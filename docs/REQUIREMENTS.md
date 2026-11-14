@@ -86,3 +86,10 @@ See [UX revision 4](design/ux.md) §2.2 and §6.
    menu and the Settings text. Precedence, strongest first: Depth input (depth only) > Settings input > view-object
    user text > menu defaults > built-in default / auto. Double-click selects the view objects in Rhino.
    The preview draws each view's frame, look arrow and depth volume (cobalt `#1F6FD1` when selected).
+
+## Decisions after the hill climbs (2026-11-15)
+
+- **Engine pivot (conditional on the A2 native locus validation passing):** our own exact visibility kernel becomes the core engine. It handles planes now and analytic cylinders next. Rhino's native HiddenLineDrawing is kept only for true freeform. The worker, disk cache and tiling work in M4/M5 shrink accordingly; tiling is dropped (S3: no equivalence).
+- **Live view boxes:** build them on Fable's "scrub stack": one solve per view direction, after which every cut depth is a lookup. First prove the section-fill (cap parity) rule against route C.
+- **Hidden lines are off by default.** This is a presentation choice only: native HLD loses visible geometry when hidden curves are disabled, so the engine always solves with hidden lines and discards them.
+- **Test data:** no owner project models. Use the campus model and the generated suites, and treat the census results as optimistic.
