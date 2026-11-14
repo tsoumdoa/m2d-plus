@@ -198,7 +198,7 @@ public sealed class WalkingSkeletonTests(RhinoHost host)
         document.InstanceDefinitions.ModifyGeometry(definition, new[] { changed }, new[] { new ObjectAttributes() });
         Assert.ThrowsAny<OperationCanceledException>(() => capture.Step(TimeSpan.FromMilliseconds(12)));
     });
-    [RhinoFact] public void UnknownTypeQuarantinesAndPlaneIsPerViewError() => host.Run(() =>
+    [RhinoFact] public void UnknownTypeQuarantinesBothUncutAndSectionViews() => host.Run(() =>
     {
         using var document = RhinoDoc.CreateHeadless(null); using var cache = new SceneCache();
         using var watch = new DocumentWatch(document);
@@ -211,7 +211,8 @@ public sealed class WalkingSkeletonTests(RhinoHost host)
         Assert.Null(batch.Views[0].Error); Assert.True(batch.Views[0].Report.Quarantined);
         Assert.All(batch.Views[0].Items, item => Assert.Equal(LineClass.Unresolved, item.Class));
         Assert.Equal(1, batch.Views[0].Report.UnsupportedByType["Light"]);
-        Assert.Contains("not in this build yet", batch.Views[1].Error); Assert.Empty(batch.Views[1].Items);
+        Assert.Null(batch.Views[1].Error); Assert.True(batch.Views[1].Report.Quarantined);
+        Assert.Empty(batch.Views[1].Regions); Assert.All(batch.Views[1].Items, item => Assert.Equal(LineClass.Unresolved, item.Class));
     });
     [RhinoFact] public void AnnotationsAreReportedButDoNotQuarantine() => host.Run(() =>
     {
@@ -273,7 +274,8 @@ public sealed class WalkingSkeletonTests(RhinoHost host)
             var vectorFrame = ViewRequest.Parse(view.Direction).Resolve(bounds, .001); Assert.Equal(frame, vectorFrame);
         }
         Assert.NotNull(ViewRequest.Parse(Vector3d.Zero).Error);
-        Assert.NotNull(ViewRequest.Parse(Plane.WorldXY).Error);
+        Assert.Null(ViewRequest.Parse(Plane.WorldXY).Error);
+        Assert.Equal(Plane.WorldXY, ViewRequest.Parse(Plane.WorldXY).Cut!.Plane);
     });
     [RhinoFact] public void StableObjectReplacementInvalidatesContentAndReusesUnchangedOwnedEntry() => host.Run(() =>
     {

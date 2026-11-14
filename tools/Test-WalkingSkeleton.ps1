@@ -23,9 +23,9 @@ try {
     foreach ($major in 8, 10) {
         $env:M2D_EXPECT_RUNTIME = "$major"
         $env:DOTNET_ROLL_FORWARD = if ($major -eq 10) { 'LatestMajor' } else { 'LatestPatch' }
-        & dotnet test (Join-Path $repo 'tests/M2DPlus.Core.Tests') -c Debug --no-build --nologo --logger "trx;LogFileName=m1b-core-net$major.trx"
+        & dotnet test (Join-Path $repo 'tests/M2DPlus.Core.Tests') -c Debug --no-build --nologo --logger "trx;LogFileName=m2-core-net$major.trx"
         if ($LASTEXITCODE -ne 0) { throw "Core .NET $major tests failed." }
-        & dotnet test (Join-Path $repo 'tests/M2DPlus.Rhino.Tests') -c Debug --no-build --nologo --logger "trx;LogFileName=m1b-rhino-net$major.trx"
+        & dotnet test (Join-Path $repo 'tests/M2DPlus.Rhino.Tests') -c Debug --no-build --nologo --logger "trx;LogFileName=m2-rhino-net$major.trx"
         if ($LASTEXITCODE -ne 0) { throw "Licensed .NET $major acceptance failed." }
     }
 } finally {

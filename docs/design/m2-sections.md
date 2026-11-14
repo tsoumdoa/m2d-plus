@@ -233,3 +233,12 @@ Verified 2026-11-14 on Rhino 8.36.26296.17001 with .NET 8.0.34:
 Run commands and licensed resolver requirements remain in the Rhino test README;
 no owner Rhino process is attached to, changed or terminated. No commit, push,
 installation or package publication was performed.
+
+## M2 wiring extension
+
+`Compute` now optionally accepts `prepareVisibility: true` and `farPlane` after its
+existing cancellation argument. `SectionResult.Visibility` owns the resulting
+per-source `PhysicalClipResult`s until disposal. Wiring reuses those certification
+pieces for HLD/point classification, avoiding the former trim-and-discard followed
+by a second near trim. Standalone callers retain their existing default behaviour.
+Region and outline ordinals use keyed counters. See [m2-wiring.md](m2-wiring.md).
