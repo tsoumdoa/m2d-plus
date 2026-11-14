@@ -1,0 +1,130 @@
+using System.Globalization;
+using M2DPlus.Core.Bake;
+using M2DPlus.Core.Placement;
+using M2DPlus.Core.Styling;
+using Xunit;
+
+namespace M2DPlus.Core.Tests;
+
+public sealed class BakeTests
+{
+    private static readonly Guid Component = Guid.Parse("77777777-7777-7777-7777-777777777777");
+    private static readonly Plane3 South = new(Vector3.Zero, Vector3.UnitX, Vector3.UnitZ);
+
+    [Theory]
+    [InlineData(LineClass.Visible, "Visible")]
+    [InlineData(LineClass.Profile, "Visible")]
+    [InlineData(LineClass.Hidden, "Hidden")]
+    [InlineData(LineClass.Beyond, "Beyond")]
+    [InlineData(LineClass.FarClip, "Far clip")]
+    [InlineData(LineClass.Cut, "Cut")]
+    [InlineData(LineClass.Hatch, "Hatch")]
+    [InlineData(LineClass.Unresolved, "Unresolved")]
+    public void LayerTreeIsCategoryThenMirroredSourcePath(LineClass lineClass, string category)
+    {
+        Assert.Equal($"M2D+::Section A::{category}::Arch::Walls", BakeNames.LayerPath("Section A", lineClass, "Arch::Walls"));
+        Assert.Equal($"M2D+::Section A::{category}", BakeNames.LayerPath("Section A", lineClass));
+    }
+
+    [Fact]
+    public void DrawingNamesUseSourceOverrideAndGeometricDescriptions()
+    {
+        var plan = new DrawingNameRequest(ViewSourceKind.Rectangle, Plane3.WorldXY.AtOrigin(new(3, 4, 1.2)), true);
+        Assert.Equal("Plan +1.20", BakeNames.Infer(plan, DocumentUnits.Metres));
+        Assert.Equal("Section 3", BakeNames.Infer(new(ViewSourceKind.Plane, South, true, SectionNumber: 3), DocumentUnits.Metres));
+        Assert.Equal("Elevation South", BakeNames.Infer(new(ViewSourceKind.Direction, South, false), DocumentUnits.Metres));
+        var sw = AnchorRules.FromDirection(new(1, 1, -1), Vector3.Zero);
+        Assert.Equal("Axo SW", BakeNames.Infer(new(ViewSourceKind.Vector, sw, false), DocumentUnits.Metres));
+        Assert.Equal("Roof", BakeNames.Infer(plan with { Source = ViewSourceKind.NamedView, SourceName = "Roof" }, DocumentUnits.Metres));
+        Assert.Equal("Section A", BakeNames.Infer(plan with { Source = ViewSourceKind.ClippingPlane, SourceName = "Section A" }, DocumentUnits.Metres));
+        Assert.Equal("Custom", BakeNames.Infer(plan with { SourceName = "Roof", OverrideName = "Custom" }, DocumentUnits.Metres));
+    }
+
+    [Theory]
+    [InlineData(1200, DocumentUnits.Millimetres, "+1200 mm")]
+    [InlineData(120, DocumentUnits.Centimetres, "+120.00 cm")]
+    [InlineData(-1.2, DocumentUnits.Metres, "-1.20")]
+    [InlineData(4.125, DocumentUnits.Feet, "+4.13 ft")]
+    [InlineData(6, DocumentUnits.Inches, "+6.00 in")]
+    [InlineData(-.00001, DocumentUnits.Metres, "+0.00")]
+    public void AutomaticPlanLevelIsUnitAwareAndCultureIndependent(double value, DocumentUnits units, string expected)
+    {
+        var old = CultureInfo.CurrentCulture;
+        try { CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("fr-FR"); Assert.Equal(expected, BakeNames.FormatElevation(value, units)); }
+        finally { CultureInfo.CurrentCulture = old; }
+    }
+
+    [Fact]
+    public void DuplicatesAndAddCopyRespectReservedNamesAndCase()
+    {
+        Assert.Equal(new[] { "A", "a (2)", "A (3)", "B" }, BakeNames.Unique(["A", "a", "A", "B"]));
+        Assert.Equal(new[] { "Section A (3)" }, BakeNames.Unique(["Section A"], ["Section A", "Section A (2)"]));
+        Assert.Throws<ArgumentException>(() => BakeNames.LayerPath("A::B", LineClass.Visible));
+        Assert.Throws<ArgumentException>(() => BakeNames.LayerPath("A", LineClass.Visible, "Arch::::Walls"));
+    }
+
+    [Theory]
+    [InlineData(LineClass.FarClip, "farclip")]
+    [InlineData(LineClass.Profile, "visible")]
+    [InlineData(LineClass.Unresolved, "unresolved")]
+    public void UserStringsCarryStableOwnershipSourceClassHashAndOriginalLayer(LineClass lineClass, string expected)
+    {
+        var tags = BakeTags.Create(Component, "Section A", "source-id", lineClass, "sha256", "layer-path");
+        Assert.Equal($"{Component:D}/Section A", tags["m2d.bake"]);
+        Assert.Equal("source-id", tags["m2d.source"]); Assert.Equal(expected, tags["m2d.class"]);
+        Assert.Equal("sha256", tags["m2d.hash"]); Assert.Equal("layer-path", tags["m2d.layer"]);
+    }
+
+    [Fact]
+    public void ReplaceDeletesOnlyUnchangedOwnedObjectsAndAddsNewCompleteDrawing()
+    {
+        var owner = BakeTags.Owner(Component, "Section A");
+        var previous = new[]
+        {
+            new BakedRecord("unchanged", owner, "a", "a", "original", "original"),
+            new BakedRecord("edited", owner, "b", "new", "original", "original"),
+            new BakedRecord("moved", owner, "c", "c", "original", "custom"),
+            new BakedRecord("missing-provenance", owner, "d", "d", "", "original"),
+            new BakedRecord("other-drawing", BakeTags.Owner(Component, "Other"), "a", "a", "original", "original"),
+            new BakedRecord("other-component", BakeTags.Owner(Guid.NewGuid(), "Section A"), "a", "a", "original", "original")
+        };
+        var fresh = new[] { new NewBakeRecord("new1", "layer", "hash", "source", LineClass.Visible),
+            new NewBakeRecord("new2", "layer", "hash2", "source", LineClass.Cut) };
+        var result = BakePlan.Replace(Component, "Section A", previous, fresh);
+        Assert.Equal(new[] { "unchanged" }, result.Delete);
+        Assert.Equal(new[] { "edited", "moved", "missing-provenance" }, result.Keep);
+        Assert.Equal(fresh, result.Add);
+        Assert.Equal("Baked Section A: 2 objects (replaced 1 · kept 3 you edited)", result.Summary);
+        Assert.Equal("a", previous[0].CurrentHash);
+        Assert.Empty(BakePlan.Replace(Component, "Section A (2)", previous, fresh).Delete);
+    }
+
+    [Fact]
+    public void EmptyNewDrawingStillDeletesOldUneditedObjectsAndDuplicateRecordsFail()
+    {
+        var old = new BakedRecord("id", BakeTags.Owner(Component, "A"), "a", "a", "layer", "layer");
+        var result = BakePlan.Replace(Component, "A", [old], []);
+        Assert.Single(result.Delete); Assert.Empty(result.Add);
+        Assert.Throws<ArgumentException>(() => BakePlan.Replace(Component, "A", [old, old], []));
+        var fresh = new NewBakeRecord("id", "layer", "a", "source", LineClass.Visible);
+        Assert.Throws<ArgumentException>(() => BakePlan.Replace(Component, "A", [], [fresh, fresh]));
+    }
+
+    [Fact]
+    public void ReBakeUpdatesOnlyExactlyUnchangedM2DWidths()
+    {
+        var next = new LineWeightPreset(50);
+        var unchanged = BakeLayerWidths.Decide(LineClass.Cut, .50, "1:100", next);
+        Assert.True(unchanged.Update); Assert.Equal(.70, unchanged.Width); Assert.Equal("1:50", unchanged.WeightsTag);
+        var edited = BakeLayerWidths.Decide(LineClass.Cut, .51, "1:100", next);
+        Assert.False(edited.Update); Assert.Equal(.51, edited.Width); Assert.Contains("you edited", edited.Message);
+        Assert.False(BakeLayerWidths.Decide(LineClass.Cut, double.BitIncrement(.50), "1:100", next).Update);
+        Assert.False(BakeLayerWidths.Decide(LineClass.Cut, .50, null, next).Update);
+        Assert.False(BakeLayerWidths.Decide(LineClass.Cut, .50, "junk", next).Update);
+        Assert.False(BakeLayerWidths.Decide(LineClass.Cut, .50, "1:0", next).Update);
+        Assert.False(BakeLayerWidths.Decide(LineClass.Cut, .50, "1:100", new(50, WeightMode.Layers)).Update);
+        var created = BakeLayerWidths.Decide(LineClass.Visible, 0, null, next, true);
+        Assert.True(created.Update); Assert.Equal(.25, created.Width);
+        Assert.False(BakeLayerWidths.Decide(LineClass.Visible, .25, "1:50", next).Update);
+    }
+}
