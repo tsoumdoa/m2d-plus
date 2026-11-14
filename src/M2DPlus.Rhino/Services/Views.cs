@@ -4,6 +4,7 @@ using Rhino.DocObjects;
 using System.Globalization;
 using M2DPlus.Core;
 using M2DPlus.Core.Sections;
+using M2DPlus.Rhino.Views;
 
 namespace M2DPlus.Rhino.Services;
 
@@ -11,23 +12,44 @@ public sealed record ViewRequest(string Name, Vector3d Direction, string? Error 
 {
     public NamedFrame? Named { get; init; }
     public CutFrame? Cut { get; init; }
+    /// <summary>The source type, for settings resolution (a view box resolves as a Box).</summary>
+    public ViewSourceKind Kind { get; init; } = ViewSourceKind.Direction;
+    /// <summary>The referenced Rhino object (view box, frame surface/curve, clipping plane), else empty.</summary>
+    public Guid ObjectId { get; init; }
+    /// <summary>A remark about how the source was read, e.g. a frame surface that is not validated yet.</summary>
+    public string? Note { get; init; }
     public string Revision => $"{Name}/{Error}/{Direction.X:R},{Direction.Y:R},{Direction.Z:R}/{Named?.Revision}/{Cut?.Revision}";
-    public static ViewRequest Parse(object? value, RhinoDoc? document = null)
+    /// <param name="scene">Scene bounds used to face a not-yet-validated frame surface at the model; computed from the
+    /// document when needed and not given.</param>
+    public static ViewRequest Parse(object? value, RhinoDoc? document = null, BoundingBox? scene = null)
     {
-        if (value is Guid id && document is not null) value = document.Objects.FindId(id);
-        if (value is ClippingPlaneObject clippingObject) return FromClippingPlane(clippingObject.ClippingPlaneGeometry, clippingObject.Name, document ?? clippingObject.Document, clippingObject);
+        if (value is Guid id && document is not null) value = (object?)document.Objects.FindId(id) ?? $"Object {id:D}";
+        if (value is ClippingPlaneObject clippingObject) return FromClippingPlane(clippingObject.ClippingPlaneGeometry, clippingObject.Name, document ?? clippingObject.Document, clippingObject)
+            with { ObjectId = clippingObject.Id };
+        if (value is RhinoObject viewObject) return FromViewObject(viewObject, document ?? viewObject.Document, scene);
+        if (value is Extrusion or Brep or Surface or Curve && value is GeometryBase frameGeometry)
+        {
+            var tolerance = document?.ModelAbsoluteTolerance ?? .001;
+            var angle = document?.ModelAngleToleranceRadians ?? RhinoMath.ToRadians(1);
+            var check = ViewBoxes.Establish(frameGeometry, tolerance, angle);
+            var label = value is Extrusion ? "View box" : value is Curve ? "Rectangle curve" : "Surface";
+            if (!check.IsValid) return new(label, default, $"{label}: {check.Reason}");
+            if (value is Extrusion) return FromBox(check.Frame!.Value, check.Depth!.Value, label);
+            var faced = Faced(check.Frame!.Value, document, scene, []);
+            return FromPlane(faced.Plane, label, faced) with { Kind = ViewSourceKind.Rectangle };
+        }
         if (value is ClippingPlaneSurface clippingSurface) return FromClippingPlane(clippingSurface, "Clipping plane", document, null);
-        if (value is Plane plane) return FromPlane(plane, "Plane");
-        if (value is Rectangle3d rectangle) return rectangle.IsValid ? FromPlane(rectangle.Plane, "Rectangle", rectangle) : new("Rectangle", default, "Invalid view rectangle.");
+        if (value is Plane plane) return FromPlane(plane, "Plane") with { Kind = ViewSourceKind.Plane };
+        if (value is Rectangle3d rectangle) return rectangle.IsValid ? FromPlane(rectangle.Plane, "Rectangle", rectangle) with { Kind = ViewSourceKind.Rectangle } : new("Rectangle", default, "Invalid view rectangle.");
         if (value is Box box)
         {
             var cutPlane = box.Plane; cutPlane.Origin = box.Plane.PointAt(0, 0, box.Z.Max);
-            return box.IsValid ? FromPlane(cutPlane, "Box", new Rectangle3d(cutPlane, box.X, box.Y), box.Z.Length) : new("Box", default, "Invalid view box.");
+            return box.IsValid ? FromPlane(cutPlane, "Box", new Rectangle3d(cutPlane, box.X, box.Y), box.Z.Length) with { Kind = ViewSourceKind.Box } : new("Box", default, "Invalid view box.");
         }
         if (value is ViewInfo view) return FromViewport(view.Name, view.Viewport);
         if (value is ViewportInfo viewport) return FromViewport("View", viewport);
         if (value is Vector3d vector)
-            return vector.IsValid && vector.Unitize() ? new("Vector", vector) : new("Vector", default, "View vector must be finite and nonzero.");
+            return vector.IsValid && vector.Unitize() ? new("Vector", vector) { Kind = ViewSourceKind.Vector } : new("Vector", default, "View vector must be finite and nonzero.");
         var name = value as string ?? value?.GetType().Name ?? "Null";
         if (value is string && document is not null)
         {
@@ -48,6 +70,34 @@ public sealed record ViewRequest(string Name, Vector3d Direction, string? Error 
         if (!direction.IsValid) return new(name, default, $"View '{name}': no supported parallel named view or direction found.");
         direction.Unitize(); return new(name, direction);
     }
+    /// <summary>A referenced Rhino object: an M2D+ view box (resolves exactly like a Box: cut at the front face,
+    /// crop to the profile, far limit at the back), or a planar rectangle surface/curve that is not validated yet
+    /// (resolves like a Rectangle, faced at the model, with a remark).</summary>
+    private static ViewRequest FromViewObject(RhinoObject obj, RhinoDoc? document, BoundingBox? scene)
+    {
+        var tolerance = document?.ModelAbsoluteTolerance ?? .001;
+        var angle = document?.ModelAngleToleranceRadians ?? RhinoMath.ToRadians(1);
+        var name = ViewBoxes.Label(obj);
+        if (ViewBoxes.IsViewBox(obj))
+        {
+            if (obj.Geometry is not Extrusion extrusion)
+                return new(name, default, $"View '{name}' is no longer a view box: Rhino turned it into a polysurface. Undo that edit, or reference a planar surface and use Validate views.") { ObjectId = obj.Id };
+            var box = ViewBoxes.ReadBox(extrusion, tolerance, angle);
+            return box.IsValid ? FromBox(box.Frame!.Value, box.Depth!.Value, name) with { ObjectId = obj.Id }
+                : new(name, default, $"View box '{name}': {box.Reason}") { ObjectId = obj.Id };
+        }
+        if (obj.Geometry is Extrusion)
+            return new(name, default, $"View '{name}' is an extrusion, not an M2D+ view box. Reference a planar surface or a closed rectangle and use Validate views.") { ObjectId = obj.Id };
+        var check = ViewBoxes.Establish(obj.Geometry, tolerance, angle);
+        if (!check.IsValid) return new(name, default, $"View '{name}' can't frame a view: {check.Reason}") { ObjectId = obj.Id };
+        var frame = Faced(check.Frame!.Value, document, scene, [obj.Id]);
+        return FromPlane(frame.Plane, name, frame) with { Kind = ViewSourceKind.Rectangle, ObjectId = obj.Id,
+            Note = $"'{name}' is drawn as a rectangle view. Right-click View > Validate views to make it an editable view box (depth, look direction, settings)." };
+    }
+    private static Rectangle3d Faced(Rectangle3d frame, RhinoDoc? document, BoundingBox? scene, Guid[] excluded) =>
+        ViewBoxes.Face(frame, scene ?? (document is null ? BoundingBox.Empty : ViewBoxes.SceneBounds(document, excluded)), document?.ModelAbsoluteTolerance ?? .001);
+    private static ViewRequest FromBox(Rectangle3d frame, double depth, string name) =>
+        FromPlane(frame.Plane, name, frame, depth) with { Kind = ViewSourceKind.Box };
     private static ViewRequest FromPlane(Plane plane, string name, Rectangle3d? crop = null, double? depth = null) =>
         plane.IsValid ? new(name, -plane.ZAxis) { Cut = new(plane, crop, depth, false, false, Array.Empty<Guid>(), Array.Empty<Guid>(), null) }
             : new(name, default, "Invalid cut plane.");
@@ -57,7 +107,7 @@ public sealed record ViewRequest(string Name, Vector3d Direction, string? Error 
         if (surface.ParticipationListsEnabled && document is null) return new(name, default, "Scoped clipping plane requires its source document.");
         var layerIds = layers.Select(i => document!.Layers[i].Id).ToArray();
         var section = obj is not null && document is not null ? SectionCapture.Capture(document, obj, null).Style : null;
-        return FromPlane(surface.Plane, name) with { Cut = new(surface.Plane, null,
+        return FromPlane(surface.Plane, name) with { Kind = ViewSourceKind.ClippingPlane, Cut = new(surface.Plane, null,
             surface.PlaneDepthEnabled ? surface.PlaneDepth : null, surface.ParticipationListsEnabled, exclude,
             objects.ToArray(), layerIds, section) };
     }
@@ -70,7 +120,7 @@ public sealed record ViewRequest(string Name, Vector3d Direction, string? Error 
             !camera.IsValid || !direction.IsValid || !direction.Unitize() ||
             !new[] { left, right, bottom, top }.All(RhinoMath.IsValidDouble) || right <= left || top <= bottom)
             return new(name, default, $"Named view '{name}' has an invalid frame.");
-        return new(name, direction) { Named = new(camera, new(left, right), new(bottom, top)) };
+        return new(name, direction) { Kind = ViewSourceKind.NamedView, Named = new(camera, new(left, right), new(bottom, top)) };
     }
     public Rectangle3d Resolve(BoundingBox bounds, double tolerance)
     {

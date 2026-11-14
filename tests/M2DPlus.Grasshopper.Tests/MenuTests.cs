@@ -9,17 +9,48 @@ namespace M2DPlus.Grasshopper.Tests;
 public sealed class MenuTests
 {
     private static ImmutableArray<MenuNode> Menu(ComponentUiState state, DrawingPhase phase = DrawingPhase.Done, params string[][] input) =>
-        ComponentMenu.Build(new(new SettingsPresentation(state, Context(input)), new(phase), HasInfo: true));
+        ComponentMenu.Build(new(new SettingsPresentation(state, Context(input)), new(phase), HasInfo: true, Views: new(2, 1, false)));
     private static MenuNode Item(ImmutableArray<MenuNode> menu, string label) => menu.First(n => n.Label.StartsWith(label, StringComparison.Ordinal));
 
     [Fact]
-    public void ItemsFollowUxSectionSevenOrder()
+    public void ItemsFollowUxRevisionFourSectionSevenOrderAndTheEditorIsGone()
     {
         var labels = Menu(ComponentUiState.Default, DrawingPhase.Running).Where(n => !n.IsSeparator).Select(n => n.Label).ToArray();
-        Assert.Equal(["View range & settings…", "Bake drawing", "Bake one", "Run automatically", "Run now", "Cancel",
+        Assert.Equal(["Validate views", "Flip view direction", "Create view from current viewport", "Select view objects",
+            "Bake drawing", "Bake one", "Run automatically", "Run now", "Cancel",
             "Hidden lines", "Tangent edges", "Seams", "Beyond", "Far clip", "Depth cueing", "Cuts", "Hatch", "Scale", "Line weights",
-            "Preview", "Output tree", "Copy info", "Copy settings as text", "Clear drawing cache"], labels);
+            "Reset menu defaults", "Preview", "Output tree", "Copy info", "Copy settings as text", "Clear drawing cache"], labels);
         Assert.DoesNotContain(Menu(ComponentUiState.Default, DrawingPhase.Done), n => n.Label == "Cancel");
+        var all = Flatten(Menu(ComponentUiState.Default)).ToArray();
+        Assert.DoesNotContain(all, n => n.Label.Contains("editor", StringComparison.OrdinalIgnoreCase) || n.Label.Contains("settings…", StringComparison.Ordinal));
+        Assert.Equal("Double-click", Item(Menu(ComponentUiState.Default), "Select view objects").Hint);
+    }
+
+    private static IEnumerable<MenuNode> Flatten(IEnumerable<MenuNode> nodes) =>
+        nodes.SelectMany(n => n.IsSubmenu ? Flatten(n.Children).Prepend(n) : [n]);
+
+    [Fact]
+    public void ViewCommandsAreEnabledByWhatVReferences()
+    {
+        var none = ViewCommands.Build(new(0, 0, false), withSelect: true);
+        Assert.Equal([false, false, true, false], none.Select(n => n.Enabled));
+        Assert.Contains("Pick views in Rhino", none[0].Tooltip);
+        var surfaces = ViewCommands.Build(new(2, 0, false), withSelect: true);
+        Assert.Equal([true, false, true, true], surfaces.Select(n => n.Enabled));
+        Assert.Contains("Validate views first", surfaces[1].Tooltip);
+        var boxes = ViewCommands.Build(new(2, 2, true), withSelect: false);
+        Assert.Equal([ViewCommands.Validate, ViewCommands.Flip, ViewCommands.Create], boxes.Select(n => n.Command));
+        Assert.All(boxes, n => Assert.True(n.Enabled));
+        Assert.Contains("wire the new box in yourself", boxes[2].Tooltip);
+    }
+
+    [Fact]
+    public void ResetMenuDefaultsNeedsMenuValues()
+    {
+        Assert.False(Item(Menu(ComponentUiState.Default), "Reset menu defaults").Enabled);
+        var reset = Item(Menu(ComponentUiState.Default.With("hidden", "off")), "Reset menu defaults");
+        Assert.True(reset.Enabled);
+        Assert.Equal(MenuCommands.Reset, reset.Command);
     }
 
     [Fact]
@@ -34,7 +65,8 @@ public sealed class MenuTests
         Assert.Equal(["Auto"], Item(menu, "Beyond").Children.Where(c => c.Checked).Select(c => c.Label));
         Assert.Equal(["Clip without line"], Item(menu, "Far clip").Children.Where(c => c.Checked).Select(c => c.Label));
         Assert.Equal(["1:100"], Item(menu, "Scale").Children.Where(c => c.Checked).Select(c => c.Label));
-        Assert.Equal(MenuCommands.Editor, Item(menu, "Scale").Children[^1].Command);
+        Assert.Equal(["1:20", "1:50", "1:100", "1:200", "1:500"], Item(menu, "Scale").Children.Select(c => c.Label));
+        Assert.Contains("0.50", Item(menu, "Scale").Tooltip);
         Assert.True(MenuCommands.TryParseSet(hidden.Command!, out var key, out var value));
         Assert.Equal(("hidden", "off"), (key, value));
     }
@@ -42,7 +74,7 @@ public sealed class MenuTests
     [Fact]
     public void TypedValuesShowAsACheckedExtraItem()
     {
-        var beyond = Item(Menu(ComponentUiState.Default.With("*", "beyond", "2 m")), "Beyond");
+        var beyond = Item(Menu(ComponentUiState.Default.With("beyond", "2 m")), "Beyond");
         Assert.Equal("2 m", beyond.Children[0].Label);
         Assert.True(beyond.Children[0].Checked);
         Assert.False(beyond.Children[0].Enabled);
@@ -84,7 +116,7 @@ public sealed class MenuTests
         var menu = Menu(state);
         Assert.False(Item(menu, "Run automatically").Checked);
         var preview = Item(menu, "Preview").Children.ToDictionary(c => c.Label, c => c.Checked);
-        Assert.Equal(new Dictionary<string, bool> { ["Hidden"] = true, ["Beyond"] = true, ["Far clip"] = true, ["Hatch"] = false, ["Frame"] = true }, preview);
+        Assert.Equal(new Dictionary<string, bool> { ["View frames"] = true, ["Hidden"] = true, ["Beyond"] = true, ["Far clip"] = true, ["Hatch"] = false, ["Frame"] = true }, preview);
     }
 
     [Theory]
@@ -122,9 +154,18 @@ public sealed class MenuTests
         Assert.Equal(11, directions.Length);
         Assert.True(directions[6].IsSeparator);
 
-        var wired = ViewMenu.Build(["Level 1"], ["Section A"], [], wired: true);
-        Assert.All(wired.Where(n => !n.IsSeparator), n => Assert.False(n.Enabled));
+        Assert.Equal(["Pick views in Rhino…", "Validate views", "Flip view direction", "Create view from current viewport"],
+            menu.TakeWhile(n => !n.IsSeparator).Select(n => n.Label));
+        Assert.DoesNotContain(menu, n => n.Label.StartsWith("Capture", StringComparison.Ordinal));
+
+        // Wired: choosing is greyed, but the view-object commands still act on the wired references.
+        var wired = ViewMenu.Build(["Level 1"], ["Section A"], [], wired: true, new(1, 1, true));
+        var commands = new[] { ViewCommands.Validate, ViewCommands.Flip, ViewCommands.Create };
+        Assert.All(wired.Where(n => !n.IsSeparator && !commands.Contains(n.Command)), n => Assert.False(n.Enabled));
+        Assert.All(wired.Where(n => commands.Contains(n.Command)), n => Assert.True(n.Enabled));
         Assert.Equal("Disconnect the wire to choose views here.", wired[0].Tooltip);
+        Assert.True(ViewMenu.Build([], [], [], wired: false, storedObjects: 1).First(n => n.Label == "Clear").Enabled);
+        Assert.False(ViewMenu.Build([], [], [], wired: false).First(n => n.Label == "Clear").Enabled);
     }
 
     [Fact]
@@ -133,6 +174,5 @@ public sealed class MenuTests
         Assert.Equal(["Top", "SW"], ViewMenu.ToggleValue(["Top"], "SW").ToArray());
         Assert.Equal(["SW"], ViewMenu.ToggleValue(["Top", "SW"], "top").ToArray());
         Assert.Equal(["Top", "level 1", "Roof"], ViewMenu.AddAll(["Top", "level 1"], ["Level 1", "Roof"]).ToArray());
-        Assert.Equal("M2D 03", ViewMenu.NextCaptureName(["m2d 01", "M2D 02", "Level 1"]));
     }
 }

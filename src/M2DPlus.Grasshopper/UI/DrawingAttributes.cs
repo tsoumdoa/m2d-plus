@@ -9,9 +9,9 @@ using M2DPlus.Grasshopper.UI.Model;
 
 namespace M2DPlus.Grasshopper.UI;
 
-/// <summary>Standard GH body plus the UX §1 additions: a 2 px cobalt progress line along the bottom of the body
-/// while a job runs, a Bake / Cancel / Run button at the right end of the message tab, double-click to open the
-/// editor, and a cobalt dot beside S when the editor holds values. Colours come from GH's palette except cobalt.</summary>
+/// <summary>Standard GH body plus the UX rev. 4 §1 additions: a 2 px cobalt progress line along the bottom of the
+/// body while a job runs, a Bake / Cancel / Run button at the right end of the message tab, and double-click to
+/// select the referenced view objects in Rhino. Colours come from GH's palette except cobalt.</summary>
 public sealed class DrawingAttributes : GH_ComponentAttributes
 {
     public static readonly Color Cobalt = Color.FromArgb(0x1F, 0x6F, 0xD1);
@@ -79,7 +79,6 @@ public sealed class DrawingAttributes : GH_ComponentAttributes
             var body = (RectangleF)GH_Convert.ToRectangle(Bounds);
             if (runtime.Phase == DrawingPhase.Running) RenderProgress(graphics, body, runtime.Fraction);
             RenderTab(graphics, body, message, RuntimeModel.Button(runtime), style);
-            if (Ui.State.HasEditorValues) RenderSettingsDot(graphics, owner);
         }
         finally { graphics.SmoothingMode = smoothing; }
         _painted = runtime;
@@ -169,16 +168,6 @@ public sealed class DrawingAttributes : GH_ComponentAttributes
 
     private static Color Fade(Color colour, int alpha) => Color.FromArgb(colour.A * alpha / 255, colour);
 
-    private void RenderSettingsDot(Graphics graphics, GH_Component owner)
-    {
-        if (owner.Params.Input.Count < 4 || GH_Canvas.ZoomFadeLow < 5) return;
-        var param = owner.Params.Input[3].Attributes.Bounds;
-        var label = GH_FontServer.MeasureString(owner.Params.Input[3].NickName, GH_FontServer.StandardAdjusted);
-        var centre = new PointF(param.Right - label.Width - 4, param.Top + param.Height / 2);
-        using var brush = new SolidBrush(Color.FromArgb(GH_Canvas.ZoomFadeLow, Cobalt));
-        graphics.FillEllipse(brush, centre.X - 2.5f, centre.Y - 2.5f, 5, 5);
-    }
-
     private static GraphicsPath TabPath(RectangleF box)
     {
         var path = new GraphicsPath();
@@ -227,11 +216,11 @@ public sealed class DrawingAttributes : GH_ComponentAttributes
 
     public override GH_ObjectResponse RespondToMouseDoubleClick(GH_Canvas sender, GH_CanvasMouseEvent e)
     {
-        if (e.Button == MouseButtons.Left && !_button.Contains(e.CanvasLocation) && (Bounds.Contains(e.CanvasLocation) || _tab.Contains(e.CanvasLocation)))
-        {
-            Ui.OpenEditor();
+        // Double-click selects the referenced view objects in Rhino (their m2d.* user text is then in Properties).
+        // With none, GH's default double-click behaviour is kept.
+        if (e.Button == MouseButtons.Left && !_button.Contains(e.CanvasLocation) && (Bounds.Contains(e.CanvasLocation) || _tab.Contains(e.CanvasLocation))
+            && Ui.SelectViewObjects())
             return GH_ObjectResponse.Handled;
-        }
         return base.RespondToMouseDoubleClick(sender, e);
     }
 

@@ -1,143 +1,98 @@
 # M3 Grasshopper UI layer
 
-Implements UX revision 3 §1 (custom attributes), §2.1 (View input menu), §5.2 (states and the
-message tab), §6 (the View Range & Settings editor, precedence, "set by input") and §7 (component
-menu) on top of the M3 Core API ([m3-core.md](m3-core.md)). Core semantics are unchanged: the UI
-stores sparse Settings **text** and lets `Settings.Resolve` decide everything.
+Implements UX revision 4 §1 (custom attributes), §1.1 (the Depth input), §2.1–2.2 (View input menu and view
+objects), §5.2 (states and the message tab), §6 (precedence) and §7 (component menu) on top of the M3 Core API
+([m3-core.md](m3-core.md)). Revision 3's View Range & Settings editor (PR #7) is **removed** (owner, 2026-11-14):
+global defaults are menu toggles, per-view values are `m2d.*` user text on view objects, and `Settings.Resolve`
+still decides everything.
 
 ## Screenshots
 
 | File | What it shows | Made by |
 |---|---|---|
-| [gh-ui/canvas.png](gh-ui/canvas.png) | Six states on GH's default skin: Done · **Bake**, Drawing 72 % · **Cancel** (determinate progress line), Reading · Cancel (indeterminate sweep), Paused · **Run**, Cancelled · Run, and No view (GH's own required-input warning). Cobalt dot beside **S** where the editor holds values; a Panel wired into S. | `GrasshopperUiTests.CanvasAndEditorRender` (real GH canvas, `GenerateHiResImageTile`, 2×) |
+| [gh-ui/canvas.png](gh-ui/canvas.png) | The component with **five inputs** (G V T S **D**) in six states on GH's default skin: Done · **Bake**, Drawing 72 % · **Cancel** (determinate progress line), Reading · Cancel (indeterminate sweep), Paused · **Run**, Cancelled · Run, and No view (GH's required-input warning). Panels wired into S (`hidden = off`) and D (`8 m`). No S dot. | `GrasshopperUiTests.CanvasRender` (real GH canvas, `GenerateHiResImageTile`, 2×) |
 | [gh-ui/canvas-dark.png](gh-ui/canvas-dark.png) | The same on a dark GH skin. | same test |
-| [gh-ui/menu.png](gh-ui/menu.png) | The component's right-click items after `hidden = off` and `farclip = line` from the menu. | `GrasshopperUiTests.AttributesMenusUndoAndSavedGhRoundTrip` |
-| [gh-ui/editor.png](gh-ui/editor.png) | The editor, **Section A** row selected: "·" inheritance in the table, Reset links, Hidden lines locked "set by input", the unused row, the weight-preset strip. | `tools/EditorPreview` |
-| [gh-ui/editor-all-views.png](gh-ui/editor-all-views.png) | The editor, **All views** row ("Reset to defaults"). | `tools/EditorPreview` |
+| [gh-ui/menu.png](gh-ui/menu.png) | The component's right-click items after `hidden = off` and `farclip = line` from the menu; the view-object group on top (greyed: V references no Rhino objects in that test). | `GrasshopperUiTests.AttributesMenusUndoAndSavedGhRoundTrip` |
+| [gh-ui/view-menu.png](gh-ui/view-menu.png) | The View input's right-click items. | same test |
+| [gh-ui/view-box-preview.png](gh-ui/view-box-preview.png) | A validated view box's preview (frame, look arrow, dotted depth volume, name) over two boxes, unselected (subtle) and selected (cobalt). An **offscreen GDI axonometric** of the exact `ViewPreview` lines the component draws, not a Rhino viewport capture (headless Rhino has no viewports). | `ViewObjectTests.SettingsPrecedence…` |
 
-The editor PNGs come from the **same** `SettingsEditorForm.cs` compiled against public Eto 2.9 on
-its WinForms backend. Inside Rhino the form runs on Rhino's Eto 2.11 (WPF) and follows Rhino's
-light/dark theme (`UseRhinoStyle`, looked up by reflection). The headless Rhino test opens it on
-that real platform and asserts layout, lock and row state. It cannot capture pixels: this session is
-a disconnected desktop, where WPF composes nothing (even a bare `TextBlock` renders empty), while
-GDI works. Regenerate:
+Regenerate (licensed, own Rhino.Inside process only):
 
 ```powershell
-# Canvas + menu (licensed, own Rhino.Inside process only)
 $env:M2D_UI_SCREENSHOTS = "$PWD/docs/design/gh-ui"   # plus the usual M2D_RHINO_* variables
-dotnet test tests/M2DPlus.Rhino.Tests -c Debug --filter FullyQualifiedName~GrasshopperUiTests
-# Editor (no Rhino, no licence)
-dotnet run --project tools/EditorPreview -- docs/design/gh-ui
+dotnet test tests/M2DPlus.Rhino.Tests -c Debug --filter "FullyQualifiedName~GrasshopperUiTests|FullyQualifiedName~ViewObjectTests"
 ```
 
 ## Structure
 
-All new code is under `src/M2DPlus.Grasshopper/UI/`.
-
 | File | Role |
 |---|---|
-| `Model/ComponentUiState.cs` | Immutable persisted UI state: All views row, per-view rows keyed by identity (raw text, any key), Run automatically, Preview layers, unknown top-level JSON. `ToEditorSettings()` hands Core only the keys it knows. |
-| `Model/UiStateSerializer.cs` | Versioned compact JSON (v1), defaults omitted. Unknown row keys, preview names and top-level properties survive a round trip; newer versions read with a note; bad data falls back to defaults and never throws. |
-| `Model/SettingsCatalog.cs` | Labels/choices for the §6.3 keys, canonical text, display text, weight-preset strip (from `Styling.LineWeightPreset`). |
-| `Model/SettingsPresentation.cs` | Precedence display model: per row and key, the shown value, origin (row / All views / default / input), lock and note. Resolves through `Settings.Resolve`. |
-| `Model/EditorSession.cs` | Toolkit-free editor: working copy, select row, validate (Core's message and suggestion), set/clear, Reset, Remove unused, Copy as text (`Settings.CopyEditorAsText`), Apply/Revert/Rebase. |
-| `Model/MenuModel.cs` | `ComponentMenu` (§7) and `ViewMenu` (§2.1) as plain `MenuNode` trees + commands. |
-| `Model/Runtime.cs` | `DrawingPhase`/`DrawingRuntime`, footer button choice, job-progress fraction (prepare 0–40 %, draw 40–100 %, Reading/Queued indeterminate). |
-| `DrawingUi.cs` | Controller owned by the component: state, GH Write/Read, undo (`RecordUndoEvent`), menu execution, editor window, events, fallback view context. |
-| `DrawingAttributes.cs` | Canvas: progress line, message tab with button, double-click, S dot, ≤10 Hz repaint. |
-| `SettingsEditorForm.cs` | Eto form (modeless), Eto + models only. |
-| `ViewParam.cs` | View input (`Param_GenericObject` subclass) with the §2.1 menu. GUID `a865210f-23f7-4626-8610-6f6e66cb8984`, hidden. |
-| `MenuRenderer.cs` | `MenuNode` → GH `ToolStrip` items. |
-| `DrawingComponent.Ui.cs` | `partial class DrawingComponent`: the hook-up overrides (below). |
+| `src/M2DPlus.Rhino/Views/ViewBoxes.cs` | Rhino-only, no GH: `Establish` (frame from a surface, trimmed surface, curve or box, with a reason when it can't), `Face`, `Flip`, `AutoDepth`, `Build`/`ReadBox` (the `Extrusion`), `ReadRow`/`WriteDefaults` (user text), and the document commands `Validate`, `Flip`, `FrameFromViewport`, `Create` (each one undo record), `SceneBounds`, `NextName`, `ViewsLayer`. |
+| `src/M2DPlus.Rhino/Views/ViewPreview.cs` | Frame, arrow, front/back/depth edges for one resolved view: the lines the component draws and the screenshot renders. |
+| `src/M2DPlus.Rhino/Services/Views.cs` | `ViewRequest.Parse` now reads referenced view boxes (exactly like a Box), not-yet-validated frame surfaces/curves (like a Rectangle, faced at the model, with a remark) and raw Brep/Curve/Extrusion values; adds `Kind`, `ObjectId`, `Note`. |
+| `src/M2DPlus.Rhino/Services/HostCapture.cs` | `SceneCapture(..., excluded)` keeps referenced view objects out of document mode; `IsDrawable` is shared with `SceneBounds`. |
+| `UI/Model/ComponentUiState.cs` | Persisted UI state: the **menu row** (sparse text, any key), Run automatically, Preview layers (new `views` = View frames), unknown top-level JSON. `ToEditorSettings(viewRows)` joins the view objects' rows for Core. |
+| `UI/Model/UiStateSerializer.cs` | Versioned compact JSON (v1). The removed editor's `views` rows in pre-release files are kept verbatim as unknown data and never resolved. |
+| `UI/Model/SettingsPresentation.cs` | `UiContext` (+ `ViewRows`, `Depth`) and the menu's view of a key: locked when the input sets it for every view, "(set on n of m view objects)" when objects override it. |
+| `UI/Model/MenuModel.cs` | `ComponentMenu` (§7), `ViewMenu` (§2.1) and the shared `ViewCommands` group as plain `MenuNode` trees. |
+| `UI/ViewObjects.cs` | GH side of view objects: which Rhino objects V references (`IdOf`, `References`), Validate (refuses Surface/Curve **wires**, re-types references stored on V to Brep), Flip, Create (+ adds the reference), Select. Reports to the command line and the component. |
+| `UI/ViewParam.cs` | View input (`Param_GenericObject` subclass, GUID `a865210f-…`, hidden) with Pick views in Rhino…, the view-object commands and the text choices. |
+| `UI/DrawingUi.cs` | Controller: state, GH Write/Read, undo, menu execution, view-command notes, double-click selection, fallback context (object rows included). |
+| `UI/DrawingAttributes.cs` | Canvas: progress line, message tab with button, double-click → `SelectViewObjects`. No S dot. |
+| `UI/DrawingComponent.Preview.cs` | `DrawViewportWires`/`ClippingBox` for the view previews. |
+| `DrawingComponent*.cs` | Input 4 **Depth** (text list, optional), Settings resolution after capture, depth applied to the engine. |
+
+### Solve wiring
+`SolveDrawing` parses views on the host (view boxes via their object id), collects the Settings branches (the hidden
+`multiplethreads` switch is read here and kept from Core), the Depth items and each view object's `m2d.*` row, and
+stores a real `UiContext` for the menus. After capture, with the scene's depth behind each view known,
+`ResolveSettings` calls `Settings.Resolve(views, branches, units, menu + view rows, depth)`. **Only depth reaches
+the engine in this slice**: an explicit depth sets `CutFrame.SourceDepth` for Plane, Rectangle, unvalidated frame and
+clipping-plane views; Box and view box keep their geometric depth (Core remarks when another depth was given). Other
+resolved keys appear in Info with their origin, and one remark lists them as "resolved but not applied yet".
+Diagnostics become component messages prefixed with the view name.
 
 ### Canvas attributes (§1, §5.2)
-- **Progress line**: 2 px cobalt `#1F6FD1` inside the bottom edge of the body, over a faint cobalt
-  track, while `Running`. Fraction from `DrawingRuntime.Fraction`; null → a quarter-width sweep.
-  A WinForms timer repaints at 100 ms (≤ 10 Hz) only while running and visible, and stops itself.
-- **Message tab**: drawn by M2D+ in GH's own shape and palette edge colour (so it follows skins), 17
-  units tall, message centred left of the button and shrunk to fit as GH does. The base pass
-  renders with `Message` temporarily null so GH's tab is not drawn twice.
-- **Button**: Bake (done) / Cancel (running) / Run (paused, cancelled); none otherwise. Bake/Run are
-  cobalt with white text; Cancel is a quiet outline in the tab's ink. Shift-click Bake = add as copy.
-  Fades with `GH_Canvas.ZoomFadeMedium` like GH's tab; hidden when zoomed far out. Tooltips per button.
-- **Minimum width 148**: the extra width goes to the parameter columns (the icon/nickname box keeps
-  GH's size), so the message and button stay readable. Inputs/outputs and their order are unchanged.
-- **Double-click** the body or tab (not the button) opens the editor. **S dot**: 5 px cobalt when the
-  editor holds values.
-
-### Editor (§6.1)
-Upper table: All views, each view, then unused rows (greyed); "·" = as All views; "(input)" marks
-input-set cells. Lower half edits the selected row in four groups: **View range** (plane, depth,
-beyond, far clip none/line/noline, crop, depth cueing on + start/end/limit sliders), **Lines**
-(hidden, tangents, seams, glass, weights), **Cuts** (hatch styles/colour/black/none, cuts
-separate/merge), **Placement** (scale "line weights only" with the preset strip, gap, name). Each
-field shows a note ("as All views", or cobalt "set by input" with the control disabled and showing
-the input's value) and a Reset link when the row sets it. Invalid text shows "not valid" with Core's
-message as tooltip and is not stored. Footer: Copy as text, Reset to All views / Reset to defaults,
-Remove unused (n), OK, Cancel, Apply. Esc = Cancel. Apply/OK commit one GH undo record and re-solve
-(which cancels the stale job). Menu toggles or undo while open rebase the editor (pending edits kept).
+Unchanged from PR #7 except: **double-click** the body or tab (not the button) selects the referenced view objects
+in Rhino (GH's default when there are none), and the cobalt **S dot is gone** (there are no editor values to signal).
 
 ### Menus (§7, §2.1)
-Component items follow §7 order, including Scale ▸ (with "Other… (editor)"). Toggles write the
-**All views** row. A key the input sets for every view is greyed "(set by input)"; for some views the
-item stays enabled and says "(set by input for 1 of 3 views)". Typed values that are not presets
-show as a checked, disabled first item. Cancel appears only while running. Bake drawing / Bake one ▸
-are enabled only with a complete drawing. Bake, Bake one, Clear drawing cache and (until wired)
-Cancel raise events and show a remark when nothing is subscribed. Copy info copies the Info output;
-Copy settings as text uses `Settings.CopyEditorAsText`. Preview ▸ only redraws.
-
-View param: Named views ▸ (multi-check, active doc), Clipping planes ▸ (named), Directions ▸,
-All named views, All clipping planes, Pick clipping planes in Rhino… (unique name, else object id),
-Capture active view as named view… (`M2D 01`…, refuses perspective), Clear. All greyed with a wire.
-Choices are persistent `GH_String` values; other persistent goo is kept.
+Component: Validate views · Flip view direction · Create view from current viewport · Select view objects
+(Double-click) │ Bake … │ Run … │ setting toggles (menu defaults) · Reset menu defaults │ Preview ▸ (View frames ✓ …) ·
+Output tree │ Copy info · Copy settings as text (menu + view objects, with headers) · Clear drawing cache. Scale ▸ has
+the five presets (other values via text) and the preset widths as its tooltip.
+View param: Pick views in Rhino… · Validate views · Flip view direction · Create view from current viewport │ Named
+views ▸ · Clipping planes ▸ · Directions ▸ · All named views · All clipping planes │ Clear (texts and references).
+Choosing is greyed while wired; the view-object commands still work on wired references.
 
 ### Persistence
-`GH_IWriter.SetString("M2DPlus.UiState", json)`. Example: `{"v":1,"all":{"hidden":"off"},
-"views":{"text:section a":{"depth":"40 m"}},"auto":false}`. Results are never stored.
-
-## Hook-up (merge these by hand)
-
-Two lines change in existing files; everything else is new.
-
-`src/M2DPlus.Grasshopper/DrawingComponent.cs`, `RegisterInputParams` (line 23): replace
-`p.AddGenericParameter("View", "V", …, GH_ParamAccess.list);` with
-```csharp
-p.AddParameter(new UI.ViewParam(), "View", "V", "<same description>", GH_ParamAccess.list);
-```
-`ViewParam` derives from `Param_GenericObject`, so saved definitions, casts and `ClearData` checks still work.
-
-`src/M2DPlus.Grasshopper/DrawingComponent.Async.cs`, `SolveDrawing`, directly after `if (_started) return;` (line 43):
-```csharp
-if (!Ui.ShouldStart()) { Message = "Paused · out of date"; return; }
-```
-
-`UI/DrawingComponent.Ui.cs` (new, same partial class) adds `Ui`, `CreateAttributes`,
-`AppendAdditionalComponentMenuItems`, `Write`, `Read`, wires **Cancel** to `Invalidate()` and supplies
-`UiRuntime()`, which reads `_drawing`, `_error`, `_started`, `_progress`/`_progressSync` and
-`Message == "Cancelled"`. If M1b renames those fields or adds any of these overrides, merge there.
-
-Still for the component to wire (not done here, to stay out of M1b's files):
-- `Settings.Resolve(views, branches, units, Ui.EditorSettings)` (replaces the M1a `Settings.Parse`).
-- `Ui.Context = () => new UiContext(realContexts, sortedBranches, units)` once views resolve, so rows
-  use real identities/names/sources. Until then `DrawingUi.FallbackContext` uses `text:<lower text>`
-  or `index:<i>` identities — rows keyed differently later appear as "unused" and can be removed.
-- `Ui.BakeRequested` / `Ui.ClearCacheRequested` when bake and the side cache exist; `Ui.RunRequested`
-  only if Run needs more than the built-in gate.
-- `Ui.ReadProblem` as a Remark during solve (a newer or unreadable stored state).
+`GH_IWriter.SetString("M2DPlus.UiState", json)`, e.g. `{"v":1,"all":{"hidden":"off"},"auto":false}`. A definition
+saved with four inputs reads into five (the licensed test unregisters Depth, saves, and reads into a new component).
 
 ## Tests
 
-- `tests/M2DPlus.Grasshopper.Tests` (new, in the solution, no licence; 42 tests): persistence round
-  trip incl. unknown/future data and corrupt input, precedence presentation and locks, editor session
-  (validation, locks, reset, apply/revert/rebase, Copy as text → Settings input reproduces every
-  value), component and View menu models, footer button and progress mapping. It loads the `.gha`
-  through a module-initializer resolver because a `.gha` cannot sit in the runtime's trusted list.
-  The pre-commit hook still runs Core tests only; add this project there if wanted.
-- `tests/M2DPlus.Rhino.Tests/GrasshopperUiTests.cs` (licensed, opt-in): attributes and View param
-  types, View menu toggles, menu building, one-step GH undo, Run automatically gate, `.gh` write →
-  reopen round trip of editor state and View texts, canvas render in two skins, editor opened on
-  Rhino's Eto platform with locks. Full licensed suite (48) passes on .NET 8 and .NET 10 hosts.
+- `tests/M2DPlus.Core.Tests/DepthPrecedenceTests.cs` (no licence): Depth > Settings > auto, units, one-for-all /
+  one-per-view / wrong count / bad values, Box geometry wins over all four sources with one remark, per-key
+  precedence input > view object > menu > default with descriptions.
+- `tests/M2DPlus.Grasshopper.Tests` (no licence; 40): persistence incl. the removed `views` rows, view-object rows
+  joining the menu row, menu order (no editor items), view-command enabling, Reset, Scale presets, input locks and
+  "(set on n of m view objects)", Depth reaching the presentation, catalogue values parse.
+- `tests/M2DPlus.Rhino.Tests/ViewObjectTests.cs` (licensed, opt-in): Establish on good/bent/parallelogram/triangle/
+  disc/polysurface/sliver/open inputs and on trimmed rectangles (split edge, rotated, cut from a 100 m plane);
+  build/read round trip and Box-equivalent parse; in-place conversion keeps the id, re-types the GH reference, writes
+  defaults, and **one Rhino undo** restores surface and attributes; Surface-wire refusal; user text never
+  overwritten; Flip (front face kept, extends to the other side, not mirrored, undo); Create view from a parallel
+  viewport (geometry builder, name, layer, reference, undo, perspective refusal); component Depth input on Plane and
+  Rectangle views with independently placed boxes (far box present at auto, absent at 4 m, Depth beats Settings,
+  unit conversion, wrong count); Box and view box geometry win with a remark; precedence end to end and a re-solve
+  after a user-text edit; preview geometry.
+- `GrasshopperUiTests` (licensed): five inputs and their access, editor gone, menus, undo, `.gh` round trip, 4-input
+  definition upgrade, canvas render in two skins.
+
+Headless Rhino raises **no** object-modify/replace events (measured), so the event → re-run path relies on the M1a
+document watch and is an interactive check; the test re-solves explicitly to prove nothing stale is reused.
 
 ## Not in this slice
-Hover tooltip on S with effective settings per view; Esc-to-cancel on the canvas; preview layer
-rendering (only the toggles are stored); cache size in the menu.
+Applying farclip/beyond/fade/hidden/… to the engine (resolved and reported only); hover tooltip on inputs; Esc to
+cancel on the canvas; preview of drawing layers; interactive checks that a gumball drag of a view box's back face
+keeps it an `Extrusion` in Rhino 8, and of the Wireframe display override.

@@ -5,14 +5,15 @@ using M2DPlus.Core;
 namespace M2DPlus.Grasshopper.UI.Model;
 
 /// <summary>Compact, versioned JSON stored in the .gh (one GH string item). Defaults are omitted.
-/// Version 1 layout: {"v":1,"all":{key:text},"views":{identity:{key:text}},"auto":false,"preview":[...]}.
-/// Unknown row keys, unknown preview names and unknown top-level properties are preserved verbatim,
-/// so a definition saved by a newer M2D+ keeps its data through an edit in this version.</summary>
+/// Version 1 layout: {"v":1,"all":{key:text},"auto":false,"preview":[...]}; "all" holds the menu defaults.
+/// Unknown row keys, unknown preview names and unknown top-level properties are preserved verbatim, so a
+/// definition saved by another M2D+ version keeps its data through an edit in this version. (The removed
+/// editor's per-view "views" rows from pre-release builds are kept that way too, unused.)</summary>
 public static class UiStateSerializer
 {
     public const int CurrentVersion = 1;
     public const string ChunkName = "M2DPlus.UiState";
-    private static readonly string[] Known = ["v", "all", "views", "auto", "preview"];
+    private static readonly string[] Known = ["v", "all", "auto", "preview"];
 
     public static string Write(ComponentUiState state)
     {
@@ -21,13 +22,7 @@ public static class UiStateSerializer
         {
             json.WriteStartObject();
             json.WriteNumber("v", CurrentVersion);
-            if (state.AllViews.Values.Count > 0) { json.WritePropertyName("all"); WriteRow(json, state.AllViews); }
-            if (state.Views.Count > 0)
-            {
-                json.WriteStartObject("views");
-                foreach (var (identity, row) in state.Views) { json.WritePropertyName(identity); WriteRow(json, row); }
-                json.WriteEndObject();
-            }
+            if (state.Menu.Values.Count > 0) { json.WritePropertyName("all"); WriteRow(json, state.Menu); }
             if (!state.AutoRun) json.WriteBoolean("auto", false);
             if (!state.Preview.SetEquals(PreviewLayers.Default))
             {
@@ -69,9 +64,6 @@ public static class UiStateSerializer
             var version = root.TryGetProperty("v", out var v) && v.TryGetInt32(out var number) ? number : 0;
             if (version < 1) throw new FormatException("Missing version.");
             var all = root.TryGetProperty("all", out var a) ? ReadRow(a) : SettingsRow.Empty;
-            var views = new List<KeyValuePair<string, SettingsRow>>();
-            if (root.TryGetProperty("views", out var vs) && vs.ValueKind == JsonValueKind.Object)
-                foreach (var view in vs.EnumerateObject()) views.Add(new(view.Name, ReadRow(view.Value)));
             var auto = !root.TryGetProperty("auto", out var r) || r.ValueKind != JsonValueKind.False;
             IEnumerable<string>? preview = null;
             if (root.TryGetProperty("preview", out var p) && p.ValueKind == JsonValueKind.Array)
@@ -79,12 +71,12 @@ public static class UiStateSerializer
             var extras = root.EnumerateObject().Where(o => !Known.Contains(o.Name))
                 .Select(o => KeyValuePair.Create(o.Name, o.Value.GetRawText())).ToArray();
             if (version > CurrentVersion)
-                problem = $"These editor settings were saved by a newer M2D+ (format {version}). Values this version understands are used; the rest are kept.";
-            return new(all, views, auto, preview, extras);
+                problem = $"These settings were saved by a newer M2D+ (format {version}). Values this version understands are used; the rest are kept.";
+            return new(all, auto, preview, extras);
         }
         catch (Exception e) when (e is JsonException or FormatException or InvalidOperationException or ArgumentException)
         {
-            problem = "The stored editor settings could not be read, so defaults are used: " + e.Message;
+            problem = "The stored menu settings could not be read, so defaults are used: " + e.Message;
             return ComponentUiState.Default;
         }
     }

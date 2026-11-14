@@ -1,7 +1,9 @@
 # M3 Core API and adapter contract
 
 Implemented against UX revision 3, REQUIREMENTS and PLAN. This slice contains pure
-immutable values and decisions only. It does not connect the editor, preview,
+immutable values and decisions only. (UX rev. 4 removed the editor: `EditorSettings.AllViews` is now the
+component menu row and per-view rows come from view objects' `m2d.*` user text; a Depth input list and the
+Box-geometry-wins rule were added to `Settings.Resolve`. See [gh-ui.md](gh-ui.md).) It does not connect the editor, preview,
 Rhino clipping, or bake mutation. `Settings.Parse` and both original distance
 parsing signatures remain compatible; the typed entry point is `Settings.Resolve`.
 The existing numeric identities of Visible, Hidden and Unresolved are preserved;

@@ -6,75 +6,73 @@ namespace M2DPlus.Grasshopper.Tests;
 
 public sealed class PresentationTests
 {
-    internal static readonly ViewSettingsContext A = new("text:section a", "Section A", ViewSourceKind.Rectangle, true, 50, .001);
+    internal static readonly ViewSettingsContext A = new("object:a", "Section A", ViewSourceKind.Box, true, 50, .001, 12);
     internal static readonly ViewSettingsContext B = new("text:section b", "Section B", ViewSourceKind.Rectangle, true, 50, .001);
     internal static UiContext Context(params string[][] branches) => new([A, B], branches, DocumentUnits.Metres);
+    private static SettingsRow Row(params (string Key, string Value)[] values) => new(values.Select(v => KeyValuePair.Create(v.Key, v.Value)));
 
     [Fact]
-    public void PrecedenceIsInputThenViewRowThenAllViewsThenDefault()
+    public void MenuShowsItsOwnValueOrTheDefault()
     {
-        var state = ComponentUiState.Default.With("*", "hidden", "off").With(A.Identity, "depth", "40 m");
-        var view = new SettingsPresentation(state, Context());
-        var depthA = view.Field(A.Identity, "depth");
-        Assert.Equal(("40 m", FieldOrigin.Row, ""), (depthA.Text, depthA.Origin, depthA.Note));
-        var depthB = view.Field(B.Identity, "depth");
-        Assert.Equal(("auto", FieldOrigin.Default, ""), (depthB.Text, depthB.Origin, depthB.Note));
-        var hiddenB = view.Field(B.Identity, "hidden");
-        Assert.Equal(("off", FieldOrigin.AllViews, "as All views"), (hiddenB.Text, hiddenB.Origin, hiddenB.Note));
-        Assert.True(hiddenB.IsInherited);
-
-        var wired = new SettingsPresentation(state, Context(["depth = 8 m"]));
-        var locked = wired.Field(A.Identity, "depth");
-        Assert.True(locked.Locked);
-        Assert.Equal("8", locked.Text); // Core's authored text, in document units
-        Assert.Equal("set by input", locked.Note);
-        Assert.Equal("40 m", locked.RowText); // the editor value is kept, only overridden
-        Assert.True(wired.Field("*", "depth").Locked);
+        var view = new SettingsPresentation(ComponentUiState.Default.With("hidden", "off"), Context());
+        var hidden = view.Field("hidden");
+        Assert.Equal(("off", FieldOrigin.Menu, "off", ""), (hidden.Text, hidden.Origin, hidden.MenuText, hidden.Note));
+        var seams = view.Field("seams");
+        Assert.Equal(("off", FieldOrigin.Default, null), (seams.Text, seams.Origin, seams.MenuText));
     }
 
     [Fact]
-    public void AllViewsRowLocksOnlyWhenEveryViewIsSetByInput()
+    public void InputLocksOnlyWhenEveryViewIsSetByInput()
     {
         var partial = new SettingsPresentation(ComponentUiState.Default, Context(["[#1]", "hidden = off"]));
-        var all = partial.Field("*", "hidden");
-        Assert.False(all.Locked);
-        Assert.Equal("set by input for 1 of 2 views", all.Note);
-        Assert.False(partial.Field(A.Identity, "hidden").Locked);
-        Assert.True(partial.Field(B.Identity, "hidden").Locked);
+        var some = partial.Field("hidden");
+        Assert.False(some.Locked);
+        Assert.Equal("set by input for 1 of 2 views", some.Note);
+
+        var all = new SettingsPresentation(ComponentUiState.Default.With("hidden", "on"), Context(["hidden = off"]));
+        var locked = all.Field("hidden");
+        Assert.True(locked.Locked);
+        Assert.Equal("off", locked.Text);
+        Assert.Equal("on", locked.MenuText); // the menu value is kept, only overridden
 
         var perView = new SettingsPresentation(ComponentUiState.Default, Context(["hidden = off"], ["hidden = on"]));
-        var varies = perView.Field("*", "hidden");
+        var varies = perView.Field("hidden");
         Assert.True(varies.Locked);
         Assert.Equal("Varies by view", varies.Display);
     }
 
     [Fact]
-    public void TableShowsDotsForInheritanceAndMarksInput()
+    public void ViewObjectOverridesAreReportedButNeverLock()
     {
-        var state = ComponentUiState.Default.With(A.Identity, "farclip", "line").With("*", "scale", "1:200");
-        var view = new SettingsPresentation(state, Context(["fade = on"]));
-        Assert.Equal("Clip with line", view.Cell(A.Identity, "farclip"));
-        Assert.Equal("·", view.Cell(B.Identity, "farclip"));
-        Assert.Equal("Clip without line", view.Cell("*", "farclip"));
-        Assert.Equal("1:200", view.Cell("*", "scale"));
-        Assert.Equal("On (input)", view.Cell(B.Identity, "fade"));
+        var context = Context() with { ViewRows = new Dictionary<string, SettingsRow> { [A.Identity] = Row(("fade", "on")) } };
+        var view = new SettingsPresentation(ComponentUiState.Default, context);
+        var fade = view.Field("fade");
+        Assert.False(fade.Locked);
+        Assert.Equal("set on 1 of 2 view objects", fade.Note);
+        Assert.Equal("Depth cueing (set on 1 of 2 view objects)", ComponentMenu.Toggle(view, "Depth cueing", "fade").Label);
+        Assert.True(view.Resolution!.Views[0].Fade);
+        Assert.False(view.Resolution.Views[1].Fade);
+
+        var everywhere = new SettingsPresentation(ComponentUiState.Default, Context() with
+        { ViewRows = new Dictionary<string, SettingsRow> { [A.Identity] = Row(("cuts", "merge")), [B.Identity] = Row(("cuts", "merge")) } });
+        Assert.Equal(FieldOrigin.ViewObjects, everywhere.Field("cuts").Origin);
+        Assert.Equal("set on every view object", everywhere.Field("cuts").Note);
     }
 
     [Fact]
-    public void RowsAreAllViewsThenViewsThenUnused()
+    public void DepthInputReachesTheResolutionAndBoxesKeepTheirDepth()
     {
-        var state = ComponentUiState.Default.With("text:gone", "depth", "3 m");
-        var rows = new SettingsPresentation(state, Context()).Rows;
-        Assert.Equal(["*", A.Identity, B.Identity, "text:gone"], rows.Select(r => r.Identity));
-        Assert.Equal([RowKind.AllViews, RowKind.View, RowKind.View, RowKind.Unused], rows.Select(r => r.Kind));
-        Assert.Equal("Rectangle · cuts", rows[1].Source);
+        var view = new SettingsPresentation(ComponentUiState.Default, Context() with { Depth = ["8 m"] });
+        Assert.Equal(12, view.Resolution!.Views[0].Depth);
+        Assert.Equal(8, view.Resolution.Views[1].Depth);
+        Assert.Contains(view.Resolution.Diagnostics, d => d.Severity == DiagnosticSeverity.Remark && d.ViewIndex == 0);
     }
 
     [Fact]
     public void BadInputBranchCountLocksNothing()
     {
         var view = new SettingsPresentation(ComponentUiState.Default, Context(["hidden = off"], ["hidden = off"], ["hidden = off"]));
-        Assert.False(view.Field(A.Identity, "hidden").Locked);
+        Assert.False(view.Field("hidden").Locked);
     }
 
     [Theory]
@@ -99,11 +97,13 @@ public sealed class PresentationTests
     [Fact]
     public void EveryCatalogFieldIsACoreKeyAndEveryOptionParses()
     {
-        var session = new EditorSession(ComponentUiState.Default, Context());
+        var probe = new ViewSettingsContext("p", "P", ViewSourceKind.Plane, true, 1, .001);
         foreach (var field in SettingsCatalog.Fields)
         {
             Assert.Contains(field.Key, Settings.Keys);
-            foreach (var option in field.Options) Assert.Null(session.Validate(field.Key, option.Value));
+            foreach (var option in field.Options)
+                Assert.Empty(Settings.Resolve([probe], [[$"{field.Key} = {option.Value}"]], DocumentUnits.Metres).Diagnostics
+                    .Where(d => d.Severity != DiagnosticSeverity.Remark));
             Assert.NotNull(SettingsPresentation.DefaultText(field.Key));
         }
     }

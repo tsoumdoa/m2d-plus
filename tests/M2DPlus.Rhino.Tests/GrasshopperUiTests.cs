@@ -15,7 +15,7 @@ using Xunit;
 namespace M2DPlus.Rhino.Tests;
 
 /// <summary>GH UI layer in a real (headless) Grasshopper: attributes, menus, undo, .gh round trip and rendering.
-/// Set M2D_UI_SCREENSHOTS to a folder to also write PNGs of the canvas, menu and editor.</summary>
+/// Set M2D_UI_SCREENSHOTS to a folder to also write PNGs of the canvas and menus.</summary>
 [Collection("Rhino")]
 [Trait("Category", "RhinoIntegration")]
 public sealed class GrasshopperUiTests(RhinoHost host)
@@ -47,7 +47,10 @@ public sealed class GrasshopperUiTests(RhinoHost host)
         Assert.Equal("DrawingAttributes", component.Attributes.GetType().Name);
         Assert.Equal("ViewParam", component.Params.Input[1].GetType().Name);
         Assert.IsAssignableFrom<Param_GenericObject>(component.Params.Input[1]);
-        Assert.Equal((4, 9), (component.Params.Input.Count, component.Params.Output.Count));
+        Assert.Equal((5, 9), (component.Params.Input.Count, component.Params.Output.Count));
+        Assert.Equal(["G", "V", "T", "S", "D"], component.Params.Input.Select(p => p.NickName));
+        Assert.Equal(GH_ParamAccess.list, component.Params.Input[4].Access);
+        Assert.True(component.Params.Input[4].Optional);
         dynamic ui = ((dynamic)component).Ui;
 
         // View input menu: multi-check text values, case-insensitive toggle.
@@ -61,18 +64,29 @@ public sealed class GrasshopperUiTests(RhinoHost host)
             Assert.True(directions.DropDownItems.OfType<ToolStripMenuItem>().Single(i => i.Text == "SW").Checked);
         }
 
-        // Component menu toggles edit the All views row; the editor rows and unknown keys persist.
+        // Component menu toggles edit the menu defaults; unknown keys persist. There is no editor any more.
         ui.Execute("set:hidden=off", false);
         ui.Execute("set:farclip=line", false);
-        ui.Commit(ui.State.With("text:sw", "depth", "40 m").With("*", "future.key", "kept"), "test", false);
+        ui.Commit(ui.State.With("future.key", "kept"), "test", false);
+        Assert.Null(component.GetType().GetMethod("OpenEditor"));
+        Assert.Null(((object)ui).GetType().GetMethod("OpenEditor"));
         using (var menu = new ContextMenuStrip())
         {
             ui.AppendMenuItems(menu);
-            var hidden = menu.Items.OfType<ToolStripMenuItem>().Single(i => i.Text == "Hidden lines");
+            var items = menu.Items.OfType<ToolStripMenuItem>().ToArray();
+            Assert.DoesNotContain(items, i => i.Text!.Contains("settings…", StringComparison.Ordinal));
+            Assert.Contains(items, i => i.Text == "Validate views");
+            var hidden = items.Single(i => i.Text == "Hidden lines");
             Assert.False(hidden.Checked);
-            var far = menu.Items.OfType<ToolStripMenuItem>().Single(i => i.Text == "Far clip");
+            var far = items.Single(i => i.Text == "Far clip");
             Assert.True(far.DropDownItems.OfType<ToolStripMenuItem>().Single(i => i.Text == "Clip with line").Checked);
             SaveMenu(menu, "menu.png");
+        }
+        using (var viewMenu = new ContextMenuStrip())
+        {
+            view.AppendAdditionalMenuItems(viewMenu);
+            Assert.Contains(viewMenu.Items.OfType<ToolStripMenuItem>(), i => i.Text == "Pick views in Rhino…");
+            SaveMenu(viewMenu, "view-menu.png");
         }
 
         // One GH undo record per change, restored through Write/Read.
@@ -112,11 +126,31 @@ public sealed class GrasshopperUiTests(RhinoHost host)
             Assert.Equal(["SW"], ViewTexts(again));
             Assert.Equal("ViewParam", again.Params.Input[1].GetType().Name);
             Assert.Null(((dynamic)again).Ui.ReadProblem);
+
+            // A definition saved before the Depth input existed (4 inputs) still reads, and Depth is added empty.
+            var legacy = new GH_Archive();
+            using (var old = new GH_Document())
+            {
+                var four = NewComponent(old, 0, 0);
+                four.Params.UnregisterInputParameter(four.Params.Input[4]);
+                ((dynamic)four.Params.Input[1]).SetTexts(new[] { "Front" }, "test");
+                Assert.True(legacy.AppendObject(old, "Definition"));
+            }
+            var legacyObjects = legacy.GetRootNode.FindChunk("Definition").FindChunk("DefinitionObjects");
+            var legacySaved = Enumerable.Range(0, legacyObjects.GetInt32("ObjectCount")).Select(i => legacyObjects.FindChunk("Object", i))
+                .Single(o => o.GetGuid("GUID") == component.ComponentGuid);
+            using var upgraded = new GH_Document();
+            var five = NewComponent(upgraded, 0, 0);
+            Assert.True(five.Read(legacySaved.FindChunk("Container")));
+            Assert.Equal(5, five.Params.Input.Count);
+            Assert.Equal(["Front"], ViewTexts(five));
+            Assert.Equal("Depth", five.Params.Input[4].Name);
+            Assert.Equal(0, five.Params.Input[4].SourceCount);
         }
         finally { File.Delete(path); }
     });
 
-    [RhinoFact] public void CanvasAndEditorRender() => host.Run(() =>
+    [RhinoFact] public void CanvasRender() => host.Run(() =>
     {
         Assert.True(global::Rhino.PlugIns.PlugIn.LoadPlugIn(GrasshopperId));
         using var rhino = RhinoDoc.CreateHeadless(null);
@@ -125,25 +159,25 @@ public sealed class GrasshopperUiTests(RhinoHost host)
         // Only the UI is rendered: keep wiring from starting solutions (and their collection warnings).
         GH_Document.EnableSolutions = false;
         using var restore = new Restore(() => GH_Document.EnableSolutions = true);
-        var states = new (string Caption, string Message, string Phase, double? Fraction, bool Values)[]
+        var states = new (string Caption, string Message, string Phase, double? Fraction)[]
         {
-            ("Done · Bake", "Section A · 2.1 s", "Done", null, true),
-            ("Drawing · Cancel", "Drawing 3/6 · 72 %", "Running", .72, true),
-            ("Reading (indeterminate)", "Reading 50,210 objects", "Running", null, false),
-            ("Paused · Run", "Paused · out of date", "Paused", null, false),
-            ("Cancelled · Run", "Cancelled", "Cancelled", null, false),
-            ("No view", "Pick a view", "Idle", null, false),
+            ("Done · Bake", "Section A · 2.1 s", "Done", null),
+            ("Drawing · Cancel", "Drawing 3/6 · 72 %", "Running", .72),
+            ("Reading (indeterminate)", "Reading 50,210 objects", "Running", null),
+            ("Paused · Run", "Paused · out of date", "Paused", null),
+            ("Cancelled · Run", "Cancelled", "Cancelled", null),
+            ("No view", "Pick a view", "Idle", null),
         };
         var components = new List<GH_Component>();
         for (var i = 0; i < states.Length; i++)
         {
-            var (caption, message, phase, fraction, values) = states[i];
-            var x = 140 + i % 3 * 230f; var y = 90 + i / 3 * 260f;
+            var (caption, message, phase, fraction) = states[i];
+            var x = 140 + i % 3 * 230f; var y = 90 + i / 3 * 270f;
             var component = NewComponent(document, x, y);
+            Assert.Equal(5, component.Params.Input.Count);
             dynamic ui = ((dynamic)component).Ui;
             SetProperty(ui, "Runtime", Constant(UiType("Model.DrawingRuntime"),
                 Activator.CreateInstance(UiType("Model.DrawingRuntime"), Enum.Parse(UiType("Model.DrawingPhase"), phase), fraction)!));
-            if (values) ui.Commit(ui.State.With("*", "scale", "1:200"), "test", false);
             if (phase != "Idle")
             {
                 // A real view, with Run automatically off so the render never starts a job.
@@ -152,15 +186,21 @@ public sealed class GrasshopperUiTests(RhinoHost host)
             }
             var scribble = new GH_Scribble { Text = caption, Font = new Font("Segoe UI", 11, FontStyle.Bold) };
             scribble.CreateAttributes();
-            scribble.Attributes.Pivot = new PointF(x - 70, y - 110);
+            scribble.Attributes.Pivot = new PointF(x - 70, y - 115);
             document.AddObject(scribble, false);
             components.Add(component);
         }
-        var panel = new GH_Panel { UserText = "hidden = off" };
-        panel.CreateAttributes();
-        panel.Attributes.Pivot = new PointF(-200, 110);
-        document.AddObject(panel, false);
-        components[0].Params.Input[3].AddSource(panel);
+        GH_Panel Panel(string text, float y)
+        {
+            var panel = new GH_Panel { UserText = text };
+            panel.CreateAttributes();
+            panel.Attributes.Bounds = new RectangleF(-40, y, 110, 22);
+            panel.Attributes.Pivot = new PointF(-40, y);
+            document.AddObject(panel, false);
+            return panel;
+        }
+        components[0].Params.Input[3].AddSource(Panel("hidden = off", 155));
+        components[0].Params.Input[4].AddSource(Panel("8 m", 195));
         // The canvas solves the definition once when attached. V is required, so GH warns "failed to collect data"
         // and the job sets its own message. Keep that warning on the last ("No view") example only and show each
         // example's state text.
@@ -176,38 +216,6 @@ public sealed class GrasshopperUiTests(RhinoHost host)
         var saved = DarkSkin();
         try { RenderCanvas(document, "canvas-dark.png", Settle); }
         finally { saved(); }
-
-        // The editor, with realistic contexts and a wired Settings input that locks Hidden lines.
-        dynamic editorUi = ((dynamic)components[0]).Ui;
-        var views = new[]
-        {
-            new ViewSettingsContext("text:section a", "Section A", ViewSourceKind.Rectangle, true, 52, .001),
-            new ViewSettingsContext("text:section b", "Section B", ViewSourceKind.Rectangle, true, 52, .001),
-            new ViewSettingsContext("text:south elevation", "South elevation", ViewSourceKind.Rectangle, false, 60, .001),
-        };
-        var context = Activator.CreateInstance(UiType("Model.UiContext"), views, new[] { new[] { "hidden = off" } }, DocumentUnits.Metres)!;
-        SetProperty(editorUi, "Context", Constant(UiType("Model.UiContext"), context));
-        editorUi.Commit(editorUi.State.ClearRow("*").With("*", "scale", "1:100")
-            .With("text:section a", "depth", "40 m").With("text:section a", "farclip", "line").With("text:section a", "fade", "on")
-            .With("text:section a", "fade.start", "10 %").With("text:section a", "fade.end", "90 %").With("text:section a", "fade.limit", "25 %")
-            .With("text:south elevation", "depth", "60 m").With("text:south elevation", "beyond", "off")
-            .With("text:south elevation", "fade", "on").With("text:south elevation", "scale", "1:200"), "test", false);
-        dynamic form = editorUi.CreateEditor();
-        try
-        {
-            form.Location = new Eto.Drawing.Point(-20000, -20000);
-            form.Show();
-            form.SelectRow("text:section a");
-            Pump();
-            Assert.Equal("text:section a", (string)form.Session.Selected);
-            Assert.True((bool)form.Session.Field("hidden").Locked);
-            AssertLaidOut((System.Windows.Window)form.ControlObject);
-            form.SelectRow("*");
-            Pump();
-            Assert.Equal("Reset to defaults", (string)form.Session.ResetLabel);
-        }
-        finally { form.Close(); Pump(); }
-        Assert.Null(editorUi.Editor);
     });
 
     private sealed class Restore(Action action) : IDisposable { public void Dispose() => action(); }
@@ -215,17 +223,6 @@ public sealed class GrasshopperUiTests(RhinoHost host)
     private static Delegate Constant(Type type, object value) =>
         Expression.Lambda(typeof(Func<>).MakeGenericType(type), Expression.Constant(value, type)).Compile();
     private static void SetProperty(object target, string name, object value) => target.GetType().GetProperty(name)!.SetValue(target, value);
-
-    private static void Pump()
-    {
-        for (var i = 0; i < 20; i++)
-        {
-            RhinoApp.Wait();
-            System.Windows.Forms.Application.DoEvents();
-            System.Windows.Threading.Dispatcher.CurrentDispatcher.Invoke(() => { }, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
-            Thread.Sleep(10);
-        }
-    }
 
     private static void RenderCanvas(GH_Document document, string file, Action settle)
     {
@@ -282,14 +279,5 @@ public sealed class GrasshopperUiTests(RhinoHost host)
             image.Save(Path.Combine(folder, file), ImageFormat.Png);
         }
         finally { menu.Close(); }
-    }
-
-    /// <summary>The editor opened inside Rhino on Rhino's Eto.Wpf platform and laid out. Pixels are captured by
-    /// tools/EditorPreview instead: WPF composes nothing in a windowless or disconnected session.</summary>
-    private static void AssertLaidOut(System.Windows.Window window)
-    {
-        window.UpdateLayout();
-        Assert.True(window.IsLoaded && window.ActualWidth > 600 && window.ActualHeight > 500, $"Editor window measured {window.ActualWidth}×{window.ActualHeight}");
-        Assert.NotNull(window.Background); // Rhino's own theme (UseRhinoStyle) was applied
     }
 }
