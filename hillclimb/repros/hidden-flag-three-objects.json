@@ -1,0 +1,50 @@
+{
+  "schema": 1,
+  "rhino": "8.36.26296.17001",
+  "runtime": "8.0.34",
+  "multipleThreads": false,
+  "absoluteTolerance": 0.0001,
+  "flatten": false,
+  "tangents": false,
+  "seams": false,
+  "frame": {
+    "origin": [
+      9,
+      12.30174834974332,
+      3
+    ],
+    "x": [
+      -1,
+      0,
+      0
+    ],
+    "y": [
+      0,
+      0,
+      1
+    ],
+    "sceneBounds": [
+      0,
+      -4,
+      -0.25,
+      18.10710678118655,
+      12.049999999999999,
+      6.7
+    ]
+  },
+  "frustum": [
+    -23.1,
+    23.1,
+    -23.1,
+    23.1
+  ],
+  "targetSource": "d2a24b27-93f2-5586-b3b4-de46dbdfd55b/f9baeae2-d1db-5de3-9ea8-67dbd27be1ba/c62e93de-b4f3-57dc-a293-ee7e8308c037",
+  "expected": {
+    "hiddenOnVisibleSpanLength": 0.017177348994127987,
+    "hiddenOffMissingSpanLength": 0.017177348994127987,
+    "sourceComponentType": "BrepEdge",
+    "sourceComponentIndex": 26
+  },
+  "fixtureSha256": "b3a4458db4ec50c146f4cd71b29ec085155b02e7f198a0cf48dce413da9ad36a",
+  "note": "Negative native regression: should not switch default to hidden-off. Plain world-space owned geometry, no blocks, no source model needed."
+}
