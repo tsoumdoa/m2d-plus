@@ -31,9 +31,9 @@ public static class VisibilityLoci
         if (!double.IsFinite(tolerance) || tolerance <= 0) throw new ArgumentOutOfRangeException(nameof(tolerance));
         if (loci.Count == 0) return [];
         double cx = loci[0].X0, cy = loci[0].Y0;
-        double extent = Math.Max(1, loci.Max(l => Math.Max(Math.Max(Math.Abs(l.X0 - cx), Math.Abs(l.Y0 - cy)),
+        double extent = Math.Max(tolerance, loci.Max(l => Math.Max(Math.Max(Math.Abs(l.X0 - cx), Math.Abs(l.Y0 - cy)),
             Math.Max(Math.Abs(l.X1 - cx), Math.Abs(l.Y1 - cy)))));
-        double step = Math.Max(tolerance * .1, 1e-10), angle = step / extent;
+        double step = Math.Max(tolerance * .1, double.Epsilon), angle = step / extent;
         var buckets = new Dictionary<(bool, long, long), List<Group>>(); var groups = new List<Group>();
         // A stable order makes duplicate ownership independent of extraction order.
         foreach (var l in loci.OrderBy(l => l.Source, StringComparer.Ordinal).ThenBy(l => l.X0).ThenBy(l => l.Y0))

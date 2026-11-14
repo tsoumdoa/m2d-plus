@@ -47,7 +47,7 @@ public static class EdgeFaceKernel
             {
                 if ((localTests++ & 255) == 0) token.ThrowIfCancellationRequested();
                 var f = prepared[fi];
-                List<(double A, double B)> pieces;
+                IReadOnlyList<(double A, double B)> pieces;
                 try
                 {
                     if (f.Filtered is null) throw new IndeterminateException();
@@ -59,8 +59,7 @@ public static class EdgeFaceKernel
                     try { pieces = Clip(f.Exact.Value, edge, options.DepthTolerance, token); }
                     catch (EndpointResolutionException) { unresolved = true; break; }
                 }
-                hidden.AddRange(pieces);
-                Merge(hidden);
+                for (int pi = 0; pi < pieces.Count; pi++) InsertHidden(hidden, pieces[pi]);
                 if (hidden.Count == 1 && hidden[0].A == 0 && hidden[0].B == 1) break;
             }
             Interlocked.Add(ref tests, localTests); Interlocked.Add(ref fallback, localExact);
@@ -77,16 +76,16 @@ public static class EdgeFaceKernel
         return new(outputs.SelectMany(x => x).ToArray(), tests, fallback, []);
     }
 
-    private static List<(double A, double B)> Clip<T>(Polygon<T> face, CandidateEdge edge, double tolerance, CancellationToken token) where T : IScalar<T>
+    private static IReadOnlyList<(double A, double B)> Clip<T>(Polygon<T> face, CandidateEdge edge, double tolerance, CancellationToken token) where T : IScalar<T>
     {
         var zero = T.From(0); var one = T.From(1);
-        var output = new List<(double, double)>();
-        if (T.Compare(face.Normal.Z, zero) == 0) return output;
+        List<(double, double)>? output = null;
+        if (T.Compare(face.Normal.Z, zero) == 0) return Array.Empty<(double, double)>();
         var a = P<T>.From(edge.A); var b = P<T>.From(edge.B); var delta = b - a;
         T Gap(P<T> p) => (face.D - P<T>.Dot(face.Normal, p)) / face.Normal.Z - T.From(tolerance);
         var g0 = Gap(a); var g1 = Gap(b);
         int s0 = T.Compare(g0, zero), s1 = T.Compare(g1, zero);
-        if (s0 <= 0 && s1 <= 0) return output;
+        if (s0 <= 0 && s1 <= 0) return Array.Empty<(double, double)>();
         var lo = zero; var hi = one;
         if (s0 <= 0) lo = g0 / (g0 - g1);
         else if (s1 <= 0) hi = g0 / (g0 - g1);
@@ -150,12 +149,30 @@ public static class EdgeFaceKernel
                 }
                 return value;
             }
-            if (inside || boundary) output.Add((EndPoint(events[i]), EndPoint(events[i + 1])));
+            if (inside || boundary) (output ??= []).Add((EndPoint(events[i]), EndPoint(events[i + 1])));
         }
-        return output;
+        return output is null ? Array.Empty<(double, double)>() : output;
     }
     private static bool Between<T>(T x, T a, T b) where T : IScalar<T> =>
         T.Compare(a, b) <= 0 ? T.Compare(x, a) >= 0 && T.Compare(x, b) <= 0 : T.Compare(x, b) >= 0 && T.Compare(x, a) <= 0;
+    private static void InsertHidden(List<(double A, double B)> spans, (double A, double B) piece)
+    {
+        double a = piece.A, b = piece.B;
+        if (b <= a) return;
+        int first = 0;
+        while (first < spans.Count && spans[first].B < a) first++;
+        int end = first;
+        while (end < spans.Count && spans[end].A <= b)
+        {
+            a = Math.Min(a, spans[end].A); b = Math.Max(b, spans[end].B); end++;
+        }
+        if (end == first) spans.Insert(first, (a, b));
+        else
+        {
+            spans[first] = (a, b);
+            if (end > first + 1) spans.RemoveRange(first + 1, end - first - 1);
+        }
+    }
     internal static void Merge(List<(double A, double B)> intervals)
     {
         intervals.Sort((a, b) => a.A.CompareTo(b.A)); int w = 0;
@@ -181,7 +198,6 @@ public static class EdgeFaceKernel
                 throw new ArithmeticException("Invalid polygon; whole view unresolved");
             Exact = new(() => new Polygon<Rational>(face));
             var all = face.Loops.SelectMany(l => l).ToArray(); Box = FilterBox.From(all); Z = all.Max(p => p.Z);
-            try { Filtered = new Polygon<Filter>(face); } catch (IndeterminateException) { }
             // Validate plane residual exactly; a failed input cannot silently cease to occlude.
             var exact = Exact.Value; var n2 = P<Rational>.Dot(exact.Normal, exact.Normal);
             var limit = Rational.From(tolerance) * Rational.From(tolerance) * n2;
@@ -189,6 +205,15 @@ public static class EdgeFaceKernel
             {
                 var residual = P<Rational>.Dot(exact.Normal, P<Rational>.From(p)) - exact.D;
                 if (Rational.Compare(residual * residual, limit) > 0) throw new ArithmeticException("Nonplanar face; whole view unresolved");
+            }
+            try { Filtered = new Polygon<Filter>(face); } catch (IndeterminateException) { }
+            if (Filtered is null)
+            {
+                try
+                {
+                    Filtered = new(face, new(Filter.FromExact(exact.Normal.X), Filter.FromExact(exact.Normal.Y), Filter.FromExact(exact.Normal.Z)), Filter.FromExact(exact.D));
+                }
+                catch (IndeterminateException) { }
             }
         }
     }
@@ -202,8 +227,10 @@ public static class EdgeFaceKernel
     {
         private sealed record Node(FilterBox Box, int[]? Faces, Node? Left, Node? Right);
         private readonly Node? _root;
+        private readonly Face[] _faces;
         public FaceTree(Face[] faces)
         {
+            _faces = faces;
             Node Build(int[] ids)
             {
                 var box = new FilterBox(ids.Min(i => faces[i].Box.X0), ids.Min(i => faces[i].Box.Y0), ids.Max(i => faces[i].Box.X1), ids.Max(i => faces[i].Box.Y1));
@@ -221,7 +248,10 @@ public static class EdgeFaceKernel
             void Walk(Node? node)
             {
                 if (node is null || !node.Box.Overlaps(box)) return;
-                if (node.Faces is not null) result.AddRange(node.Faces);
+                if (node.Faces is not null)
+                {
+                    foreach (int fi in node.Faces) if (_faces[fi].Box.Overlaps(box)) result.Add(fi);
+                }
                 else { Walk(node.Left); Walk(node.Right); }
             }
             Walk(_root);

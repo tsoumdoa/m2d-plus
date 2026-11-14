@@ -23,6 +23,11 @@ internal sealed class Polygon<T> where T : IScalar<T>
     public P<T>[][] Loops { get; }
     public P<T> Normal { get; }
     public T D { get; }
+    public Polygon(PlanarFace face, P<T> normal, T d)
+    {
+        Loops = face.Loops.Select(l => l.Select(P<T>.From).ToArray()).ToArray();
+        Normal = normal; D = d;
+    }
     public Polygon(PlanarFace face)
     {
         Loops = face.Loops.Select(l => l.Select(P<T>.From).ToArray()).ToArray();

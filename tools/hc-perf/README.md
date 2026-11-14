@@ -79,8 +79,15 @@ dotnet build tools/hc-perf -c Release
 dotnet build tools/hc-perf/reader -c Release
 $py = 'C:/Users/tomosandego/.t3/scratch/2026-11-13-i-noticed-that-make2d-in-2f66c87c/.venv/Scripts/python.exe'
 & $py -B -u tools/hc-perf/run.py --iteration 0
-# If another suite owns the Rhino mutex; native gates remain explicitly failed:
+# Kernel-only diagnostic; native gates remain explicitly failed:
 & $py -B -u tools/hc-perf/run.py --iteration 0 --licence-free
+# A2 correctness-only native cache, serial owned processes, no timing mutex:
+dotnet build tools/hc-perf -c Release -o artifacts/hc-perf/slot-bin
+& $py -B -u tools/hc-perf/native_gate.py --all
+# Scored kernel candidate against immutable native correctness evidence:
+& $py -B -u tools/hc-perf/run.py --iteration 5 --native-cache artifacts/hc-perf/native-a2
+# Later candidates can reuse exact crop truth from a passed scored iteration:
+& $py -B -u tools/hc-perf/run.py --iteration 6 --native-cache artifacts/hc-perf/native-a2 --oracle-cache artifacts/hc-perf/iteration-5
 ```
 
 The runner creates a fixed 183-row manifest: S/M/L/XL × blocks/exploded ×
@@ -94,6 +101,57 @@ are retained, including those extending beyond the tile. Native and deduplicated
 blocks/exploded comparisons use bidirectional sampled-locus coverage at model
 tolerance, at least 8 samples per interval and at most 50 mm sample spacing.
 Any unexplained disagreement or missing/capped gate fails the run.
+
+A2 changes native execution only: correctness calls run at normal priority without
+`Local\M2DPlusLocalModelSuiteRhino`, once per case, serially in owned Rhino.Inside
+processes. Views of one model can share a process; HLD calls remain serial.
+`native_gate.py` retains all 12 M/L and 153 supplemental native cases. The cache
+includes the model hash, actual Rhino/runtime/priority, complete exclusion census,
+raw native visible/hidden loci, all other native slot classifications and extracted
+planar faces/candidates. An Unset slot is not an accepted exception merely because
+of its name. Every lost sample needs evidence; unexplained samples still fail.
+
+`--native-compare` applies the documented drawing-locus union to native output;
+raw output remains intact. `--native-oracle` visits every relevant face/candidate
+pair on all disputed supports, retaining the exact reference intervals. The
+`audit_native.py` diagnostic records a witness for every failed sample. It refuses
+native exceptions if this independent reference check fails. Duplicate exceptions
+require a native Duplicate slot on the same source, XY locus and depth as a
+frontmost reference-visible candidate. They are not inferred from aggregate length.
+
+Native correctness wall duration in the owned-job watch is a guard observation,
+never a native benchmark. A2 timing references come from the owner-specified
+archived baseline; those rows contain curved geometry and are labelled mixed-native
+context. Uncut Top and XL North/SW are absent, so no matching ratio can be reported
+for them. Cut/section rows are never substituted for an uncut direction view.
+
+The exact crop-reference cache reuses expected intervals only. Every candidate
+still recomputes all 16 cropped kernel results and checks raw intervals and both
+directions of canonical locus coverage. Cache use requires a passed full source
+iteration, SHA-256 checks of all 16 reference payloads, identical owned face/edge/
+tolerance input hashes, and an oracle fingerprint covering the independent oracle,
+arithmetic and model source. Every payload records the full drawable-edge x face
+pair count; exactly point-projecting candidates produce no curve and are skipped
+by the reference. Changed inputs or oracle code recompute rational truth. Fresh,
+reuse, changed-algorithm and changed-input probes all pass under
+`artifacts/hc-perf/oracle-cache-probe/`. Timings are always freshly measured; no
+benchmark rows are reused. Worker guard failures fail both tile and rigid gates,
+even if a stale output file exists.
+
+After a complete candidate, run `python -B tools/hc-perf/decide.py N` before
+changing its source. It snapshots all five Core visibility sources, records the
+gate and primary decision, and updates the single JSONL record and hill-climb row.
+It does not restore rejected source: copy the previous winner's five `.cs` files
+from `artifacts/hc-perf/snapshots/iteration-N/`, then rebuild the reader before the
+next trial. A lower perf-only score cannot override a worse full primary.
+Use `dotnet build tools/hc-perf/reader/M2DPlus.HcPerf.Reader.csproj -c Release
+--no-restore -t:Rebuild` to reproduce its measured DLL after a solution build;
+the final A2 rebuild matches the winning engine byte-for-byte.
+After three consecutive non-improvements or eight candidates, restore the winner
+and run `python -B tools/hc-perf/report.py`. This checks the snapshot, model and
+engine hashes and complete gate inventory, then writes `final-report.json` and
+the compact tier comparison under `artifacts/hc-perf/`. All raw local evidence
+must remain available for review; no commit, push or native timing is performed.
 
 The primary is geometric-mean extraction + BVH + solve + locus-union wall time
 over nonempty planar subsets of all primary rows. Read time is reported separately.

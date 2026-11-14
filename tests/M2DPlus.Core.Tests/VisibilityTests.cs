@@ -62,6 +62,40 @@ public sealed class VisibilityTests
         Assert.Equal(loci.Sum(l => l.Length), reordered.Sum(l => l.Length), 8);
     }
     [Fact]
+    public void SubnormalProjectedAreaMustNotBeRoundedToAnEdgeOnFace()
+    {
+        // A binary64-thin polygon still has nonzero exact area. Its closed
+        // boundary occludes; coefficient seeding must certify it or fall back.
+        var points = new[] { V(0, 0), V(2, 0), V(2, double.Epsilon), V(0, double.Epsilon) };
+        CandidateEdge[] edges = [new(V(.5, 0, 0), V(1.5, 0, 0), "subnormal")];
+        foreach (var loop in new[] { points, points.AsEnumerable().Reverse().ToArray() })
+        {
+            PlanarFace[] faces = [new([loop])];
+            Compare(faces, edges);
+            var span = Assert.Single(EdgeFaceKernel.Solve(faces, edges, new(.0001)).Intervals);
+            Assert.Equal(VisibilityClass.Hidden, span.Class);
+            Assert.Equal(0, span.Start); Assert.Equal(1, span.End);
+        }
+    }
+    [Theory]
+    [InlineData(1e-137, 1e-150)]
+    [InlineData(1, 1e-13)]
+    [InlineData(1e137, 1e124)]
+    public void ScaledParallelSupportsKeepTheirSeparateVisibility(double scale, double tolerance)
+    {
+        PlanarFace[] faces = [new([[V(-scale, .5 * scale, scale), V(2 * scale, .5 * scale, scale),
+            V(2 * scale, 1.5 * scale, scale), V(-scale, 1.5 * scale, scale)]])];
+        CandidateEdge[] edges = [new(V(0, 0, 0), V(scale, 0, 0), "visible"),
+            new(V(0, scale, 0), V(scale, scale, 0), "hidden")];
+        var result = EdgeFaceKernel.Solve(faces, edges, new(tolerance));
+        Assert.Equal(VisibilityClass.Visible, Assert.Single(result.Intervals, i => i.Edge == 0).Class);
+        Assert.Equal(VisibilityClass.Hidden, Assert.Single(result.Intervals, i => i.Edge == 1).Class);
+        var loci = VisibilityLoci.Create(edges, result, tolerance);
+        Assert.Equal(2, loci.Length);
+        Assert.Single(loci, l => l.Class == VisibilityClass.Visible);
+        Assert.Single(loci, l => l.Class == VisibilityClass.Hidden);
+    }
+    [Fact]
     public void NearParallelAndLargeOffsetPredicatesMatchExactOracle()
     {
         double o = 1e9;

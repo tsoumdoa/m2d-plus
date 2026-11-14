@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Security.Cryptography;
 using System.Text.Json;
 using M2DPlus.Core.Visibility;
 using M2DPlus.Rhino.Services;
@@ -14,7 +15,7 @@ public static class Gates
     {
         using var model = File3dm.Read(path);
         double unit = RhinoMath.UnitScale(UnitSystem.Meters, model.Settings.ModelUnitSystem), tolerance = model.Settings.ModelAbsoluteTolerance;
-        var n = viewName == "North" ? Vector3d.YAxis : new Vector3d(-1, -1, 1); n.Unitize();
+        var n = viewName == "North" ? Vector3d.YAxis : viewName == "Front" ? -Vector3d.YAxis : new Vector3d(-1, -1, 1); n.Unitize();
         var x = Vector3d.CrossProduct(Vector3d.ZAxis, n); x.Unitize();
         var view = new Plane(Point3d.Origin, x, Vector3d.CrossProduct(n, x)); var scene = new PlanarExtraction();
         foreach (var l in PlanarExtraction.Leaves(model)) scene.Add(l.Geometry, l.Transform, view, tolerance, l.Source);
@@ -73,12 +74,71 @@ public static class Gates
         return JsonSerializer.Serialize(new { passed = missing.Missed + extra.Missed == 0, missing, extra });
     }
 
-    public static void Tiles(string path, string viewName, string output)
+    public static void Scene(string path, string viewName, string output)
+    {
+        using var model = File3dm.Read(path);
+        var n = viewName == "Top" ? Vector3d.ZAxis : viewName == "North" ? Vector3d.YAxis : viewName == "Front" ? -Vector3d.YAxis : new Vector3d(-1, -1, 1); n.Unitize();
+        var x = Vector3d.CrossProduct(Math.Abs(n.Z) > .99 ? Vector3d.YAxis : Vector3d.ZAxis, n); x.Unitize();
+        var view = new Plane(Point3d.Origin, x, Vector3d.CrossProduct(n, x)); var scene = new PlanarExtraction();
+        foreach (var l in PlanarExtraction.Leaves(model)) scene.Add(l.Geometry, l.Transform, view, model.Settings.ModelAbsoluteTolerance, l.Source);
+        File.WriteAllText(output, JsonSerializer.Serialize(new { scene.Faces, scene.Edges, scene.Excluded, tolerance = model.Settings.ModelAbsoluteTolerance, metersToModelUnits = RhinoMath.UnitScale(UnitSystem.Meters, model.Settings.ModelUnitSystem) }));
+    }
+
+    public static void NativeOracle(string prefix, string output)
+    {
+        using var scene = JsonDocument.Parse(File.ReadAllText(prefix + ".scene.json"));
+        var faces = scene.RootElement.GetProperty("Faces").Deserialize<PlanarFace[]>()!;
+        var edges = scene.RootElement.GetProperty("Edges").Deserialize<CandidateEdge[]>()!;
+        using var comparison = JsonDocument.Parse(File.ReadAllText(prefix + ".canonical-comparison.json"));
+        var disputed = new[] { "missing", "extra" }.SelectMany(k => comparison.RootElement.GetProperty(k)
+            .GetProperty("FailedSegments").Deserialize<Locus[]>()!).ToArray();
+        double tolerance = scene.RootElement.TryGetProperty("tolerance", out var toleranceValue) ? toleranceValue.GetDouble() : .0001;
+        bool Meets(CandidateEdge e, Locus l)
+        {
+            double dx = e.B.X - e.A.X, dy = e.B.Y - e.A.Y, length = Math.Sqrt(dx * dx + dy * dy);
+            if (length == 0) return false;
+            double Cross(double x, double y) => Math.Abs(dx * (y - e.A.Y) - dy * (x - e.A.X)) / length;
+            if (Cross(l.X0, l.Y0) > tolerance || Cross(l.X1, l.Y1) > tolerance) return false;
+            double At(double x, double y) => ((x - e.A.X) * dx + (y - e.A.Y) * dy) / length;
+            double a = At(l.X0, l.Y0), b = At(l.X1, l.Y1);
+            return Math.Max(a, b) >= -tolerance && Math.Min(a, b) <= length + tolerance;
+        }
+        var selected = edges.Where(e => disputed.Any(l => Meets(e, l))).ToArray();
+        // Conservative projected bounds only: no potentially occluding face omitted.
+        var retained = faces.Where(f =>
+        {
+            var p = f.Loops.SelectMany(l => l).ToArray();
+            double x0 = p.Min(v => v.X), x1 = p.Max(v => v.X), y0 = p.Min(v => v.Y), y1 = p.Max(v => v.Y);
+            return selected.Any(e => Math.Min(e.A.X, e.B.X) <= x1 && Math.Max(e.A.X, e.B.X) >= x0
+                && Math.Min(e.A.Y, e.B.Y) <= y1 && Math.Max(e.A.Y, e.B.Y) >= y0);
+        }).ToArray();
+        var watch = Stopwatch.StartNew();
+        var actual = EdgeFaceKernel.Solve(retained, selected, new(tolerance, 8));
+        using var limit = new CancellationTokenSource(TimeSpan.FromMinutes(10));
+        var expected = ExactVisibilityOracle.Solve(retained, selected, tolerance, limit.Token, 8);
+        var failures = new List<string>(); Bench.CheckIntervals(expected, actual, selected, tolerance, failures);
+        File.WriteAllText(output, JsonSerializer.Serialize(new { passed = failures.Count == 0, failures,
+            edges = selected.Length, faces = retained.Length, expected.FaceTests, seconds = watch.Elapsed.TotalSeconds,
+            selectedEdges = selected, oracleIntervals = expected.Intervals }));
+    }
+
+    public static string CompareNative(string a, string b, double tolerance, double spacing)
+    {
+        var raw = JsonSerializer.Deserialize<Locus[]>(File.ReadAllText(a))!;
+        var kernel = JsonSerializer.Deserialize<Locus[]>(File.ReadAllText(b))!;
+        var canonical = VisibilityLoci.Union(raw, tolerance);
+        var missing = VisibilityLoci.Compare(canonical, kernel, tolerance, spacing);
+        var extra = VisibilityLoci.Compare(kernel, canonical, tolerance, spacing);
+        return JsonSerializer.Serialize(new { passed = missing.Missed + extra.Missed == 0,
+            rawCount = raw.Length, canonicalCount = canonical.Length, nativeCanonical = canonical, missing, extra });
+    }
+
+    public static void Tiles(string path, string viewName, string output, string oracleFingerprint = "", string? referenceDirectory = null)
     {
         using var model = File3dm.Read(path);
         double unit = RhinoMath.UnitScale(UnitSystem.Meters, model.Settings.ModelUnitSystem);
         double tolerance = model.Settings.ModelAbsoluteTolerance;
-        var n = viewName == "North" ? Vector3d.YAxis : new Vector3d(-1, -1, 1); n.Unitize();
+        var n = viewName == "North" ? Vector3d.YAxis : viewName == "Front" ? -Vector3d.YAxis : new Vector3d(-1, -1, 1); n.Unitize();
         var x = Vector3d.CrossProduct(Vector3d.ZAxis, n); x.Unitize();
         var view = new Plane(Point3d.Origin, x, Vector3d.CrossProduct(n, x));
         var scene = new PlanarExtraction();
@@ -114,14 +174,35 @@ public static class Gates
             using var limit = new CancellationTokenSource(TimeSpan.FromMinutes(10));
             try
             {
-                var exact = ExactVisibilityOracle.Solve(faces, edges, tolerance, limit.Token, 8);
+                string inputSha256 = Convert.ToHexString(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(new { faces, edges, tolerance })));
+                string referenceFile = output + $".{(int)(u * 100)}-{(int)(v * 100)}.oracle-reference.json";
+                int drawableEdges = edges.Count(e => e.A.X != e.B.X || e.A.Y != e.B.Y);
+                long fullPairCount = (long)faces.Length * drawableEdges;
+                string? cachedFile = referenceDirectory is null ? null : Path.Combine(referenceDirectory, Path.GetFileName(referenceFile));
+                VisibilityResult? exact = null; bool referenceReused = false;
+                if (oracleFingerprint.Length > 0 && cachedFile is not null && File.Exists(cachedFile))
+                {
+                    using var cache = JsonDocument.Parse(File.ReadAllText(cachedFile)); var record = cache.RootElement;
+                    if (record.GetProperty("schema").GetInt32() == 1 && record.GetProperty("inputSha256").GetString() == inputSha256
+                        && record.GetProperty("oracleFingerprint").GetString() == oracleFingerprint
+                        && record.GetProperty("FaceTests").GetInt64() == fullPairCount)
+                    {
+                        exact = new(record.GetProperty("intervals").Deserialize<EdgeInterval[]>()!, record.GetProperty("FaceTests").GetInt64(), 0, []);
+                        referenceReused = true;
+                    }
+                }
+                exact ??= ExactVisibilityOracle.Solve(faces, edges, tolerance, limit.Token, 8);
+                if (exact.FaceTests != fullPairCount) throw new InvalidOperationException("Incomplete exact crop reference");
+                if (referenceReused) File.Copy(cachedFile!, referenceFile, true);
+                else File.WriteAllText(referenceFile, JsonSerializer.Serialize(new { schema = 1, inputSha256, oracleFingerprint,
+                    drawableEdges, exact.FaceTests, intervals = exact.Intervals }));
                 Bench.CheckIntervals(exact, kernel, edges, tolerance, failures);
                 var expected = VisibilityLoci.Create(edges, exact, tolerance); var actual = VisibilityLoci.Create(edges, kernel, tolerance);
                 var a = VisibilityLoci.Compare(expected, actual, tolerance, .05 * unit);
                 var b = VisibilityLoci.Compare(actual, expected, tolerance, .05 * unit);
                 if (a.Missed + b.Missed > 0) failures.Add($"tile {u}/{v} mismatch: {a.Missed}/{b.Missed}");
                 tiles.Add(new { cx, cy, width = 20 * unit, edges = edges.Count, faces = faces.Length, oraclePairs = exact.FaceTests,
-                    seconds = watch.Elapsed.TotalSeconds, missing = a, extra = b });
+                    referenceReused, inputSha256, referenceFile = Path.GetFileName(referenceFile), seconds = watch.Elapsed.TotalSeconds, missing = a, extra = b });
             }
             catch (OperationCanceledException) { failures.Add($"tile {u}/{v} oracle exceeded 10 minute guard"); }
             Console.WriteLine($"tile {u}/{v} {edges.Count} edges x {faces.Length} faces in {watch.Elapsed.TotalSeconds:F1}s");
