@@ -22,4 +22,9 @@ if ! dotnet test "$root/tests/M2DPlus.Core.Tests/M2DPlus.Core.Tests.csproj" -c D
   echo "pre-commit: Core tests failed. Commit aborted." >&2
   exit 1
 fi
-echo "pre-commit: build + Core tests passed in $(( $(date +%s) - start ))s."
+echo "pre-commit: dotnet test (GH UI models; no Rhino licence) ..."
+if ! dotnet test "$root/tests/M2DPlus.Grasshopper.Tests/M2DPlus.Grasshopper.Tests.csproj" -c Debug --no-build -v q -nologo; then
+  echo "pre-commit: GH UI tests failed. Commit aborted." >&2
+  exit 1
+fi
+echo "pre-commit: build + Core + GH UI tests passed in $(( $(date +%s) - start ))s."

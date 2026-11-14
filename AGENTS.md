@@ -16,7 +16,7 @@ dotnet test M2DPlus.sln -c Debug --no-build # Rhino test is skipped by default
 
 Warnings are errors. No cloud CI. Enable the local hook per clone with
 `git config core.hooksPath .githooks`; don't bypass it. It builds the solution and
-runs **Core tests only** for code changes. Manually verify using
+runs **Core and GH UI-model tests** (no Rhino licence) for code changes. Manually verify using
 `M2DPLUS_HOOK_FORCE=1 sh .githooks/pre-commit` (Git's sh on Windows).
 Licensed, serial integration tests require explicit `M2D_RHINO_TESTS=1` and an
 existing compatible Rhino.Inside resolver. See [test instructions](tests/M2DPlus.Rhino.Tests/README.md).
