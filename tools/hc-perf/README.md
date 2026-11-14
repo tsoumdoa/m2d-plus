@@ -172,3 +172,48 @@ depth with `GetLength()` while the SVG and prototype use projected XY lengths.
 For axis-aligned edges in SW, XY/3D = sqrt(2/3) = 0.81649658. The remaining
 prototype differences still require locus analysis; the length-metric error does
 not establish prototype correctness.
+
+
+## Whole-output composition gate
+
+`composition.py` extends the A2 owned serial process runner to the actual
+`NativeDrawing` and route-C adapters, with an explicit native-only baseline.
+Run with the Rhino.Inside Python environment used above:
+
+```powershell
+& $py -B -u tools/hc-perf/composition.py
+# Focused diagnosis; cannot certify the complete gate:
+& $py -B -u tools/hc-perf/composition.py --select curved-facade__Top
+```
+
+The manifest includes all fixtures/features, M/L blocks/exploded North/SW/Top/long
+sections, curved S blocks/exploded, and both cut views of every section fixture.
+Each view has exact serialized native/kernel curves and depth curves, source
+inventory, per-sample failed loci, model/engine hashes and an owned-job watchdog.
+Comparison samples both directions at model tolerance, at least eight samples per
+curve and maximum 50 mm physical spacing; curve proximity uses exact Rhino curves,
+not tessellated substitutes. Unresolved precedes Visible, then Hidden at overlaps.
+Points are compared separately. Cut-loop loci, region areas and loop counts are checked in the section pass;
+this is not a separate full hatch-pattern oracle. The first uncut diagnostic
+rows predate presentation timing; per-view records explicitly flag its inclusion.
+
+Native extraction is correctness-only, normal priority, serial and without the
+suite timing mutex. An internal harness-only scheduler allows the requested large
+fixtures inside the 16 GiB owned-job cap; product admission still uses the global
+512 MiB scheduler. Baselines are cached with model hash and complete view revision.
+The gate deliberately does not auto-classify mismatches as native quirks: every
+unclassified sample remains `unexplained`, and any such row fails. Do not infer a
+passed integration gate from the earlier A2 planar-only validation.
+
+`composition_report.py` writes `per-view.csv` and `report.json` with hash-matched archived native timings. Ratios remain contextual: the archive used the model-suite adapter, while current cut rows include route C and presentation. Uncut Top is never replaced by a cut timing. Candidate-family shares use drawable native parent curves and non-point-projecting kernel edges; planar edges also submitted to native are reported separately. Invalid native extraction makes that census incomplete.
+
+
+Native inputs are canonical in both adapters (M1b source path/identity, generated
+geometry SHA-256, far flag). When all remaining discrepancies are on exclusively native-owned loci,
+the harness performs one reverse-order full-scene native control. Earlier
+diagnostic runs also retained positive native-owned witnesses in mixed failing
+views; they never clear the kernel-owned discrepancies. It requires
+identical full input signatures in reversed order and an actual reproduced class
+change at the sample before classifying `native-order-quirk`. It writes input
+order signatures, exact reverse output, control hashes and per-sample witnesses.
+Kernel-owned contributors never qualify, and every other mismatch stays unexplained.

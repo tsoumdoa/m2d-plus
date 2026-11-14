@@ -9,7 +9,7 @@ Status: v2, 2026-11-14. It folds in [Astra's review](design/plan-review-astra.md
   - routing work to our own convex kernel (S4).
 - **Repetition helps per-object stages, not the global solve.** Reusing definition-local meshes was 44× faster for that stage, and silhouettes 8–19×. Native HLD with per-instance transforms gave no speedup. Reuse pays off in sections, silhouettes, culling and cross-view preparation.
 - **Avoid HLD whenever we can.** A valid cached result, or a change that only affects style or placement, must never call visibility. Changes to material/opacity and clipping scope do invalidate it.
-- **The custom general engine is not a replacement.** Keep only the verified convex kernel. It can be used only where the *entire* relevant occluder scene meets its eligibility rules, because mutual occlusion between engines cannot be split apart.
+- **The exact planar kernel is the primary route after A2.** Candidate ownership is separate from occluder participation: hidden intervals compose by union across planar and curved occluders. Native HLD generates curved candidates and solves their curved occlusion. See [engine composition](design/engine-composition.md) for contacts, coincident ownership, uncertainty and the separate whole-output integration gate. Passing A2 alone does not certify mixed composition.
 - **Sections need a new pipeline:** per-object material regions → crop the regions → optional merge of compatible styles → hatch. Region and hatch construction is feasible (1.8 s for 500 hollow objects), but the semantics are hard.
 - **Native quirks become regression fixtures:** hidden lines that vary under multithreading, Unset proxies, occluding-section mode dropping points, and blocks/SubD/points needing explicit normalisation.
 

@@ -159,4 +159,29 @@ public sealed class VisibilityTests
             }
         }
     }
+
+    [Fact] public void PointQueriesUseClosedBoundariesStrictDepthAndHoles()
+    {
+        var face = new PlanarFace([[new(-2,-2,1), new(2,-2,1), new(2,2,1), new(-2,2,1)],
+            [new(-1,-1,1),new(1,-1,1),new(1,1,1),new(-1,1,1)]]);
+        var query = new EdgeFaceKernel.PointQuery([face], .125);
+        Assert.Equal(VisibilityClass.Visible, query.Classify(new(0,0,0)));
+        Assert.Equal(VisibilityClass.Hidden, query.Classify(new(2,0,0)));
+        Assert.Equal(VisibilityClass.Visible, query.Classify(new(1.5,0,.875)));
+        Assert.Equal(VisibilityClass.Hidden, query.Classify(new(1.5,0,.874)));
+    }
+    [Fact] public void OwnedUnionNeverAssignsDisjointExtensionsToAnUnrelatedSource()
+    {
+        var union = VisibilityLoci.Union([new(0,0,1,0,VisibilityClass.Visible,"a"),
+            new(1,0,2,0,VisibilityClass.Visible,"b")], 1e-6, preserveOwnership: true);
+        Assert.Equal("a", union.Single(l => l.X0 == 0).Source);
+        Assert.Equal("b", union.Single(l => l.X1 == 2).Source);
+    }
+
+    [Fact] public void UnrepresentablePointCoordinatesRemainUnresolvedEvenWithoutOccluders()
+    {
+        var query = new EdgeFaceKernel.PointQuery([], 1e-4);
+        Assert.Equal(VisibilityClass.Unresolved, query.Classify(new(1e151,0,0)));
+        Assert.Equal(VisibilityClass.Unresolved, query.Classify(new(1e14,0,0)));
+    }
 }

@@ -28,22 +28,22 @@ public sealed class M3ComponentTests(RhinoHost host)
         ((Param_String)component.Params.Input[3]).PersistentData.Append(new GH_String("beyond=off\nname=Test drawing"));
         try
         {
-            Solve(); var calls = NativeDrawing.HldCalls;
+            Solve(); var calls = NativeDrawing.VisibilitySolves;
             var target = (Param_Plane)component.Params.Input[2];
             target.PersistentData.Append(new GH_Plane(new Plane(new Point3d(30, 40, 50), Vector3d.YAxis, Vector3d.ZAxis)));
-            target.ExpireSolution(false); component.ExpireSolution(false); Solve(); Assert.Equal(calls, NativeDrawing.HldCalls);
+            target.ExpireSolution(false); component.ExpireSolution(false); Solve(); Assert.Equal(calls, NativeDrawing.VisibilitySolves);
             var curve = ((GH_Curve)Assert.Single(component.Params.Output[0].VolatileData.AllData(true))).Value;
             Assert.Equal(new Point3d(30, 40, 50), curve.PointAtStart); Assert.Equal(new Point3d(30, 44, 50), curve.PointAtEnd);
-            ui.Execute("set:scale=1:50", false); Solve(); Assert.Equal(calls, NativeDrawing.HldCalls);
-            ui.Execute("set:tree=object", false); Solve(); Assert.Equal(calls, NativeDrawing.HldCalls);
+            ui.Execute("set:scale=1:50", false); Solve(); Assert.Equal(calls, NativeDrawing.VisibilitySolves);
+            ui.Execute("set:tree=object", false); Solve(); Assert.Equal(calls, NativeDrawing.VisibilitySolves);
             Assert.All(component.Params.Output[0].VolatileData.Paths, path => { Assert.Equal(3, path.Length); Assert.Equal(0, path.Indices[2]); });
-            ui.Execute("preview:hidden", false); Assert.Equal(calls, NativeDrawing.HldCalls);
+            ui.Execute("preview:hidden", false); Assert.Equal(calls, NativeDrawing.VisibilitySolves);
             ui.Execute("bake", false);
             Assert.Single(Owned("Test drawing"));
             ui.Execute("bake-one:0", false); Assert.Single(Owned("Test drawing"));
             ui.Execute("bake", true); Assert.Single(Owned("Test drawing (2)"));
             ui.Execute("bake", false); Assert.Single(Owned("Test drawing")); Assert.Single(Owned("Test drawing (2)"));
-            ui.Execute("clear-cache", false); Solve(); Assert.True(NativeDrawing.HldCalls > calls);
+            ui.Execute("clear-cache", false); Solve(); Assert.True(NativeDrawing.VisibilitySolves > calls);
         }
         finally { component.RemovedFromDocument(gh); SceneCache.Shared.Clear(); }
 
