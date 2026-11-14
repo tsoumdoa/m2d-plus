@@ -36,7 +36,8 @@ internal static class EdgeProvenance
             if (ends[i] <= ends[i - 1]) continue;
             var middle = (ends[i] + ends[i - 1]) / 2;
             var origin = overlaps.Where(o => o.Interval.IncludesParameter(middle)).Aggregate(EdgeOrigin.None, (a, o) => a | o.Origin);
-            var piece = curve.Trim(ends[i - 1], ends[i]);
+            var piece = M2DPlus.Rhino.Services.CurveIntervals.Trim(curve, new(ends[i - 1], ends[i]));
+            if (piece is null && curve is LineCurve && curve.PointAt(ends[i - 1]) == curve.PointAt(ends[i])) continue;
             if (piece is null) throw new SectionFailure("Provenance interval extraction failed.");
             result.Add(new(piece, origin == EdgeOrigin.None ? otherwise : origin));
         }

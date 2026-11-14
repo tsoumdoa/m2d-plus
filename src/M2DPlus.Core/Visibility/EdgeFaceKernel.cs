@@ -3,6 +3,64 @@ namespace M2DPlus.Core.Visibility;
 /// <summary>Experimental parallel planar kernel. No documents, native calls or live geometry.</summary>
 public static class EdgeFaceKernel
 {
+    /// <summary>Prepared planar occluders for exact point decisions between curve/plane events.</summary>
+    public sealed class PointQuery
+    {
+        private readonly Face[] _faces;
+        private readonly FaceTree _tree;
+        private readonly double _tolerance;
+        public PointQuery(IReadOnlyList<PlanarFace> faces, double tolerance, CancellationToken token = default)
+        {
+            if (!double.IsFinite(tolerance) || tolerance < 1e-150) throw new ArithmeticException("Unsupported point tolerance");
+            _tolerance = tolerance; _faces = new Face[faces.Count];
+            for (int i = 0; i < faces.Count; i++)
+            {
+                token.ThrowIfCancellationRequested();
+                if (faces[i].Loops.SelectMany(l => l).Any(p => !Resolvable(p)))
+                    throw new ArithmeticException("Drawing coordinate resolution exceeds tolerance; points unresolved");
+                _faces[i] = new(faces[i], tolerance);
+            }
+            _tree = new(_faces, token);
+        }
+        private bool Resolvable(Vertex p)
+        {
+            double size = Math.Max(Math.Abs(p.X), Math.Abs(p.Y));
+            return Finite(p) && size < 1e150 && Math.BitIncrement(size) - size <= _tolerance / 64;
+        }
+        public IReadOnlyList<int> OverlappingFaces(double x0, double y0, double x1, double y1)
+        {
+            var ids = new List<int>(); _tree.Query(new(new(x0,y0,0), new(x1,y1,0), "bounds"), ids); return ids;
+        }
+        public VisibilityClass Classify(Vertex point, CancellationToken token = default)
+        {
+            token.ThrowIfCancellationRequested();
+            if (!Resolvable(point)) return VisibilityClass.Unresolved;
+            var ids = new List<int>(); _tree.Query(new(point, point, "point"), ids);
+            var p = P<Rational>.From(point); var zero = Rational.From(0);
+            foreach (int id in ids)
+            {
+                token.ThrowIfCancellationRequested(); var f = _faces[id].Exact.Value;
+                if (Rational.Compare(f.Normal.Z, zero) == 0) continue;
+                var gap = (f.D - P<Rational>.Dot(f.Normal, p)) / f.Normal.Z;
+                if (Rational.Compare(gap, Rational.From(_tolerance)) <= 0) continue;
+                bool inside = false, boundary = false;
+                foreach (var loop in f.Loops)
+                    for (int j = 0; j < loop.Length; j++)
+                    {
+                        if ((j & 255) == 0) token.ThrowIfCancellationRequested();
+                        var a = loop[j]; var b = loop[(j + 1) % loop.Length];
+                        var cross = (b.X - a.X) * (p.Y - a.Y) - (b.Y - a.Y) * (p.X - a.X);
+                        int sign = Rational.Compare(cross, zero);
+                        if (sign == 0 && Between(p.X, a.X, b.X) && Between(p.Y, a.Y, b.Y)) boundary = true;
+                        if ((Rational.Compare(a.Y, p.Y) > 0) == (Rational.Compare(b.Y, p.Y) > 0)) continue;
+                        if (sign == Rational.Compare(b.Y, a.Y)) inside = !inside;
+                    }
+                if (inside || boundary) return VisibilityClass.Hidden;
+            }
+            return VisibilityClass.Visible;
+        }
+    }
+
     public static VisibilityResult Solve(IReadOnlyList<PlanarFace> faces, IReadOnlyList<CandidateEdge> edges,
         VisibilityOptions options, CancellationToken token = default)
     {
@@ -16,6 +74,7 @@ public static class EdgeFaceKernel
             // an explicit roundoff budget for subtraction, interpolation and union.
             foreach (var p in faces.SelectMany(f => f.Loops).SelectMany(l => l).Concat(edges.SelectMany(e => new[] { e.A, e.B })))
             {
+                token.ThrowIfCancellationRequested();
                 double size = Math.Max(Math.Abs(p.X), Math.Abs(p.Y));
                 if (!Finite(p) || size >= 1e150 || Math.BitIncrement(size) - size > options.DepthTolerance / 64)
                     throw new ArithmeticException("Drawing coordinate resolution exceeds tolerance; whole view unresolved");
@@ -27,7 +86,7 @@ public static class EdgeFaceKernel
         {
             return new(edges.Select((_, i) => new EdgeInterval(i, 0, 1, VisibilityClass.Unresolved)).ToArray(), 0, 0, [e.Message]);
         }
-        var tree = options.UseIndex ? new FaceTree(prepared) : null;
+        var tree = options.UseIndex ? new FaceTree(prepared, token) : null;
         var outputs = new EdgeInterval[edges.Count][];
         long tests = 0, fallback = 0;
         Parallel.For(0, edges.Count, new ParallelOptions { MaxDegreeOfParallelism = options.Threads, CancellationToken = token }, ei =>
@@ -228,11 +287,12 @@ public static class EdgeFaceKernel
         private sealed record Node(FilterBox Box, int[]? Faces, Node? Left, Node? Right);
         private readonly Node? _root;
         private readonly Face[] _faces;
-        public FaceTree(Face[] faces)
+        public FaceTree(Face[] faces, CancellationToken token)
         {
             _faces = faces;
             Node Build(int[] ids)
             {
+                token.ThrowIfCancellationRequested();
                 var box = new FilterBox(ids.Min(i => faces[i].Box.X0), ids.Min(i => faces[i].Box.Y0), ids.Max(i => faces[i].Box.X1), ids.Max(i => faces[i].Box.Y1));
                 if (ids.Length <= 8) return new(box, ids, null, null);
                 bool x = box.X1 - box.X0 >= box.Y1 - box.Y0;

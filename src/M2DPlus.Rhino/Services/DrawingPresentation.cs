@@ -93,6 +93,8 @@ public static class DrawingPresentation
                 var target = plan.Views[i]; var transform = Transform.PlaneToPlane(RhinoPlane(target.Transform.Source), RhinoPlane(target.Transform.Target));
                 var result = new ViewDrawing { Name = original.Name, Error = original.Error, Frame = original.Frame,
                     Report = original.Report, Settings = settings, Seconds = original.Seconds, Tolerance = original.Tolerance,
+                    KernelEdges = original.KernelEdges, NativeEdges = original.NativeEdges, NativeCalls = original.NativeCalls,
+                    CurvedCandidateEdges = original.CurvedCandidateEdges, PlanarNativeEdges = original.PlanarNativeEdges, NativeFragments = original.NativeFragments,
                     MultipleThreads = original.MultipleThreads, HiddenPoints = original.HiddenPoints, DuplicateSegments = original.DuplicateSegments,
                     ProjectingSegments = original.ProjectingSegments, EmptyNativeSlots = original.EmptyNativeSlots, ZeroLengthNativeSegments = original.ZeroLengthNativeSegments };
                 results.Add(result); result._diagnostics.AddRange(original.Diagnostics.Where(d => metadata is null || !d.StartsWith("Style ", StringComparison.Ordinal)));
@@ -122,7 +124,13 @@ public static class DrawingPresentation
                         {
                             var interval = new Interval(ends[j - 1], ends[j]);
                             using var depthPart = depthGeometry is Curve dc ? dc.Trim(interval) : null;
-                            var part = curve.Trim(interval) ?? throw new InvalidOperationException("Range split failed.");
+                            var part = CurveIntervals.Trim(curve, interval);
+                            // Floating-point interpolation can collapse an interval of an
+                            // already sub-tolerance projected candidate to one point.
+                            // It has no drawable extent; retain failures on real curves.
+                            if (part is null && curve.GetBoundingBox(true).Diagonal.Length <= original.Tolerance)
+                            { result.ProjectingSegments++; continue; }
+                            if (part is null) throw new InvalidOperationException(FormattableString.Invariant($"Range split failed: {curve.GetType().Name} domain={curve.Domain}; interval={interval}; endpoints={curve.PointAt(interval.Min)}/{curve.PointAt(interval.Max)}; len={curve.GetLength():R}"));
                             Add(part, depthPart ?? depthGeometry);
                         }
                     }
@@ -139,7 +147,7 @@ public static class DrawingPresentation
                             if (part is Curve && kind == LineClass.Visible && range?.Classify(representative, false) == RangeClassification.Beyond) kind = LineClass.Beyond;
                             if (!part.Transform(transform)) throw new InvalidOperationException("Placement failed.");
                             result.Pieces.Add(new(part, new PreparedLeaf(item.SourceIdentity, item.SourcePath, part) { Section = metadata?.GetValueOrDefault(item.SourceIdentity) ?? item.Source, SourceItem = item.SourceItem }, kind)
-                            { Profile = item.Profile, Depths = span, Intensity = range?.Intensity(span, kind) ?? 1 });
+                            { Profile = item.Profile, KernelOwned = item.KernelOwned, Depths = span, Intensity = range?.Intensity(span, kind) ?? 1 });
                         }
                         catch { part.Dispose(); throw; }
                     }

@@ -189,7 +189,8 @@ public sealed class BaselineTests(RhinoHost host, ITestOutputHelper output)
         using var document = RhinoDoc.CreateHeadless(null); using var cache = new SceneCache();
         var inputs = new[] { new CaptureInput(new Line(new Point3d(-3, 0, 0), new Point3d(3, 0, 0)), new[] { 0 }, "line"),
             new CaptureInput(new Point3d(4, 0, 0), new[] { 0 }, "point") };
-        using var batch = Solve(Capture(document, cache, inputs), ViewRequest.Parse("Top")); var view = batch.Views[0];
+        var lease = Capture(document, cache, inputs);
+        using var batch = NativeDrawing.SolveAsync(lease, new(lease.Value.Revision, "Top", "native", 1), new[] { ViewRequest.Parse("Top") }, new(NativeOnly: true), default).GetAwaiter().GetResult(); var view = batch.Views[0];
         // F property, not a passing visibility claim: expected point (4,0) is absent in this native build.
         // An improvement deliberately fails this assertion so reviewers can upgrade the gate to P.
         Assert.True(view.Report.Quarantined, view.Info); Assert.Equal(1, view.Report.InvalidExtractionCount);

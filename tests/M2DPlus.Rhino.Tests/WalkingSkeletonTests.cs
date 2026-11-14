@@ -142,7 +142,7 @@ public sealed class WalkingSkeletonTests(RhinoHost host)
         var definition = AddBlocks(document); using var watch = new DocumentWatch(document);
         var lease = Capture(document, watch, cache); var revision = lease.Value.Revision;
         using var barrier = new NativeBarrier(); NativeDrawing.NativeProgress = barrier;
-        var task = NativeDrawing.SolveAsync(lease, Request(lease.Value), new[] { ViewRequest.Parse("Top"), ViewRequest.Parse("Front") }, new(), default);
+        var task = NativeDrawing.SolveAsync(lease, Request(lease.Value), new[] { ViewRequest.Parse("Top"), ViewRequest.Parse("Front") }, new(NativeOnly: true), default);
         try
         {
             Assert.True(barrier.Entered.Wait(TimeSpan.FromSeconds(15)), "Native progress callback was not entered");

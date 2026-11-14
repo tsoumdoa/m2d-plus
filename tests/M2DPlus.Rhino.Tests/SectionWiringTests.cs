@@ -286,7 +286,8 @@ public sealed class SectionWiringTests(RhinoHost host, ITestOutputHelper output)
     [RhinoFact] public void CoincidentBlockUnsetIsInvestigatedAndConservativelyScoped() => host.Run(() =>
     {
         using var document = RhinoDoc.OpenHeadless(Fixture("block_instance")); using var cache = new SceneCache();
-        using var batch = BaselineTests.Solve(BaselineTests.Capture(document, cache), ViewRequest.Parse("SW"));
+        var lease = BaselineTests.Capture(document, cache);
+        using var batch = NativeDrawing.SolveAsync(lease, new(lease.Value.Revision, "SW", "native", 1), new[] { ViewRequest.Parse("SW") }, new(NativeOnly: true), default).GetAwaiter().GetResult();
         var view = batch.Views[0]; output.WriteLine(view.Info);
         Healthy(view); Assert.Equal(1, view.Report.InvalidExtractionCount);
         Assert.Equal(0, view.EmptyNativeSlots); Assert.Equal(4, view.Report.UncertainCount);

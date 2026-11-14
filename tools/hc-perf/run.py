@@ -30,6 +30,7 @@ def main():
     p.add_argument('--native', action='store_true')
     p.add_argument('--native-only', action='store_true')
     p.add_argument('--native-batch', type=Path)
+    p.add_argument('--composition-batch', type=Path)
     p.add_argument('--bench-bin', type=Path, default=ROOT / 'tools/hc-perf/bin/Release/net8.0-windows/M2DPlus.HcPerf.dll')
     p.add_argument('--select', help='Diagnostic only; cannot create a scored full run')
     p.add_argument('--wall', type=float, default=1800)
@@ -50,7 +51,11 @@ def main():
         clr.AddReference(str(args.bench_bin.resolve()))
         from M2DPlus.HcPerf import Bench
         try:
-            if args.native_batch:
+            if args.composition_batch:
+                from M2DPlus.HcPerf import CompositionGate
+                for case in json.loads(args.composition_batch.read_text()):
+                    CompositionGate.Run(case['path'], case['view'], case['output'])
+            elif args.native_batch:
                 for case in json.loads(args.native_batch.read_text()):
                     print('native correctness: ' + case['output'], flush=True)
                     Bench.NativeGate(case['path'], case['view'], case['output'])
@@ -59,7 +64,8 @@ def main():
             else:
                 Bench.Run(str(args.model), args.view, str(args.output), args.oracle, args.native, 3, args.threads)
         except Exception:
-            failure_path = str(args.native_batch) + '.error.json' if args.native_batch else str(args.output) + '.json'
+            batch_path = args.composition_batch or args.native_batch
+            failure_path = str(batch_path) + '.error.json' if batch_path else str(args.output) + '.json'
             write_json(failure_path, {'gate': {'passed': False, 'failures': [traceback.format_exc()]}})
             raise
         return

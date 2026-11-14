@@ -34,6 +34,18 @@ public sealed class M3WiringTests(RhinoHost host, ITestOutputHelper output)
     private static Guid Box(RhinoDoc doc, Point3d a, Point3d b, ObjectAttributes? attributes = null)
     { using var box = Brep.CreateFromBox(new BoundingBox(a, b)); return doc.Objects.AddBrep(box, attributes); }
 
+    [RhinoFact] public void BeyondSplitToleratesACollapsedSubToleranceProjection() => host.Run(() =>
+    {
+        var request = SettingsFor(ViewRequest.Parse(Plane.WorldXY), "beyond=.4857142857142857");
+        var drawing = new ViewDrawing { Frame = new Rectangle3d(Plane.WorldXY, new Interval(-20,20), new Interval(-20,20)), Tolerance = .00001 };
+        var projected = new LineCurve(new Point3d(19.4,12.08,0), new Point3d(double.BitIncrement(19.4),double.BitIncrement(12.08),0)) { Domain = new Interval(0,.7) };
+        var depth = new LineCurve(new Point3d(19.4,12.08,0),new Point3d(19.4,12.08,-1)) { Domain = projected.Domain };
+        drawing.Pieces.Add(new(projected,new PreparedLeaf("collapsed",[0],projected),LineClass.Visible,depth));
+        using var raw = new DrawingBatch(new("scene","view","range",1),[drawing]);
+        using var result = DrawingPresentation.ApplySnapshot(raw,raw.Identity,[request],[],null);
+        Assert.Equal(1,result.Views[0].ProjectingSegments);
+    });
+
     [RhinoFact] public void BeyondUsesExactQuadraticPlaneRootsAndFadeUsesPieceDepthExtrema() => host.Run(() =>
     {
         using var doc = RhinoDoc.CreateHeadless(null); doc.ModelAbsoluteTolerance = .00001;
@@ -120,20 +132,20 @@ public sealed class M3WiringTests(RhinoHost host, ITestOutputHelper output)
         var view = ViewRequest.Parse(new Rectangle3d(source, new Interval(0, 10), new Interval(0, 8)));
         var first = SettingsFor(view, "gap=3"); var views = new[] { first, first };
         using var baseline = Draw(doc, scene, cache, views); Healthy(baseline.Views[0]);
-        var calls = NativeDrawing.HldCalls;
+        var calls = NativeDrawing.VisibilitySolves;
         var target = new Plane(new Point3d(100, 20, 30), Vector3d.YAxis, Vector3d.ZAxis);
         var styled = views.Select(v => SettingsFor(v, "scale=1:50", "fade=on", "gap=3", "hatch=black", "cuts=merge")).ToArray();
         using var placed = Draw(doc, scene, cache, styled, target);
-        Assert.Equal(calls, NativeDrawing.HldCalls);
+        Assert.Equal(calls, NativeDrawing.VisibilitySolves);
         Assert.Equal(target.Origin, placed.Views[0].Frame.Plane.Origin);
         Assert.Equal(target.PointAt(13, 0), placed.Views[1].Frame.Plane.Origin);
         foreach (var v in placed.Views) { Assert.Equal(10, v.Frame.Width, 8); Assert.Equal(4, Length(v, LineClass.Visible), 6); }
         using var perView = Draw(doc, scene, cache, styled, target, Plane.WorldXY);
         Assert.Equal(Point3d.Origin, perView.Views[1].Frame.Plane.Origin);
-        Assert.Equal(calls, NativeDrawing.HldCalls);
+        Assert.Equal(calls, NativeDrawing.VisibilitySolves);
         Assert.Throws<ArgumentException>(() => Draw(doc, scene, cache, styled, target, target, target));
-        Assert.Equal(calls, NativeDrawing.HldCalls);
-        cache.Clear(); using var cold = Draw(doc, scene, cache, styled, target); Assert.True(NativeDrawing.HldCalls > calls);
+        Assert.Equal(calls, NativeDrawing.VisibilitySolves);
+        cache.Clear(); using var cold = Draw(doc, scene, cache, styled, target); Assert.True(NativeDrawing.VisibilitySolves > calls);
     });
 
     [RhinoFact] public void HatchPoliciesAndMergeHaveIndependentAreasAndNoVisibilityCost() => host.Run(() =>

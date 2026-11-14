@@ -39,6 +39,7 @@ internal static class SectionDrawing
         var sourceTrim = new Dictionary<string, List<Curve>>(StringComparer.Ordinal);
         var sourceFar = new Dictionary<string, List<Curve>>(StringComparer.Ordinal);
         var registered = new List<(GeometryBase Geometry, Candidate Tag)>();
+        string route = "native HLD (in process)";
         try
         {
             using var sections = SectionRegionEngine.Compute(bodies.Select(s => new SectionSource(s.Identity, s.Geometry, cut.Style(s))),
@@ -120,6 +121,56 @@ internal static class SectionDrawing
                     { owned.Add(curve); registered.Add((curve, entry.Tag)); }
                 }
             }
+            if (!settings.NativeOnly)
+            {
+                using var routed = new ViewDrawing { Frame = result.Frame, Tolerance = tol };
+                route = ComposedVisibility.Solve(registered.Select(r => new VisibilityInput(r.Geometry, r.Tag.Source, r.Tag.Far)).ToArray(), routed, view, settings, token);
+                result.KernelEdges = routed.KernelEdges; result.NativeEdges = routed.NativeEdges; result.NativeCalls = routed.NativeCalls;
+                result.CurvedCandidateEdges = routed.CurvedCandidateEdges; result.PlanarNativeEdges = routed.PlanarNativeEdges; result.NativeFragments = routed.NativeFragments;
+                result.HiddenPoints += routed.HiddenPoints; result.DuplicateSegments += routed.DuplicateSegments;
+                result.EmptyNativeSlots += routed.EmptyNativeSlots; result.ZeroLengthNativeSegments += routed.ZeroLengthNativeSegments;
+                result.ProjectingSegments += routed.ProjectingSegments; invalid += routed.RoutingInvalid;
+                quarantine |= routed.RoutingQuarantine; uncertainSources.UnionWith(routed.UncertainRoutingSources);
+                result._diagnostics.AddRange(routed.Diagnostics);
+                foreach (var item in routed.Items)
+                {
+                    token.ThrowIfCancellationRequested();
+                    var source = byId[item.SourceIdentity];
+                    using var geometry = item.CopyGeometry();
+                    if (geometry is Point point)
+                    {
+                        if (cut.Crop is not { } pc || NativeDrawing.Inside(point.Location, pc, tol))
+                            result.Pieces.Add(new(point.Duplicate(), source, item.Class, item.DepthGeometry?.Duplicate()));
+                        continue;
+                    }
+                    if (geometry is not Curve curve) continue;
+                    if (item.Class == LineClass.Hidden && view.Settings?.Hidden == false) continue;
+                    if (item.FarCandidate && item.Class != LineClass.Visible) continue;
+                    var farParts = EdgeProvenance.Split(curve, (sourceFar.GetValueOrDefault(source.Identity) ?? Enumerable.Empty<Curve>()).Select(c => (c, EdgeOrigin.FarTrim)), tol);
+                    foreach (var farPart in farParts)
+                    {
+                        using (farPart)
+                        {
+                            var isFar = (farPart.Origin & EdgeOrigin.FarTrim) != 0;
+                            if (item.FarCandidate && !isFar) continue;
+                            if (isFar && (!range.GenerateFarClipLines || item.Class != LineClass.Visible)) continue;
+                            var kind = isFar ? LineClass.FarClip : item.Class;
+                            IEnumerable<Curve> references = isFar ? cutLoci : cutLoci.Concat(sourceTrim.GetValueOrDefault(source.Identity) ?? Enumerable.Empty<Curve>());
+                            foreach (var part in Subtract(farPart.Curve, references, tol))
+                            {
+                                using (part)
+                                {
+                                    if (cut.Crop is { } crop)
+                                        foreach (var cropped in NativeDrawing.Crop(part, crop, tol)) result.Pieces.Add(new(cropped, source, kind, (item.DepthGeometry as Curve)?.Trim(cropped.Domain)) { Profile = item.Profile, KernelOwned = item.KernelOwned });
+                                    else result.Pieces.Add(new(part.DuplicateCurve(), source, kind, (item.DepthGeometry as Curve)?.Trim(part.Domain)) { Profile = item.Profile, KernelOwned = item.KernelOwned });
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            else
+            {
             var occluders = registered.Where(p => !p.Tag.Far && p.Geometry is Brep or Mesh).Select(p => p.Geometry).ToArray();
             using var viewport = new ViewportInfo(); var frame = result.Frame;
             var radius = Math.Max(1, scene.Bounds.IsValid ? scene.Bounds.Diagonal.Length : 1);
@@ -128,10 +179,10 @@ internal static class SectionDrawing
             viewport.SetCameraDirection(view.Direction); viewport.SetCameraUp(frame.Plane.YAxis);
             viewport.SetFrustum(frame.X.Min, frame.X.Max, frame.Y.Min, frame.Y.Max, .001, radius * 10 + 100);
             var parameters = new HiddenLineDrawingParameters { AbsoluteTolerance = tol, Flatten = false,
-                IncludeHiddenCurves = view.Settings?.Hidden ?? Settings.DefaultHidden, IncludeTangentEdges = view.Settings?.Tangents ?? false, IncludeTangentSeams = view.Settings?.Seams ?? false };
+                IncludeHiddenCurves = true, IncludeTangentEdges = view.Settings?.Tangents ?? false, IncludeTangentSeams = view.Settings?.Seams ?? false };
             parameters.SetViewport(viewport);
             var curvesAndBodies = registered.Where(p => p.Geometry is not Point).ToArray();
-            foreach (var entry in curvesAndBodies)
+            foreach (var entry in VisibilityInputOrder.Native(curvesAndBodies, r => new VisibilityInput(r.Geometry,r.Tag.Source,r.Tag.Far), settings))
                 if (!parameters.AddGeometry(entry.Geometry, entry.Tag))
                 { invalid++; quarantine = true; result._diagnostics.Add($"Native rejected {entry.Tag.Source.Identity}"); }
             if (curvesAndBodies.Length != 0)
@@ -200,6 +251,7 @@ internal static class SectionDrawing
                 if (cut.Crop is { } crop && !NativeDrawing.Inside(location, crop, tol)) continue;
                 result.Pieces.Add(new(new Point(location), entry.Tag.Source, LineClass.Visible, new Point(point)));
             }
+            }
         }
         catch (OperationCanceledException) { result.Dispose(); throw; }
         catch (Exception ex) { result.Dispose(); result.Error = ex.Message; quarantine = true; }
@@ -226,7 +278,7 @@ internal static class SectionDrawing
             }
             if (result.EmptyNativeSlots + result.ZeroLengthNativeSegments != 0) result._diagnostics.Add($"Benign native records dropped: {result.EmptyNativeSlots} empty slots; {result.ZeroLengthNativeSegments} exactly zero-length point curves.");
             result.Pieces.Sort(NativeDrawing.ComparePieces);
-            result.Report = new("Route C physical section + native HLD (in process)", result.Items.Count(p => p.Class == LineClass.Unresolved),
+            result.Report = new("Route C physical section + " + route, result.Items.Count(p => p.Class == LineClass.Unresolved),
                 invalid, scene.Unsupported, scene.Conversions, quarantine) { ValidationDomain = "analytic section/visibility controls; unverified freeform crossings quarantined" };
             result.Seconds = timer.Elapsed.TotalSeconds;
         }

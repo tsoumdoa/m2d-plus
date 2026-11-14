@@ -66,9 +66,9 @@ internal static class Program
                 var name = Path.GetFileNameWithoutExtension(file) + "-" + view.Name;
                 var svg = Render(view, Path.Combine(output, name + ".png"));
                 File.WriteAllText(Path.Combine(output, name + ".svg"), svg);
-                cards.Append($"<article><h2>{WebUtility.HtmlEncode(name)}</h2><div class='pair'><div>{svg}</div><div class='dark'>{svg}</div></div><p>{(view.Info.Contains("Uncertain:", StringComparison.Ordinal) ? "SOURCE UNCERTAINTY: some geometry is withheld; inspect Info. " : "")}Read + capture {captureMs:F1} ms · native/extraction {view.Seconds * 1000:F1} ms · {view.Items.Count} pieces</p><details><summary>Info</summary><pre>{WebUtility.HtmlEncode(view.Info)}</pre></details></article>");
+                cards.Append($"<article><h2>{WebUtility.HtmlEncode(name)}</h2><div class='pair'><div>{svg}</div><div class='dark'>{svg}</div></div><p>{(view.Info.Contains("Uncertain:", StringComparison.Ordinal) ? "SOURCE UNCERTAINTY: some geometry is withheld; inspect Info. " : "")}Read + capture {captureMs:F1} ms · routing/extraction {view.Seconds * 1000:F1} ms · {view.Items.Count} pieces</p><details><summary>Info</summary><pre>{WebUtility.HtmlEncode(view.Info)}</pre></details></article>");
                 records.Add(new { file, fixtureSha256, view.Name, captureMs, capture.MaximumSliceMilliseconds,
-                    cost, view.Seconds, count = view.Items.Count, classes = view.Items.GroupBy(p => p.Class).ToDictionary(g => g.Key.ToString(), g => g.Count()), intensities = view.Items.Select(p => p.Intensity).Distinct().Order().ToArray(), regions = view.Regions.Count, view.Info, wallMs = timer.Elapsed.TotalMilliseconds,
+                    cost, view.Seconds, view.KernelEdges, view.CurvedCandidateEdges, view.PlanarNativeEdges, view.NativeCalls, count = view.Items.Count, classes = view.Items.GroupBy(p => p.Class).ToDictionary(g => g.Key.ToString(), g => g.Count()), intensities = view.Items.Select(p => p.Intensity).Distinct().Order().ToArray(), regions = view.Regions.Count, view.Info, wallMs = timer.Elapsed.TotalMilliseconds,
                     processCpuMs = process.TotalProcessorTime.TotalMilliseconds - cpuStart, peakWorkingSet = process.PeakWorkingSet64,
                     tolerance = document.ModelAbsoluteTolerance, units = document.ModelUnitSystem.ToString(), cache = "fresh per file; shared across views" });
                 Console.WriteLine($"{name}: {view.Seconds:F3}s, {view.Items.Count} pieces, {view.Error ?? "ok"}");
@@ -236,7 +236,7 @@ internal sealed class M2DEngine : IRenderEngine
 
 internal sealed class M3Engine : IRenderEngine
 {
-    public string Name => "M2D+ M3 applied settings / presentation";
+    public string Name => "M2D+ planar kernel / curved native; M3 presentation (integration gate pending)";
     public DrawingBatch Draw(LeaseEntry<PreparedScene>.Lease scene, IReadOnlyList<ViewRequest> views)
     {
         var bounds = scene.Value.Bounds;

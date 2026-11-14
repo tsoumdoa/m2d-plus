@@ -14,6 +14,7 @@ public static class VisibilityLoci
         public bool X = x;
         public List<(double A, double B)>[] Spans = [[], [], []];
         public string Source = "";
+        public List<(double A, double B, VisibilityClass Class, string Source)> Owners = [];
     }
     public static Locus[] Create(IReadOnlyList<CandidateEdge> edges, VisibilityResult result, double tolerance)
     {
@@ -26,7 +27,7 @@ public static class VisibilityLoci
         }).ToArray();
         return Union(raw, tolerance);
     }
-    public static Locus[] Union(IReadOnlyList<Locus> loci, double tolerance)
+    public static Locus[] Union(IReadOnlyList<Locus> loci, double tolerance, bool preserveOwnership = false, CancellationToken token = default)
     {
         if (!double.IsFinite(tolerance) || tolerance <= 0) throw new ArgumentOutOfRangeException(nameof(tolerance));
         if (loci.Count == 0) return [];
@@ -38,6 +39,7 @@ public static class VisibilityLoci
         // A stable order makes duplicate ownership independent of extraction order.
         foreach (var l in loci.OrderBy(l => l.Source, StringComparer.Ordinal).ThenBy(l => l.X0).ThenBy(l => l.Y0))
         {
+            token.ThrowIfCancellationRequested();
             double dx = l.X1 - l.X0, dy = l.Y1 - l.Y0;
             if (dx == 0 && dy == 0) continue;
             bool x = Math.Abs(dx) >= Math.Abs(dy); double slope = x ? dy / dx : dx / dy;
@@ -56,10 +58,12 @@ public static class VisibilityLoci
             }
             double a = x ? l.X0 - cx : l.Y0 - cy, b = x ? l.X1 - cx : l.Y1 - cy;
             group.Spans[(int)l.Class].Add((Math.Min(a, b), Math.Max(a, b)));
+            if (preserveOwnership) group.Owners.Add((Math.Min(a, b), Math.Max(a, b), l.Class, l.Source));
         }
         var output = new List<Locus>();
         foreach (var g in groups)
         {
+            token.ThrowIfCancellationRequested();
             foreach (var spans in g.Spans) EdgeFaceKernel.Merge(spans);
             for (int c = 0; c < 3; c++)
                 foreach (var span in g.Spans[c])
@@ -85,8 +89,23 @@ public static class VisibilityLoci
                         // isolated short features; only junction residues are absorbed.
                         if (c == (int)VisibilityClass.Hidden && (p.B - p.A) * scale <= tolerance
                             && g.Spans[0].Any(v => v.A <= p.B + tolerance / scale && v.B >= p.A - tolerance / scale)) continue;
-                        output.Add(g.X ? new(p.A + cx, g.Slope * p.A + g.Offset + cy, p.B + cx, g.Slope * p.B + g.Offset + cy, (VisibilityClass)c, g.Source)
-                            : new(g.Slope * p.A + g.Offset + cx, p.A + cy, g.Slope * p.B + g.Offset + cx, p.B + cy, (VisibilityClass)c, g.Source));
+                        void Emit(double a, double b, string source) => output.Add(g.X
+                            ? new(a + cx, g.Slope * a + g.Offset + cy, b + cx, g.Slope * b + g.Offset + cy, (VisibilityClass)c, source)
+                            : new(g.Slope * a + g.Offset + cx, a + cy, g.Slope * b + g.Offset + cx, b + cy, (VisibilityClass)c, source));
+                        if (!preserveOwnership) Emit(p.A, p.B, g.Source);
+                        else
+                        {
+                            // Select an actual contributor at each interval, preserving depth/source ownership.
+                            var owners = g.Owners.Where(o => (int)o.Class == c && o.B > p.A && o.A < p.B).ToArray();
+                            var events = owners.SelectMany(o => new[] { Math.Max(o.A, p.A), Math.Min(o.B, p.B) }).Distinct().Order().ToArray();
+                            for (int k = 1; k < events.Length; k++)
+                            {
+                                token.ThrowIfCancellationRequested();
+                                double mid = (events[k - 1] + events[k]) / 2;
+                                var owner = owners.Where(o => o.A <= mid && o.B >= mid).MinBy(o => o.Source, StringComparer.Ordinal);
+                                if (owner.Source is not null) Emit(events[k - 1], events[k], owner.Source);
+                            }
+                        }
                     }
                 }
         }

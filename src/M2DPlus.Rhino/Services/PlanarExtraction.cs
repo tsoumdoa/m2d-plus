@@ -4,7 +4,7 @@ using Rhino.Geometry;
 
 namespace M2DPlus.Rhino.Services;
 
-/// <summary>Experimental owned-value extraction for the PERF spike; not a production route.</summary>
+/// <summary>Owned-value planar extraction shared by production routing and validation.</summary>
 public sealed class PlanarExtraction
 {
     public static M2DPlus.Core.LineClass OutputClass(VisibilityClass value) => value switch
@@ -19,8 +19,11 @@ public sealed class PlanarExtraction
     public int EligibleObjects { get; private set; }
     public int OtherObjects { get; private set; }
 
-    public bool Add(GeometryBase geometry, Transform transform, Plane view, double tolerance, string source)
+    public bool Add(GeometryBase geometry, Transform transform, Plane view, double tolerance, string source, CancellationToken token = default, bool nativeMeshCandidates = false, bool tangents = false)
     {
+#if LICENSE_FREE
+        if (nativeMeshCandidates) throw new NotSupportedException("Production welded-mesh candidates require RhinoCommon; A2 retains its all-crease census.");
+#endif
         var faces = new List<PlanarFace>(); var edges = new List<CandidateEdge>();
         Vertex Project(Point3d p)
         {
@@ -33,6 +36,7 @@ public sealed class PlanarExtraction
             if (b.Faces.Any(f => !f.IsPlanar(tolerance)) || b.Edges.Any(e => !e.IsLinear(tolerance))) return false;
             foreach (var f in b.Faces)
             {
+                token.ThrowIfCancellationRequested();
                 var loops = new List<Vertex[]>();
                 foreach (var loop in f.Loops)
                 {
@@ -46,8 +50,9 @@ public sealed class PlanarExtraction
             }
             foreach (var e in b.Edges)
             {
+                token.ThrowIfCancellationRequested();
                 var adj = e.AdjacentFaces();
-                if (adj.Length == 2 && b.Faces[adj[0]].TryGetPlane(out var p) && b.Faces[adj[1]].TryGetPlane(out var q)
+                if (!tangents && adj.Length == 2 && b.Faces[adj[0]].TryGetPlane(out var p) && b.Faces[adj[1]].TryGetPlane(out var q)
                     && Vector3d.CrossProduct(p.Normal, q.Normal).Length <= 1e-12) continue;
                 Edge(e.PointAtStart, e.PointAtEnd);
             }
@@ -68,11 +73,28 @@ public sealed class PlanarExtraction
                 {
                     mesh.Faces.ConvertQuadsToTriangles(); mesh.FaceNormals.ComputeFaceNormals();
                     foreach (var f in mesh.Faces)
+                    {
+                        token.ThrowIfCancellationRequested();
                         faces.Add(new([[Project(mesh.Vertices[f.A]), Project(mesh.Vertices[f.B]), Project(mesh.Vertices[f.C])]]));
+                    }
                     for (int i = 0; i < mesh.TopologyEdges.Count; i++)
                     {
+                        token.ThrowIfCancellationRequested();
                         var adj = mesh.TopologyEdges.GetConnectedFaces(i);
-                        if (adj.Length == 2 && Vector3d.CrossProduct(mesh.FaceNormals[adj[0]], mesh.FaceNormals[adj[1]]).Length <= 1e-12) continue;
+                        if (adj.Length == 2)
+                        {
+                            var n = new Vector3d(mesh.FaceNormals[adj[0]]); var m = new Vector3d(mesh.FaceNormals[adj[1]]);
+                            if (Vector3d.CrossProduct(n, m).Length <= 1e-12) continue;
+#if !LICENSE_FREE
+                            if (nativeMeshCandidates && !mesh.TopologyEdges.IsEdgeUnwelded(i))
+                            {
+                                // A welded mesh has smooth shading: interior tessellation edges
+                                // are occluders, but only facing transitions generate linework.
+                                n.Transform(transform); m.Transform(transform);
+                                if ((n * view.ZAxis > 0) == (m * view.ZAxis > 0)) continue;
+                            }
+#endif
+                        }
                         var line = mesh.TopologyEdges.EdgeLine(i); Edge(line.From, line.To);
                     }
                 }
