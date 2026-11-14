@@ -39,7 +39,8 @@ public sealed class DocumentWatch : IDisposable
         return string.Join("|", objects.Select(o => $"{o.Id}:{o.RuntimeSerialNumber}:{o.Attributes.ToJSON(new global::Rhino.FileIO.SerializationOptions())}")) +
             string.Join("|", document.InstanceDefinitions.Where(d => !d.IsDeleted).Select(d => $"{d.Id}:{string.Join(',', d.GetObjects().Select(o => o.RuntimeSerialNumber))}")) +
             string.Join("|", document.Layers.Where(l => !l.IsDeleted).Select(l => $"{l.Id}:{l.IsVisible}:{l.FullPath}")) +
-            document.ModelAbsoluteTolerance.ToString("R", CultureInfo.InvariantCulture) + document.ModelUnitSystem;
+            document.ModelAbsoluteTolerance.ToString("R", CultureInfo.InvariantCulture) + document.ModelUnitSystem +
+            string.Join("|", document.NamedViews.Select(v => ViewRequest.Parse(v).Revision));
     }
     public void VerifyHostState()
     {
@@ -92,6 +93,7 @@ public sealed class SceneCapture : IDisposable
     private readonly Queue<Pending> _pending = new();
     private readonly List<SceneLeaf> _leaves = new();
     private readonly Dictionary<string, int> _unsupported = new(StringComparer.Ordinal);
+    private readonly Dictionary<uint, string> _fingerprints = new();
     private readonly double _tolerance;
     private bool _accepted;
     public int CapturedCount => _leaves.Count;
@@ -150,19 +152,36 @@ public sealed class SceneCapture : IDisposable
     private void Capture(Pending item)
     {
         var value = item.Value;
+        if (value is string layerPattern)
+        {
+            // A bare leaf name matches that layer; a full path or wildcard matches FullPath.
+            var expression = "^" + System.Text.RegularExpressions.Regex.Escape(layerPattern).Replace("\\*", ".*").Replace("\\?", ".") + "$";
+            var layers = _document.Layers.Where(l => !l.IsDeleted &&
+                (System.Text.RegularExpressions.Regex.IsMatch(l.FullPath, expression, System.Text.RegularExpressions.RegexOptions.IgnoreCase) ||
+                 (!layerPattern.Contains("::") && System.Text.RegularExpressions.Regex.IsMatch(l.Name, expression, System.Text.RegularExpressions.RegexOptions.IgnoreCase))))
+                .Select(l => l.Index).ToHashSet();
+            var matches = _document.Objects.GetObjectList(new ObjectEnumeratorSettings { NormalObjects = true, LockedObjects = true, ReferenceObjects = true })
+                .Where(o => layers.Contains(o.Attributes.LayerIndex) && Included(o)).OrderBy(o => o.Id).ToArray();
+            if (layers.Count == 0) Unsupported(PreparedScene.NonOccludingPrefix + $"Layer not found '{layerPattern}'");
+            foreach (var match in matches) _pending.Enqueue(item with { Value = match.Id, Identity = item.Identity + "/" + match.Id });
+            return;
+        }
         if (value is Guid id)
         {
             var obj = _document.Objects.FindId(id);
             if (obj is null) throw new OperationCanceledException("Source deleted during capture.");
             value = obj;
         }
-        if (value is RhinoObject source) value = source.Geometry;
+        uint? sourceSerial = null;
+        if (value is RhinoObject source) { sourceSerial = source.RuntimeSerialNumber; value = source.Geometry; }
         if (value is InstanceReferenceGeometry instance)
         {
             var definition = _document.InstanceDefinitions.FindId(instance.ParentIdefId);
-            if (definition is null || item.Definitions.Contains(instance.ParentIdefId) || item.Definitions.Length >= 64)
+            if (definition is null || item.Definitions.Contains(instance.ParentIdefId) || item.Definitions.Length >= 256)
             { Unsupported("Invalid/cyclic block"); return; }
-            foreach (var leaf in definition.GetObjects().OrderBy(o => o.Id))
+            var members = definition.GetObjects();
+            if (members.Length == 0) { Unsupported("Empty/unavailable block definition " + definition.Name); return; }
+            foreach (var leaf in members.OrderBy(o => o.Id))
             {
                 if (!Included(leaf)) continue;
                 _pending.Enqueue(new(leaf.Id, item.Path, item.Identity + "/" + definition.Id + "/" + leaf.Id,
@@ -174,7 +193,9 @@ public sealed class SceneCapture : IDisposable
         {
             GeometryBase g => g,
             Point3d p => new Point(p), Line l => new LineCurve(l), Polyline p => new PolylineCurve(p),
-            Arc a => new ArcCurve(a), Circle c => new ArcCurve(c), _ => null
+            Arc a => new ArcCurve(a), Circle c => new ArcCurve(c), Rectangle3d r => r.ToNurbsCurve(),
+            Box b => b.ToBrep(), BoundingBox b => b.ToBrep(), Sphere s => s.ToBrep(),
+            Cylinder c => c.ToBrep(true, true), Cone c => c.ToBrep(true), Torus t => t.ToBrep(), _ => null
         };
         var temporary = value is not GeometryBase && geometry is not null;
         try
@@ -184,16 +205,19 @@ public sealed class SceneCapture : IDisposable
             { Unsupported(PreparedScene.NonOccludingPrefix + geometry.GetType().Name); return; }
             if (geometry is not (Brep or Mesh or Curve or Surface or Extrusion or SubD or Point) || geometry is ClippingPlaneSurface)
             { Unsupported(geometry?.GetType().Name ?? value.GetType().Name); return; }
-            // Hash the complete serialized content, never a hash of DataCRC. Definition-local identity enables repeat reuse.
-            var fingerprint = SceneCache.Hash(geometry.ToJSON(new global::Rhino.FileIO.SerializationOptions()));
+            // Each document leaf is content-hashed once per coherent capture, including repeated definitions.
+            var fingerprint = sourceSerial is { } serial && _fingerprints.TryGetValue(serial, out var reused)
+                ? reused : GeometryFingerprint.Compute(geometry);
+            if (sourceSerial is { } capturedSerial) _fingerprints[capturedSerial] = fingerprint;
             var localId = item.Definitions.Length == 0 ? item.Identity : item.Definitions[^1] + "/" + item.Identity.Split('/')[^1];
-            var key = $"{_watch.DocumentSerial}/{localId}/{fingerprint}/normalise-v1";
-            var lease = _cache.Geometry(key, () => Normalise(geometry));
+            var normalisationType = temporary ? value.GetType().Name : geometry.GetType().Name;
+            var key = $"{_watch.DocumentSerial}/{localId}/{fingerprint}/normalise-v2/{normalisationType}";
+            var lease = _cache.Geometry(key, () => Normalise(geometry, temporary ? value.GetType().Name : null));
             _leaves.Add(new(item.Identity, key, item.Path, item.Chain, lease));
         }
         finally { if (temporary) geometry?.Dispose(); }
     }
-    private static OwnedGeometry Normalise(GeometryBase geometry)
+    private static OwnedGeometry Normalise(GeometryBase geometry, string? primitive = null)
     {
         var owned = geometry.Duplicate();
         GeometryBase? converted = null;
@@ -207,7 +231,8 @@ public sealed class SceneCapture : IDisposable
                 Surface surface => surface.ToBrep() ?? throw new InvalidOperationException("Surface to Brep failed."),
                 _ => owned
             };
-            var conversion = ReferenceEquals(owned, converted) ? null : $"{owned.GetType().Name} to Brep";
+            var conversion = primitive is not null ? $"{primitive} to {converted.GetType().Name}" :
+                ReferenceEquals(owned, converted) ? null : $"{owned.GetType().Name} to Brep";
             converted.EnsurePrivateCopy();
             var result = new OwnedGeometry(converted, conversion);
             if (!ReferenceEquals(owned, converted)) owned.Dispose();
@@ -219,6 +244,17 @@ public sealed class SceneCapture : IDisposable
     {
         Verify();
         if (_accepted || _pending.Count != 0) throw new InvalidOperationException("Capture is not ready for acceptance.");
+        // Native coincident-edge attribution depends on insertion order. Stabilise sources as
+        // well as extracted pieces, and give a permuted but identical scene the same revision.
+        _leaves.Sort((a, b) =>
+        {
+            for (var i = 0; i < Math.Min(a.Path.Length, b.Path.Length); i++)
+            { var order = a.Path[i].CompareTo(b.Path[i]); if (order != 0) return order; }
+            var result = a.Path.Length.CompareTo(b.Path.Length);
+            if (result == 0) result = StringComparer.Ordinal.Compare(a.Identity, b.Identity);
+            if (result == 0) result = StringComparer.Ordinal.Compare(a.Key, b.Key);
+            return result;
+        });
         static string Matrix(Transform t) => string.Join(",", Enumerable.Range(0, 4)
             .SelectMany(r => Enumerable.Range(0, 4).Select(c => t[r, c].ToString("R", CultureInfo.InvariantCulture))));
         var signature = string.Join("|", _leaves.Select(l => l.Identity + ":" + l.Key + ":" + string.Join(",", l.Path) + ":" + string.Join(";", l.Chain.Select(Matrix))));

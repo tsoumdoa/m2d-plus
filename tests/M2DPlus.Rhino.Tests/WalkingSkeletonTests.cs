@@ -254,9 +254,10 @@ public sealed class WalkingSkeletonTests(RhinoHost host)
         var input = new[] { new CaptureInput(extrusion, new[] { 2, 4 }, "extrusion"),
             new CaptureInput(subd, new[] { 5 }, "subd"), new CaptureInput(new Point3d(10, 10, 10), new[] { 8, 9 }, "point") };
         using var batch = Solve(Capture(document, watch, cache, input), "Top");
-        var view = batch.Views[0]; Assert.Null(view.Error); Assert.Equal(2, view.Report.Normalisation.Count);
+        var view = batch.Views[0]; Assert.Null(view.Error); Assert.Equal(3, view.Report.Normalisation.Count);
         Assert.Contains(view.Report.Normalisation, note => note.Contains("Extrusion to Brep"));
         Assert.Contains(view.Report.Normalisation, note => note.Contains("SubD to Brep"));
+        Assert.Contains(view.Report.Normalisation, note => note.Contains("Point3d to Point"));
         var point = Assert.Single(view.Items, p => p.SourceIdentity == "point");
         Assert.Equal(new[] { 8, 9 }, point.SourcePath);
         var path = point.SourcePath; path[0] = 99; Assert.Equal(8, point.SourcePath[0]);
