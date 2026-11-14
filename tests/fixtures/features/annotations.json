@@ -1,0 +1,70 @@
+{
+  "expected": {
+    "types": [
+      "TextEntity",
+      "TextDot",
+      "LinearDimension",
+      "Leader",
+      "Hatch"
+    ],
+    "unsupportedOrIgnored": 5
+  },
+  "flavor": null,
+  "generator": {
+    "rhino": "8.36.26296.17001",
+    "runtime": "8.0.34",
+    "script": "tools/models/generate.py",
+    "sha256": "2b530e7a39cb6b72b251f62a9d996702252b51cbd054c00988e0803e55109e18"
+  },
+  "hook": true,
+  "id": "annotations",
+  "notes": [],
+  "schemaVersion": 1,
+  "seed": 20261114,
+  "sha256": "e2c82b8822d5920d05cd2b7eb1ad5cdb369990b0bac8157b903b4d939ecd9e98",
+  "sizeBytes": 13967,
+  "sourceFixtures": {
+    "text_dot": "bb2193d90f7e489258a64c604bc5388b5957508f6e0987fdb63f422e7aba7ca2",
+    "text_entity": "84d2812d615f5f35fd63eafa162ae5ea73ac47a6b4823d64a3f948d9898d1096"
+  },
+  "stats": {
+    "blockDefinitions": 0,
+    "blockInstances": 0,
+    "brepFaces": 0,
+    "definitionMembers": 0,
+    "expandedObjects": 5,
+    "expandedTypes": {
+      "Hatch": 1,
+      "Leader": 1,
+      "LinearDimension": 1,
+      "TextDot": 1,
+      "TextEntity": 1
+    },
+    "meshTriangles": 0,
+    "objectTypes": {
+      "Hatch": 1,
+      "Leader": 1,
+      "LinearDimension": 1,
+      "TextDot": 1,
+      "TextEntity": 1
+    },
+    "objects": 5
+  },
+  "tier": null,
+  "tolerance": 0.0001,
+  "units": "Meters",
+  "views": [
+    {
+      "name": "Top",
+      "settings": {
+        "hidden": "on",
+        "seams": "off",
+        "tangents": "off"
+      },
+      "source": {
+        "kind": "direction keyword",
+        "value": "Top"
+      }
+    }
+  ]
+}

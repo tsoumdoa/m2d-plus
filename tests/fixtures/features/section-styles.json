@@ -1,0 +1,109 @@
+{
+  "expected": {
+    "explicitNoFill": [
+      "explicit-no-fill"
+    ],
+    "holes": 0,
+    "regionAreaEach": 2.25,
+    "sectionRegions": 8,
+    "unavailableProperties": [],
+    "viewportFallback": "object display colour"
+  },
+  "flavor": null,
+  "generator": {
+    "rhino": "8.36.26296.17001",
+    "runtime": "8.0.34",
+    "script": "tools/models/generate.py",
+    "sha256": "2b530e7a39cb6b72b251f62a9d996702252b51cbd054c00988e0803e55109e18"
+  },
+  "hook": true,
+  "id": "section-styles",
+  "notes": [
+    "No document section-style table exists; custom styles are stored on layers/object attributes. HLD does not render fills."
+  ],
+  "schemaVersion": 1,
+  "seed": 20261114,
+  "sha256": "ea3578d97527d836de326c1503417ba1f200491ac8114d01e63850799558c8d2",
+  "sizeBytes": 152031,
+  "sourceFixtures": {},
+  "stats": {
+    "blockDefinitions": 2,
+    "blockInstances": 1,
+    "brepFaces": 48,
+    "definitionMembers": 2,
+    "expandedObjects": 8,
+    "expandedTypes": {
+      "Brep": 8
+    },
+    "meshTriangles": 0,
+    "objectTypes": {
+      "Brep": 7,
+      "InstanceReferenceGeometry": 1
+    },
+    "objects": 8
+  },
+  "tier": null,
+  "tolerance": 0.0001,
+  "units": "Meters",
+  "views": [
+    {
+      "clipStyle": true,
+      "name": "Styled clipping plane",
+      "plane": {
+        "origin": [
+          0,
+          0,
+          0
+        ],
+        "x": [
+          1,
+          0,
+          0
+        ],
+        "y": [
+          0,
+          1,
+          0
+        ]
+      },
+      "settings": {
+        "hidden": "on",
+        "seams": "off",
+        "tangents": "off"
+      },
+      "source": {
+        "kind": "clipping plane name",
+        "value": "Styled clipping plane"
+      }
+    },
+    {
+      "name": "GH plane fallback",
+      "plane": {
+        "origin": [
+          0,
+          0,
+          0
+        ],
+        "x": [
+          1,
+          0,
+          0
+        ],
+        "y": [
+          0,
+          1,
+          0
+        ]
+      },
+      "settings": {
+        "hidden": "on",
+        "seams": "off",
+        "tangents": "off"
+      },
+      "source": {
+        "kind": "GH-style plane",
+        "value": null
+      }
+    }
+  ]
+}

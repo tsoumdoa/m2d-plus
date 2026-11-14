@@ -1,0 +1,100 @@
+{
+  "expected": {
+    "metamorphicGroup": "units-coords",
+    "modelUnitsPerMetre": 3.280839895013123,
+    "sameTopologyAfterInverseTransform": true,
+    "translationModelUnits": [
+      0,
+      0,
+      0
+    ]
+  },
+  "flavor": null,
+  "generator": {
+    "rhino": "8.36.26296.17001",
+    "runtime": "8.0.34",
+    "script": "tools/models/generate.py",
+    "sha256": "2b530e7a39cb6b72b251f62a9d996702252b51cbd054c00988e0803e55109e18"
+  },
+  "hook": true,
+  "id": "units-coords-ft",
+  "notes": [],
+  "schemaVersion": 1,
+  "seed": 20261114,
+  "sha256": "efad5b7827379ceb390da01fa32aacd8c4d10f68a4d25506a62ed300797297b2",
+  "sizeBytes": 336889,
+  "sourceFixtures": {},
+  "stats": {
+    "blockDefinitions": 0,
+    "blockInstances": 0,
+    "brepFaces": 114,
+    "definitionMembers": 0,
+    "expandedObjects": 19,
+    "expandedTypes": {
+      "Brep": 19
+    },
+    "meshTriangles": 0,
+    "objectTypes": {
+      "Brep": 19
+    },
+    "objects": 19
+  },
+  "tier": null,
+  "tolerance": 0.00032808398950131233,
+  "units": "Feet",
+  "views": [
+    {
+      "name": "Top",
+      "settings": {
+        "hidden": "on",
+        "seams": "off",
+        "tangents": "off"
+      },
+      "source": {
+        "kind": "direction keyword",
+        "value": "Top"
+      }
+    },
+    {
+      "name": "SW",
+      "settings": {
+        "hidden": "on",
+        "seams": "off",
+        "tangents": "off"
+      },
+      "source": {
+        "kind": "direction keyword",
+        "value": "SW"
+      }
+    },
+    {
+      "name": "Plan cut",
+      "plane": {
+        "origin": [
+          0,
+          0,
+          3.9370078740157473
+        ],
+        "x": [
+          1,
+          0,
+          0
+        ],
+        "y": [
+          0,
+          1,
+          0
+        ]
+      },
+      "settings": {
+        "hidden": "on",
+        "seams": "off",
+        "tangents": "off"
+      },
+      "source": {
+        "kind": "GH-style plane",
+        "value": null
+      }
+    }
+  ]
+}
