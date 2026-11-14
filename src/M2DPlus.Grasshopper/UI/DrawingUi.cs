@@ -89,7 +89,7 @@ public sealed class DrawingUi
             return;
         }
         if (command.StartsWith(MenuCommands.BakeOne, StringComparison.Ordinal) && int.TryParse(command[MenuCommands.BakeOne.Length..], out var index))
-        { Raise(BakeRequested, new BakeRequest(false, index), "Bake isn't available in this build yet."); return; }
+        { Raise(BakeRequested, new BakeRequest(shift, index), "Bake isn't available in this build yet."); return; }
         switch (command)
         {
             case ViewCommands.Validate or ViewCommands.Flip or ViewCommands.Create or ViewCommands.Select:

@@ -10,6 +10,7 @@ namespace M2DPlus.Rhino.Services;
 
 public sealed record ViewRequest(string Name, Vector3d Direction, string? Error = null)
 {
+    public EffectiveSettings? Settings { get; init; }
     public NamedFrame? Named { get; init; }
     public CutFrame? Cut { get; init; }
     /// <summary>The source type, for settings resolution (a view box resolves as a Box).</summary>
@@ -120,7 +121,7 @@ public sealed record ViewRequest(string Name, Vector3d Direction, string? Error 
             !camera.IsValid || !direction.IsValid || !direction.Unitize() ||
             !new[] { left, right, bottom, top }.All(RhinoMath.IsValidDouble) || right <= left || top <= bottom)
             return new(name, default, $"Named view '{name}' has an invalid frame.");
-        return new(name, direction) { Kind = ViewSourceKind.NamedView, Named = new(camera, new(left, right), new(bottom, top)) };
+        return new(name, direction) { Kind = ViewSourceKind.NamedView, Named = new(camera, new(left, right), new(bottom, top)) { Target = viewport.TargetPoint.IsValid ? viewport.TargetPoint : camera.Origin } };
     }
     public Rectangle3d Resolve(BoundingBox bounds, double tolerance)
     {
@@ -160,7 +161,8 @@ public sealed record ViewRequest(string Name, Vector3d Direction, string? Error 
 /// <summary>Owned plain values captured on the host; named views never carry viewport clipping planes into compute.</summary>
 public sealed record NamedFrame(Plane Camera, Interval X, Interval Y, bool Crop = true)
 {
-    public string Revision => string.Join(",", new[] { Camera.OriginX, Camera.OriginY, Camera.OriginZ,
+    public Point3d? Target { get; init; }
+    public string Revision => Target?.ToString() + "/" + string.Join(",", new[] { Camera.OriginX, Camera.OriginY, Camera.OriginZ,
         Camera.XAxis.X, Camera.XAxis.Y, Camera.XAxis.Z, Camera.YAxis.X, Camera.YAxis.Y, Camera.YAxis.Z,
         X.Min, X.Max, Y.Min, Y.Max }.Select(v => v.ToString("R", CultureInfo.InvariantCulture))) + "/" + Crop;
 }
@@ -170,7 +172,7 @@ public sealed record CutFrame(Plane Plane, Rectangle3d? Crop, double? SourceDept
     bool ScopeEnabled, bool Exclusion, IReadOnlyList<Guid> Objects, IReadOnlyList<Guid> Layers,
     SectionStyleSnapshot? SectionerStyle)
 {
-    // Internal test seam. Product always uses NoLine until M3 settings wiring.
+    // Legacy test seam; resolved M3 settings override this value.
     internal FarClipMode FarClip { get; init; } = FarClipMode.NoLine;
     public string Revision => System.Text.Json.JsonSerializer.Serialize(new {
         plane = new NamedFrame(Plane, new(0, 1), new(0, 1)).Revision,

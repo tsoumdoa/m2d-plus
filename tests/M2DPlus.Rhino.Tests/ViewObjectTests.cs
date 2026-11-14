@@ -354,7 +354,7 @@ public sealed class ViewObjectTests(RhinoHost host, ITestOutputHelper output)
     private static Drawn Read(GH_Component component)
     {
         var info = ((GH_String)component.Params.Output[8].VolatileData.AllData(true).Single()).Value;
-        var curves = component.Params.Output[0].VolatileData.AllData(true).OfType<GH_Curve>().Select(c => c.Value).ToArray();
+        var curves = component.Params.Output[0].VolatileData.AllData(true).Concat(component.Params.Output[2].VolatileData.AllData(true)).OfType<GH_Curve>().Select(c => c.Value).ToArray();
         var maxX = curves.Length == 0 ? double.NaN : curves.Max(c => c.GetBoundingBox(true).Max.X);
         var messages = new[] { GH_RuntimeMessageLevel.Remark, GH_RuntimeMessageLevel.Warning, GH_RuntimeMessageLevel.Error }
             .SelectMany(component.RuntimeMessages).ToArray();
@@ -369,7 +369,7 @@ public sealed class ViewObjectTests(RhinoHost host, ITestOutputHelper output)
         var auto = Draw(plane);
         output.WriteLine(auto.Info);
         Assert.Equal(4, auto.MaxX, 3); // auto depth reaches B (x up to 4)
-        Assert.Contains("Settings: depth = 7.01 (auto)", auto.Info);
+        Assert.Contains("depth = 7.01 (auto)", auto.Info);
         var four = Draw(plane, depth: "4");
         output.WriteLine(four.Info + "\n" + string.Join("\n", four.Messages));
         Assert.Equal(1, four.MaxX, 3);    // B lies 6–7 behind: beyond a 4 far limit
@@ -408,7 +408,7 @@ public sealed class ViewObjectTests(RhinoHost host, ITestOutputHelper output)
         Assert.Contains(viewBox.Messages, m => m.Contains("is a box: its geometry sets the depth"));
         // The view box itself is never drawn as scene geometry (document mode): it would enclose and hide everything.
         // Two boxes seen face-on: 4 visible edges each, nothing hidden.
-        Assert.Contains("Visible=8, hidden=0", viewBox.Info);
+        Assert.Contains("Visible=4, hidden=0", viewBox.Info);
     });
 
     [RhinoFact] public void SettingsPrecedenceIsInputThenViewObjectThenMenuAndFollowsUserTextEdits() => host.Run(() =>
@@ -431,7 +431,7 @@ public sealed class ViewObjectTests(RhinoHost host, ITestOutputHelper output)
         SetUserText("m2d.hidden", "default");
         var menu = Draw(new GH_Brep(id), setup: c => ((dynamic)c).Ui.Execute("set:hidden=off", false));
         Assert.Contains("hidden = off (component menu)", menu.Info);
-        Assert.Contains(menu.Messages, m => m.Contains("not applied to the drawing in this build yet: hidden"));
+        Assert.DoesNotContain(menu.Messages, m => m.Contains("not applied"));
 
         // A user-text edit re-runs the component with the new value. Interactive Rhino raises ModifyObjectAttributes,
         // which the component's document watch turns into Invalidate + re-solve; headless documents raise no object

@@ -20,6 +20,8 @@ public sealed partial class DrawingComponent
     private DocumentWatch? _watch;
     private SceneCapture? _capture;
     private DrawingBatch? _drawing;
+    private readonly DrawingCache _drawingCache = new();
+    private Plane[] _targets = Array.Empty<Plane>();
     private List<CaptureInput>? _inputs;
     private ViewRequest[] _views = Array.Empty<ViewRequest>();
     private NativeSettings _settings = new();
@@ -90,9 +92,12 @@ public sealed partial class DrawingComponent
                     var value = goo is IGH_GeometricGoo { IsReferencedGeometry: true } reference && reference.ReferenceID != Guid.Empty
                         ? reference.ReferenceID : Value(goo);
                     _inputs.Add(new(value ?? "Null input", geometry.Paths[branch].Indices,
-                        $"input/{geometry.Paths[branch]}/{index}/{(value is Guid objectId ? objectId.ToString() : "local")}"));
+                        $"input/{geometry.Paths[branch]}/{index}/{(value is Guid objectId ? objectId.ToString() : "local")}") { SourceItem = index });
                 }
         }
+        var targets = new List<Plane>(); da.GetDataList(2, targets); _targets = targets.ToArray();
+        if (_targets.Length != 0 && _targets.Length != 1 && _targets.Length != _views.Length)
+        { _error = "Give 1 target, or one per view"; AddRuntimeMessage(GH_RuntimeMessageLevel.Error, _error); return; }
         _settingsWarnings.Clear(); _settings = new();
         da.GetDataTree(3, out GH_Structure<GH_String> settings);
         var branches = new List<IReadOnlyList<string>>();
@@ -186,15 +191,11 @@ public sealed partial class DrawingComponent
         catch (OperationCanceledException) { Invalidate(); Refresh(false); }
         catch (Exception ex) { _timer?.Stop(); _capture?.Dispose(); _capture = null; _error = ex.Message; Refresh(true); }
     }
-    /// <summary>UX rev. 4 §6 precedence, once the scene depth is known: Depth input &gt; Settings &gt; view object
-    /// (m2d.* user text) &gt; component menu &gt; auto. Box views keep their geometric depth. In this build only depth
-    /// reaches the engine; the rest is resolved, reported in Info and flagged as not applied yet.</summary>
+    /// <summary>Resolve every key on the host; the engine receives immutable values only.</summary>
     private void ResolveSettings(BoundingBox bounds)
     {
         var contexts = _context.Views.Select((c, i) => c with { SceneDepth = SceneDepth(_views[i], bounds) }).ToArray();
-        SettingsResolution resolution;
-        try { resolution = Settings.Resolve(contexts, _context.InputBranches, _context.Units, Ui.State.ToEditorSettings(_context.ViewRows), _context.Depth); }
-        catch (ArgumentException ex) { _settingsWarnings.Add((GH_RuntimeMessageLevel.Error, ex.Message)); return; }
+        var resolution = Settings.Resolve(contexts, _context.InputBranches, _context.Units, Ui.State.ToEditorSettings(_context.ViewRows), _context.Depth);
         foreach (var diagnostic in resolution.Diagnostics)
         {
             var where = diagnostic.ViewIndex is int v && v < _views.Length ? $"{_views[v].Name}: " : "";
@@ -202,23 +203,8 @@ public sealed partial class DrawingComponent
                 DiagnosticSeverity.Warning => GH_RuntimeMessageLevel.Warning, _ => GH_RuntimeMessageLevel.Remark };
             _settingsWarnings.Add((level, where + diagnostic.Message));
         }
-        var pending = new SortedSet<string>(StringComparer.Ordinal);
-        _effective = new string[_views.Length];
-        for (var i = 0; i < _views.Length && i < resolution.Views.Length; i++)
-        {
-            var effective = resolution.Views[i]; var view = _views[i];
-            var entry = effective["depth"];
-            if (view.Cut is { } cut && view.Kind != ViewSourceKind.Box && entry.Source != SettingSource.Auto)
-                _views[i] = view with { Cut = cut with { SourceDepth = effective.Depth } };
-            else if (view.Cut is null && view.Error is null && entry.Source != SettingSource.Auto)
-                _settingsWarnings.Add((GH_RuntimeMessageLevel.Remark, $"{view.Name}: depth applies to plane, rectangle, box and clipping-plane views; this view has no far limit in this build."));
-            var set = Settings.Keys.Where(k => effective[k].AssignedBy != SettingSource.Default && !(k == "depth" && entry.Source == SettingSource.Auto && entry.AssignedBy == SettingSource.Auto)).ToArray();
-            foreach (var key in set.Where(k => k != "depth")) pending.Add(key);
-            _effective[i] = $"Settings: depth = {(entry.Value is double d ? d.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture) : "auto")} ({entry.SourceDescription})" +
-                string.Concat(set.Where(k => k != "depth").Select(k => $" · {k} = {effective[k].Text} ({effective[k].SourceDescription})"));
-        }
-        if (pending.Count > 0)
-            _settingsWarnings.Add((GH_RuntimeMessageLevel.Remark, $"Resolved but not applied to the drawing in this build yet: {string.Join(", ", pending)}. Only depth is applied."));
+        _effective = resolution.Views.Select(s => s.Describe()).ToArray();
+        for (var i = 0; i < _views.Length; i++) _views[i] = _views[i] with { Settings = resolution.Views[i] };
         Previews(bounds);
     }
 
@@ -226,7 +212,8 @@ public sealed partial class DrawingComponent
     {
         if (!bounds.IsValid) return 0;
         if (view.Cut is { } cut) return Math.Max(0, -bounds.GetCorners().Min(cut.Plane.DistanceTo)) + _tolerance * 10;
-        return ViewPreview.For(view, bounds, _tolerance)?.Depth ?? 0;
+        var plane = view.Resolve(bounds, _tolerance).Plane;
+        return Math.Max(0, -bounds.GetCorners().Min(plane.DistanceTo)) + _tolerance * 10;
     }
 
     private sealed class ProgressSink(Action<JobProgress> report) : IProgress<JobProgress>
@@ -238,7 +225,7 @@ public sealed partial class DrawingComponent
         string? error = null;
         try
         {
-            batch = await NativeDrawing.SolveAsync(scene, identity, views, settings, token,
+            batch = await _drawingCache.SolveAsync(scene, identity, views, settings, _targets, token,
                 new ProgressSink(p => _requests.TryUpdate(identity, () => { lock (_progressSync) _progress = p; }))).ConfigureAwait(false);
         }
         catch (OperationCanceledException) { }
@@ -254,7 +241,7 @@ public sealed partial class DrawingComponent
     private void Emit(IGH_DataAccess da, DrawingBatch batch)
     {
         var visible = new GH_Structure<IGH_GeometricGoo>(); var hidden = new GH_Structure<GH_Curve>();
-        var farClip = new GH_Structure<GH_Curve>(); var cut = new GH_Structure<GH_Curve>(); var hatch = new GH_Structure<GH_Hatch>();
+        var beyond = new GH_Structure<GH_Curve>(); var farClip = new GH_Structure<GH_Curve>(); var cut = new GH_Structure<GH_Curve>(); var hatch = new GH_Structure<GH_Hatch>();
         var unresolved = new GH_Structure<GH_Curve>(); var frames = new GH_Structure<GH_Rectangle>(); var info = new GH_Structure<GH_String>();
         for (var index = 0; index < batch.Views.Count; index++)
         {
@@ -265,18 +252,20 @@ public sealed partial class DrawingComponent
             frames.Append(new(view.Frame), viewPath);
             foreach (var item in view.Items)
             {
-                var path = new GH_Path(new[] { index }.Concat(item.SourcePath).ToArray());
+                var sourcePath = view.Settings?.Tree == OutputTreeMode.Object ? item.SourcePath.Append(item.SourceItem).ToArray() : item.SourcePath;
+                var path = new GH_Path(new[] { index }.Concat(sourcePath).ToArray());
                 var copy = item.CopyGeometry();
                 if (copy is Curve curve)
                 {
-                    if (item.Class == LineClass.Visible) visible.Append(new GH_Curve(curve), path);
+                    if (item.Class is LineClass.Visible or LineClass.Profile) visible.Append(new GH_Curve(curve), path);
+                    else if (item.Class == LineClass.Beyond) beyond.Append(new(curve), path);
                     else if (item.Class == LineClass.Hidden) hidden.Append(new(curve), path);
                     else if (item.Class == LineClass.FarClip) farClip.Append(new(curve), path);
                     else unresolved.Append(new(curve), path);
                 }
                 else if (copy is Point point)
                 {
-                    if (item.Class == LineClass.Visible) visible.Append(new GH_Point(point.Location), path);
+                    if (item.Class is LineClass.Visible or LineClass.Profile) visible.Append(new GH_Point(point.Location), path);
                     point.Dispose();
                 }
                 else copy.Dispose();
@@ -286,7 +275,8 @@ public sealed partial class DrawingComponent
             {
                 var key = string.Join(",", entry.SourcePath);
                 var ordinal = regionOrdinals.GetValueOrDefault(key); regionOrdinals[key] = ordinal + 1;
-                var path = new GH_Path(new[] { index }.Concat(entry.SourcePath).Append(ordinal).ToArray());
+                var regionPath = view.Settings?.Tree == OutputTreeMode.Object ? entry.SourcePath.Append(entry.SourceItem) : entry.SourcePath;
+                var path = new GH_Path(new[] { index }.Concat(regionPath).Append(ordinal).ToArray());
                 foreach (var loop in entry.Region.Loops) cut.Append(new(loop.Curve.DuplicateCurve()), path);
                 if (entry.Region.Hatch is { } fill)
                 {
@@ -297,7 +287,7 @@ public sealed partial class DrawingComponent
                 }
                 else hatch.Append(null!, path);
             }
-            if (view.Report.Quarantined || view.Report.UncertainCount != 0)
+            if (view.Report.Quarantined || view.Report.UncertainCount != 0 || view.Diagnostics.Any(d => (d.Contains("Uncertain:", StringComparison.Ordinal) || d.Contains("Unsupported:", StringComparison.Ordinal))))
                 AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"{view.Name}: uncertain/quarantined view; inspect Unresolved and Info. Uncertain points are suppressed.");
             if (view.Report.UnsupportedByType.Count > 0)
                 AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"{view.Name}: unsupported sources: {string.Join(", ", view.Report.UnsupportedByType.Select(p => $"{p.Key}={p.Value}"))}. See Info.");
@@ -305,8 +295,9 @@ public sealed partial class DrawingComponent
         foreach (var (level, text) in _settingsWarnings) AddRuntimeMessage(level, text);
         var good = batch.Views.Count(v => v.Error is null);
         Message = good == batch.Views.Count ? $"{good} drawings · {batch.Views.Sum(v => v.Seconds):F1} s" : $"Partial · {good}/{batch.Views.Count} drawings";
-        da.SetDataTree(0, visible); da.SetDataTree(1, hidden); da.SetDataTree(3, farClip); da.SetDataTree(4, cut); da.SetDataTree(5, hatch); da.SetDataTree(6, unresolved); da.SetDataTree(7, frames); da.SetDataTree(8, info);
+        da.SetDataTree(0, visible); da.SetDataTree(1, hidden); da.SetDataTree(2, beyond); da.SetDataTree(3, farClip); da.SetDataTree(4, cut); da.SetDataTree(5, hatch); da.SetDataTree(6, unresolved); da.SetDataTree(7, frames); da.SetDataTree(8, info);
     }
+
     private void Refresh(bool preserve)
     {
         if (_removed) return;
@@ -339,15 +330,18 @@ public sealed partial class DrawingComponent
         }
         base.ClearData();
     }
-    public override void AddedToDocument(GH_Document document) { _removed = false; base.AddedToDocument(document); }
+    private void EscapePressed(object? sender, EventArgs args)
+    { if (Attributes?.Selected == true && _started && _drawing is null) { Invalidate(); OnDisplayExpired(true); } }
+    public override void AddedToDocument(GH_Document document)
+    { _removed = false; RhinoApp.EscapeKeyPressed += EscapePressed; base.AddedToDocument(document); }
     public override void RemovedFromDocument(GH_Document document)
     {
-        _removed = true; Invalidate(); DetachWatch(); _timer?.Dispose(); _timer = null;
+        RhinoApp.EscapeKeyPressed -= EscapePressed; _removed = true; Invalidate(); _drawingCache.Clear(); DetachWatch(); _timer?.Dispose(); _timer = null;
         base.RemovedFromDocument(document);
     }
     public override void DocumentContextChanged(GH_Document document, GH_DocumentContext context)
     {
-        if (context == GH_DocumentContext.Close) { Invalidate(); DetachWatch(); }
+        if (context == GH_DocumentContext.Close) { Invalidate(); _drawingCache.Clear(); DetachWatch(); }
         base.DocumentContextChanged(document, context);
     }
 }

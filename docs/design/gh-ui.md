@@ -96,3 +96,7 @@ document watch and is an interactive check; the test re-solves explicitly to pro
 Applying farclip/beyond/fade/hidden/… to the engine (resolved and reported only); hover tooltip on inputs; Esc to
 cancel on the canvas; preview of drawing layers; interactive checks that a gumball drag of a view box's back face
 keeps it an `Extrusion` in Rhino 8, and of the Wireframe display override.
+
+The later [M3 wiring slice](m3-wiring.md) applies the settings, draws the styled
+preview, connects Bake/Copy/Clear cache and adds selected-component Escape handling.
+Interactive installed-Yak checks remain manual.

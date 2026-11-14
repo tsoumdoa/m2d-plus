@@ -18,6 +18,8 @@ public sealed partial class DrawingComponent
         var ui = new DrawingUi(this) { Runtime = UiRuntime };
         // Cancel rejects the running job at once; nothing is published and the button then reads Run.
         ui.CancelRequested += (_, _) => { Invalidate(); OnDisplayExpired(true); };
+        ui.BakeRequested += (_, request) => BakeCurrent(global::Rhino.RhinoDoc.ActiveDoc, request.AsCopy, request.ViewIndex);
+        ui.ClearCacheRequested += (_, _) => { _drawingCache.Clear(); M2DPlus.Rhino.Services.SceneCache.Shared.Clear(); Invalidate(); ExpireSolution(true); };
         return ui;
     }
 
@@ -29,8 +31,20 @@ public sealed partial class DrawingComponent
         Ui.AppendMenuItems(menu);
     }
 
-    public override bool Write(GH_IWriter writer) => Ui.Write(writer) && base.Write(writer);
-    public override bool Read(GH_IReader reader) => Ui.Read(reader) && base.Read(reader);
+    public override bool Write(GH_IWriter writer)
+    {
+        writer.SetString("M3BakeNames", System.Text.Json.JsonSerializer.Serialize(_allocatedBakeNames));
+        return Ui.Write(writer) && base.Write(writer);
+    }
+    public override bool Read(GH_IReader reader)
+    {
+        if (reader.ItemExists("M3BakeNames"))
+        {
+            try { _allocatedBakeNames = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(reader.GetString("M3BakeNames")) ?? new(); }
+            catch (System.Text.Json.JsonException) { _allocatedBakeNames = new(); }
+        }
+        return Ui.Read(reader) && base.Read(reader);
+    }
 
     /// <summary>Job state for the canvas. Reads the job fields owned by DrawingComponent.Async.cs.</summary>
     private DrawingRuntime UiRuntime()
