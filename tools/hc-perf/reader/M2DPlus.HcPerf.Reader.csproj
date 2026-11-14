@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><TargetFramework>net8.0-windows</TargetFramework><OutputType>Exe</OutputType><DefineConstants>$(DefineConstants);LICENSE_FREE</DefineConstants></PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../../src/M2DPlus.Core/M2DPlus.Core.csproj" />
+    <PackageReference Include="Rhino3dm" Version="8.17.0" />
+    <Compile Include="../../../src/M2DPlus.Rhino/Services/PlanarExtraction.cs" Link="PlanarExtraction.cs" />
+    <Compile Include="../Bench.cs" Link="Bench.cs" />
+    <Compile Include="../Gates.cs" Link="Gates.cs" />
+  </ItemGroup>
+</Project>

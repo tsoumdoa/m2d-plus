@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><TargetFramework>net8.0-windows</TargetFramework></PropertyGroup>
+  <ItemGroup><ProjectReference Include="../../src/M2DPlus.Rhino/M2DPlus.Rhino.csproj" /></ItemGroup>
+  <ItemGroup><Compile Remove="reader/**/*.cs" /></ItemGroup>
+</Project>
