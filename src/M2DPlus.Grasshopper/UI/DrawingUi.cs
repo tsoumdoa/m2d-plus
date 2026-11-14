@@ -5,6 +5,7 @@ using Grasshopper.Kernel.Data;
 using Grasshopper.Kernel.Types;
 using M2DPlus.Core;
 using M2DPlus.Grasshopper.UI.Model;
+using M2DPlus.Rhino.Views;
 using Rhino;
 
 namespace M2DPlus.Grasshopper.UI;
@@ -16,27 +17,24 @@ public sealed class BakeRequest(bool asCopy, int? viewIndex) : EventArgs
     public int? ViewIndex { get; } = viewIndex;
 }
 
-/// <summary>The UI half of the M2D+ Drawing component: persisted editor state, menus, the editor window,
-/// and the events the component wires to its job/bake backends. All members run on the GH UI thread.</summary>
+/// <summary>The UI half of the M2D+ Drawing component (UX rev. 4): persisted menu defaults, menus, view-object
+/// commands and their reports, and the events the component wires to its job/bake backends. GH UI thread only.</summary>
 public sealed class DrawingUi
 {
     private readonly GH_Component _owner;
-    private SettingsEditorForm? _editor;
-    private GH_Document? _editorDocument;
     private bool _runRequested;
+    private readonly List<(GH_RuntimeMessageLevel Level, string Text)> _notes = new();
 
     public DrawingUi(GH_Component owner) => _owner = owner;
 
     public ComponentUiState State { get; private set; } = ComponentUiState.Default;
     /// <summary>Set when a stored state could not be fully read; show it as a remark.</summary>
     public string? ReadProblem { get; private set; }
-    /// <summary>Editor values for Core's Settings.Resolve (unknown future keys filtered out).</summary>
-    public EditorSettings EditorSettings => State.ToEditorSettings();
     public bool AutoRun => State.AutoRun;
 
     /// <summary>Supplied by the component: the job state for the progress line and the tab button.</summary>
     public Func<DrawingRuntime>? Runtime { get; set; }
-    /// <summary>Supplied by the component once it resolves views: real identities, names, sources.
+    /// <summary>Supplied by the component once it resolves views: real identities, names, sources and view-object rows.
     /// Until then a fallback derived from the View and Settings inputs is used.</summary>
     public Func<UiContext>? Context { get; set; }
 
@@ -44,7 +42,7 @@ public sealed class DrawingUi
     public event EventHandler? CancelRequested;
     public event EventHandler? RunRequested;
     public event EventHandler? ClearCacheRequested;
-    /// <summary>Raised after the persisted state changes (menu, editor Apply, undo/redo through Read).</summary>
+    /// <summary>Raised after the persisted state changes (menu, undo/redo through Read).</summary>
     public event EventHandler? StateChanged;
 
     public DrawingRuntime CurrentRuntime
@@ -52,6 +50,10 @@ public sealed class DrawingUi
         get { try { return Runtime?.Invoke() ?? DrawingRuntime.Idle; } catch (Exception e) when (e is InvalidOperationException or NullReferenceException) { return DrawingRuntime.Idle; } }
     }
     public UiContext CurrentContext => Context?.Invoke() ?? FallbackContext(_owner);
+    public ViewParam? ViewInput => _owner.Params.Input.Count > 1 ? _owner.Params.Input[1] as ViewParam : null;
+
+    /// <summary>Refusals from the last view command (Validate, Flip, Create), shown as warnings until View changes.</summary>
+    public IReadOnlyList<(GH_RuntimeMessageLevel Level, string Text)> Notes => _notes;
 
     /// <summary>The component's start gate: true with Run automatically on, or once after Run now.</summary>
     public bool ShouldStart()
@@ -79,7 +81,7 @@ public sealed class DrawingUi
     public void Execute(string command, bool shift)
     {
         if (MenuCommands.TryParseSet(command, out var key, out var value))
-        { Commit(State.With(ComponentUiState.AllViewsRow, key, value), $"M2D+ {key} = {value}"); return; }
+        { Commit(State.With(key, value), $"M2D+ {key} = {value}"); return; }
         if (command.StartsWith(MenuCommands.Preview, StringComparison.Ordinal))
         {
             var layer = command[MenuCommands.Preview.Length..];
@@ -90,16 +92,48 @@ public sealed class DrawingUi
         { Raise(BakeRequested, new BakeRequest(false, index), "Bake isn't available in this build yet."); return; }
         switch (command)
         {
-            case MenuCommands.Editor: OpenEditor(); break;
+            case ViewCommands.Validate or ViewCommands.Flip or ViewCommands.Create or ViewCommands.Select:
+                if (ViewInput is { } views && RhinoDoc.ActiveDoc is { } document) ViewObjects.Execute(command, views, document, this);
+                break;
             case MenuCommands.Bake: Raise(BakeRequested, new BakeRequest(shift, null), "Bake isn't available in this build yet."); break;
             case MenuCommands.AutoRun: Commit(State.WithAutoRun(!State.AutoRun), "M2D+ run automatically", resolve: !State.AutoRun); break;
             case MenuCommands.Run: RunNow(); break;
             case MenuCommands.Cancel: Raise(CancelRequested, EventArgs.Empty, "Cancel isn't connected in this build."); break;
+            case MenuCommands.Reset: Commit(State.ResetMenu(), "M2D+ reset menu defaults"); break;
             case MenuCommands.ClearCache: Raise(ClearCacheRequested, EventArgs.Empty, "There is no drawing cache to clear in this build yet."); break;
             case MenuCommands.CopyInfo: CopyText(InfoText(), "There is no Info to copy yet."); break;
-            case MenuCommands.CopySettings: CopyText(Settings.CopyEditorAsText(EditorSettings, CurrentContext.Views), null); break;
+            case MenuCommands.CopySettings:
+                var context = CurrentContext;
+                CopyText(Settings.CopyEditorAsText(State.ToEditorSettings(context.ViewRows), context.Views), null);
+                break;
         }
     }
+
+    /// <summary>Double-click on the component: select the referenced view objects in Rhino (nothing else happens).</summary>
+    public bool SelectViewObjects()
+    {
+        if (ViewInput is not { } views || RhinoDoc.ActiveDoc is not { } document) return false;
+        if (ViewObjects.References(views, document).Count == 0) return false;
+        ViewObjects.Select(views, document);
+        return true;
+    }
+
+    /// <summary>Shows a view command's outcome on the component: successes as one-off remarks, refusals as warnings
+    /// that stay (re-added on every solve) until the next view command or a change to the View input.</summary>
+    public void Report(string title, IReadOnlyList<ViewObjectResult> results)
+    {
+        _notes.Clear();
+        foreach (var result in results)
+        {
+            var level = result.Ok ? GH_RuntimeMessageLevel.Remark : GH_RuntimeMessageLevel.Warning;
+            if (!result.Ok) _notes.Add((level, $"{title}: {result}"));
+            _owner.AddRuntimeMessage(level, $"{title}: {result}");
+        }
+        _owner.OnDisplayExpired(true);
+    }
+
+    /// <summary>Forget the last report (the View input changed).</summary>
+    public void ClearNotes() => _notes.Clear();
 
     /// <summary>Message-tab button. Shift on Bake adds a copy instead of replacing (UX §8.2).</summary>
     public void Press(FooterButton button, bool shift)
@@ -150,56 +184,16 @@ public sealed class DrawingUi
     public void AppendMenuItems(ToolStripDropDown menu)
     {
         GH_DocumentObject.Menu_AppendSeparator(menu);
+        MenuRenderer.Append(menu, ComponentMenu.Build(MenuContext()), Execute);
+    }
+
+    /// <summary>The model behind the component menu, for rendering and for tests.</summary>
+    public MenuContext MenuContext()
+    {
         var presentation = new SettingsPresentation(State, CurrentContext);
         var hasInfo = _owner.Params.Output.Count > 8 && _owner.Params.Output[8].VolatileDataCount > 0;
-        MenuRenderer.Append(menu, ComponentMenu.Build(new(presentation, CurrentRuntime, hasInfo)), Execute);
-    }
-
-    public void OpenEditor()
-    {
-        if (_editor is { } open) { open.BringToFront(); return; }
-        CreateEditor().Show();
-    }
-
-    /// <summary>Creates (without showing) the one editor window for this component, wired to its document.</summary>
-    public SettingsEditorForm CreateEditor()
-    {
-        if (_editor is { } open) return open;
-        var session = new EditorSession(State, CurrentContext);
-        _editor = new SettingsEditorForm(session, applied => Commit(applied, "M2D+ View range & settings"), ReadProblem);
-        _editor.Closed += (_, _) => DetachEditor();
-        _editorDocument = _owner.OnPingDocument();
-        if (_editorDocument is not null)
-        {
-            _editorDocument.SolutionEnd += SolutionEnded;
-            _editorDocument.ObjectsDeleted += ObjectsDeleted;
-        }
-        StateChanged += ExternalStateChanged;
-        _editor.Owner = global::Rhino.UI.RhinoEtoApp.MainWindowForOwner;
-        return _editor;
-    }
-
-    /// <summary>The open editor, if any.</summary>
-    public SettingsEditorForm? Editor => _editor;
-
-    public void CloseEditor() => _editor?.Close();
-
-    private void ExternalStateChanged(object? sender, EventArgs e) => _editor?.Rebase(State);
-    private void SolutionEnded(object? sender, GH_SolutionEventArgs e) =>
-        _editor?.UpdateContext(CurrentContext);
-    private void ObjectsDeleted(object? sender, GH_DocObjectEventArgs e)
-    {
-        if (e.Objects.Contains(_owner)) CloseEditor();
-    }
-    private void DetachEditor()
-    {
-        StateChanged -= ExternalStateChanged;
-        if (_editorDocument is not null)
-        {
-            _editorDocument.SolutionEnd -= SolutionEnded;
-            _editorDocument.ObjectsDeleted -= ObjectsDeleted;
-        }
-        _editorDocument = null; _editor = null;
+        var views = ViewInput is { } param ? ViewObjects.State(param, RhinoDoc.ActiveDoc) : null;
+        return new(presentation, CurrentRuntime, hasInfo, Views: views);
     }
 
     public bool Write(GH_IWriter writer)
@@ -217,31 +211,35 @@ public sealed class DrawingUi
         return true;
     }
 
-    /// <summary>Best-effort contexts from the View and Settings inputs, used until the component supplies real ones.
-    /// Identities: "text:" + lower-case text for text views, "index:" + list index otherwise (UX §6.1).</summary>
+    /// <summary>Best-effort contexts from the View, Settings and Depth inputs, used until the component supplies real
+    /// ones. Identities: "object:" + id for referenced Rhino objects (with their m2d.* rows), "text:" + lower-case
+    /// text for text views, "index:" + list index otherwise.</summary>
     public static UiContext FallbackContext(GH_Component owner)
     {
         var document = RhinoDoc.ActiveDoc;
         var tolerance = document?.ModelAbsoluteTolerance is > 0 and var t ? t : .001;
         var views = new List<ViewSettingsContext>();
+        var rows = new Dictionary<string, SettingsRow>(StringComparer.Ordinal);
         if (owner.Params.Input.Count > 1)
         {
-            var param = owner.Params.Input[1];
-            IEnumerable<IGH_Goo> data = param.VolatileDataCount > 0 ? param.VolatileData.AllData(true)
-                : param is GH_PersistentParam<IGH_Goo> persistent ? persistent.PersistentData.AllData(true) : [];
             var index = 0;
-            foreach (var goo in data)
+            foreach (var goo in Items(owner.Params.Input[1]))
             {
-                var (kind, name, identity) = goo switch
-                {
-                    GH_String s when ViewMenu.Directions.Contains(s.Value.Trim(), StringComparer.OrdinalIgnoreCase) => (ViewSourceKind.Direction, s.Value.Trim(), "text:" + s.Value.Trim().ToLowerInvariant()),
-                    GH_String s => (ViewSourceKind.NamedView, s.Value.Trim(), "text:" + s.Value.Trim().ToLowerInvariant()),
-                    GH_Rectangle => (ViewSourceKind.Rectangle, $"Rectangle {index}", $"index:{index}"),
-                    GH_Box => (ViewSourceKind.Box, $"Box {index}", $"index:{index}"),
-                    GH_Plane => (ViewSourceKind.Plane, $"Plane {index}", $"index:{index}"),
-                    GH_Vector => (ViewSourceKind.Vector, $"Vector {index}", $"index:{index}"),
-                    _ => (ViewSourceKind.ClippingPlane, $"View {index}", $"index:{index}")
-                };
+                var obj = ViewObjects.IdOf(goo) is { } id ? document?.Objects.FindId(id) : null;
+                var (kind, name, identity) = obj is not null
+                    ? (ViewBoxes.IsViewBox(obj) ? ViewSourceKind.Box : obj is global::Rhino.DocObjects.ClippingPlaneObject ? ViewSourceKind.ClippingPlane : ViewSourceKind.Rectangle,
+                        ViewBoxes.Label(obj), Identity(obj.Id))
+                    : goo switch
+                    {
+                        GH_String s when ViewMenu.Directions.Contains(s.Value.Trim(), StringComparer.OrdinalIgnoreCase) => (ViewSourceKind.Direction, s.Value.Trim(), "text:" + s.Value.Trim().ToLowerInvariant()),
+                        GH_String s => (ViewSourceKind.NamedView, s.Value.Trim(), "text:" + s.Value.Trim().ToLowerInvariant()),
+                        GH_Rectangle => (ViewSourceKind.Rectangle, $"Rectangle {index}", $"index:{index}"),
+                        GH_Box => (ViewSourceKind.Box, $"Box {index}", $"index:{index}"),
+                        GH_Plane => (ViewSourceKind.Plane, $"Plane {index}", $"index:{index}"),
+                        GH_Vector => (ViewSourceKind.Vector, $"Vector {index}", $"index:{index}"),
+                        _ => (ViewSourceKind.ClippingPlane, $"View {index}", $"index:{index}")
+                    };
+                if (obj is not null) rows[identity] = ViewBoxes.ReadRow(obj.Attributes);
                 views.Add(new(identity, name.Length == 0 ? $"View {index}" : name, kind, false, 0, tolerance));
                 index++;
             }
@@ -257,8 +255,16 @@ public sealed class DrawingUi
                 foreach (var path in data.Paths.OrderBy(p => p))
                     branches.Add(data.get_Branch(path).Cast<object>().Select(o => o is GH_String s ? s.Value : o?.ToString() ?? "").ToArray());
         }
-        return new(views, branches, Units(document));
+        var depth = owner.Params.Input.Count > 4 ? Items(owner.Params.Input[4]).Select(g => g is GH_String s ? s.Value : g?.ToString()).ToArray() : [];
+        return new(views, branches, Units(document)) { ViewRows = rows, Depth = depth };
     }
+
+    /// <summary>The stable settings identity of a referenced view object.</summary>
+    public static string Identity(Guid id) => "object:" + id.ToString("D");
+
+    private static IEnumerable<IGH_Goo> Items(IGH_Param param) => param.VolatileDataCount > 0 ? param.VolatileData.AllData(true).OfType<IGH_Goo>()
+        : param is GH_PersistentParam<IGH_Goo> generic ? generic.PersistentData.AllData(true)
+        : param is GH_PersistentParam<GH_String> text ? text.PersistentData.AllData(true) : [];
 
     public static DocumentUnits Units(RhinoDoc? document) => document?.ModelUnitSystem switch
     {

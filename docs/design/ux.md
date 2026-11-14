@@ -1,19 +1,32 @@
 # M2D+ Grasshopper UX (v1 design)
 
-Status: proposal by the design sub-agent, 2026-11-14, revision 3 (owner decisions on cut fill and on scale).
-Revision 2 covered settings, view range, rectangle views, placement and section styles. It follows
-[REQUIREMENTS.md](../REQUIREMENTS.md).
+Status: design sub-agent, 2026-11-14, revision 4 (owner decisions on view objects; the settings editor is removed).
+Revision 3 decided cut fill and scale; revision 2 covered settings, view range, rectangle views, placement and
+section styles. It follows [REQUIREMENTS.md](../REQUIREMENTS.md).
 Visual mockup: [ux-mockup.html](ux-mockup.html).
 
-**The idea:** one component and four inputs, of which only **View** must be set. Plug in a view and you
+**The idea:** one component and five inputs, of which only **View** must be set. Plug in a view and you
 get a correct drawing. M2D+ works out everything else from the view source and the document: what
 to cut, the crop, the tolerance, the hatches and the line weights. The Frame2D prototype needed about 30
 inputs to say these things. Here they are inferred or given a sensible default.
 
-Settings that an architect expects to *set*, such as Revit's view range (view depth, far clipping, depth
-cueing), are not inputs either. They live in a **View Range & Settings editor** that opens when you
-double-click the component, and they are stored on the component. The optional **Settings** input takes the
-same keys as `key = value` text for parametric control, and wins where it is wired (§6).
+**Views are Rhino objects you can edit.** Reference a planar surface (or a closed rectangle) as the View and
+right-click **Validate views**: M2D+ turns it, in place, into an **M2D+ view box**, a box whose front face is the
+view frame and whose length is the view depth. You move it, resize it and drag its back face with the gumball
+like any Rhino object, and its per-view settings are Attribute User Text keys (`m2d.hidden = off`) in Rhino's
+Properties panel (§2.2). Global defaults are right-click menu toggles. The optional **Settings** input takes the
+same keys as `key = value` text for parametric control, and **Depth** sets the depth of plane and rectangle views
+from a slider or a number (§6).
+
+**What changed in revision 4** (owner decisions, 2026-11-14)
+
+| Area | Change | Why |
+|---|---|---|
+| Views | **Validate views** converts a referenced planar rectangle into an editable **view box** (an `Extrusion`, same object id, one undo). **Create view from current viewport** bakes one. **Flip view direction** reverses it. The component previews each view's frame, look arrow and depth volume (§2.2). | Owner: rectangle views had no proper depth input, and views should be editable Rhino objects. |
+| Per-view settings | Live on the view object as Attribute User Text `m2d.*` keys (§2.2). | Edited where the view is, in Rhino's own Properties panel. No dialog to learn. |
+| Inputs | New fifth input **Depth (D)**, appended after Settings: depth of Plane/Rectangle/clipping-plane views from a number or `8 m`. Boxes and view boxes take depth from their geometry (§1.1, §6). | A slider-driven depth was not possible without it. |
+| Editor | The **View Range & Settings editor is removed**, with its double-click, its stored per-view rows and the S dot. Double-click now selects the view objects in Rhino (§1, §10). | Owner: too heavy. |
+| Precedence | Depth input > Settings input > view object (`m2d.*`) > menu defaults > built-in default / auto (§6). | One simple chain, strongest = most specific and most visible. |
 
 **What changed in revision 3** (owner decisions, 2026-11-14)
 
@@ -26,7 +39,7 @@ same keys as `key = value` text for parametric control, and wins where it is wir
 
 | Area | Change | Why |
 |---|---|---|
-| Settings | New double-click **editor** (Revit-style dialog, per-view rows). Settings input becomes **tree** access with optional `[view]` headers. | The owner couldn't see how Settings worked. A GH Panel splits lines into items, so "one item per view" was broken. |
+| Settings | New double-click **editor** (Revit-style dialog, per-view rows; removed in revision 4). Settings input becomes **tree** access with optional `[view]` headers. | The owner couldn't see how Settings worked. A GH Panel splits lines into items, so "one item per view" was broken. |
 | View range | New keys `depth`, `farclip`, `fade`, `fade.start`, `fade.end`, `fade.limit`. `beyond` is kept as Revit's *Bottom* / `<Beyond>` threshold. | Owner asked for Revit's view range and depth cueing. |
 | Outputs | New output **Far clip (Fc)**, 9 outputs in all. | "Clip with line" draws a line class that downstream users need to separate. |
 | Rectangle / Plane / Box | One rule: the source's plane is the view plane, its size is the crop, `depth` is the far limit. | Owner: "a rectangle frames the model; if it cuts, it's a section". |
@@ -42,37 +55,40 @@ same keys as `key = value` text for parametric control, and wins where it is wir
 | Name | **M2D+ Drawing** |
 | Nickname | **M2D+** |
 | Tab / panel | `M2D+` / `Drawing` (the only component in v1) |
-| Description | "Hidden-line plans, sections, elevations and axonometrics from your model and a view. Runs in the background. Double-click for view range and settings; click Bake on the component to bake to tidy layers." |
+| Description | "Hidden-line plans, sections, elevations and axonometrics from your model and a view. Runs in the background. Reference a planar surface as View and right-click Validate views to get an editable view box; click Bake on the component to bake to tidy layers." |
 | Icon | Uses the dark rounded tile that Panel+, HopperFormat and Conduit+ share (tile `#181E1A`, white glyph, 24-unit grid), drawn in code the same way as `ConduitIcons.cs`. **Glyph:** a cube in axonometric with its near corner cut away. The cut face is a solid white poché, the visible edges are white strokes and one hidden edge is a soft (50 % white) dash. It reads as "section + hidden line" at 24 px. **Plug-in logo:** "M+" drawn in the same way as the C+ / P+ marks. |
-| Custom attributes | Standard GH body, plus (a) a 2 px cobalt `#1F6FD1` progress line along the bottom edge of the body while a job runs, (b) a small **Bake** button at the right end of the message tab (it becomes **Cancel** while running and **Run** when paused), (c) **double-click opens the editor** (§6.1), and (d) a 5 px cobalt dot next to the **S** input label when the editor holds values, so stored settings are visible on the canvas. Nothing else is custom. |
+| Custom attributes | Standard GH body, plus (a) a 2 px cobalt `#1F6FD1` progress line along the bottom edge of the body while a job runs, (b) a small **Bake** button at the right end of the message tab (it becomes **Cancel** while running and **Run** when paused), and (c) **double-click selects the referenced view objects in Rhino**, so their `m2d.*` user text is right there in Properties (with no view objects, double-click does nothing special). Nothing else is custom. Revision 3's cobalt dot beside **S** is gone: it meant "the editor holds values", and there is no editor. Menu defaults show as check marks in the menu, view-object values in Rhino's Properties, and Info lists every effective value with its origin. |
 
-### 1.1 Inputs (4)
+### 1.1 Inputs (5)
 
 | # | Name | Nick | Access | Type | Optional | Default |
 |---|---|---|---|---|---|---|
 | 0 | Geometry | G | tree | Generic: geometry, referenced Rhino objects, Rhino 8 model objects / block instances, object IDs, layer names | yes | **The whole visible Rhino document** |
-| 1 | View | V | list | Generic: text, clipping plane (reference or ID), Plane, Rectangle, Box, Vector, Rhino view object | **no** (choose one by right-click, or wire one) | none: the component shows "Pick a view" |
+| 1 | View | V | list | Generic: referenced planar surface, closed rectangle or **M2D+ view box**; text; clipping plane (reference or ID); Plane, Rectangle, Box, Vector, Rhino view object | **no** (pick or choose by right-click, or wire one) | none: the component shows "Pick a view" |
 | 2 | Target | T | list | Plane | yes | **In place** (each drawing lies on its own view plane in 3D) |
-| 3 | Settings | S | **tree** | Text, `key = value` lines | yes | The editor's values (§6) |
+| 3 | Settings | S | **tree** | Text, `key = value` lines | yes | View objects' `m2d.*` values, then the menu defaults (§6) |
+| 4 | Depth | D | list (matched to View) | Text: a number in document units or a distance such as `8 m` | yes | Auto (§3.2). **Appended in revision 4**; inputs are never reordered. |
 
 Description text shown in GH (keep these short, as Conduit+ does):
 
 - **Geometry**: "Scene to draw, shared by every view. Leave empty to draw the visible Rhino model. Also accepts layer names such as `Walls` or `Structure::*`, and block instances (repeats are drawn once and reused)."
-- **View**: "What to draw. A named view, clipping plane name or direction (Top, Front, SW…), a referenced clipping plane, a Plane, a Rectangle (its plane is the view plane and it crops; if it cuts the model you get a section), a Box (cut, crop and depth) or a Vector (look along it). A list gives one drawing per view."
+- **View**: "What to draw. A referenced planar surface, rectangle or M2D+ view box (right-click Validate views to make one), a named view, clipping plane name or direction (Top, Front, SW…), a referenced clipping plane, a Plane, a Rectangle (its plane is the view plane and it crops; if it cuts the model you get a section), a Box (cut, crop and depth) or a Vector (look along it). A list gives one drawing per view."
 - **Target**: "Optional plane per view. The view's own plane is moved onto it 1:1 (View[i] → Target[i]). One plane for several views lays them out in a row. Leave empty to show each drawing in place."
-- **Settings**: "Optional `key = value` lines, for example `depth = 8 m` or `farclip = line`. They override the editor (double-click the component). One branch applies to all views; one branch per view, or `[View name]` headers, set views separately."
+- **Settings**: "Optional `key = value` lines, for example `hidden = off` or `farclip = line`. They override view-object user text (`m2d.*`) and the right-click menu. One branch applies to all views; one branch per view, or `[View name]` headers, set views separately."
+- **Depth**: "Optional view depth for Plane, Rectangle and clipping-plane views: a number in document units or text such as `8 m`. One value for all views, or one per view. Beats `depth` in Settings. Boxes and view boxes take their depth from their geometry."
 
 #### Why each input exists (and why there are no others)
 
 1. **Geometry**: the only thing a user must be able to choose freely, so it can't be inferred. It is optional because the common Rhino case is "draw my model", which is what Make2D does with the selection. Leaving it empty also gives the fastest path for 50k objects. The engine reads `RhinoObject`s directly, keeps block instances as instances so repeats are reused, and avoids wrapping 50k geometries in GH goo. Layer-name strings give the same fast path for subsets.
 2. **View**: a drawing has no meaning without one. One smart input replaces the prototype's View component and its 10 inputs (name, capture pulse, plane, width, height, near, far, cut on/off, cut depth, crop), because the type of value you pass says what you mean (§2).
 3. **Target**: placement is geometric, often computed (a sheet grid, a strip), and it is the one thing the prototype's Layout component did that people actually need. Seven layout inputs collapse to one plane, because the anchor is the view's own plane (§4).
-4. **Settings**: the editor covers hand-set values, but an editor can't be driven by a slider or computed per view. Settings is text so that one wire carries every key without adding inputs.
+4. **Settings**: view objects and menu toggles cover hand-set values, but they can't be driven by a slider or computed per view. Settings is text so that one wire carries every key without adding inputs.
+5. **Depth**: the one view-range value people drive parametrically (a slider for "how far back do I draw this section"), and the one a Plane or Rectangle has no geometry for. A view box *is* its depth, so it needs no input; a GH plane can't carry one. Writing `depth = 8 m` into a Settings Panel to drive it from a slider was the clumsy workaround the owner rejected. Depth is a list matched to View, like Target, and it is appended after Settings so saved definitions keep their wires.
 
 Not inputs, with where they went: Run, Async, Mode (Native/Custom/Auto), Tolerance, Include hidden, Capture (§2.1, §5);
 Near/Far/Cut, Crop (§2, §3.2); Scale (now the line-weight preset key `scale`, §3.6); Anchor U/V, Offset X/Y, Rotation,
 Dock to/side/gap (§4); Fade on/start/end/min
-(now the Revit-style `fade.*` keys in the editor, §3.2); Show hidden (§3.8).
+(now the Revit-style `fade.*` keys, §3.2); Show hidden (§3.8).
 
 ### 1.2 Outputs (9)
 
@@ -116,6 +132,8 @@ get a section or a plan. If it doesn't, nothing is cut and you get an elevation.
 
 | You wire / choose | View plane | Cut? | Crop (extent) | Far limit when `depth = auto` |
 |---|---|---|---|---|
+| **M2D+ view box** (referenced, §2.2) | its **front face** (the frame) | if the front face passes through geometry | **the frame** | **its back face** (the box length; always, §6) |
+| **Planar surface or closed rectangle** (referenced, not validated yet) | the rectangle, faced at the model (§2.2) | as Rectangle | **the rectangle** | scene extent; Info suggests Validate views |
 | **Rectangle** | the rectangle's plane | if it passes through geometry | **the rectangle** | scene extent behind the plane |
 | **Plane** | the plane | if it passes through geometry | none (scene bounds) | scene extent behind the plane |
 | **Box** | its **+Z face** | if that face passes through geometry | the box's XY | **the box's −Z face** (its height) |
@@ -124,8 +142,8 @@ get a section or a plan. If it doesn't, nothing is cut and you get an elevation.
 | **Text: direction** (`Top`, `Front`, `Right`, `Back`, `Left`, `Bottom`, `SW`, `SE`, `NE`, `NW`) | perpendicular to the direction, at the scene front | no | none | scene extent |
 | **Vector** | perpendicular to the vector, at the scene front | no | none | scene extent |
 
-So a **Rectangle is "Plane + crop"** and a **Box is "Rectangle + explicit depth"**. They are the same view with more
-said. World XY at height *h* is a plan at *h*. A rectangle standing in a building is a cropped section. The same
+So a **Rectangle is "Plane + crop"** and a **Box is "Rectangle + explicit depth"**; a **view box is a Box you edit in
+Rhino**. They are the same view with more said. World XY at height *h* is a plan at *h*. A rectangle standing in a building is a cropped section. The same
 rectangle moved outside the building is a cropped elevation.
 
 Text is resolved in this order: named view, then named clipping plane, then direction keyword (case-insensitive).
@@ -139,24 +157,111 @@ world Y (north up).
 
 ### 2.1 View right-click menu (on the input parameter)
 
-This works like Conduit+'s `Param_TextOption`. Choosing an item sets persistent data, and items are
-greyed out while a wire is connected.
+This works like Conduit+'s `Param_TextOption`. Choosing an item sets persistent data, and choosing is
+greyed out while a wire is connected. The three view-object commands also act on wired references.
 
 ```
+Pick views in Rhino…                 (planar surfaces, rectangles, view boxes, clipping planes)
+Validate views                       (§2.2; also on the component menu)
+Flip view direction                  (view boxes only)
+Create view from current viewport    (bakes "M2D View 01" on M2D+::Views and adds it)
+───────────────
 Named views     ▸  Level 1 · Level 2 · Roof · …          (multi-check: one drawing each)
 Clipping planes ▸  Section A · Section B · Plan cut L1 · …
 Directions      ▸  Top · Front · Right · Back · Left · Bottom │ SW · SE · NE · NW
-───────────────
 All named views
 All clipping planes
-Pick clipping planes in Rhino…
-Capture active view as named view…                   (creates "M2D 01", adds it)
 ───────────────
 Clear
 ```
 
-The active viewport is never tracked live, because orbiting would re-run the job. **Capture active view**
-saves it as a Rhino named view, which is stored in the document and can be edited in Rhino's Named Views panel.
+The active viewport is never tracked live, because orbiting would re-run the job. **Create view from current
+viewport** freezes it into a view box instead (revision 3's "Capture active view as named view" is replaced: a named
+view has no depth and no settings of its own). Picked objects are stored as references to the object id, in a form
+that survives Validate; picked clipping planes are stored as their name text, as before.
+
+### 2.2 View objects: view boxes
+
+A **view box** is the view as a Rhino object. It is an `Extrusion`:
+
+```
+              look direction (−Z of the frame)
+   viewer  ──────────────────────────────────▶
+          ┌───────────────────────────────────┐
+  front   │ frame = profile = cut plane        │ back face = far limit
+  face ──▶│ (crop; cuts what it passes through)│◀── drag with the gumball to change depth
+          └───────────────────────────────────┘
+          ◀──────────── path length = depth ──────────▶
+```
+
+- **Profile** = the view frame (crop), at the path start. It is the cut plane when it passes through the model.
+- **Path** runs from the frame into the model along the look direction. Its length **is** the depth; the back face
+  is the far limit. Move, rotate, scale or gumball-drag the back face to edit the view. Nothing else stores it.
+- **Resolves exactly like a GH Box** (m2d-wiring): cut at the front face, crop to the profile, far limit at the back.
+- **Look direction** follows the existing convention: the frame plane's +Z points at the viewer and the view looks
+  along −Z. The preview draws an arrow, so the direction is never a guess.
+- **Ignored as scene geometry.** View boxes (and any surface the View input references) are never drawn, so a box
+  around the model never hides it. In Rhino they get a Wireframe display override for the same reason.
+- If Rhino turns a view box into a polysurface (some sub-object edits do), the view reports it with the fix:
+  undo the edit, or reference a planar surface and validate again. It never guesses the orientation back.
+
+**Validate views** (right-click on V or on the component), one Rhino undo record for the whole run:
+
+1. Checks every referenced object can frame a view: **planar**, an outer boundary that is a **rectangle** (4 straight
+   edges at right angles within the document angle tolerance; a split edge is still one edge), **not degenerate**
+   (no edge shorter than 10 × the absolute tolerance). Trimmed planar surfaces whose outer loop is a rectangle are
+   fine. Each refusal says why: "not planar", "its corners are not right angles (78.7°)", "its outline has 3
+   corners, not 4", "a polysurface with 6 faces", "the curve is not closed"…
+2. Converts each good one **in place** with `ReplaceObject`: same object id, same layer and attributes, so the GH
+   reference survives. References stored on V are re-typed to a Brep reference (a GH *Surface* reference can't
+   hold a box). A surface that reaches V through a **Surface or Curve parameter wire** is refused with that reason
+   instead of being converted, because converting it would break the wire.
+3. **Orientation.** Y (up) is the rectangle edge nearest world Z, or nearest north for a horizontal frame; X makes
+   it right-handed; the origin is the lower-left corner (the placement anchor, §4). A **horizontal** frame looks
+   down (a plan); any other frame looks toward the middle of the scene. **Flip view direction** reverses either.
+4. **Depth: auto**, to the back of the scene's bounding box along the look direction plus 1 % of its diagonal
+   (with nothing behind the frame: the frame's longer side). Edit it by dragging the back face.
+5. Names unnamed objects `M2D View 01`, `M2D View 02`… and writes the user-text keys below. **Missing keys get
+   `default`; an existing value is never overwritten.** Validating a view box again only re-adds deleted keys.
+6. Reports each object on the Rhino command line and on the component (remarks; refusals stay as warnings until
+   the next view command or a change to V).
+
+**Per-view settings: Attribute User Text.** Edit them in Rhino's *Properties ▸ Attribute User Text*. `default`
+(or blank) means "not set here": the menu default, then the built-in default, applies (§6).
+
+| Key | Values | Written by Validate |
+|---|---|---|
+| `m2d.view` | `1` (marker and format version) | `1` |
+| `m2d.name` | drawing name (bake layer); `default` = the object's name | `default` |
+| `m2d.farclip` | `none` · `line` · `noline` | `default` |
+| `m2d.beyond` | `auto` · `off` · distance | `default` |
+| `m2d.fade` | `on` · `off` | `default` |
+| `m2d.fade.start` / `m2d.fade.end` / `m2d.fade.limit` | 0–100 % | `default` |
+| `m2d.hidden` · `m2d.tangents` · `m2d.seams` | `on` · `off` | `default` |
+| `m2d.glass` | `opaque` · `clear` | `default` |
+| `m2d.scale` | `1:n` (line weights only) | `default` |
+| `m2d.weights` | `auto` · `layers` | `default` |
+| `m2d.hatch` | `styles` · `colour` · `black` · `none` | `default` |
+| `m2d.cuts` | `separate` · `merge` | `default` |
+
+The values are the Settings syntax of §6.3, so any `m2d.<key>` of §6.3 is read (including `m2d.gap` or `m2d.tree`
+if a user adds them); `depth` and `crop` come from the box itself. A bad value is a warning naming the view, with
+the closest valid value, exactly as for Settings text. Referenced clipping planes read `m2d.*` user text the same
+way. The component re-runs when a view object or its attributes change (debounced with the other document changes).
+
+**Create view from current viewport** (right-click on V or the component): bakes a view box matching the active
+**parallel** viewport's visible rectangle, with its front face just in front of the scene and its back just behind
+it (so it starts as an elevation, cutting nothing), names it `M2D View 01`…, puts it on the **`M2D+::Views`** layer
+(cobalt), writes the user-text defaults, and adds it to V. One undo. A perspective viewport gets "M2D+ draws parallel
+views only. Switch the viewport to Parallel and try again."
+
+**Flip view direction** (view boxes): the front face stays where it is and the box extends to the other side with the
+same depth; X flips with Z so the drawing is never mirrored. One undo.
+
+**Preview.** For each view the component draws its frame (solid), a look-direction arrow from the frame's centre, the
+depth volume (dotted back rectangle and depth edges) and the view's name. Subtle grey-blue normally, **cobalt
+`#1F6FD1` while the component is selected**. Boxes and cropped views show at once; plane, clipping-plane and
+direction views show once the scene is read. Toggle: *Preview ▸ View frames*.
 
 ---
 
@@ -192,7 +297,7 @@ directions and vectors.
 
 | Concept | Key | Revit equivalent | What it does |
 |---|---|---|---|
-| **View depth** | `depth = auto \| <distance>` | Plan: *View Depth*. Section/elevation: *Far Clip Offset*. | Places the far plane. `auto` = the source's own depth (Box height, clipping plane *Depth*), else the scene extent, so nothing is clipped. |
+| **View depth** | `depth = auto \| <distance>` (or the **Depth** input) | Plan: *View Depth*. Section/elevation: *Far Clip Offset*. | Places the far plane. A Box or view box always uses its own length (§6). `auto` = the clipping plane's *Depth* when enabled, else the scene extent, so nothing is clipped. |
 | **Far clipping** | `farclip = none \| line \| noline` | *Far Clipping*: No clip / Clip with line / Clip without line | `none`: nothing is clipped at the far plane; `depth` then only sets 100 % for fading. `noline` (default): geometry beyond the far plane is removed and the open ends are left open. `line`: as `noline`, plus the far plane's intersection with the geometry is drawn as **Far clip** lines (own output, own class, own bake layer). |
 | **Beyond** | `beyond = auto \| off \| <distance>` | Plan view range *Bottom*, below which lines use the `<Beyond>` line style | Visible lines farther than this go to the **Beyond** output and class (thinner, grey). `auto` = **3 m** (one storey, in document units) in cut views, off in uncut views. Ignored, with a remark, when it is ≥ `depth`. |
 | **Depth cueing** | `fade = on \| off` | *Depth Cueing*: Enable | Fades projected lines with distance. Off by default (§11, Q9). |
@@ -273,7 +378,7 @@ never changes the Frame, the gap or hatch pattern scale (§4, §3.7). Default **
   1:20 – 1:50, **1:1000** and smaller → 1:200 – 1:500. Info names the band used (§5.4).
 - **Preview px widths are fixed per class** (the right column) and do not change with `scale`. Keeping them fixed keeps
   the canvas readable at any zoom; the print widths are what changes, and Rhino's print preview shows them.
-- Each view can have its own `scale` (editor row or `[view]` header), so one component can bake a 1:50 detail and a
+- Each view can have its own `scale` (`m2d.scale` on its view object or a `[view]` header), so one component can bake a 1:50 detail and a
   1:200 site plan. Their bake layers are separate (§8.1), so the widths never clash.
 
 "Ink" means black on a light background and near-white on a dark viewport. The preview blends toward
@@ -423,7 +528,7 @@ share the Z = 0 line" working.
 
 - `SolveInstance` never blocks. It snapshots the request (scene references, views, effective settings), compares it
   with the cached result, and either publishes the cached result or starts or restarts a job.
-- **Changing an input, or pressing Apply/OK in the editor, cancels a stale job at once.** The new job starts after 250 ms
+- **Changing an input, a menu setting, or a view object in Rhino cancels a stale job at once.** The new job starts after 250 ms
   without further changes, so slider drags don't queue work.
 - The outputs only ever hold a **complete result for the current inputs**. While a job runs, the outputs are
   empty and the preview shows the previous result greyed, labelled *Stale*. Draft results are **preview only**.
@@ -433,8 +538,8 @@ share the Z = 0 line" working.
 - **Cancel:** the footer button (it reads Cancel while running), **Esc** while the component is selected, the right-click
   **Cancel** item, or disabling the component. A cancelled job publishes nothing.
 - **Reopen:** finished drawings are kept in a disk side-cache and reused when the model, views and settings haven't changed.
-  Otherwise they rerun in the background. Results are never stored in the `.gh`. (Editor values *are* stored in the `.gh`;
-  they are settings, not results.)
+  Otherwise they rerun in the background. Results are never stored in the `.gh`. (Menu defaults *are* stored in the `.gh`;
+  they are settings, not results. Per-view settings are stored on the view objects, in the `.3dm`.)
 
 ### 5.2 Phases and the message line
 
@@ -464,9 +569,9 @@ Unknown keys and bad values are warnings that suggest the closest match ("Unknow
 ### 5.4 Info (one per view)
 
 ```
-Section A — Rectangle (plane origin 12.0, 6.0, 0.0), cuts 214 objects
-View range: depth 40 m (editor) · far clip with line (editor) · beyond 3 m (auto)
-Depth cueing: on, 10 %–90 %, limit 25 % (editor) · line weights 1:100 preset (scale 1:100, editor)
+Section A — View box (front face origin 12.0, 6.0, 0.0), cuts 214 objects
+View range: depth 40 m (view box) · far clip with line (view object) · beyond 3 m (auto)
+Depth cueing: on, 10 %–90 %, limit 25 % (view object) · line weights 1:100 preset (scale 1:100, component menu)
 Scene 50,210 objects · 31,004 block instances of 212 definitions (reused)
 18,422 visible · 6,108 hidden · 2,340 beyond · 96 far clip · 1,206 cut regions · 1,206 hatches
 Styles: "Concrete" (layer Structure::Core) 212 · "Brick" (object) 18 · object colour 976 (hatch = styles)
@@ -477,64 +582,31 @@ Tolerance 0.001 m (document) · 41 short pieces dropped
 
 ---
 
-## 6. Settings: the editor and the text input
+## 6. Settings: where they live, and which wins
 
-There is **one set of settings per view**, with three ways to set it. From strongest to weakest:
+There is **one set of settings per view**. From strongest to weakest:
 
-1. **Settings input** (when wired): only the keys it contains, for the views it addresses.
-2. **Editor, per-view row** (stored on the component).
-3. **Editor, "All views" row** (stored on the component). The right-click menu toggles edit this row.
-4. **Built-in default**, often *Auto* = inferred from the source (§2, §3).
+1. **Depth input** (`depth` only, when wired): one value for all views, or one per view.
+2. **Settings input** (when wired): only the keys it contains, for the views it addresses.
+3. **The view object's user text** (`m2d.*` on a view box or clipping plane, §2.2).
+4. **Right-click menu defaults** (stored on the component, apply to every view).
+5. **Built-in default**, often *Auto* = inferred from the source (§2, §3).
 
-A key set by the input is shown in the editor and menu as **locked, with the input's value** and a "set by input"
-tag. Unwire the input and the editor's own value comes back; nothing is lost.
+One exception, for depth only: **a Box or view box always takes its depth from its geometry.** If a Depth input,
+Settings text, user text or menu value also gives a depth, the geometry wins and a remark says which instruction was
+ignored and how to change the box instead. A box *is* its view volume; two competing depths would make the box lie.
 
-### 6.1 The View Range & Settings editor
+A key the Settings input sets for every view is greyed in the menu with "(set by input)". A key some view objects
+override keeps its menu item enabled and says so: "Depth cueing (set on 1 of 3 view objects)". Unwire the input and
+the lower values come back; nothing is lost. Info lists every effective value with its origin (`set by Depth input`,
+`set by input`, `view object`, `component menu`, `default`, `auto`). **Copy settings as text** copies the menu defaults
+and every view object's values as Settings text with `[view]` headers.
 
-Opens on **double-click** on the component, or **right-click ▸ View range & settings…**. A compact, Revit-like
-dialog (Eto, so it follows Rhino's light/dark theme). The mockup shows it.
+### 6.1 Why no dialog
 
-```
-┌ M2D+ · View Range & Settings ───────────────────────────────────────────────────┐
-│ View                Source            Depth   Beyond   Far clip      Fade        │
-│ ▸ All views                          Auto    Auto     Without line  Off          │
-│   Section A         Rectangle · cuts  40 m    ·        With line     On          │  ← selected
-│   Section B         Rectangle · cuts  ·       ·        ·             ·           │  (· = as All views)
-│   South elevation   Rectangle         60 m    Off      ·             On          │
-├──────────────────────────────────────────────────────────────────────────────────┤
-│ Section A                                                                          │
-│ View range                         │ Depth cueing                                  │
-│  View plane  Rectangle · cuts 214   │  [x] Fade with distance                       │
-│  Depth       [40 m     ] [ ] Auto   │  Start  ──●──────────  10 %                   │
-│  Beyond      [         ] [x] Auto   │  End    ───────────●─  90 %                   │
-│  Far clip    ( ) No clip            │  Limit  ────●────────  25 %                   │
-│              (•) Clip with line     │                                               │
-│              ( ) Clip without line  │ Drawing                                       │
-│                                     │  Hidden lines [x] 🔒 set by input             │
-│                                     │  Scale  [1:100 ▾]  line weights only          │
-│                                     │  Hatch  [From section styles ▾]  Weights [Auto ▾]│
-│                                     │  Cut 0.50 · Profile 0.35 · Visible 0.18 · …    │
-├──────────────────────────────────────────────────────────────────────────────────┤
-│ [Copy as text]   [Reset view to All views]                 [OK] [Cancel] [Apply]  │
-└──────────────────────────────────────────────────────────────────────────────────┘
-```
-
-- **Rows** are the current views (from the View input), plus **All views** at the top. A blank cell (`·`) inherits
-  from All views. With one view there are still two rows, so the model is always the same.
-- **Rows are keyed by the view's identity** (named view / clipping plane name or id; for GH geometry, the view index),
-  so reordering named views keeps their settings. Values for views that no longer exist are kept, greyed, under
-  "Unused (3)", until the user removes them.
-- The lower half edits the selected row. Every field has a tooltip with its key (`farclip = line`).
-- **Scale** is a drop-down (1:20, 1:50, 1:100, 1:200, 1:500) that also takes typed `1:n`. Its label says **"line weights
-  only"**, and a one-line strip under it shows the preset's widths (Cut 0.50 · Profile 0.35 · Visible 0.18 · Hidden 0.13 ·
-  Beyond 0.09 at 1:100), so it is clear that nothing gets smaller. With `weights = layers` the strip reads "from source
-  layers" and Scale is greyed.
-- **Hatch** offers *From section styles* (default, "else object colour"), *Object colour*, *Black* and *None* (§3.7).
-- **OK / Apply** start a re-run (one GH undo record per Apply). **Cancel** discards. The dialog is modeless, so you can
-  orbit Rhino while it is open.
-- **Copy as text** copies the editor's values as Settings text (with `[view]` headers), ready to paste into a Panel.
-- On the canvas, a cobalt dot next to **S** means "this component has editor values"; hovering **S** shows the
-  effective settings per view and where each came from (input / editor / default).
+Revision 3 had a View Range & Settings editor. It is removed (§10): the menu covers global defaults, view objects
+cover per-view values where the view itself lives, and text covers parametric control. There is nothing else to
+store, so there is nothing to open.
 
 ### 6.2 Settings text
 
@@ -566,27 +638,27 @@ fade.limit = 25 %
 | Key | Values | Default | Units | Revit equivalent | Also in |
 |---|---|---|---|---|---|
 | **View range** | | | | | |
-| `depth` | `auto` · distance | `auto`: Box height, clipping plane *Depth*, else scene extent | distance from the view plane | View Depth (plan) / Far Clip Offset | editor |
-| `farclip` | `none` · `line` · `noline` | `noline` | — | Far Clipping: No clip / Clip with line / Clip without line | editor, menu |
-| `beyond` | `auto` · `off` · distance | `auto` (3 m in cut views, off otherwise) | distance from the view plane | View range *Bottom* → `<Beyond>` line style | editor, menu |
-| `fade` | `on` · `off` | `off` | — | Depth Cueing | editor, menu |
-| `fade.start` | 0–100 | `0 %` | % of depth | Depth Cueing *Start* | editor |
-| `fade.end` | 0–100 | `100 %` | % of depth | Depth Cueing *End* | editor |
-| `fade.limit` | 0–100 | `30 %` | % intensity | Depth Cueing *Fade Limit* | editor |
-| `crop` | `auto` · `off` | `auto` | — | Crop View | editor |
+| `depth` | `auto` · distance | `auto`: clipping plane *Depth*, else scene extent. Box / view box: always its length | distance from the view plane | View Depth (plan) / Far Clip Offset | **Depth input**, the view box itself |
+| `farclip` | `none` · `line` · `noline` | `noline` | — | Far Clipping: No clip / Clip with line / Clip without line | view object, menu |
+| `beyond` | `auto` · `off` · distance | `auto` (3 m in cut views, off otherwise) | distance from the view plane | View range *Bottom* → `<Beyond>` line style | view object, menu |
+| `fade` | `on` · `off` | `off` | — | Depth Cueing | view object, menu |
+| `fade.start` | 0–100 | `0 %` | % of depth | Depth Cueing *Start* | view object |
+| `fade.end` | 0–100 | `100 %` | % of depth | Depth Cueing *End* | view object |
+| `fade.limit` | 0–100 | `30 %` | % intensity | Depth Cueing *Fade Limit* | view object |
+| `crop` | `auto` · `off` | `auto` | — | Crop View | text only (boxes always crop) |
 | **Lines** | | | | | |
-| `hidden` | `on` · `off` | `on` | — | Show Hidden Lines | editor, menu |
-| `tangents` | `on` · `off` | `off` | — | — (Make2D option) | editor, menu |
-| `seams` | `on` · `off` | `off` | — | — (Make2D option) | editor, menu |
-| `glass` | `opaque` · `clear` | `opaque` | — | — | editor |
-| `scale` | `1:n` · `n` | `1:100` | — (picks the nearest preset band, §3.6) | View Scale (line weights only; the drawing stays 1:1) | editor, menu |
-| `weights` | `auto` · `layers` | `auto` (the `scale` preset, §3.6) | — | Object Styles | editor, menu |
+| `hidden` | `on` · `off` | `on` | — | Show Hidden Lines | view object, menu |
+| `tangents` | `on` · `off` | `off` | — | — (Make2D option) | view object, menu |
+| `seams` | `on` · `off` | `off` | — | — (Make2D option) | view object, menu |
+| `glass` | `opaque` · `clear` | `opaque` | — | — | view object |
+| `scale` | `1:n` · `n` | `1:100` | — (picks the nearest preset band, §3.6) | View Scale (line weights only; the drawing stays 1:1) | view object, menu |
+| `weights` | `auto` · `layers` | `auto` (the `scale` preset, §3.6) | — | Object Styles | view object, menu |
 | **Cuts** | | | | | |
-| `hatch` | `styles` · `colour` · `black` · `none` | `styles` (section style, else object colour) | — | Cut pattern (material / V/G override) | editor, menu |
-| `cuts` | `separate` · `merge` | `separate` | — | Join Geometry | editor, menu |
+| `hatch` | `styles` · `colour` · `black` · `none` | `styles` (section style, else object colour) | — | Cut pattern (material / V/G override) | view object, menu |
+| `cuts` | `separate` · `merge` | `separate` | — | Join Geometry | view object, menu |
 | **Placement** (always 1:1) | | | | | |
-| `gap` | `auto` · distance | `auto` (1/10 of mean frame width) | distance on the target | — (sheet placement) | editor |
-| `name` | text | auto (§8.1) | — | View Name | editor |
+| `gap` | `auto` · distance | `auto` (1/10 of mean frame width) | distance on the target | — (sheet placement) | text only |
+| `name` | text | auto (§8.1): the view object's name | — | View Name | view object (`m2d.name`), the object's Rhino name |
 | **Output and diagnosis** | | | | | |
 | `tree` | `branch` · `object` | `branch` | — | — | menu |
 | `tolerance` | distance | document absolute tolerance | distance | — | text only |
@@ -595,11 +667,15 @@ fade.limit = 25 %
 
 ## 7. Right-click menu (component)
 
-These items come after GH's standard items (Preview, Enabled, Bake…, Help). Every toggle edits the editor's
-**All views** row; an item whose key is set by the input is greyed and shows "(set by input)".
+These items come after GH's standard items (Preview, Enabled, Bake…, Help). Every toggle edits the component's
+**menu defaults** (every view, below view objects and input, §6); an item whose key the input sets for every view is
+greyed and shows "(set by input)", and one some view objects override says "(set on 1 of 3 view objects)".
 
 ```
-View range & settings…            Double-click
+Validate views                    (§2.2)
+Flip view direction               (view boxes)
+Create view from current viewport
+Select view objects               Double-click
 ────────────────
 Bake drawing                      Shift-click: add as a copy
 Bake one ▸        Section A · Section B · South elevation · …
@@ -613,13 +689,14 @@ Tangent edges                         tangents = off | on
 Seams                                 seams    = off | on
 Beyond ▸     Auto ✓ · Off · 1 m · 3 m · 10 m          beyond  = auto | off | <distance>
 Far clip ▸   No clip · Clip with line · Clip without line ✓   farclip = none | line | noline
-Depth cueing                          fade     = off | on   (start/end/limit in the editor)
+Depth cueing                          fade     = off | on   (start/end/limit: m2d.fade.* or text)
 Cuts ▸       Separate per object ✓ · Merge touching (same style)   cuts = separate | merge
 Hatch ▸      From section styles ✓ · Object colour · Black · None   hatch = styles | colour | black | none
-Scale ▸      1:20 · 1:50 · 1:100 ✓ · 1:200 · 1:500 · Other… (editor)   scale = 1:n   (line weights only)
+Scale ▸      1:20 · 1:50 · 1:100 ✓ · 1:200 · 1:500                    scale = 1:n   (line weights only; other n via text)
 Line weights ▸ From scale ✓ · From source layers                    weights = auto | layers
+Reset menu defaults
 ────────────────
-Preview ▸    Hidden ✓ · Beyond ✓ · Far clip ✓ · Hatch ✓ · Frame
+Preview ▸    View frames ✓ · Hidden ✓ · Beyond ✓ · Far clip ✓ · Hatch ✓ · Frame
 Output tree ▸ Per source branch ✓ · Branch per object               tree = branch | object
 ────────────────
 Copy info
@@ -705,12 +782,23 @@ M2D+
   XY Plane ───────T┘   (one target → a row; direction views share the Z = 0 level line)
 ```
 
-**3. A cropped section from a rectangle, placed 1:1 on a sheet plane**
+**3a. A section you edit in Rhino (view box)**
+
+```
+  Rhino: draw a vertical planar surface through the building (PlaneSrf / Rectangle + PlanarSrf)
+  GH:    right-click V ▸ Pick views in Rhino… ▸ pick it ▸ right-click V ▸ Validate views
+  → "M2D View 01": a view box looking at the model, depth to the back of the scene, arrow + depth volume in preview
+  Rhino: gumball-drag its back face to 12 m; Properties ▸ Attribute User Text: m2d.farclip = line, m2d.fade = on
+  Double-click the component to select it in Rhino again. Flip view direction to look the other way.
+```
+
+**3b. A cropped section from a GH rectangle, placed 1:1 on a sheet plane**
 
 ```
   Rectangle (in a vertical plane through the building) ── V┐
-  Plane (sheet origin, off to the side) ────────────────── T├─ M2D+ ── Frame = the rectangle, moved to T
-  Panel "depth = 12 m / farclip = line / fade = on" ────── S┘
+  Plane (sheet origin, off to the side) ────────────────── T│
+  Panel "farclip = line / fade = on" ───────────────────── S├─ M2D+ ── Frame = the rectangle, moved to T
+  Slider 12 (m) ─────────────────────────────────────────── D┘   depth from a slider
   The rectangle cuts the building → section. Move it outside → elevation. Same wires.
 ```
 
@@ -729,7 +817,7 @@ M2D+
   (empty) ─────────────── G┐
   right-click V ▸ All named views + All clipping planes      ├─ M2D+   click Bake (one undo)
   Rectangular Grid ─ planes ─ T┘   (one target per view = a sheet layout)
-  Double-click: All views → scale 1:100 (line weights), depth-cue on; Section rows → far clip with line
+  Menu: Scale ▸ 1:100 (line weights), Depth cueing on; each section view box: m2d.farclip = line
   The set stays 1:1 in the model. For 1:100 sheets: Rhino Layout details at 1:100 (recommended),
   or GH Scale 0.01 about each target origin before baking.
 ```
@@ -749,9 +837,10 @@ M2D+
 | Alternative | Why rejected |
 |---|---|
 | The prototype's View → Drawing → Layout pipeline (3 components, ~30 inputs) | The owner rejected it. Every view needed three components set up, and most of the inputs repeated what the view source already says. |
-| A separate "View" or "Settings" builder component | It is a second component, which goes against the agreed decision. The editor (double-click) gives the same visual control without a second component, and the Settings text covers parametric use. |
-| View range values as inputs (Depth, Far clip, Fade start/end/limit) | Five more inputs, mostly left at default. They are editor fields and Settings keys instead. |
-| Settings *only* as text (revision 1) | Invisible: nothing on the canvas said what was set or what could be set. The editor and the S dot fix that; text stays for parametric control. |
+| A separate "View" or "Settings" builder component | It is a second component, which goes against the agreed decision. View boxes give the same visual control as Rhino objects, and the Settings text covers parametric use. |
+| **The View Range & Settings editor** (revision 3: a double-click, Revit-like dialog with per-view rows, stored on the component) | **Removed by the owner, revision 4.** Too heavy for what it held: a second place to look, a dialog to learn, and per-view rows keyed to identities that silently became "unused" when views changed. Depth for rectangle views still had no proper input. View objects put per-view values on the view itself (Properties ▸ Attribute User Text, with the box's own geometry as depth), the menu keeps global defaults one click away, and the Depth input covers sliders. Its double-click now selects the view objects; its S dot is gone. |
+| View range values as inputs (Depth, Far clip, Fade start/end/limit) | Five more inputs, mostly left at default. Far clip and fade are view-object keys, menu items and Settings keys. **Depth is the exception since revision 4**: it is the one value people drive from a slider, and planes and rectangles have no geometry to hold it. |
+| Settings *only* as text (revision 1) | Invisible: nothing on the canvas said what was set or what could be set. View objects (selected by double-click), menu check marks and Info fix that; text stays for parametric control. |
 | Settings matched item by item to View (revision 1) | A GH Panel outputs one item per line, so a 3-line Panel with 3 views was misread. Branch matching and `[view]` headers are unambiguous. |
 | Merging Beyond into depth cueing | Fading would change which output a line lands in. Revit keeps them separate too (§3.2). |
 | Revit *Top*, *Overhead*, *Underlay* | §3.2: not meaningful without categories, or covered by a second view. Overhead may come in v1.x. |
@@ -765,7 +854,9 @@ M2D+
 | A Capture pulse and a Run toggle as inputs | Pulse inputs are fragile and keep hidden state in the GH file. Named views plus Auto-run, Run now and Cancel replace them. |
 | Anchor U/V, Offset, Rotation, Dock | The own-plane anchor plus one Target plane (or a row) covers sheet layout with no extra inputs. |
 | Mode (Native / Custom / Auto), Tolerance and Async inputs | Engine routing is internal and reported in Info. Tolerance comes from the document. The job is always async. |
-| "Zoomable" optional extra inputs (variable parameters) | They bring input sprawl back with a hidden "+" button. The editor gives the same power visibly. |
+| "Zoomable" optional extra inputs (variable parameters) | They bring input sprawl back with a hidden "+" button. View objects and the menu give the same power visibly. |
+| Per-view settings in an object's geometry user data, or in a hidden GH store | Invisible and lost on export or copy. Attribute User Text shows in Rhino's Properties, copies with the object and survives `ReplaceObject`. |
+| Recovering a view box that Rhino turned into a polysurface by guessing its front face | A box has three face pairs and no stored orientation survives a rotation. M2D+ reports it and asks for an undo or a re-validate instead of guessing (principle 2). |
 | A bake boolean input or a separate Bake component | The bake-on-true toggle is a known GH anti-pattern. One button gives one undo record. |
 | Auto-bake / live sync into the document | It would fight the user's edits to baked linework and flood undo. |
 | A single "Drawing" output plus an Explode component | Needs a second component. Nine plain outputs are cheap. Inputs are what hurt. |
@@ -783,7 +874,8 @@ M2D+
 style, a cut is a solid fill in the object's display colour; M2D+ has no hatch system of its own. `scale` works like
 Revit's View Scale and only picks line weights; drawings stay 1:1. The Settings input stays as `key = value` text.
 Reopening a file uses a disk cache (§5.1). Q3–Q8 take the recommendations below until the owner says otherwise. The owner
-accepted all Q9–Q15 recommendations on 2026-11-14, which locks the component at 4 inputs and 9 outputs. **Orchestrator decisions, 2026-11-14 (owner may override):** Q16–Q19 take the recommendations. Q14 is revised: a style's *Viewport* background fill uses the object's display colour, the same as the default fill, and is noted in Info. **Q16–Q19 are
+accepted all Q9–Q15 recommendations on 2026-11-14, which locked the component at 4 inputs and 9 outputs; revision 4
+(owner) appends the fifth input, Depth. **Orchestrator decisions, 2026-11-14 (owner may override):** Q16–Q19 take the recommendations. Q14 is revised: a style's *Viewport* background fill uses the object's display colour, the same as the default fill, and is noted in Info. **Q16–Q19 are
 new in revision 3** and follow from the two decisions.
 
 | # | Question | Recommendation |
@@ -796,11 +888,11 @@ new in revision 3** and follow from the two decisions.
 | Q6 | No Target: in place or on World XY? | **In place** (on the rectangle / plane / clipping plane itself). |
 | Q7 | Beyond Auto (3 m behind the cut) for cut views, off for elevations? | **Yes.** Revisit after testing with real models. |
 | Q8 | Bake button drawn on the component? | **Yes.** |
-| Q9 | Depth cueing on or off by default? | **Off**, as in Revit. Beyond already greys far lines in plans and sections; fading on top by default double-greys them. One click turns it on, and a project can store it in the editor's All views row. |
+| Q9 | Depth cueing on or off by default? | **Off**, as in Revit. Beyond already greys far lines in plans and sections; fading on top by default double-greys them. One click turns it on (a menu default), or `m2d.fade = on` on one view. |
 | Q10 | Far clip default? | **Clip without line** (Revit's default for sections). It only matters once `depth` is set, because `depth = auto` clips nothing. |
 | Q11 | Anchor = the source's own plane for Rectangle/Plane/Box/clipping plane/named view; world origin only for Vector/direction? | **Yes** (§4). It is what "1-to-1" means. |
 | Q12 | New ninth output **Far clip**? | **Yes.** Empty unless `farclip = line`. |
-| Q13 | Settings input as tree access with `[view]` headers? | **Yes.** It fixes the Panel line-splitting problem and lets Copy as text round-trip the editor. |
+| Q13 | Settings input as tree access with `[view]` headers? | **Yes.** It fixes the Panel line-splitting problem and lets Copy settings as text round-trip menu and view-object values. |
 | Q14 | A section style with background fill *Viewport* (display-mode dependent)? | **Treat as no background fill**, noted in Info. A drawing has no display mode. The alternative is a solid fill in the object's display colour. |
 | Q15 | A clipping plane's own style applies only to objects set to *By clipping plane*? | **Yes, follow RhinoCommon** and confirm with a viewport fixture in the first spike (§3.7). |
 | Q16 | Band edges for scales between the presets? | **Nearest on a log scale**: ≤ 1:70 → 1:20–1:50 weights, 1:71–1:141 → 1:100, ≥ 1:142 → 1:200–1:500. So 1:75 → 1:100 and 1:150 → 1:200 (§3.6). |

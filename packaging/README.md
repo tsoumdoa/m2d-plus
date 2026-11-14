@@ -10,7 +10,7 @@ Unsupported potential occluders quarantine the view; check Info before using a d
 
 This package contains the GHA, Core and Rhino libraries; keep them together.
 The managed GHA targets .NET 8 and is intended for Rhino .NET 8 and .NET 10.
-Target placement, sections, named views, other outputs, settings editor and Bake are
+Target placement, sections, named views, other outputs, view objects and Bake are
 not in this build. The only effective text setting is `multiplethreads = true|false`
 (false by default). This build admits at most 512 normalized sources and 16 views,
 subject to an estimated in-process memory budget. A drawing worker is unavailable;

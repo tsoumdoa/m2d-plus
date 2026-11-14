@@ -195,46 +195,31 @@ section { margin-top: 44px; }
 
 /* ---------- settings: dialog ---------- */
 .set-grid { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 16px; align-items: start; margin-top: 16px; }
-.dlg { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow); font-size: 13px; overflow: hidden; }
-.dlg-bar { display: flex; align-items: center; gap: 8px; padding: 7px 10px; background: var(--dlg-bar); border-bottom: 1px solid var(--line); }
-.dlg-bar svg { width: 18px; height: 18px; }
-.dlg-bar b { font-weight: 600; flex: 1; }
-.dlg-bar .x { color: var(--muted); }
-.vt-wrap { overflow-x: auto; border-bottom: 1px solid var(--line); }
-.vt { border-collapse: collapse; width: 100%; min-width: 560px; font-size: 12.5px; }
-.vt th { text-align: left; font-weight: 600; color: var(--muted); font-size: 11.5px; padding: 6px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
-.vt td { padding: 5px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; font-variant-numeric: tabular-nums; }
-.vt tr:last-child td { border-bottom: 0; }
-.vt tr.all td:first-child { font-weight: 600; }
-.vt tr.on td { background: var(--accent-soft); }
-.vt tr.on td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
-.vt .mut { color: var(--muted); }
-.vt .inh { color: var(--muted); opacity: .7; }
-.dlg-body { padding: 12px 14px 4px; }
-.dlg-body h4 { margin: 0 0 8px; font-size: 13px; }
-.fs-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px 14px; }
-fieldset { border: 1px solid var(--line); border-radius: 8px; margin: 0 0 10px; padding: 6px 10px 10px; min-width: 0; }
-legend { font-size: 11.5px; font-weight: 600; color: var(--muted); padding: 0 4px; text-transform: uppercase; letter-spacing: .05em; }
-.fr { display: grid; grid-template-columns: 78px minmax(0, 1fr); align-items: center; gap: 8px; min-height: 30px; }
-.fr > label:first-child, .fr > span:first-child { color: var(--muted); }
-.fr .ctl { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.fr input[type="number"], .fr select { font: inherit; font-size: 12.5px; color: var(--text); background: var(--field); border: 1px solid var(--field-line); border-radius: 5px; padding: 3px 6px; }
-.fr input[type="number"] { width: 64px; }
-.fr input:disabled { opacity: .5; }
-.radios { display: grid; gap: 2px; }
-.radios label, .chk-l { display: flex; align-items: center; gap: 6px; cursor: pointer; }
-input[type="radio"], input[type="checkbox"], input[type="range"] { accent-color: var(--accent); }
-input[type="range"] { width: 100%; min-width: 0; }
-.rg { display: grid; grid-template-columns: 44px minmax(0, 1fr) 40px; align-items: center; gap: 8px; min-height: 28px; }
-.rg span:first-child { color: var(--muted); }
-.rg output { text-align: right; font-variant-numeric: tabular-nums; }
-.lock { background: var(--locked); border: 1px dashed var(--field-line); border-radius: 5px; padding: 2px 8px; display: inline-flex; gap: 6px; align-items: center; color: var(--text); }
-.lock .tag { font-size: 10.5px; color: var(--accent); font-weight: 600; }
-.lock svg { width: 11px; height: 11px; }
-.dlg-foot { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px 14px; border-top: 1px solid var(--line); background: var(--dlg-bar); }
-.dlg-foot .sp { flex: 1; }
-.btn { font: inherit; font-size: 12.5px; border-radius: 5px; padding: 4px 14px; border: 1px solid var(--field-line); background: var(--field); color: var(--text); }
-.btn.pri { background: var(--accent); border-color: var(--accent); color: #fff; }
+.steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+.steps .fig svg { background: var(--paper); }
+.step-menu { padding: 14px; background: var(--paper); min-height: 180px; display: grid; gap: 10px; align-content: start; }
+.refuse { font-size: 12.5px; color: var(--muted); display: grid; gap: 3px; }
+.refuse b { color: var(--err); font-weight: 600; }
+.refuse .ok { color: var(--accent); }
+.vo-grid { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 16px; align-items: start; margin-top: 16px; }
+.props { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow); font-size: 13px; overflow: hidden; }
+.props-bar { display: flex; align-items: center; gap: 8px; padding: 7px 10px; background: var(--dlg-bar); border-bottom: 1px solid var(--line); }
+.props-bar b { font-weight: 600; flex: 1; }
+.props-bar .mut { color: var(--muted); font-size: 12px; }
+.ut-wrap { overflow-x: auto; }
+.ut { border-collapse: collapse; width: 100%; min-width: 300px; font-size: 12.5px; }
+.ut th { text-align: left; font-weight: 600; color: var(--muted); font-size: 11.5px; padding: 6px 10px; border-bottom: 1px solid var(--line); }
+.ut td { padding: 3px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.ut td:first-child { font: 12px Consolas, "Cascadia Mono", monospace; }
+.ut tr.set td { background: var(--accent-ghost); }
+.ut tr.set td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+.ut input, .ut select, .gum input { font: inherit; font-size: 12.5px; color: var(--text); background: var(--field); border: 1px solid var(--field-line); border-radius: 5px; padding: 2px 6px; }
+.ut input[type="number"] { width: 64px; }
+.ut .def { color: var(--muted); }
+.gum { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 10px 12px; border-top: 1px solid var(--line); background: var(--dlg-bar); font-size: 13px; }
+.gum output { font-variant-numeric: tabular-nums; min-width: 64px; text-align: right; }
+.scale-ctl { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 0 0 8px; font-size: 13px; }
+.scale-ctl select { font: inherit; font-size: 12.5px; color: var(--text); background: var(--field); border: 1px solid var(--field-line); border-radius: 5px; padding: 2px 6px; }
 .ladder { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
 .ladder li { display: grid; grid-template-columns: 22px 1fr; gap: 8px; align-items: start; font-size: 13px; }
 .ladder .n { width: 20px; height: 20px; border-radius: 50%; background: var(--accent); color: #fff; font: 700 11px/20px "Segoe UI", sans-serif; text-align: center; }
@@ -356,13 +341,12 @@ pre.txt { margin: 8px 0 0; font: 12px/1.5 Consolas, "Cascadia Mono", monospace; 
 .wtab.off td:not(:first-child) { opacity: .4; }
 .strip { font-size: 11.5px; line-height: 1.45; color: var(--muted); font-variant-numeric: tabular-nums; margin: 0 0 4px; padding: 4px 8px; border-radius: 5px; background: var(--accent-ghost); }
 .strip b { color: var(--accent); font-weight: 600; }
-.fr select { max-width: 100%; }
 @media (max-width: 900px) { .wt { grid-template-columns: minmax(0, 1fr); } }
 
 footer { margin-top: 48px; color: var(--muted); font-size: 13px; border-top: 1px solid var(--line); padding-top: 16px; }
 
 @media (max-width: 900px) {
-  .canvas-grid, .drawing-grid, .set-grid, .vr-grid, .pl-grid, .ss-grid { grid-template-columns: minmax(0, 1fr); }
+  .canvas-grid, .drawing-grid, .vo-grid, .vr-grid, .pl-grid, .ss-grid { grid-template-columns: minmax(0, 1fr); }
 }
 </style>
 </head>
@@ -415,7 +399,7 @@ footer { margin-top: 48px; color: var(--muted); font-size: 13px; border-top: 1px
 <header>
   <div>
     <h1>M2D+ Drawing: Grasshopper UX mockup</h1>
-    <p class="lede">One component and four inputs, of which only View is required. Revision 3 applies two owner decisions: <b>cut fill</b> comes from Rhino 8 section styles, otherwise a solid fill in the object’s colour (no M2D+ hatch system), and <b>scale</b> works like Revit’s View Scale: it only picks line weights, and drawings always stay 1:1 in the model. Revision 2 added the double-click <b>View Range &amp; Settings</b> editor and rectangle views placed 1:1.</p>
+    <p class="lede">One component and five inputs, of which only View is required. Revision 4 applies the owner’s decision on views: a referenced planar surface becomes an editable <b>M2D+ view box</b> in Rhino (right-click <b>Validate views</b>), per-view settings are <code>m2d.*</code> Attribute User Text on it, and a new <b>Depth</b> input drives plane and rectangle views. The settings editor is gone. Revision 3 still holds: cut fill from Rhino 8 section styles, else the object’s colour; <b>scale</b> picks line weights only.</p>
   </div>
   <div class="theme" role="group" aria-label="Theme">
     <button type="button" data-t="auto" aria-pressed="true">Auto</button>
@@ -427,7 +411,7 @@ footer { margin-top: 48px; color: var(--muted); font-size: 13px; border-top: 1px
 <!-- ======================= 1. Canvas ======================= -->
 <section>
   <h2>1 · On the canvas</h2>
-  <p class="sub">Typical setup: a clipping plane name in View, nothing in Geometry (the whole visible model) and no Target (the drawing is shown in place). The component is done, and Bake sits on its message tab. Nine outputs; <b>Far clip</b> is new.</p>
+  <p class="sub">Typical setup: a clipping plane name in View, nothing in Geometry (the whole visible model) and no Target (the drawing is shown in place). The component is done, and Bake sits on its message tab. Five inputs (<b>Depth</b> is new in revision 4, appended last), nine outputs.</p>
   <div class="canvas-grid">
     <div>
       <div class="gh">
@@ -435,7 +419,7 @@ footer { margin-top: 48px; color: var(--muted); font-size: 13px; border-top: 1px
           <rect width="760" height="400" fill="url(#grid)"/>
         </svg>
       </div>
-      <p class="gh-caption">Inputs: <b>G</b> Geometry · <b>V</b> View · <b>T</b> Target · <b>S</b> Settings. Outputs: <b>V</b> Visible · <b>H</b> Hidden · <b>B</b> Beyond · <b>Fc</b> Far clip · <b>C</b> Cut · <b>Ha</b> Hatch · <b>?</b> Unresolved · <b>F</b> Frame · <b>i</b> Info. Trees are always <code>{view; source path}</code>.</p>
+      <p class="gh-caption">Inputs: <b>G</b> Geometry · <b>V</b> View · <b>T</b> Target · <b>S</b> Settings · <b>D</b> Depth. Outputs: <b>V</b> Visible · <b>H</b> Hidden · <b>B</b> Beyond · <b>Fc</b> Far clip · <b>C</b> Cut · <b>Ha</b> Hatch · <b>?</b> Unresolved · <b>F</b> Frame · <b>i</b> Info. Trees are always <code>{view; source path}</code>.</p>
     </div>
 
     <div class="menus">
@@ -444,7 +428,10 @@ footer { margin-top: 48px; color: var(--muted); font-size: 13px; border-top: 1px
         <div class="menu" role="menu" aria-label="Component menu">
           <div class="mi dim"><span></span><span>Preview · Enabled · Bake… · Help</span><span class="k">GH</span></div>
           <div class="sep"></div>
-          <div class="mi hot"><span></span><span><b>View range &amp; settings…</b></span><span class="k">Double-click</span></div>
+          <div class="mi hot"><span></span><span><b>Validate views</b></span><span class="k">surface → view box</span></div>
+          <div class="mi"><span></span><span>Flip view direction</span><span></span></div>
+          <div class="mi"><span></span><span>Create view from current viewport</span><span></span></div>
+          <div class="mi"><span></span><span>Select view objects</span><span class="k">Double-click</span></div>
           <div class="sep"></div>
           <div class="mi"><span></span><span>Bake drawing</span><span class="k">Shift: copy</span></div>
           <div class="mi"><span></span><span>Bake one</span><span class="arr">›</span></div>
@@ -471,6 +458,7 @@ footer { margin-top: 48px; color: var(--muted); font-size: 13px; border-top: 1px
             <div class="mi"><span></span><span>None</span><span></span></div>
           </div>
           <div class="mi"><span></span><span>Cuts · Line weights</span><span class="arr">›</span></div>
+          <div class="mi"><span></span><span>Reset menu defaults</span><span></span></div>
           <div class="sep"></div>
           <div class="mi"><span></span><span>Preview · Output tree</span><span class="arr">›</span></div>
           <div class="sep"></div>
@@ -481,8 +469,13 @@ footer { margin-top: 48px; color: var(--muted); font-size: 13px; border-top: 1px
       <div>
         <p class="menu-label">Right-click the View input</p>
         <div class="menu" role="menu" aria-label="View input menu">
+          <div class="mi"><span></span><span>Pick views in Rhino…</span><span></span></div>
+          <div class="mi hot"><span></span><span><b>Validate views</b></span><span></span></div>
+          <div class="mi"><span></span><span>Flip view direction</span><span></span></div>
+          <div class="mi"><span></span><span>Create view from current viewport</span><span></span></div>
+          <div class="sep"></div>
           <div class="mi"><span></span><span>Named views</span><span class="arr">›</span></div>
-          <div class="mi hot"><span></span><span>Clipping planes</span><span class="arr">›</span></div>
+          <div class="mi"><span></span><span>Clipping planes</span><span class="arr">›</span></div>
           <div class="submenu">
             <div class="mi"><span class="chk">✓</span><span>Plan cut L1</span><span></span></div>
             <div class="mi"><span></span><span>Section A</span><span></span></div>
@@ -490,114 +483,101 @@ footer { margin-top: 48px; color: var(--muted); font-size: 13px; border-top: 1px
           <div class="mi"><span></span><span>Directions <span class="k">· Top, Front, SW…</span></span><span class="arr">›</span></div>
           <div class="sep"></div>
           <div class="mi"><span></span><span>All named views · All clipping planes</span><span></span></div>
-          <div class="mi"><span></span><span>Capture active view as named view…</span><span></span></div>
+          <div class="sep"></div>
+          <div class="mi"><span></span><span>Clear</span><span></span></div>
         </div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ======================= 2. Settings ======================= -->
+<!-- ======================= 2. View objects ======================= -->
 <section>
-  <h2>2 · Settings: the editor and the text input <span class="new">new</span></h2>
-  <p class="sub">Double-click the component to open the editor. Its values are stored on the component, and a cobalt dot next to <b>S</b> says so. A Panel wired into <b>S</b> overrides only the keys it contains; the editor then shows those fields locked, “set by input”. Unwire it and the editor’s own values come back. <b>Scale</b> sets line weights only (Revit’s View Scale): try it below and watch the weight table.</p>
-  <div class="gh">
-    <svg id="canvas2" viewBox="0 0 1000 330" role="img" aria-label="Rectangle, plane and a settings Panel wired into M2D+; double-click opens the editor">
-      <rect width="1000" height="330" fill="url(#grid)"/>
-    </svg>
+  <h2>2 · View objects: a surface becomes a view box <span class="new">new</span></h2>
+  <p class="sub">The view is a Rhino object you edit. Reference a planar surface (or a closed rectangle) in <b>View</b>, right-click <b>Validate views</b>, and M2D+ converts it in place into an <b>M2D+ view box</b>: an extrusion whose front face is the view frame (and the cut plane) and whose length is the depth. Same object, same id, one undo. Drag its back face with the gumball to change the depth; its per-view settings are <code>m2d.*</code> keys in Rhino’s <i>Properties ▸ Attribute User Text</i>. Try the controls: they drive the view-range diagrams in section 3.</p>
+
+  <div class="steps">
+    <div class="fig"><svg id="vb1" viewBox="0 0 360 250" role="img" aria-label="A planar surface standing in a building, referenced in View"></svg>
+      <div class="fig-cap"><b>1 · Reference a planar surface.</b> Right-click V ▸ <i>Pick views in Rhino…</i> Any planar rectangle works, trimmed or not.</div></div>
+    <div class="fig">
+      <div class="step-menu">
+        <div class="menu" role="menu" aria-label="View input menu, Validate views">
+          <div class="mi"><span></span><span>Pick views in Rhino…</span><span></span></div>
+          <div class="mi hot"><span></span><span><b>Validate views</b></span><span></span></div>
+          <div class="mi"><span></span><span>Flip view direction</span><span></span></div>
+          <div class="mi"><span></span><span>Create view from current viewport</span><span></span></div>
+        </div>
+        <div class="refuse" aria-label="Validate report">
+          <span><span class="ok">✓</span> <b style="color:var(--text)">M2D View 01</b> converted to a view box, looking north, depth 18.2 m (auto)</span>
+          <span><b>✕ Slab edge</b> the surface is not planar.</span>
+          <span><b>✕ Skew panel</b> its corners are not right angles (78.7°).</span>
+          <span><b>✕ Façade</b> a polysurface with 6 faces. Reference one planar surface.</span>
+        </div>
+      </div>
+      <div class="fig-cap"><b>2 · Validate views.</b> Planar, a rectangle (4 straight edges at right angles), not degenerate. Each refusal says why; nothing is converted silently. One undo for the run.</div></div>
+    <div class="fig"><svg id="vb3" viewBox="0 0 360 250" role="img" aria-label="The view box: frame, look arrow and depth volume"></svg>
+      <div class="fig-cap"><b>3 · An M2D+ view box.</b> Front face = frame and cut plane (solid cobalt), arrow = look direction, dotted = depth volume to the back face. Drawn in cobalt while the component is selected.</div></div>
   </div>
 
-  <div class="set-grid">
-    <div class="dlg" role="dialog" aria-label="M2D+ View Range and Settings">
-      <div class="dlg-bar"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon"/></svg><b>M2D+ · View Range &amp; Settings</b><span class="x" aria-hidden="true">✕</span></div>
-      <div class="vt-wrap">
-        <table class="vt">
-          <thead><tr><th>View</th><th>Source</th><th>Depth</th><th>Beyond</th><th>Far clip</th><th>Fade</th><th>Scale</th></tr></thead>
+  <div class="vo-grid">
+    <div class="props" role="group" aria-label="Rhino Properties, Attribute User Text of M2D View 01">
+      <div class="props-bar"><b>Properties ▸ Attribute User Text</b><span class="mut">M2D View 01 · Extrusion · layer M2D+::Views</span></div>
+      <div class="ut-wrap">
+        <table class="ut">
+          <thead><tr><th>Key</th><th>Value</th></tr></thead>
           <tbody>
-            <tr class="all"><td>All views</td><td class="mut">defaults</td><td>Auto</td><td>Auto · 3 m</td><td>Without line</td><td>Off</td><td>1:100</td></tr>
-            <tr class="on"><td>Section A</td><td class="mut">Rectangle · cuts</td><td id="r-depth">40 m</td><td id="r-beyond" class="inh">·</td><td id="r-far">With line</td><td id="r-fade">On</td><td id="r-scale" class="inh">·</td></tr>
-            <tr><td>Section B</td><td class="mut">Rectangle · cuts</td><td class="inh">·</td><td class="inh">·</td><td class="inh">·</td><td class="inh">·</td><td class="inh">·</td></tr>
-            <tr><td>South elevation</td><td class="mut">Rectangle · no cut</td><td>60 m</td><td>Off</td><td class="inh">·</td><td>On</td><td>1:200</td></tr>
+            <tr><td>m2d.view</td><td class="def">1</td></tr>
+            <tr><td>m2d.name</td><td class="def">default</td></tr>
+            <tr id="u-far-row"><td>m2d.farclip</td><td><select id="u-far" aria-label="m2d.farclip"><option value="def">default</option><option value="none">none</option><option value="line" selected>line</option><option value="noline">noline</option></select></td></tr>
+            <tr id="u-beyond-row"><td>m2d.beyond</td><td><select id="u-beyond" aria-label="m2d.beyond"><option value="def" selected>default</option><option value="off">off</option><option value="1">1 m</option><option value="10">10 m</option><option value="20">20 m</option></select></td></tr>
+            <tr id="u-fade-row"><td>m2d.fade</td><td><select id="u-fade" aria-label="m2d.fade"><option value="def">default</option><option value="on" selected>on</option><option value="off">off</option></select></td></tr>
+            <tr id="u-start-row"><td>m2d.fade.start</td><td><input id="u-start" type="number" min="0" max="100" value="10" aria-label="m2d.fade.start"> %</td></tr>
+            <tr id="u-end-row"><td>m2d.fade.end</td><td><input id="u-end" type="number" min="0" max="100" value="90" aria-label="m2d.fade.end"> %</td></tr>
+            <tr id="u-limit-row"><td>m2d.fade.limit</td><td><input id="u-limit" type="number" min="0" max="100" value="25" aria-label="m2d.fade.limit"> %</td></tr>
+            <tr><td>m2d.hidden</td><td class="def">default</td></tr>
+            <tr><td>m2d.tangents · seams · glass</td><td class="def">default</td></tr>
+            <tr><td>m2d.scale · weights</td><td class="def">default</td></tr>
+            <tr><td>m2d.hatch · cuts</td><td class="def">default</td></tr>
           </tbody>
         </table>
       </div>
-      <div class="dlg-body">
-        <h4>Section A <span class="note">· “·” in the table means “as All views”</span></h4>
-        <div class="fs-grid">
-          <fieldset>
-            <legend>View range</legend>
-            <div class="fr"><span>View plane</span><span class="note">Rectangle · cuts 214 objects</span></div>
-            <div class="fr"><label for="f-depth">Depth</label><span class="ctl"><input id="f-depth" type="number" min="5" max="60" step="1" value="40"> m <label class="chk-l"><input id="f-depth-auto" type="checkbox"> Auto</label></span></div>
-            <div class="fr"><label for="f-beyond">Beyond</label><span class="ctl"><select id="f-beyond"><option value="auto" selected>As All views (Auto · 3 m)</option><option value="off">Off</option><option value="1">1 m</option><option value="10">10 m</option><option value="20">20 m</option></select></span></div>
-            <div class="fr" style="align-items:start"><span style="padding-top:4px">Far clip</span>
-              <span class="radios" role="radiogroup" aria-label="Far clipping">
-                <label><input type="radio" name="far" value="none"> No clip</label>
-                <label><input type="radio" name="far" value="line" checked> Clip with line</label>
-                <label><input type="radio" name="far" value="noline"> Clip without line</label>
-              </span>
-            </div>
-          </fieldset>
-          <fieldset>
-            <legend>Depth cueing</legend>
-            <label class="chk-l" style="min-height:28px"><input id="f-fade" type="checkbox" checked> Fade with distance</label>
-            <div class="rg"><span>Start</span><input id="f-start" type="range" min="0" max="100" value="10" aria-label="Fade start"><output id="o-start">10 %</output></div>
-            <div class="rg"><span>End</span><input id="f-end" type="range" min="0" max="100" value="90" aria-label="Fade end"><output id="o-end">90 %</output></div>
-            <div class="rg"><span>Limit</span><input id="f-limit" type="range" min="0" max="100" value="25" aria-label="Fade limit"><output id="o-limit">25 %</output></div>
-          </fieldset>
-          <fieldset>
-            <legend>Drawing</legend>
-            <div class="fr"><span>Hidden lines</span><span class="lock"><svg aria-hidden="true"><use href="#lock"/></svg>Off <span class="tag">set by input</span></span></div>
-            <div class="fr"><label for="f-scale">Scale</label><span class="ctl"><select id="f-scale"><option value="inh" selected>As All views (1:100)</option><option value="20">1:20</option><option value="50">1:50</option><option value="75">1:75</option><option value="150">1:150</option><option value="200">1:200</option><option value="500">1:500</option><option value="1000">1:1000</option></select></span></div>
-            <div class="strip" id="f-strip"></div>
-            <div class="fr"><label for="f-w">Weights</label><span class="ctl"><select id="f-w"><option value="auto">From scale</option><option value="layers">Source layers</option></select></span></div>
-            <div class="fr"><label for="f-hatch">Hatch</label><span class="ctl"><select id="f-hatch"><option>Styles, else colour</option><option>Object colour</option><option>Black</option><option>None</option></select></span></div>
-          </fieldset>
-          <fieldset>
-            <legend>Placement</legend>
-            <div class="fr"><span>Target</span><span class="note">Target[0] · plane-to-plane, always 1:1</span></div>
-            <div class="fr"><label for="f-gap">Gap</label><span class="ctl"><select id="f-gap"><option>Auto</option><option>2 m</option></select></span></div>
-            <div class="fr"><span>Name</span><span class="note">Section A (from the view)</span></div>
-          </fieldset>
-        </div>
-      </div>
-      <div class="dlg-foot">
-        <button class="btn" type="button">Copy as text</button>
-        <button class="btn" type="button">Reset to All views</button>
-        <span class="sp"></span>
-        <button class="btn pri" type="button">OK</button>
-        <button class="btn" type="button">Cancel</button>
-        <button class="btn" type="button">Apply</button>
-      </div>
+      <div class="gum"><label for="g-depth">Back face (gumball)</label><input id="g-depth" type="range" min="5" max="60" step="1" value="40" aria-label="Drag the back face: depth"><output id="o-depth">40 m</output></div>
     </div>
 
     <div class="card pad">
       <h3>Who wins, per key and per view</h3>
       <ol class="ladder">
-        <li><span class="n">1</span><span><b>Settings input</b>, when wired<small>Only the keys it contains. One branch = all views; one branch per view, or <code>[Section A]</code> headers.</small></span></li>
-        <li><span class="n">2</span><span><b>Editor, the view’s row</b><small>Stored in the .gh, keyed by the view’s name or id.</small></span></li>
-        <li><span class="n">3</span><span><b>Editor, All views</b><small>The right-click toggles edit this row.</small></span></li>
-        <li><span class="n o">4</span><span><b>Default</b><small>Usually Auto: inferred from the source (box height, clipping-plane depth, scene extent).</small></span></li>
+        <li><span class="n">1</span><span><b>Depth input</b> (depth only)<small>One value for all views or one per view: a slider for plane and rectangle views. A box or view box always uses its own length, with a remark.</small></span></li>
+        <li><span class="n">2</span><span><b>Settings input</b>, when wired<small>Only the keys it contains. One branch = all views; one branch per view, or <code>[M2D View 01]</code> headers.</small></span></li>
+        <li><span class="n">3</span><span><b>The view object</b><small><code>m2d.*</code> user text on the view box or clipping plane. <code>default</code> = not set here.</small></span></li>
+        <li><span class="n">4</span><span><b>Menu defaults</b><small>The right-click toggles, stored on the component, for every view.</small></span></li>
+        <li><span class="n o">5</span><span><b>Built-in default</b><small>Usually Auto: inferred from the source (scene extent, clipping-plane depth).</small></span></li>
       </ol>
-      <p class="note" style="margin:12px 0 0"><b>Copy as text</b> turns the editor into a Panel you can paste and drive parametrically:</p>
-      <pre class="txt">scale = 1:100
+      <p class="note" style="margin:12px 0 0"><b>Double-click</b> the component to select its view objects in Rhino. <b>Copy settings as text</b> gives a Panel:</p>
+      <pre class="txt">[*]
+scale = 1:100
 
-[South elevation]
-scale = 1:200
-
-[Section A]
-depth   = 40 m
+[M2D View 01]
 farclip = line
 fade    = on
 fade.start = 10 %
 fade.end   = 90 %
 fade.limit = 25 %</pre>
-      <p class="note" style="margin:10px 0 0">The editor’s fields drive the diagrams in section 3 and the weight table below. Try them.</p>
     </div>
   </div>
 
-  <div class="card pad wt">
+  <div class="gh" style="margin-top:16px">
+    <svg id="canvas2" viewBox="0 0 1000 330" role="img" aria-label="Three view boxes, a plane, a settings Panel and an empty Depth input wired into the five-input M2D+ component">
+      <rect width="1000" height="330" fill="url(#grid)"/>
+    </svg>
+  </div>
+
+  <div class="card pad wt" style="margin-top:16px">
     <div>
-      <h3>Scale = line weights (Revit’s View Scale) <span class="new">new</span></h3>
+      <h3>Scale = line weights (Revit’s View Scale)</h3>
+      <div class="scale-ctl"><label for="f-scale">Scale (menu, or <code>m2d.scale</code>)</label><select id="f-scale"><option value="20">1:20</option><option value="50">1:50</option><option value="75">1:75</option><option value="100" selected>1:100</option><option value="150">1:150</option><option value="200">1:200</option><option value="500">1:500</option><option value="1000">1:1000</option></select>
+        <label for="f-w">Line weights</label><select id="f-w"><option value="auto">From scale</option><option value="layers">From source layers</option></select></div>
+      <div class="note" id="f-strip" style="margin:0 0 8px"></div>
       <div class="wtab-wrap"><table class="wtab" id="wtab" aria-label="Print widths in mm per scale band"></table></div>
     </div>
     <div>
@@ -619,7 +599,7 @@ fade.limit = 25 %</pre>
   <div class="vr-grid">
     <div class="fig">
       <svg id="front" viewBox="0 0 760 320" role="img" aria-label="Section A as drawn, with depth cueing and far clipping"></svg>
-      <div class="fig-cap"><b>Section A, as drawn.</b> Cut on the view plane, filled in the walls’ layer colour (no section style; the ground has its own style); the room behind within 3 m is Visible; everything farther is Beyond; fading follows the editor. The cobalt frame is the Frame output: the rectangle.</div>
+      <div class="fig-cap"><b>Section A, as drawn.</b> Cut on the view plane, filled in the walls’ layer colour (no section style; the ground has its own style); the room behind within 3 m is Visible; everything farther is Beyond; fading follows the view box’s <code>m2d.fade.*</code> keys (section 2). The cobalt frame is the Frame output: the view box’s front face.</div>
     </div>
     <div class="trio" id="trio"></div>
   </div>
@@ -738,7 +718,7 @@ fade.limit = 25 %</pre>
 </section>
 
 <footer>
-  M2D+ is an MIT, open-source plug-in for Rhino 8 (Windows). This is a design mockup; numbers and names are illustrative. Spec: <code>docs/design/ux.md</code> (revision 3).
+  M2D+ is an MIT, open-source plug-in for Rhino 8 (Windows). This is a design mockup; numbers and names are illustrative. Spec: <code>docs/design/ux.md</code> (revision 4).
 </footer>
 </div>
 
@@ -787,7 +767,6 @@ function ghComp(svg, o) {
     if (i) E('line', { 'class': 'ghdiv', x1: x, y1: y + 6 + inH * i, x2: lc, y2: y + 6 + inH * i }, svg);
     E('text', { 'class': 'ghtxt', x: x + 19, y: cy + 4.5, 'text-anchor': 'middle' }, svg, n);
     E('circle', { 'class': 'grip', cx: x, cy: cy, r: 4 }, svg);
-    if (o.sdot && n === 'S') E('circle', { cx: x + 30, cy: cy - 7, r: 3, 'class': 'acc' }, svg);
     res.inY.push(cy);
   });
   outs.forEach(function (n, i) {
@@ -828,12 +807,13 @@ var OUTS = ['V', 'H', 'B', 'Fc', 'C', 'Ha', '?', 'F', 'i'];
 /* canvas 1 */
 (function () {
   var s = document.getElementById('canvas1');
-  var c = ghComp(s, { x: 330, y: 70, ins: ['G', 'V', 'T', 'S'], outs: OUTS, msg: 'Plan cut L1 · 2.1 s', btn: 'Bake' });
+  var c = ghComp(s, { x: 330, y: 70, ins: ['G', 'V', 'T', 'S', 'D'], outs: OUTS, msg: 'Plan cut L1 · 2.1 s', btn: 'Bake' });
   var p = panel(s, 64, c.inY[1] - 19, ['Plan cut L1'], 132);
   wire(s, p.x, p.y, 330, c.inY[1]);
   E('text', { 'class': 'hint', x: 318, y: c.inY[0] + 4, 'text-anchor': 'end' }, s, 'empty = visible model');
   E('text', { 'class': 'hint', x: 318, y: c.inY[2] + 4, 'text-anchor': 'end' }, s, 'empty = in place');
-  E('text', { 'class': 'hint', x: 318, y: c.inY[3] + 4, 'text-anchor': 'end' }, s, 'empty = editor values');
+  E('text', { 'class': 'hint', x: 318, y: c.inY[3] + 4, 'text-anchor': 'end' }, s, 'empty = view objects + menu');
+  E('text', { 'class': 'hint', x: 318, y: c.inY[4] + 4, 'text-anchor': 'end' }, s, 'empty = auto depth');
   var area = 4;
   wire(s, 330 + c.w, c.outY[area], 610, 120);
   E('rect', { 'class': 'ghb', x: 610, y: 104, width: 92, height: 32, rx: 5 }, s);
@@ -846,37 +826,89 @@ var OUTS = ['V', 'H', 'B', 'Fc', 'C', 'Ha', '?', 'F', 'i'];
   E('text', { 'class': 'tiptxt', x: 12, y: 54, opacity: .75 }, g, 'one region per object; Hatch[i] fills Cut[i]');
 })();
 
-/* canvas 2 */
+/* canvas 2: the five-input component with view boxes */
 (function () {
   var s = document.getElementById('canvas2'), X0 = 470;
-  var c = ghComp(s, { x: X0, y: 40, ins: ['G', 'V', 'T', 'S'], outs: OUTS, msg: 'Section A · 3 drawings', btn: 'Bake', sdot: true });
-  var r = param(s, 260, c.inY[1] - 13, 'Rectangle');
+  var c = ghComp(s, { x: X0, y: 40, ins: ['G', 'V', 'T', 'S', 'D'], outs: OUTS, msg: '3 drawings · 6.4 s', btn: 'Bake' });
+  var r = param(s, 260, c.inY[1] - 13, 'Geometry');
   wire(s, r.x, r.y, X0, c.inY[1]);
-  E('text', { 'class': 'hint', x: 150, y: c.inY[1] - 22 }, s, '3 rectangles: Section A, Section B, South elevation');
+  E('text', { 'class': 'hint', x: 150, y: c.inY[1] - 22 }, s, '3 referenced view boxes: M2D View 01, 02, 03');
   var t = param(s, 260, c.inY[2] - 13, 'Plane');
   wire(s, t.x, t.y, X0, c.inY[2]);
   E('text', { 'class': 'hint', x: 150, y: c.inY[2] + 4 }, s, '1 plane → a row, 1:1');
   var p = panel(s, 230, c.inY[3] - 12, ['hidden = off'], 128);
   wire(s, p.x, p.y, X0, c.inY[3]);
-  E('text', { 'class': 'hint', x: 120, y: c.inY[3] + 46 }, s, 'Panel: only this key is locked in the editor');
+  E('text', { 'class': 'hint', x: 92, y: c.inY[3] + 4 }, s, 'beats m2d.hidden');
+  E('text', { 'class': 'hint', x: X0 - 8, y: c.inY[4] + 4, 'text-anchor': 'end' }, s, 'Depth: empty (view boxes use their own length)');
   E('text', { 'class': 'hint', x: 330, y: c.inY[0] + 4 }, s, 'empty = visible model');
-  E('text', { 'class': 'hint', x: X0 - 8, y: c.inY[3] - 18, 'text-anchor': 'end' }, s, '• = editor values stored');
   /* double-click cue */
   var cx = X0 + c.w / 2 + 2, cy = 40 + c.h / 2 + 30;
   E('circle', { cx: cx, cy: cy, r: 11, fill: 'none', 'class': 'accs', 'stroke-width': 1.4 }, s);
   E('circle', { cx: cx, cy: cy, r: 17, fill: 'none', 'class': 'accs', 'stroke-width': 1, opacity: .5 }, s);
   E('path', { d: 'M' + (cx + 1) + ' ' + (cy - 1) + ' l0 16 l4 -4 l3 7 l3 -1.4 l-3 -7 l6 0 z', style: 'fill:var(--surface);stroke:var(--text)', 'stroke-width': 1 }, s);
-  E('text', { 'class': 'hint', x: X0 + c.w + 16, y: 40 + c.h + 18 }, s, 'double-click → View Range & Settings editor');
-  /* S tooltip */
+  E('text', { 'class': 'hint', x: X0 + c.w + 16, y: 40 + c.h + 18 }, s, 'double-click → select the view boxes in Rhino');
+  /* Info excerpt */
   var g = E('g', { transform: 'translate(' + (X0 + c.w + 40) + ' 40)' }, s);
-  E('rect', { 'class': 'tip', width: 196, height: 112, rx: 7 }, g);
-  E('text', { 'class': 'tiptxt', x: 12, y: 20, 'font-weight': 600 }, g, 'Settings (S) · on hover');
-  [['hidden off', 'input'], ['scale 1:100', 'editor · All'], ['depth 40 m', 'editor · A'], ['farclip line', 'editor · A'], ['fade on 10–90 %', 'editor · A']].forEach(function (r, i) {
+  E('rect', { 'class': 'tip', width: 236, height: 112, rx: 7 }, g);
+  E('text', { 'class': 'tiptxt', x: 12, y: 20, 'font-weight': 600 }, g, 'Info · M2D View 01');
+  [['depth 40 m', 'view box'], ['hidden off', 'set by input'], ['farclip line', 'view object'], ['fade on 10–90 %', 'view object'], ['scale 1:100', 'component menu']].forEach(function (r, i) {
     E('text', { 'class': 'tipmut', x: 12, y: 40 + i * 15 }, g, r[0]);
-    E('text', { 'class': 'tipmut', x: 184, y: 40 + i * 15, 'text-anchor': 'end' }, g, r[1]);
+    E('text', { 'class': 'tipmut', x: 224, y: 40 + i * 15, 'text-anchor': 'end' }, g, r[1]);
   });
-  E('path', { d: 'M' + (X0 + 34) + ' ' + (c.inY[3] - 7) + ' C ' + (X0 + 120) + ' ' + (c.inY[3] + 40) + ', ' + (X0 + c.w + 20) + ' ' + 170 + ', ' + (X0 + c.w + 40) + ' 140', 'class': 'accs', 'stroke-dasharray': '3 3', 'stroke-width': 1 }, s);
 })();
+
+/* ---------- view box steps (axonometric) ---------- */
+function vbIso(svg, opts) {
+  while (svg.firstChild) svg.removeChild(svg.firstChild);
+  /* True isometric. The drawn depth is compressed (labelled with the real value) so 5–60 m all fit. */
+  var D = opts.depth || 0, Dv = 4 + D * .4, s = 4.7, c30 = .866;
+  var cx = 22 + 2 * c30 * s, cy = 14 + 30 * s;
+  /* x runs to the lower right, y (the look direction, into the model) to the upper right, z up */
+  function p(x, y, z) { return [cx + (x + y) * c30 * s, cy + (x - y) * .5 * s - z * s]; }
+  function poly(pts, a) { a = a || {}; a.points = P(pts.map(function (q) { return p(q[0], q[1], q[2]); })); return E('polygon', a, svg); }
+  function ln(a3, b3, a) { var A = p.apply(null, a3), B = p.apply(null, b3); a = a || {}; a.x1 = A[0]; a.y1 = A[1]; a.x2 = B[0]; a.y2 = B[1]; return E('line', a, svg); }
+  E('rect', { width: 360, height: 250, style: 'fill:var(--paper)' }, svg);
+  poly([[-4, -4, 0], [26, -4, 0], [26, 40, 0], [-4, 40, 0]], { style: 'fill:var(--ink);stroke:none', opacity: .03 });
+  /* building 20 × 12 × 10: visible faces are the south (y = 0), east (x = 20) and the roof */
+  var ink = { style: 'fill:var(--paper);stroke:var(--ink)', 'stroke-width': 1.1 };
+  var Y0 = 0, Y1 = 12;
+  var F = { u0: -2, u1: 22, v0: -1.5, v1: 12.5, y: 5 };
+  var front = [[F.u0, F.y, F.v0], [F.u1, F.y, F.v0], [F.u1, F.y, F.v1], [F.u0, F.y, F.v1]];
+  var back = front.map(function (q) { return [q[0], q[1] + Dv, q[2]]; });
+  if (opts.box) { /* depth volume behind the building first */
+    var dot = { style: 'stroke:var(--accent)', 'stroke-dasharray': '3 3', 'stroke-width': 1.1, opacity: .9 };
+    for (var i = 0; i < 4; i++) ln(back[i], back[(i + 1) % 4], dot);
+    ln(front[2], back[2], dot); ln(front[3], back[3], dot);
+  }
+  poly([[0, Y0, 10], [20, Y0, 10], [20, Y1, 10], [0, Y1, 10]], ink);
+  poly([[20, Y0, 0], [20, Y1, 0], [20, Y1, 10], [20, Y0, 10]], ink);
+  poly([[0, Y0, 0], [20, Y0, 0], [20, Y0, 10], [0, Y0, 10]], ink);
+  [1.5, 5.5, 9.5, 13.5].forEach(function (x) { [2, 6].forEach(function (z) {
+    poly([[x, Y0, z], [x + 3, Y0, z], [x + 3, Y0, z + 2], [x, Y0, z + 2]], { style: 'fill:none;stroke:var(--ink)', 'stroke-width': .7, opacity: .65 }); }); });
+  if (!opts.box) {
+    poly(front, { style: 'fill:var(--ink);stroke:var(--ink)', 'fill-opacity': .12, 'stroke-width': 1.4 });
+    E('text', { x: 12, y: 232, 'class': 'dl' }, svg, 'planar surface through the building');
+    E('text', { x: 12, y: 245, 'class': 'dlm' }, svg, 'referenced in V; its normal is a guess until validated');
+    return;
+  }
+  var dot2 = { style: 'stroke:var(--accent)', 'stroke-dasharray': '3 3', 'stroke-width': 1.1, opacity: .9 };
+  ln(front[0], back[0], dot2); ln(front[1], back[1], dot2);
+  poly(front, { style: 'fill:var(--accent);stroke:var(--accent)', 'fill-opacity': .12, 'stroke-width': 2.4 });
+  var c3 = [(F.u0 + F.u1) / 2, F.y, (F.v0 + F.v1) / 2], a3 = [c3[0], F.y + Math.min(Dv, 8), c3[2]];
+  var A = p.apply(null, c3), B = p.apply(null, a3), ang = Math.atan2(B[1] - A[1], B[0] - A[0]);
+  E('line', { x1: A[0], y1: A[1], x2: B[0], y2: B[1], style: 'stroke:var(--accent)', 'stroke-width': 2.2 }, svg);
+  E('path', { d: 'M' + B[0] + ' ' + B[1] + ' L' + (B[0] - 9 * Math.cos(ang - .4)) + ' ' + (B[1] - 9 * Math.sin(ang - .4)) + ' L' + (B[0] - 9 * Math.cos(ang + .4)) + ' ' + (B[1] - 9 * Math.sin(ang + .4)) + ' Z', style: 'fill:var(--accent)' }, svg);
+  var N = p(F.u0, F.y, F.v1);
+  E('text', { x: N[0] - 30, y: N[1] - 8, 'class': 'dla' }, svg, 'M2D View 01');
+  E('text', { x: 12, y: 245, 'class': 'dlm' }, svg, 'look direction → into the model');
+  /* gumball arrow on the back face */
+  var G = p(F.u1, F.y + Dv, (F.v0 + F.v1) / 2), H = p(F.u1, F.y + Dv + 5, (F.v0 + F.v1) / 2);
+  E('line', { x1: G[0], y1: G[1], x2: H[0], y2: H[1], style: 'stroke:var(--accent)', 'stroke-width': 2.2 }, svg);
+  E('circle', { cx: H[0], cy: H[1], r: 4, style: 'fill:var(--accent)' }, svg);
+  var tx = Math.min(H[0] + 8, 286), ty = Math.max(H[1] + 4, 16);
+  E('text', { x: tx, y: ty, 'class': 'dla' }, svg, 'depth ' + D + ' m');
+  E('text', { x: tx, y: ty + 14, 'class': 'dlm' }, svg, 'drag back face');
+}
 
 /* ---------- view range state ---------- */
 var ST = { depth: 40, auto: false, beyond: 'auto', far: 'line', fade: true, start: 10, end: 90, limit: 25 };
@@ -1057,38 +1089,41 @@ function renderTrio() {
   });
 }
 
-/* ---------- editor wiring ---------- */
+/* ---------- view-object wiring (user text + back face drive section 3) ---------- */
 (function () {
   var $ = function (id) { return document.getElementById(id); };
+  var MENU = { beyond: 'auto', far: 'noline', fade: false };   /* menu defaults behind "default" */
+  function read() {
+    var far = $('u-far').value, b = $('u-beyond').value, f = $('u-fade').value;
+    ST.far = far === 'def' ? MENU.far : far;
+    ST.beyond = b === 'def' ? MENU.beyond : b;
+    ST.fade = f === 'def' ? MENU.fade : f === 'on';
+    ['start', 'end', 'limit'].forEach(function (k) { var v = Math.max(0, Math.min(100, +$('u-' + k).value || 0)); ST[k] = v; });
+    ST.depth = +$('g-depth').value; ST.auto = false;
+    $('u-far-row').className = far === 'def' ? '' : 'set';
+    $('u-beyond-row').className = b === 'def' ? '' : 'set';
+    $('u-fade-row').className = f === 'def' ? '' : 'set';
+    ['start', 'end', 'limit'].forEach(function (k) { $('u-' + k).disabled = !ST.fade; $('u-' + k + '-row').className = 'set'; });
+  }
   function sync() {
+    read();
     var e = eff();
-    $('o-start').textContent = ST.start + ' %'; $('o-end').textContent = ST.end + ' %'; $('o-limit').textContent = ST.limit + ' %';
-    $('f-depth').disabled = ST.auto;
-    ['f-start', 'f-end', 'f-limit'].forEach(function (id) { $(id).disabled = !ST.fade; });
-    $('r-depth').textContent = ST.auto ? 'Auto' : ST.depth + ' m';
-    $('r-beyond').textContent = ST.beyond === 'auto' ? '·' : ST.beyond === 'off' ? 'Off' : ST.beyond + ' m';
-    $('r-beyond').className = ST.beyond === 'auto' ? 'inh' : '';
-    $('r-far').textContent = ({ none: 'No clip', line: 'With line', noline: 'Without line' })[ST.far];
-    $('r-fade').textContent = ST.fade ? 'On' : 'Off';
+    $('o-depth').textContent = ST.depth + ' m';
+    vbIso($('vb1'), { box: false });
+    vbIso($('vb3'), { box: true, depth: ST.depth });
     renderSide($('side'), e);
     renderFront($('front'), e, false);
     renderTrio();
-    $('side-cap').innerHTML = '<b>Section A, seen from the side.</b> Depth ' + (ST.auto ? '<b>Auto</b> (scene extent, nothing clipped)' : '<b>' + ST.depth + ' m</b>') +
+    $('side-cap').innerHTML = '<b>M2D View 01, seen from the side.</b> Depth <b>' + ST.depth + ' m</b> (its back face)' +
       ' · beyond ' + (e.b === Infinity ? 'off' : e.b + ' m') + ' · far clip ' + ({ none: 'none', line: 'with line', noline: 'without line' })[e.far] +
       ' · depth cueing ' + (ST.fade ? ST.start + ' % → ' + ST.end + ' %, limit ' + ST.limit + ' %' : 'off') + '. Each line takes the intensity at its mid-depth; Cut and Hatch never fade.';
   }
-  $('f-depth').addEventListener('input', function () { var v = +this.value; if (v >= 5 && v <= 60) { ST.depth = v; sync(); } });
-  $('f-depth-auto').addEventListener('change', function () { ST.auto = this.checked; sync(); });
-  $('f-beyond').addEventListener('change', function () { ST.beyond = this.value; sync(); });
-  document.querySelectorAll('input[name="far"]').forEach(function (r) { r.addEventListener('change', function () { ST.far = this.value; sync(); }); });
-  $('f-fade').addEventListener('change', function () { ST.fade = this.checked; sync(); });
-  [['f-start', 'start'], ['f-end', 'end'], ['f-limit', 'limit']].forEach(function (p) {
-    $(p[0]).addEventListener('input', function () { ST[p[1]] = +this.value; sync(); });
-  });
+  ['u-far', 'u-beyond', 'u-fade'].forEach(function (id) { $(id).addEventListener('change', sync); });
+  ['u-start', 'u-end', 'u-limit', 'g-depth'].forEach(function (id) { $(id).addEventListener('input', sync); });
   sync();
 })();
 
-/* ---------- scale = line weights (editor field + preset table) ---------- */
+/* ---------- scale = line weights (menu / m2d.scale + preset table) ---------- */
 (function () {
   var $ = function (id) { return document.getElementById(id); };
   var BANDS = ['1:20 – 1:50', '1:100', '1:200 – 1:500'];
@@ -1123,10 +1158,8 @@ function renderTrio() {
     t.classList.toggle('off', !!off);
   }
   function sync() {
-    var v = $('f-scale').value, n = v === 'inh' ? 100 : +v, b = band(n), off = $('f-w').value === 'layers';
+    var n = +$('f-scale').value, b = band(n), off = $('f-w').value === 'layers';
     $('f-scale').disabled = off;
-    $('r-scale').textContent = v === 'inh' ? '·' : '1:' + n;
-    $('r-scale').className = v === 'inh' ? 'inh' : '';
     $('f-strip').innerHTML = off ? '<b>Line weights from source layers.</b> Scale has no effect.' :
       '<b>Line weights only</b>, nothing shrinks. ' + BANDS[b] + ' preset, mm: ' + ROWS.slice(0, 5).map(function (r) { return r[0] + ' ' + r[1][b].toFixed(2); }).join(' · ');
     render(b, off);
@@ -1168,7 +1201,7 @@ function renderTrio() {
   var rect = [[R.u0, yc, R.v0], [R.u1, yc, R.v0], [R.u1, yc, R.v1], [R.u0, yc, R.v1]];
   poly(rect, { style: 'fill:var(--accent);stroke:var(--accent)', 'fill-opacity': .08, 'stroke-width': 2 });
   rect.forEach(function (q, i) { ln(q, far[i], { style: 'stroke:var(--accent)', 'stroke-dasharray': '4 3', 'stroke-width': 1, opacity: .8 }); });
-  at(far[2], 0, -8, 'depth (setting)', 'dla', 'middle');
+  at(far[2], 0, -8, 'depth (Depth input)', 'dla', 'middle');
   at(rect[2], 10, 4, 'View[0] = a Rectangle', 'dla');
   at(rect[2], 10, 19, 'its plane = view plane, size = crop', 'dlm');
   /* rectangle axes at its plane origin */
@@ -1263,7 +1296,7 @@ function renderTrio() {
     { t: 'Done', msg: 'Section A · 2.1 s', btn: 'Bake', primary: true, d: 'A complete result. One click bakes every view to M2D+ layers.' },
     { t: 'Done with warnings', msg: '6 drawings · 12 unresolved', cls: 'warn', bal: 'w', btn: 'Bake', primary: true, d: '12 pieces are in the Unresolved output, orange in the preview, and go to the Unresolved layer when baked.' },
     { t: 'Partial', msg: 'Partial · 5/6 drawings', cls: 'err', bal: 'e', btn: 'Bake', primary: true, d: 'Error: View 4 “Section C” not found. The other five drawings are output; that view’s branches are empty.' },
-    { t: 'Paused', msg: 'Paused · out of date', btn: 'Run', primary: true, d: 'Run automatically is off. Inputs or editor values changed, so the outputs are empty until you click Run.' },
+    { t: 'Paused', msg: 'Paused · out of date', btn: 'Run', primary: true, d: 'Run automatically is off. Inputs, menu settings or view objects changed, so the outputs are empty until you click Run.' },
     { t: 'Cancelled', msg: 'Cancelled', btn: 'Run', d: 'Stopped from the Cancel button, Esc, or by an input change. Nothing is published.' }
   ];
   document.getElementById('states').innerHTML = states.map(function (s) {

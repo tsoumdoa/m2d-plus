@@ -4,6 +4,9 @@ using Grasshopper.Kernel.Types;
 using M2DPlus.Core;
 using M2DPlus.Rhino.Services;
 using M2DPlus.Rhino.Sections;
+using M2DPlus.Rhino.Views;
+using M2DPlus.Grasshopper.UI;
+using M2DPlus.Grasshopper.UI.Model;
 using Rhino;
 using Rhino.Geometry;
 using Point = Rhino.Geometry.Point;
@@ -20,7 +23,12 @@ public sealed partial class DrawingComponent
     private List<CaptureInput>? _inputs;
     private ViewRequest[] _views = Array.Empty<ViewRequest>();
     private NativeSettings _settings = new();
-    private readonly List<string> _settingsWarnings = new();
+    private readonly List<(GH_RuntimeMessageLevel Level, string Text)> _settingsWarnings = new();
+    // Settings resolution inputs captured on the host in SolveDrawing, resolved after capture (scene depth known).
+    private UiContext _context = UiContext.Empty;
+    private string[] _effective = Array.Empty<string>();
+    private HashSet<Guid> _excluded = new();
+    private double _tolerance = .001;
     private long _epoch;
     private bool _internalRefresh;
     private bool _removed;
@@ -48,6 +56,7 @@ public sealed partial class DrawingComponent
     }
     private void SolveDrawing(IGH_DataAccess da)
     {
+        foreach (var (level, text) in Ui.Notes) AddRuntimeMessage(level, text);
         if (_drawing is not null) { Emit(da, _drawing); return; }
         if (_error is not null) { Message = "Error"; AddRuntimeMessage(GH_RuntimeMessageLevel.Error, _error); return; }
         var inputViews = new List<IGH_Goo>();
@@ -61,8 +70,14 @@ public sealed partial class DrawingComponent
         {
             DetachWatch(); _watch = new(document); _watch.Changed += DocumentChanged;
         }
+        _tolerance = document.ModelAbsoluteTolerance;
+        // Not-yet-validated frame surfaces face the model; their scene bounds exclude every referenced view object.
+        var referenced = inputViews.Select(ViewObjects.IdOf).OfType<Guid>().ToArray();
+        BoundingBox? frameScene = referenced.Any(id => document.Objects.FindId(id) is { } o && !ViewBoxes.IsViewBox(o) && o is not global::Rhino.DocObjects.ClippingPlaneObject)
+            ? ViewBoxes.SceneBounds(document, referenced) : null;
         _views = inputViews.Select(v => ViewRequest.Parse(v is IGH_GeometricGoo { IsReferencedGeometry: true } reference && reference.ReferenceID != Guid.Empty
-            ? reference.ReferenceID : Value(v), document)).ToArray();
+            ? reference.ReferenceID : Value(v), document, frameScene)).ToArray();
+        _excluded = _views.Where(v => v.ObjectId != Guid.Empty && v.Kind != ViewSourceKind.ClippingPlane).Select(v => v.ObjectId).ToHashSet();
         da.GetDataTree(0, out GH_Structure<IGH_Goo> geometry);
         _inputs = null;
         if (geometry is not null && geometry.DataCount > 0)
@@ -80,18 +95,39 @@ public sealed partial class DrawingComponent
         }
         _settingsWarnings.Clear(); _settings = new();
         da.GetDataTree(3, out GH_Structure<GH_String> settings);
-        try
-        {
-            var assignments = Settings.Parse(settings?.AllData(true).Select(v => ((GH_String)v).Value) ?? Array.Empty<string>());
-            foreach (var assignment in assignments)
+        var branches = new List<IReadOnlyList<string>>();
+        if (settings is not null)
+            foreach (var path in settings.Paths.OrderBy(p => p))
             {
-                if (assignment.View != "*") { _settingsWarnings.Add("Per-view settings are not in this build yet."); continue; }
-                if (assignment.Key == "multiplethreads" && bool.TryParse(assignment.Value, out var enabled)) _settings = new(enabled);
-                else if (assignment.Key == "multiplethreads" && assignment.Value is "on" or "off") _settings = new(assignment.Value == "on");
-                else _settingsWarnings.Add($"Setting '{assignment.Key} = {assignment.Value}' is not supported in M1b; default retained.");
+                // multiplethreads is a host diagnostic switch, not a UX setting: read it here and keep it from Core.
+                var lines = new List<string>();
+                foreach (var item in settings[path])
+                    foreach (var line in (item?.Value ?? "").Replace("\r\n", "\n").Split('\n'))
+                    {
+                        var parts = line.Split('=', 2);
+                        if (parts.Length == 2 && parts[0].Trim().Equals("multiplethreads", StringComparison.OrdinalIgnoreCase))
+                            _settings = new(parts[1].Trim().ToLowerInvariant() is "on" or "true" or "yes" or "1");
+                        else lines.Add(line);
+                    }
+                branches.Add(lines);
             }
+        var depth = new List<GH_String>();
+        if (Params.Input.Count > 4) da.GetDataList(4, depth);
+        var rows = new Dictionary<string, SettingsRow>(StringComparer.Ordinal);
+        var contexts = new List<ViewSettingsContext>();
+        for (var i = 0; i < _views.Length; i++)
+        {
+            var view = _views[i];
+            var identity = view.ObjectId != Guid.Empty ? DrawingUi.Identity(view.ObjectId)
+                : inputViews[i] is GH_String text ? "text:" + text.Value.Trim().ToLowerInvariant() : $"index:{i}";
+            if (view.ObjectId != Guid.Empty && document.Objects.FindId(view.ObjectId) is { } obj) rows[identity] = ViewBoxes.ReadRow(obj.Attributes);
+            contexts.Add(new(identity, view.Name, view.Kind, view.Cut is not null, 0, _tolerance,
+                view.Kind is ViewSourceKind.Box or ViewSourceKind.ClippingPlane ? view.Cut?.SourceDepth : null));
+            if (view.Note is { } note) _settingsWarnings.Add((GH_RuntimeMessageLevel.Remark, note));
         }
-        catch (FormatException ex) { _settingsWarnings.Add(ex.Message); }
+        _context = new UiContext(contexts, branches, DrawingUi.Units(document)) { ViewRows = rows, Depth = depth.Select(d => d?.Value).ToArray() };
+        Ui.Context = () => _context;
+        Previews(BoundingBox.Empty);
         _started = true; Message = "Reading";
         _timer ??= CreateTimer(); _timer.Interval = 250; _timer.Start();
     }
@@ -133,13 +169,14 @@ public sealed partial class DrawingComponent
                 }
                 var document = RhinoDoc.FromRuntimeSerialNumber(_watch.DocumentSerial);
                 if (document is null) { Invalidate(); return; }
-                _capture = new(document, _watch, _inputs);
+                _capture = new(document, _watch, _inputs, excluded: _excluded);
                 _timer!.Interval = 10;
             }
             if (!_capture.Step(TimeSpan.FromMilliseconds(12))) { Message = $"Reading {_capture.CapturedCount} objects"; OnDisplayExpired(true); return; }
             var scene = _capture.Accept();
             _captureInfo = $"Capture: initial enumeration {_capture.InitialEnumerationMilliseconds:F2} ms; maximum slice {_capture.MaximumSliceMilliseconds:F2} ms (12 ms target; individual copies may overrun).";
             _capture.Dispose(); _capture = null; _inputs = null;
+            ResolveSettings(scene.Value.Bounds);
             var request = _requests.Begin(scene.Value.Revision, string.Join("|", _views.Select(v => v.Revision)), _settings.ToString());
             var epoch = _epoch; var documentGeneration = _watch.Generation;
             lock (_progressSync) _progress = new(JobPhase.Queued, 0, _views.Length);
@@ -149,6 +186,49 @@ public sealed partial class DrawingComponent
         catch (OperationCanceledException) { Invalidate(); Refresh(false); }
         catch (Exception ex) { _timer?.Stop(); _capture?.Dispose(); _capture = null; _error = ex.Message; Refresh(true); }
     }
+    /// <summary>UX rev. 4 §6 precedence, once the scene depth is known: Depth input &gt; Settings &gt; view object
+    /// (m2d.* user text) &gt; component menu &gt; auto. Box views keep their geometric depth. In this build only depth
+    /// reaches the engine; the rest is resolved, reported in Info and flagged as not applied yet.</summary>
+    private void ResolveSettings(BoundingBox bounds)
+    {
+        var contexts = _context.Views.Select((c, i) => c with { SceneDepth = SceneDepth(_views[i], bounds) }).ToArray();
+        SettingsResolution resolution;
+        try { resolution = Settings.Resolve(contexts, _context.InputBranches, _context.Units, Ui.State.ToEditorSettings(_context.ViewRows), _context.Depth); }
+        catch (ArgumentException ex) { _settingsWarnings.Add((GH_RuntimeMessageLevel.Error, ex.Message)); return; }
+        foreach (var diagnostic in resolution.Diagnostics)
+        {
+            var where = diagnostic.ViewIndex is int v && v < _views.Length ? $"{_views[v].Name}: " : "";
+            var level = diagnostic.Severity switch { DiagnosticSeverity.Error => GH_RuntimeMessageLevel.Error,
+                DiagnosticSeverity.Warning => GH_RuntimeMessageLevel.Warning, _ => GH_RuntimeMessageLevel.Remark };
+            _settingsWarnings.Add((level, where + diagnostic.Message));
+        }
+        var pending = new SortedSet<string>(StringComparer.Ordinal);
+        _effective = new string[_views.Length];
+        for (var i = 0; i < _views.Length && i < resolution.Views.Length; i++)
+        {
+            var effective = resolution.Views[i]; var view = _views[i];
+            var entry = effective["depth"];
+            if (view.Cut is { } cut && view.Kind != ViewSourceKind.Box && entry.Source != SettingSource.Auto)
+                _views[i] = view with { Cut = cut with { SourceDepth = effective.Depth } };
+            else if (view.Cut is null && view.Error is null && entry.Source != SettingSource.Auto)
+                _settingsWarnings.Add((GH_RuntimeMessageLevel.Remark, $"{view.Name}: depth applies to plane, rectangle, box and clipping-plane views; this view has no far limit in this build."));
+            var set = Settings.Keys.Where(k => effective[k].AssignedBy != SettingSource.Default && !(k == "depth" && entry.Source == SettingSource.Auto && entry.AssignedBy == SettingSource.Auto)).ToArray();
+            foreach (var key in set.Where(k => k != "depth")) pending.Add(key);
+            _effective[i] = $"Settings: depth = {(entry.Value is double d ? d.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture) : "auto")} ({entry.SourceDescription})" +
+                string.Concat(set.Where(k => k != "depth").Select(k => $" · {k} = {effective[k].Text} ({effective[k].SourceDescription})"));
+        }
+        if (pending.Count > 0)
+            _settingsWarnings.Add((GH_RuntimeMessageLevel.Remark, $"Resolved but not applied to the drawing in this build yet: {string.Join(", ", pending)}. Only depth is applied."));
+        Previews(bounds);
+    }
+
+    private double SceneDepth(ViewRequest view, BoundingBox bounds)
+    {
+        if (!bounds.IsValid) return 0;
+        if (view.Cut is { } cut) return Math.Max(0, -bounds.GetCorners().Min(cut.Plane.DistanceTo)) + _tolerance * 10;
+        return ViewPreview.For(view, bounds, _tolerance)?.Depth ?? 0;
+    }
+
     private sealed class ProgressSink(Action<JobProgress> report) : IProgress<JobProgress>
     { public void Report(JobProgress value) => report(value); }
     private async Task RunDrawing(LeaseEntry<PreparedScene>.Lease scene, RequestIdentity identity, CancellationToken token,
@@ -179,7 +259,8 @@ public sealed partial class DrawingComponent
         for (var index = 0; index < batch.Views.Count; index++)
         {
             var view = batch.Views[index]; var viewPath = new GH_Path(index);
-            info.Append(new(view.Info + "\n" + _captureInfo + "\n" + string.Join("\n", _settingsWarnings)), viewPath);
+            var effective = index < _effective.Length ? _effective[index] + "\n" : "";
+            info.Append(new(view.Info + "\n" + effective + _captureInfo + "\n" + string.Join("\n", _settingsWarnings.Select(w => w.Text))), viewPath);
             if (view.Error is not null) { AddRuntimeMessage(GH_RuntimeMessageLevel.Error, view.Error); continue; }
             frames.Append(new(view.Frame), viewPath);
             foreach (var item in view.Items)
@@ -221,7 +302,7 @@ public sealed partial class DrawingComponent
             if (view.Report.UnsupportedByType.Count > 0)
                 AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"{view.Name}: unsupported sources: {string.Join(", ", view.Report.UnsupportedByType.Select(p => $"{p.Key}={p.Value}"))}. See Info.");
         }
-        foreach (var warning in _settingsWarnings) AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, warning);
+        foreach (var (level, text) in _settingsWarnings) AddRuntimeMessage(level, text);
         var good = batch.Views.Count(v => v.Error is null);
         Message = good == batch.Views.Count ? $"{good} drawings · {batch.Views.Sum(v => v.Seconds):F1} s" : $"Partial · {good}/{batch.Views.Count} drawings";
         da.SetDataTree(0, visible); da.SetDataTree(1, hidden); da.SetDataTree(3, farClip); da.SetDataTree(4, cut); da.SetDataTree(5, hatch); da.SetDataTree(6, unresolved); da.SetDataTree(7, frames); da.SetDataTree(8, info);

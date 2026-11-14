@@ -9,9 +9,14 @@ public static partial class Settings
     private sealed record Candidate(object Value, SettingSource Source);
 
     /// <summary>Branches must already be in GH path order. View indices in headers are zero-based.
-    /// Invalid assignments are reported individually; the last valid addressed assignment wins.</summary>
+    /// Invalid assignments are reported individually; the last valid addressed assignment wins.
+    /// <paramref name="depth"/> is the component's Depth input (UX rev. 4 §1.1): no items = not set, one item for
+    /// every view, or one per view (null or blank items leave that view unset). It beats the Settings input's
+    /// <c>depth</c>. A Box view (GH Box or M2D+ view box) always takes its depth from its geometry: any depth
+    /// instruction is ignored there with a remark.</summary>
     public static SettingsResolution Resolve(IReadOnlyList<ViewSettingsContext> views,
-        IEnumerable<IEnumerable<string>> inputBranches, DocumentUnits units, EditorSettings? editor = null)
+        IEnumerable<IEnumerable<string>> inputBranches, DocumentUnits units, EditorSettings? editor = null,
+        IReadOnlyList<string?>? depth = null)
     {
         _ = MetresPerUnit(units);
         editor ??= EditorSettings.Empty;
@@ -63,6 +68,26 @@ public static partial class Settings
                 }
             }
 
+        depth ??= [];
+        if (depth.Count > 1 && depth.Count != views.Count)
+            diagnostics.Add(new(DiagnosticSeverity.Error, "Give one Depth, or one per view"));
+        else
+            for (var item = 0; item < depth.Count; item++)
+            {
+                if (string.IsNullOrWhiteSpace(depth[item])) continue;
+                var addressed = depth.Count == 1 ? Enumerable.Range(0, views.Count).ToArray() : [item];
+                try
+                {
+                    var value = ParseValue("depth", depth[item]!.Trim(), units);
+                    foreach (var index in addressed) candidates[index]["depth"].Add(new(value, SettingSource.DepthInput));
+                }
+                catch (FormatException e)
+                {
+                    diagnostics.Add(new(DiagnosticSeverity.Warning, $"Invalid Depth input '{depth[item]}': {e.Message} Use auto or a nonnegative distance (for example 8 m).",
+                        depth.Count == 1 ? null : item, Key: "depth"));
+                }
+            }
+
         var result = ImmutableArray.CreateBuilder<EffectiveSettings>();
         for (var i = 0; i < views.Count; i++)
         {
@@ -74,6 +99,16 @@ public static partial class Settings
                 current["fade.start"].RemoveAt(current["fade.start"].Count - 1);
             }
             var values = Keys.ToImmutableDictionary(k => k, k => MakeEntry(k, current[k][^1], views[i], units), StringComparer.OrdinalIgnoreCase);
+            if (views[i].Source == ViewSourceKind.Box && views[i].SourceDepth is double boxDepth)
+            {
+                // The box's own geometry is the view volume: it wins over every depth instruction.
+                var ignored = current["depth"].Where(c => c.Value is DistanceSetting { Mode: DistanceMode.Value }).Select(c => c.Source).Distinct().ToArray();
+                if (ignored.Length > 0)
+                    diagnostics.Add(new(DiagnosticSeverity.Remark,
+                        $"'{views[i].Name}' is a box: its geometry sets the depth ({Numeric(boxDepth)}), so the {string.Join(" and ", ignored.Select(DepthOrigin))} {(ignored.Length > 1 ? "depths are" : "depth is")} ignored. Change the box instead (drag a view box's back face).",
+                        i, Key: "depth"));
+                values = values.SetItem("depth", new(boxDepth, DistanceSetting.Auto, "auto", SettingSource.Auto, SettingSource.Auto));
+            }
             if (values["beyond"].Value is double beyond && values["farclip"].Value is not FarClipMode.None && beyond >= (double)values["depth"].Value!)
             {
                 diagnostics.Add(new(DiagnosticSeverity.Remark, "Beyond is >= depth and is ignored while far clipping is enabled.", i, Key: "beyond"));
@@ -92,6 +127,12 @@ public static partial class Settings
                     candidates[index][key].Add(new(value!, source));
         }
     }
+
+    private static string DepthOrigin(SettingSource source) => source switch
+    {
+        SettingSource.DepthInput => "Depth input", SettingSource.Input => "Settings input",
+        SettingSource.EditorView => "view object", _ => "component menu"
+    };
 
     private static bool TryValue(string key, string text, DocumentUnits units, List<SettingsDiagnostic> diagnostics,
         int? view, int? branch, int? line, out object? value)

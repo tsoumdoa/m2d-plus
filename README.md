@@ -9,7 +9,7 @@ plans, sections, elevations and axonometric drawings from a model and a view.
 asynchronously with native hidden lines. Wire `Top`, `Front`, another direction keyword,
 or a Vector into View. Empty Geometry draws the visible document. Visible curves and
 points, Hidden, Unresolved, Frame and Info are available; other outputs remain empty.
-Sections, named views, Target placement, the settings editor and Bake are future milestones.
+Sections, named views, Target placement, view objects (UX rev. 4) are in progress; Bake is a future milestone.
 See [M1a notes](docs/design/m1a-notes.md) for ownership, validation and admission limits.
 
 Install only through Yak: drop a locally built `.yak` onto Rhino, accept installation,

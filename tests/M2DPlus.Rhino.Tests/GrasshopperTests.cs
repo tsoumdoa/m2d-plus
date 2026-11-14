@@ -104,7 +104,7 @@ public sealed class GrasshopperTests(RhinoHost host)
         Assert.True(SceneCache.Shared.SceneHits > before);
         Assert.Equal(1, PreparedScene.TotalPreparations - preparations);
         Assert.True(first.Params.Output[0].VolatileDataCount > 0); Assert.True(second.Params.Output[0].VolatileDataCount > 0);
-        Assert.Equal(4, first.Params.Input.Count); Assert.Equal(9, first.Params.Output.Count);
+        Assert.Equal(5, first.Params.Input.Count); Assert.Equal(9, first.Params.Output.Count);
         var visible = (GH_Curve)first.Params.Output[0].VolatileData.AllData(true).First(g => g is GH_Curve);
         var secondCurve = (GH_Curve)second.Params.Output[0].VolatileData.AllData(true).First(g => g is GH_Curve);
         var original = secondCurve.Value.GetBoundingBox(true);
