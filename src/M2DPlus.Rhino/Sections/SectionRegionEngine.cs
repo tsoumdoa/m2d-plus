@@ -76,12 +76,15 @@ public static class SectionRegionEngine
                         {
                             cancellationToken.ThrowIfCancellationRequested();
                             var component = components[i];
-                            var classification = SectionGeometry.Classify(source.Id, i, component, request);
+                            var classification = SectionGeometry.Classify(source.Id, i, component, request, out var evidence);
+                            using var certificate = evidence;
                             result.Components.Add(classification);
+                            var stable = classification.Certificate.StartsWith(StableSectionCertificate.Route, StringComparison.Ordinal);
+                            if (stable) result.Diagnostics.Add(new(source.Id, SectionStatus.Crossing, classification.Certificate));
                             if (classification.Status == SectionStatus.Uncertain)
-                                result.Diagnostics.Add(new(source.Id, SectionStatus.Uncertain, "Tolerance band or unverified freeform crossing; no confident fill."));
+                                result.Diagnostics.Add(new(source.Id, SectionStatus.Uncertain, classification.Certificate));
                             if (classification.Status != SectionStatus.Crossing) continue;
-                            var loops = SectionGeometry.Intersections(component, request.Plane, request.Tolerance);
+                            var loops = certificate?.Loops.Select(c => c.DuplicateCurve()).ToArray() ?? SectionGeometry.Intersections(component, request.Plane, request.Tolerance);
                             try
                             {
                                 if (loops.Length == 0) throw new SectionFailure("Crossing certificate has no transverse intersection.");
@@ -91,7 +94,12 @@ public static class SectionRegionEngine
                                     result.Diagnostics.Add(new(source.Id, SectionStatus.OutlineOnly, "Open source: section outline only, Hatch null."));
                                     continue;
                                 }
-                                if (prepareVisibility)
+                                if (stable)
+                                {
+                                    // The slab/winding proof authorizes the planar region independently.
+                                    // Visibility preparation retains its own quarantine on any trim failure.
+                                }
+                                else if (prepareVisibility)
                                 {
                                     if (!result.Visibility[source.Id].Succeeded && !(farPlane is { } fp && -request.Plane.DistanceTo(fp.Origin) <= request.Tolerance))
                                         throw new SectionFailure("Crossing trim/cap could not be certified.");
@@ -207,7 +215,11 @@ public static class SectionRegionEngine
                 var curve = loop.To3dCurve();
                 var segments = curve.DuplicateSegments();
                 var edges = new List<SectionEdge>();
-                try { foreach (var segment in segments) edges.AddRange(EdgeProvenance.Split(segment, references, request.Tolerance)); }
+                // These faces are constructed exclusively from physical loops, crop, and
+                // their planar arrangement. Unmatched intervals inherit physical ancestry;
+                // native periodic reparameterization need not reproduce a CurveCurve overlap.
+                // Crop matches still override that ancestry (and retain dual origins).
+                try { foreach (var segment in segments) edges.AddRange(EdgeProvenance.Split(segment, references, request.Tolerance, EdgeOrigin.PhysicalCut)); }
                 finally { foreach (var segment in segments) segment.Dispose(); }
                 if (edges.Any(e => e.Origin == EdgeOrigin.None))
                 { curve.Dispose(); foreach (var edge in edges) edge.Dispose(); throw new SectionFailure("Unattributed section boundary interval."); }

@@ -40,7 +40,8 @@ budget/lifetime mechanism.
 
 - `Regions`: material regions and outline branches, with deterministic ids/order.
 - `Components`: signed range, classification and certificate description per
-  material component. Crossing here is provisional until region/cap checks pass.
+  material component. Legacy crossing is provisional until region/cap checks
+  pass; route D certifies the region independently of visibility trim/cap.
 - `Diagnostics`: source, status and reason, including overlapping-fill Info and
   the Viewport-background fallback.
 - `RequiresQuarantine`: true for any Unsupported/Uncertain diagnostic. Integration
@@ -82,14 +83,29 @@ Uncertain unless exact linear contact is established. Roundoff at or exceeding
 the modelling tolerance also returns Uncertain. Side/crossing certificates include
 that roundoff margin.
 
-For curved material, bounds are broad phase only. Actual vertices must witness both
+For curved material, bounds are broad phase only. On the legacy analytic route,
+actual vertices must witness both
 sides beyond tolerance, faces must be planar/cylindrical, and the section loops and
 nondegenerate physical trim/cap must validate. This covers the tested extruded RHS,
-CHS and I sections. Unverified freeform/converted SubD crossings return Uncertain,
-without fill. Exact curved tangent/coplanar contact certification remains open;
-it must not be promoted from sampled signs. Open analytic surfaces give outlines,
+CHS and I sections. Other outward closed solids can use the experimental **D**
+certificate: unchanged-plane intersections at d−4tol, d and d+4tol must have
+matching simple-loop topology, nesting and bounded area/displacement changes.
+Adaptive positive-weight rational Bézier derivative intervals bound normals over
+the complete perturbation slab away from tangency. An owned copy standardizes
+face/surface orientation before checking winding against nesting. Finite normal
+samples check winding direction; they do not prove transversality.
+
+Route D retains its central loops as owned evidence for planar regions and route
+C caps. Region certification calls no trim, cap, volume or solid-membership
+oracle. Visibility still validates trim/join results independently and quarantines
+failures. The existing disconnected-shell grouping retains its shell-containment
+policy. Unverified crossings remain Uncertain without fill; exact curved contact
+must not be promoted from sampled signs. Validated open surfaces give outlines,
 even when their intersection is a closed circle. Unsupported/non-manifold material
 does not get a region or cap.
+
+See [HILLCLIMB.md](../../HILLCLIMB.md) for the frozen benchmark, independent
+expectations, rejected trials, measured coverage and numerical/topology limits.
 
 ## Regions, crop, merge and edge provenance
 
