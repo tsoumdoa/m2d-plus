@@ -15,6 +15,30 @@ namespace M2DPlus.HcPerf;
 public static class Bench
 {
     private static readonly JsonSerializerOptions Json = new() { WriteIndented = true };
+#if !LICENSE_FREE
+    public static void NativeGate(string path, string viewName, string output)
+    {
+        using var model = File3dm.Read(path);
+        double tolerance = model.Settings.ModelAbsoluteTolerance;
+        var n = viewName == "Top" ? Vector3d.ZAxis : viewName == "North" ? Vector3d.YAxis : viewName == "Front" ? -Vector3d.YAxis : new Vector3d(-1, -1, 1); n.Unitize();
+        var x = Vector3d.CrossProduct(Math.Abs(n.Z) > .99 ? Vector3d.YAxis : Vector3d.ZAxis, n); x.Unitize();
+        var view = new Plane(Point3d.Origin, x, Vector3d.CrossProduct(n, x));
+        var scene = new PlanarExtraction();
+        var leaves = PlanarExtraction.Leaves(model).Where(l => scene.Add(l.Geometry, l.Transform, view, tolerance, l.Source)).ToArray();
+        var loci = Native(leaves, view, tolerance, out var diagnostics, output + ".slots.json");
+        File.WriteAllText(output + ".native.json", JsonSerializer.Serialize(loci));
+        File.WriteAllText(output + ".scene.json", JsonSerializer.Serialize(new { scene.Faces, scene.Edges, scene.Excluded, tolerance = model.Settings.ModelAbsoluteTolerance, metersToModelUnits = RhinoMath.UnitScale(UnitSystem.Meters, model.Settings.ModelUnitSystem) }));
+        string Hash(string file) => Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(file)));
+        File.WriteAllText(output + ".native-meta.json", JsonSerializer.Serialize(new { diagnostics,
+            modelSha256 = Hash(path), model = path, view = viewName, tolerance,
+            nativeSha256 = Hash(output + ".native.json"), slotsSha256 = Hash(output + ".slots.json"), sceneSha256 = Hash(output + ".scene.json"),
+            rhinoCommonSha256 = Hash(typeof(RhinoApp).Assembly.Location),
+            rhino = RhinoApp.Version.ToString(), runtime = System.Environment.Version.ToString(),
+            priority = Process.GetCurrentProcess().PriorityClass.ToString(),
+            multipleThreads = false, flatten = false, includeHidden = true, includeTangents = false, includeSeams = false,
+            excluded = scene.Excluded, objects = scene.EligibleObjects, purpose = "correctness only; no suite timing mutex; normal priority; serial owned process" }));
+    }
+#endif
     public static string Run(string path, string viewName, string output, bool oracle, bool native, int repeats, int threads)
     {
         long peakManaged = 0, peakPrivate = 0;
@@ -76,31 +100,16 @@ public static class Bench
         if (native)
         {
 #if !LICENSE_FREE
-            var nativeTimes = new List<double>(); Locus[] nativeLoci = [];
-            for (int run = 0; run < 3; run++)
-            {
-                watch.Restart(); nativeLoci = Native(leaves.Where(l => eligible.Contains(l.Source)).ToArray(), view, tolerance, out var diag);
-                nativeTimes.Add(watch.Elapsed.TotalSeconds);
-                if (diag.Count > 0) failures.AddRange(diag);
-                Console.WriteLine($"native {viewName} repeat {run}: {nativeTimes[^1]:F3}s");
-                if (nativeTimes[^1] >= 10) break;
-            }
-            nativeSeconds = Median(nativeTimes);
+            // One serial correctness solve; deliberately no timing measurement.
+            var nativeLoci = Native(leaves.Where(l => eligible.Contains(l.Source)).ToArray(), view, tolerance, out var diag, output + ".slots.json");
+            details["nativeDiagnostics"] = diag;
+            if (diag.Count > 0) failures.AddRange(diag);
+            Console.WriteLine($"native {viewName}: correctness solve completed");
             var missing = VisibilityLoci.Compare(nativeLoci, loci, tolerance, .05 * unit);
             var extra = VisibilityLoci.Compare(loci, nativeLoci, tolerance, .05 * unit);
             details["nativeMissing"] = missing; details["nativeExtra"] = extra;
             if (missing.Missed + extra.Missed > 0) failures.Add($"unexplained native locus disagreement: missing={missing.Missed}, extra={extra.Missed}");
             File.WriteAllText(output + ".native.json", JsonSerializer.Serialize(nativeLoci, Json));
-            if (extraction.OtherObjects > 0)
-            {
-                var mixed = Native(leaves, view, tolerance, out var mixedDiag);
-                details["mixedNativeDiagnostics"] = mixedDiag;
-                details["mixedNativeVisibleLength"] = mixed.Where(l => l.Class == VisibilityClass.Visible).Sum(l => l.Length);
-                details["mixedCurvedVisibleLength"] = mixed.Where(l => l.Class == VisibilityClass.Visible && !eligible.Contains(l.Source.Split('|')[0])).Sum(l => l.Length);
-                details["mixedCurvedVisibleKinds"] = mixed.Where(l => l.Class == VisibilityClass.Visible && !eligible.Contains(l.Source.Split('|')[0]))
-                    .GroupBy(l => l.Source.Split('|').Last()).ToDictionary(g => g.Key, g => g.Sum(l => l.Length));
-                File.WriteAllText(output + ".mixed-native.json", JsonSerializer.Serialize(mixed, Json));
-            }
 #else
             failures.Add("Native comparison unavailable in licence-free reader");
 #endif
@@ -158,9 +167,16 @@ public static class Bench
     }
 
 #if !LICENSE_FREE
-    private static Locus[] Native((GeometryBase Geometry, Transform Transform, string Source)[] leaves, Plane view, double tolerance, out List<string> diagnostics)
+    private static Locus[] Native((GeometryBase Geometry, Transform Transform, string Source)[] leaves, Plane view, double tolerance, out List<string> diagnostics, string? slotsPath = null)
     {
-        diagnostics = []; var output = new List<Locus>(); var owned = new List<GeometryBase>();
+        diagnostics = []; var output = new List<Locus>(); var owned = new List<GeometryBase>(); var slots = new List<object>();
+        // The empty planar subset has identical empty output on both sides. Rhino
+        // rejects an HLD call with no geometry; exclusions remain in NativeGate's census.
+        if (leaves.Length == 0)
+        {
+            if (slotsPath is not null) File.WriteAllText(slotsPath, "[]");
+            return [];
+        }
         using var vp = new ViewportInfo(); vp.IsParallelProjection = true;
         var bounds = BoundingBox.Empty;
         foreach (var leaf in leaves) { var b = leaf.Geometry.GetBoundingBox(true); b.Transform(leaf.Transform); bounds.Union(b); }
@@ -185,20 +201,58 @@ public static class Bench
             foreach (var segment in drawing.Segments)
             {
                 var visibility = segment.SegmentVisibility;
-                if (visibility == HiddenLineDrawingSegment.Visibility.Unset) { diagnostics.Add("Native Unset proxy"); continue; }
-                if (visibility is not (HiddenLineDrawingSegment.Visibility.Visible or HiddenLineDrawingSegment.Visibility.Hidden)) continue;
+                if (visibility == HiddenLineDrawingSegment.Visibility.Unset)
+                {
+                    slots.Add(InspectUnset(segment, flatten));
+                    diagnostics.Add("Native Unset proxy"); continue;
+                }
                 if (segment.ParentCurve is null || segment.CurveGeometry is null) { diagnostics.Add("Invalid native slot"); continue; }
                 using var c = segment.CurveGeometry.DuplicateCurve(); c.Transform(flatten);
                 using var poly = c.ToPolyline(tolerance * .25, Math.PI / 90, 0, 0);
                 if (poly is null || !poly.TryGetPolyline(out var points)) { diagnostics.Add("Native polyline failed"); continue; }
                 string source = segment.ParentCurve.SourceObject?.Tag?.ToString() ?? "<none>";
                 source += "|" + segment.ParentCurve.SilhouetteType;
+                slots.Add(new { visibility = visibility.ToString(), source, points = points.Select(p => new Vertex(p.X, p.Y, p.Z)).ToArray() });
+                if (visibility is not (HiddenLineDrawingSegment.Visibility.Visible or HiddenLineDrawingSegment.Visibility.Hidden)) continue;
                 for (int i = 1; i < points.Count; i++) output.Add(new(points[i - 1].X, points[i - 1].Y, points[i].X, points[i].Y,
                     visibility == HiddenLineDrawingSegment.Visibility.Visible ? VisibilityClass.Visible : VisibilityClass.Hidden, source));
             }
         }
         finally { foreach (var g in owned) g.Dispose(); }
+        if (slotsPath is not null) File.WriteAllText(slotsPath, JsonSerializer.Serialize(slots));
         return output.ToArray();
+    }
+
+    private static Dictionary<string, object?> InspectUnset(HiddenLineDrawingSegment segment, Transform projection)
+    {
+        var evidence = new Dictionary<string, object?> { ["visibility"] = "Unset", ["index"] = segment.Index };
+        try
+        {
+            var parent = segment.ParentCurve;
+            evidence["hasParent"] = parent is not null;
+            if (segment.Index < 0 && parent is null) { evidence["kind"] = "empty native slot"; return evidence; }
+            evidence["source"] = parent?.SourceObject?.Tag?.ToString();
+            var proxy = segment.CurveGeometry;
+            evidence["hasGeometry"] = proxy is not null;
+            evidence["valid"] = proxy?.IsValid == true;
+            evidence["kind"] = "nonzero or ambiguous native record";
+            if (proxy?.IsValid == true)
+            {
+                var bounds = proxy.GetBoundingBox(projection);
+                double length = proxy.GetLength();
+                evidence["length"] = double.IsFinite(length) ? length : null;
+                if (bounds.IsValid)
+                {
+                    evidence["bounds"] = new[] { bounds.Min.X, bounds.Min.Y, bounds.Min.Z, bounds.Max.X, bounds.Max.Y, bounds.Max.Z };
+                    if (bounds.Diagonal.Length == 0 && length == 0) evidence["kind"] = "exactly point-sized native curve";
+                }
+                var a = proxy.PointAtStart; var b = proxy.PointAtEnd; a.Transform(projection); b.Transform(projection);
+                if (a.IsValid && b.IsValid) evidence["points"] = new[] { new Vertex(a.X, a.Y, a.Z), new Vertex(b.X, b.Y, b.Z) };
+            }
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or NullReferenceException or ArgumentException or NotSupportedException)
+        { evidence["error"] = ex.GetType().Name + ": " + ex.Message; }
+        return evidence;
     }
 #endif
     private static double Median(List<double> x) => x.Order().ElementAt(x.Count / 2);

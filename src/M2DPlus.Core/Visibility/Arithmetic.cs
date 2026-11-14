@@ -58,6 +58,21 @@ internal sealed class EndpointResolutionException : ArithmeticException;
 internal readonly record struct Filter(double Lo, double Hi) : IScalar<Filter>
 {
     public static Filter From(double v) => double.IsFinite(v) ? new(v, v) : throw new IndeterminateException();
+    // Seed cached plane coefficients from their exact values. In particular an
+    // exact zero stays a singleton instead of becoming an uncertain cross product.
+    public static Filter FromExact(Rational exact)
+    {
+        double lo = exact.Value, hi = lo;
+        for (int i = 0; i < 8; i++)
+        {
+            if (!double.IsFinite(lo) || !double.IsFinite(hi)) throw new IndeterminateException();
+            int lower = Rational.Compare(Rational.From(lo), exact), upper = Rational.Compare(Rational.From(hi), exact);
+            if (lower <= 0 && upper >= 0) return new(lo, hi);
+            if (lower > 0) lo = Math.BitDecrement(lo);
+            if (upper < 0) hi = Math.BitIncrement(hi);
+        }
+        throw new IndeterminateException();
+    }
     public double Value => Hi - Lo <= 1e-13 ? Lo + (Hi - Lo) * .5 : throw new IndeterminateException();
     private static Filter Enclose(double lo, double hi)
     {
