@@ -1,0 +1,153 @@
+{
+  "expected": {
+    "chsMembers": 487,
+    "edgeInventory": {
+      "CHS-unit/member-0": {
+        "crease": [
+          1,
+          2,
+          4,
+          5
+        ],
+        "naked": [],
+        "seam": [
+          0,
+          3
+        ],
+        "tangent": []
+      },
+      "sphere-node/member-0": {
+        "crease": [],
+        "naked": [],
+        "seam": [
+          0
+        ],
+        "tangent": []
+      }
+    },
+    "highOverlap": true,
+    "sphericalNodes": 182
+  },
+  "family": "curved",
+  "flavor": null,
+  "generator": {
+    "dependencies": {
+      "archive.py": "c0f8f13f7f873a6f2163ae89455bc01d12bb44ee03d0b18ca10c6cb4f6f6bd67",
+      "common.py": "7842b495ce25479e4dd06bcd44732b3e34a3a7fefa4896f38199eb813c7ae04a",
+      "generate.py": "8ab7c0e78bd5ecb2e2cf28c4d739187383031319110a0fe135700f24af034a74"
+    },
+    "rhino": "8.36.26296.17001",
+    "runtime": "8.0.34",
+    "script": "tools/models/curved.py",
+    "sha256": "526e97097e24b395c7d8ab4ce618e18ec8d4fb71580aa9e80b0d462607399459"
+  },
+  "hook": false,
+  "id": "space-frame",
+  "notes": [],
+  "schemaVersion": 1,
+  "seed": 20261114,
+  "sha256": "fb0c6525f01bb330f06af8e40a642b0bf4faef16b23bee5263fe314c7a36c0c6",
+  "sizeBytes": 270201,
+  "sourceFixtures": {},
+  "stats": {
+    "blockDefinitions": 2,
+    "blockInstances": 669,
+    "brepFaces": 2130,
+    "definitionMembers": 2,
+    "expandedObjects": 669,
+    "expandedTypes": {
+      "Brep": 669
+    },
+    "meshTriangles": 0,
+    "objectTypes": {
+      "InstanceReferenceGeometry": 669
+    },
+    "objects": 669
+  },
+  "tier": null,
+  "tolerance": 0.0001,
+  "units": "Meters",
+  "views": [
+    {
+      "name": "SW",
+      "settings": {
+        "hidden": "on",
+        "seams": "off",
+        "tangents": "off"
+      },
+      "source": {
+        "kind": "direction keyword",
+        "value": "SW"
+      }
+    },
+    {
+      "name": "Front",
+      "settings": {
+        "hidden": "on",
+        "seams": "off",
+        "tangents": "off"
+      },
+      "source": {
+        "kind": "direction keyword",
+        "value": "Front"
+      }
+    },
+    {
+      "name": "Top",
+      "settings": {
+        "hidden": "on",
+        "seams": "off",
+        "tangents": "off"
+      },
+      "source": {
+        "kind": "direction keyword",
+        "value": "Top"
+      }
+    },
+    {
+      "name": "Plan cut",
+      "plane": {
+        "origin": [
+          0,
+          0,
+          4.5
+        ],
+        "x": [
+          1,
+          0,
+          0
+        ],
+        "y": [
+          0,
+          1,
+          0
+        ]
+      },
+      "settings": {
+        "hidden": "on",
+        "seams": "off",
+        "tangents": "off"
+      },
+      "source": {
+        "kind": "GH-style plane",
+        "value": null
+      }
+    },
+    {
+      "name": "Grazing",
+      "settings": {
+        "hidden": "on",
+        "seams": "off",
+        "tangents": "off"
+      },
+      "source": {
+        "kind": "vector",
+        "value": [
+          0.99985,
+          0.01745,
+          0.0001
+        ]
+      }
+    }
+  ]
+}

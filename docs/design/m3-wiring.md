@@ -166,9 +166,12 @@ Git under the repository's existing artifact policy.
 
 ## Limits and manual checks
 
-M2's certification boundary is unchanged: unverified freeform section crossings
-remain explicitly uncertain; the curved-steel renders are not a new whole-model
-correctness claim. Native silhouette flags identify scene profiles, not every
+This branch extends M2's certification with the experimental perturbation/winding
+route D; see [the hill-climb evidence](../../HILLCLIMB.md). It constructs regions
+without a trim-based crossing oracle and reuses the certified loops for route C
+caps. Unverified crossings and native visibility trim/join failures remain
+explicitly uncertain; the renders are not a whole-model correctness claim.
+Native silhouette flags identify scene profiles, not every
 architectural feature an owner might want heavier. Preview dashed curves are
 display tessellations; the output and baked curves remain exact. The contact
 sheet's line-pattern raster hatch rendering retains its documented approximation.
