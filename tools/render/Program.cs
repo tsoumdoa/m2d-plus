@@ -36,10 +36,12 @@ internal static class Program
         using var core = new RhinoCore(new[] { "/nosplash", "/notemplate" }, WindowStyle.NoWindow);
         var output = Path.GetFullPath(args[2], args[1]); Directory.CreateDirectory(output);
         if (args[3] == "fingerprints") { Benchmark(args.Skip(4), output); return; }
-        IRenderEngine engine = args[3] switch { "m2d" or "m2" => new M2DEngine(), "raw" => new RawHldEngine(), _ => throw new ArgumentException("Unknown engine adapter (m2d or raw)") };
+        IRenderEngine engine = args[3] switch { "m3" => new M3Engine(), "m2d" or "m2" => new M2DEngine(), "raw" => new RawHldEngine(), _ => throw new ArgumentException("Unknown engine adapter (m2d or raw)") };
         var cards = new StringBuilder(); var records = new List<object>();
         var process = Process.GetCurrentProcess(); var engineSha256 = FileHash(typeof(NativeDrawing).Assembly.Location);
-        foreach (var file in args.Skip(4))
+        var modelFiles = args.Skip(4).ToList();
+        if (args[3] == "m3") modelFiles.Add(RangeControl(output));
+        foreach (var file in modelFiles)
         {
             var fixtureSha256 = FileHash(file); var cpuStart = process.TotalProcessorTime.TotalMilliseconds;
             var timer = Stopwatch.StartNew();
@@ -50,24 +52,45 @@ internal static class Program
             while (!capture.Step(TimeSpan.FromMilliseconds(12))) { }
             var lease = capture.Accept(); var captureMs = timer.Elapsed.TotalMilliseconds; var cost = lease.Value.Cost;
             var bounds = lease.Value.Bounds;
-            var views = args[3] == "m2" ? CutViews(bounds) : new[] { "Top", "Front", "Right", "SW" }.Select(v => ViewRequest.Parse(v)).ToArray();
+            var views = args[3] is "m2" or "m3" ? CutViews(bounds) : new[] { "Top", "Front", "Right", "SW" }.Select(v => ViewRequest.Parse(v)).ToArray();
+            if (args[3] == "m3" && Path.GetFileName(file) == "range-control.3dm")
+                views = new[] { ViewRequest.Parse(Plane.WorldXY) with { Name = "Range-control" } };
+            else if (args[3] == "m3")
+            {
+                var along = new Vector3d(1, .18, 0); along.Unitize();
+                views = new[] { views[0], ViewRequest.Parse(new Plane(new Point3d(bounds.Center.X, bounds.Center.Y, 0), along, Vector3d.ZAxis)) with { Name = "Long-section" } };
+            }
             using var batch = engine.Draw(lease, views);
             foreach (var view in batch.Views)
             {
                 var name = Path.GetFileNameWithoutExtension(file) + "-" + view.Name;
                 var svg = Render(view, Path.Combine(output, name + ".png"));
                 File.WriteAllText(Path.Combine(output, name + ".svg"), svg);
-                cards.Append($"<article><h2>{WebUtility.HtmlEncode(name)}</h2><div class='pair'><div>{svg}</div><div class='dark'>{svg}</div></div><p>Read + capture {captureMs:F1} ms · native/extraction {view.Seconds * 1000:F1} ms · {view.Items.Count} pieces</p><details><summary>Info</summary><pre>{WebUtility.HtmlEncode(view.Info)}</pre></details></article>");
+                cards.Append($"<article><h2>{WebUtility.HtmlEncode(name)}</h2><div class='pair'><div>{svg}</div><div class='dark'>{svg}</div></div><p>{(view.Info.Contains("Uncertain:", StringComparison.Ordinal) ? "SOURCE UNCERTAINTY: some geometry is withheld; inspect Info. " : "")}Read + capture {captureMs:F1} ms · native/extraction {view.Seconds * 1000:F1} ms · {view.Items.Count} pieces</p><details><summary>Info</summary><pre>{WebUtility.HtmlEncode(view.Info)}</pre></details></article>");
                 records.Add(new { file, fixtureSha256, view.Name, captureMs, capture.MaximumSliceMilliseconds,
-                    cost, view.Seconds, count = view.Items.Count, view.Info, wallMs = timer.Elapsed.TotalMilliseconds,
+                    cost, view.Seconds, count = view.Items.Count, classes = view.Items.GroupBy(p => p.Class).ToDictionary(g => g.Key.ToString(), g => g.Count()), intensities = view.Items.Select(p => p.Intensity).Distinct().Order().ToArray(), regions = view.Regions.Count, view.Info, wallMs = timer.Elapsed.TotalMilliseconds,
                     processCpuMs = process.TotalProcessorTime.TotalMilliseconds - cpuStart, peakWorkingSet = process.PeakWorkingSet64,
                     tolerance = document.ModelAbsoluteTolerance, units = document.ModelUnitSystem.ToString(), cache = "fresh per file; shared across views" });
                 Console.WriteLine($"{name}: {view.Seconds:F3}s, {view.Items.Count} pieces, {view.Error ?? "ok"}");
             }
         }
         File.WriteAllText(Path.Combine(output, "results.json"), JsonSerializer.Serialize(new { engine = engine.Name, engineSha256, rhino = RhinoApp.Version.ToString(), runtime = Environment.Version.ToString(), multipleThreads = false, workers = 0, records }, new JsonSerializerOptions { WriteIndented = true }));
-        File.WriteAllText(Path.Combine(output, "index.html"), "<!doctype html><html><meta charset='utf-8'><title>M2D+ renders</title><style>body{margin:24px;background:#eee;color:#222;font:14px system-ui}h1{font-size:25px}main{display:grid;grid-template-columns:repeat(auto-fit,minmax(560px,1fr));gap:20px}article{background:white;padding:16px;border:1px solid #ccc;border-radius:8px}h2{font-size:17px}.pair{display:flex}.pair>div{width:50%;background:white}.pair svg{width:100%;height:260px}.pair .dark{background:#15191e}.dark .visible{stroke:#f5f5f5}.dark .point{fill:#f5f5f5}pre{white-space:pre-wrap;font-size:12px}</style><h1>M2D+ section renders</h1><p>" + WebUtility.HtmlEncode(engine.Name) + " · serial HLD, multipleThreads=false · solid visible, dashed hidden, orange unresolved, cobalt frame · light / dark</p><main>" + cards + "</main></html>");
+        File.WriteAllText(Path.Combine(output, "index.html"), "<!doctype html><html><meta charset='utf-8'><title>M2D+ renders</title><style>body{margin:24px;background:#eee;color:#222;font:14px system-ui}h1{font-size:25px}main{display:grid;grid-template-columns:repeat(auto-fit,minmax(560px,1fr));gap:20px}article{background:white;padding:16px;border:1px solid #ccc;border-radius:8px}h2{font-size:17px}.pair{display:flex}.pair>div{width:50%;background:white}.pair svg{width:100%;height:260px}.pair .dark{background:#15191e}.pair svg{color:#000}.dark svg{color:#f5f5f5}.dark .point{fill:#f5f5f5}pre{white-space:pre-wrap;font-size:12px}</style><h1>M2D+ section renders</h1><p>" + WebUtility.HtmlEncode(engine.Name) + " · serial HLD, multipleThreads=false · applied class weights (cut 3 px, profile 2 px, edge 1 px), dashed hidden, Beyond 55% ink, continuous depth fade, far-clip lines, orange unresolved, cobalt frame · light / dark</p><main>" + cards + "</main></html>");
         Console.WriteLine(Path.Combine(output, "index.html"));
+    }
+
+    private static string RangeControl(string output)
+    {
+        using var doc = RhinoDoc.CreateHeadless(null); doc.ModelAbsoluteTolerance = .00001;
+        using var bottom = new Rectangle3d(new Plane(new Point3d(0, 0, -3), Vector3d.ZAxis), new Interval(-2, 2), new Interval(-2, 2)).ToNurbsCurve();
+        using var top = new Rectangle3d(new Plane(new Point3d(0, 0, 1), Vector3d.ZAxis), new Interval(-.5, .5), new Interval(-.5, .5)).ToNurbsCurve();
+        var lofts = Brep.CreateFromLoft(new[] { bottom, top }, Point3d.Unset, Point3d.Unset, LoftType.Straight, false);
+        try { using var solid = lofts[0].CapPlanarHoles(.00001); doc.Objects.AddBrep(solid); }
+        finally { foreach (var loft in lofts) loft.Dispose(); }
+        doc.Objects.AddLine(new Point3d(3, 0, -.5), new Point3d(6, 0, -2));
+        var file = Path.Combine(output, "range-control.3dm");
+        if (!doc.Write3dmFile(file, new global::Rhino.FileIO.FileWriteOptions())) throw new InvalidOperationException("Could not write analytic render control.");
+        return file;
     }
 
     private static ViewRequest[] CutViews(BoundingBox bounds)
@@ -162,24 +185,28 @@ internal static class Program
             }
             if (region.Style.Boundary.Visible)
             {
-                using var pen = new Pen(Color.FromArgb(unchecked((int)region.Style.Boundary.Colour)), (float)(1.8 * region.Style.Boundary.WidthScale)); graphics.DrawPath(pen, path);
-                svg.Append($"<path d='{commands}' stroke='{Colour(region.Style.Boundary.Colour)}' stroke-width='{1.8 * region.Style.Boundary.WidthScale:F2}'/>");
+                using var pen = new Pen(Color.FromArgb(unchecked((int)region.Style.Boundary.Colour)), (float)(view.Weights[LineClass.Cut].PreviewPixels * region.Style.Boundary.WidthScale)); graphics.DrawPath(pen, path);
+                svg.Append($"<path d='{commands}' stroke='{Colour(region.Style.Boundary.Colour)}' stroke-width='{view.Weights[LineClass.Cut].PreviewPixels * region.Style.Boundary.WidthScale:F2}'/>");
             }
         }
         // Hidden first; solid visible strokes remain legible at coincident boundaries.
         foreach (var item in view.Items.OrderBy(i => i.Class == LineClass.Hidden ? 0 : 1))
         {
             using var geometry = item.CopyGeometry();
-            var colour = item.Class switch { LineClass.Hidden => "#999999", LineClass.Unresolved => "#E88920", _ => "#000000" };
-            var css = item.Class == LineClass.Visible ? "visible" : "";
-            using var pen = new Pen(ColorTranslator.FromHtml(colour), 1.1f);
+            var kind = item.Profile && item.Class == LineClass.Visible ? LineClass.Profile : item.Class;
+            var weight = view.Weights[kind];
+            var intensity = item.Intensity * weight.InkIntensity;
+            var baseColour = kind == LineClass.Unresolved ? Color.FromArgb(224, 122, 0) : Color.Black;
+            var colour = kind == LineClass.Unresolved ? "#E07A00" : "currentColor";
+            var css = kind == LineClass.Unresolved ? "unresolved" : "ink";
+            using var pen = new Pen(DrawingBake.Blend(baseColour, Color.White, intensity), weight.PreviewPixels);
             if (item.Class == LineClass.Hidden) pen.DashStyle = DashStyle.Dash;
             if (geometry is Curve curve)
             {
                 using var polyline = curve.ToPolyline(Math.Max(width, height) / 3000, .03, 0, Math.Max(width, height) / 80);
                 if (polyline is null || !polyline.TryGetPolyline(out var points) || points.Count < 2) continue;
                 var mapped = points.Select(Map).ToArray(); graphics.DrawLines(pen, mapped);
-                svg.Append($"<polyline class='{css}' stroke='{colour}'{(item.Class == LineClass.Hidden ? " stroke-dasharray='5 4'" : "")} points='{string.Join(" ", mapped.Select(p => $"{p.X:F3},{p.Y:F3}"))}'/>");
+                svg.Append($"<polyline class='{css}' stroke='{colour}' stroke-opacity='{intensity:F4}' stroke-width='{weight.PreviewPixels}'{(item.Class == LineClass.Hidden ? " stroke-dasharray='5 4'" : "")} points='{string.Join(" ", mapped.Select(p => $"{p.X:F3},{p.Y:F3}"))}'/>");
             }
             else if (geometry is Point point)
             {
@@ -205,4 +232,24 @@ internal sealed class M2DEngine : IRenderEngine
     public string Name => "M2D+ capture/NativeDrawing";
     public DrawingBatch Draw(LeaseEntry<PreparedScene>.Lease scene, IReadOnlyList<ViewRequest> views) =>
         NativeDrawing.SolveAsync(scene, new RequestIdentity(scene.Value.Revision, "render", "default", 1), views, new(), CancellationToken.None).GetAwaiter().GetResult();
+}
+
+internal sealed class M3Engine : IRenderEngine
+{
+    public string Name => "M2D+ M3 applied settings / presentation";
+    public DrawingBatch Draw(LeaseEntry<PreparedScene>.Lease scene, IReadOnlyList<ViewRequest> views)
+    {
+        var bounds = scene.Value.Bounds;
+        var configured = views.Select((v, i) =>
+        {
+            var depth = Math.Max(.001, -bounds.GetCorners().Min(v.Cut!.Plane.DistanceTo));
+            if (v.Name == "Range-control") depth = 2;
+            var context = new ViewSettingsContext($"render/{i}", v.Name, v.Kind, true, depth, scene.Value.Tolerance);
+            var settings = Settings.Resolve(new[] { context }, new[] { new[] { $"depth={(v.Name == "Range-control" ? 2 : i == 0 ? depth + scene.Value.Tolerance * 10 : depth * .7):R}", $"beyond={depth * .3:R}",
+                "farclip=line", "fade=on", "fade.start=10", "fade.end=100", "fade.limit=30", "scale=1:100" } }, DocumentUnits.Metres).Views[0];
+            return v with { Settings = settings };
+        }).ToArray();
+        using var cache = new DrawingCache();
+        return cache.SolveAsync(scene, new(scene.Value.Revision, "render", "m3", 1), configured, new(), Array.Empty<Plane>(), default).GetAwaiter().GetResult();
+    }
 }

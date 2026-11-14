@@ -81,12 +81,14 @@ public sealed class DocumentWatch : IDisposable
     }
 }
 
-public sealed record CaptureInput(object Value, int[] Path, string Identity);
+public sealed record CaptureInput(object Value, int[] Path, string Identity)
+{ public int SourceItem { get; init; } }
 
 /// <summary>Host-only incremental capture. No document/table/reference survives into PreparedScene.</summary>
 public sealed class SceneCapture : IDisposable
 {
-    private sealed record Pending(object Value, int[] Path, string Identity, Transform[] Chain, Guid[] Definitions, SourceSection? Section = null);
+    private sealed record Pending(object Value, int[] Path, string Identity, Transform[] Chain, Guid[] Definitions, SourceSection? Section = null)
+    { public int SourceItem { get; init; } }
     private readonly int _thread = Environment.CurrentManagedThreadId;
     private readonly RhinoDoc _document;
     private readonly DocumentWatch _watch;
@@ -113,10 +115,11 @@ public sealed class SceneCapture : IDisposable
         {
             var settings = new ObjectEnumeratorSettings { NormalObjects = true, LockedObjects = true, HiddenObjects = false,
                 ReferenceObjects = true, IncludeLights = false, IncludeGrips = false };
-            foreach (var obj in document.Objects.GetObjectList(settings))
-                if (IsDrawable(document, obj) && excluded?.Contains(obj.Id) != true) _pending.Enqueue(new(obj.Id, new[] { 0 }, obj.Id.ToString(), Array.Empty<Transform>(), Array.Empty<Guid>()));
+            var ordinal = 0;
+            foreach (var obj in document.Objects.GetObjectList(settings).OrderBy(o => o.Id))
+                if (IsDrawable(document, obj) && excluded?.Contains(obj.Id) != true) _pending.Enqueue(new(obj.Id, new[] { 0 }, obj.Id.ToString(), Array.Empty<Transform>(), Array.Empty<Guid>()) { SourceItem = ordinal++ });
         }
-        else foreach (var item in input) _pending.Enqueue(new(item.Value, (int[])item.Path.Clone(), item.Identity, Array.Empty<Transform>(), Array.Empty<Guid>()));
+        else foreach (var item in input) _pending.Enqueue(new(item.Value, (int[])item.Path.Clone(), item.Identity, Array.Empty<Transform>(), Array.Empty<Guid>()) { SourceItem = item.SourceItem });
         InitialEnumerationMilliseconds = timer.Elapsed.TotalMilliseconds;
     }
     /// <summary>Document mode's scene rule (UX §3.1): visible, not a clipping plane or light, not on an M2D+ layer and
@@ -192,7 +195,7 @@ public sealed class SceneCapture : IDisposable
             {
                 if (!IsDrawable(_document, leaf)) continue;
                 _pending.Enqueue(new(leaf.Id, item.Path, item.Identity + "/" + definition.Id + "/" + leaf.Id,
-                    item.Chain.Append(instance.Xform).ToArray(), item.Definitions.Append(definition.Id).ToArray(), item.Section));
+                    item.Chain.Append(instance.Xform).ToArray(), item.Definitions.Append(definition.Id).ToArray(), item.Section) { SourceItem = item.SourceItem });
             }
             return;
         }
@@ -220,7 +223,7 @@ public sealed class SceneCapture : IDisposable
             var normalisationType = temporary ? value.GetType().Name : geometry.GetType().Name;
             var key = $"{_watch.DocumentSerial}/{localId}/{fingerprint}/normalise-v2/{normalisationType}";
             var lease = _cache.Geometry(key, () => Normalise(geometry, temporary ? value.GetType().Name : null));
-            _leaves.Add(new(item.Identity, key, item.Path, item.Chain, lease, item.Section ?? SourceSection.Plain));
+            _leaves.Add(new(item.Identity, key, item.Path, item.Chain, lease, item.Section ?? SourceSection.Plain) { SourceItem = item.SourceItem });
         }
         finally { if (temporary) geometry?.Dispose(); }
     }
@@ -264,7 +267,7 @@ public sealed class SceneCapture : IDisposable
         });
         static string Matrix(Transform t) => string.Join(",", Enumerable.Range(0, 4)
             .SelectMany(r => Enumerable.Range(0, 4).Select(c => t[r, c].ToString("R", CultureInfo.InvariantCulture))));
-        var signature = string.Join("|", _leaves.Select(l => l.Identity + ":" + l.Key + ":" + l.Section.Revision + ":" + string.Join(",", l.Path) + ":" + string.Join(";", l.Chain.Select(Matrix))));
+        var signature = string.Join("|", _leaves.Select(l => l.SourceItem + ":" + l.Identity + ":" + l.Key + ":" + l.Section.Revision + ":" + string.Join(",", l.Path) + ":" + string.Join(";", l.Chain.Select(Matrix))));
         signature += string.Join("|", _unsupported.OrderBy(p => p.Key)) + _tolerance.ToString("R", CultureInfo.InvariantCulture);
         var lease = _cache.Scene(SceneCache.Hash(signature), _leaves, _unsupported, _tolerance);
         _accepted = true; return lease;

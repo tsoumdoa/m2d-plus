@@ -315,7 +315,7 @@ public sealed class SectionWiringTests(RhinoHost host, ITestOutputHelper output)
         try
         {
             document.NewSolution(true, GH_SolutionMode.Silent);
-            GrasshopperTests.PumpUntil(() => component.Params.Output[8].VolatileDataCount == 1, () => component.Message,
+            GrasshopperTests.PumpUntil(() => component.Params.Output[8].VolatileDataCount == 1, () => component.Message + ": " + string.Join(";", component.RuntimeMessages(GH_RuntimeMessageLevel.Error)),
                 () => { if (document.ScheduleDelay >= 0) document.NewSolution(false, GH_SolutionMode.Silent); });
             var info = ((GH_String)Assert.Single(component.Params.Output[8].VolatileData.AllData(true))).Value; output.WriteLine(info);
             Assert.DoesNotContain("quarantined=True", info);

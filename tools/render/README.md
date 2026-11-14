@@ -46,3 +46,28 @@ No UI or bake code is involved. The sheet, SVGs, PNGs and results manifest are a
 local artifacts. The manifest retains native build/runtime, engine and fixture
 hashes, timings and full Info, including uncertainty. Run this serially with the
 licensed test harness and other research hosts.
+
+## M3 applied settings
+
+Use `-Engine m3 -Output artifacts/render/m3` with `-Models` pointing to the
+305-object building and the available curved-steel/diagrid model. This adapter
+resolves Settings and calls the same cached presentation path as the component.
+It renders a storey plan and an oblique long section with class pixel widths,
+profile metadata, Hidden dashes, Beyond intensity and depth fade. The plan keeps
+the entire background; the section's far plane lies inside the input volume.
+
+The renderer also writes and draws its own `range-control.3dm`: an analytic tapered
+solid cut at z=0 and far-clipped at depth 2, plus a depth-varying probe. Its Far clip
+perimeter is 13 model units. This makes generated far lines visible even when the
+building's prismatic cut/far strokes coincide and Cut takes precedence. The
+manifest includes class counts, region counts and per-piece intensity values.
+Source uncertainty is explicitly marked on affected cards; a successful render
+does not certify freeform section crossings. These remain CPU inspection renders,
+not interactive Rhino viewport screenshots.
+
+```powershell
+./tools/render/Render.ps1 -Engine m3 -Output artifacts/render/m3 -Models @(
+  'C:/Users/tomosandego/.t3/scratch/m2d-plus-research-20261114/fixtures/repeated_building_305.3dm',
+  'C:/Users/tomosandego/.t3/worktrees/m2d-plus/t3-d6bdd8e8-f1e6b3c68a0e104e/artifacts/models/curved-steel.3dm'
+)
+```

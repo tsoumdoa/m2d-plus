@@ -8,6 +8,10 @@ namespace M2DPlus.Rhino.Services;
 internal sealed record SourceSection(SectionStyleSnapshot Style, bool FromSectioner,
     Guid[] ObjectIds, Guid[] LayerIds, string Rule)
 {
+    public string LayerPath { get; init; } = "";
+    public double LayerWidth { get; init; }
+    public uint LayerColour { get; init; } = 0xff000000;
+    public bool Transparent { get; init; }
     internal static SourceSection Plain { get; } = new(SectionStyleSnapshot.Default(), false,
         Array.Empty<Guid>(), Array.Empty<Guid>(), "GH geometry: ink fallback");
     internal string Revision => System.Text.Json.JsonSerializer.Serialize(this);
@@ -33,7 +37,12 @@ internal static class SectionCapture
             mode == ObjectSectionAttributesSource.FromParent && parent?.FromSectioner == true,
             (parent?.ObjectIds ?? Array.Empty<Guid>()).Append(obj.Id).ToArray(),
             (parent?.LayerIds ?? Array.Empty<Guid>()).Append(layer.Id).ToArray(),
-            mode == ObjectSectionAttributesSource.FromParent ? $"{mode} -> {parent?.Rule ?? "layer fallback"}" : mode.ToString());
+            mode == ObjectSectionAttributesSource.FromParent ? $"{mode} -> {parent?.Rule ?? "layer fallback"}" : mode.ToString())
+        {
+            LayerPath = layer.FullPath, LayerWidth = layer.PlotWeight, LayerColour = unchecked((uint)layer.Color.ToArgb()),
+            Transparent = obj.GetMaterial(true)?.Transparency > 0 || parent?.Transparent == true ||
+                layer.FullPath.Split("::").Any(s => s.Contains("glass", StringComparison.OrdinalIgnoreCase) || s.Contains("glazing", StringComparison.OrdinalIgnoreCase))
+        };
     }
 
     internal static SectionStyleSnapshot Snapshot(RhinoDoc document, SectionStyle? style, uint colour, uint print)

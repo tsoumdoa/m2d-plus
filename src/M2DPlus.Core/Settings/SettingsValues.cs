@@ -7,6 +7,7 @@ namespace M2DPlus.Core;
 
 public static partial class Settings
 {
+    public const bool DefaultHidden = true;
     public static ImmutableArray<string> Keys { get; } = ["depth", "farclip", "beyond", "fade", "fade.start", "fade.end",
         "fade.limit", "crop", "hidden", "tangents", "seams", "glass", "scale", "weights", "hatch", "cuts", "gap", "name", "tree", "tolerance"];
 
@@ -111,7 +112,7 @@ public static partial class Settings
     private static object DefaultValue(string key, ViewSettingsContext view) => key switch
     {
         "depth" or "beyond" or "gap" => DistanceSetting.Auto,
-        "farclip" => FarClipMode.NoLine, "fade" or "tangents" or "seams" => false, "hidden" => true,
+        "farclip" => FarClipMode.NoLine, "fade" or "tangents" or "seams" => false, "hidden" => DefaultHidden,
         "fade.start" => 0d, "fade.end" => 100d, "fade.limit" => 30d, "crop" => CropMode.Auto,
         "glass" => GlassMode.Opaque, "scale" => 100d, "weights" => WeightMode.Auto, "hatch" => HatchMode.Styles,
         "cuts" => CutMode.Separate, "name" => "auto", "tree" => OutputTreeMode.Branch, "tolerance" => view.DocumentTolerance,

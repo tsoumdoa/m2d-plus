@@ -34,9 +34,11 @@ internal sealed class OwnedGeometry : IDisposable
 }
 
 internal sealed record SceneLeaf(string Identity, string Key, int[] Path,
-    Transform[] Chain, LeaseEntry<OwnedGeometry>.Lease Geometry, SourceSection Section);
+    Transform[] Chain, LeaseEntry<OwnedGeometry>.Lease Geometry, SourceSection Section)
+{ internal int SourceItem { get; init; } }
 internal sealed record PreparedLeaf(string Identity, int[] Path, GeometryBase Geometry)
 {
+    internal int SourceItem { get; init; }
     internal SourceSection Section { get; init; } = SourceSection.Plain;
 }
 
@@ -59,8 +61,16 @@ public sealed class PreparedScene : IDisposable
     public SceneCost Cost { get; }
     public int SourceCount => _leaves.Count;
     public int PreparationCount { get; private set; }
+    public string VisibilityRevision { get; }
+    internal IReadOnlyDictionary<string, SourceSection> SourceMetadata { get; }
     internal PreparedScene(string revision, List<SceneLeaf> leaves, Dictionary<string, int> unsupported, double tolerance)
     {
+        SourceMetadata = new ReadOnlyDictionary<string, SourceSection>(leaves.ToDictionary(l => l.Identity, l => l.Section, StringComparer.Ordinal));
+        VisibilityRevision = SceneCache.Hash(System.Text.Json.JsonSerializer.Serialize(new {
+            leaves = leaves.Select(l => new { l.Identity, l.Key, l.Path, l.SourceItem,
+                chain = l.Chain.Select(t => new[] { t.M00,t.M01,t.M02,t.M03,t.M10,t.M11,t.M12,t.M13,t.M20,t.M21,t.M22,t.M23,t.M30,t.M31,t.M32,t.M33 }),
+                l.Section.Transparent, l.Section.ObjectIds, l.Section.LayerIds }),
+            unsupported = unsupported.OrderBy(p => p.Key, StringComparer.Ordinal), tolerance }));
         Revision = revision; _leaves = leaves; Unsupported = new ReadOnlyDictionary<string, int>(unsupported); Tolerance = tolerance;
         Conversions = Array.AsReadOnly(leaves.Where(l => l.Geometry.Value.Conversion is not null)
             .Select(l => $"{l.Identity}: {l.Geometry.Value.Conversion}")
@@ -109,7 +119,7 @@ public sealed class PreparedScene : IDisposable
                     // Transform reverses closed-solid orientation for odd reflections. Normalize after the whole chain.
                     if (geometry is Brep { SolidOrientation: BrepSolidOrientation.Inward } brep) brep.Flip();
                     if (geometry is Mesh { IsClosed: true } mesh && mesh.SolidOrientation() < 0) mesh.Flip(true, true, true);
-                    prepared.Add(new(leaf.Identity, leaf.Path, geometry) { Section = leaf.Section });
+                    prepared.Add(new(leaf.Identity, leaf.Path, geometry) { Section = leaf.Section, SourceItem = leaf.SourceItem });
                 }
                 catch { geometry.Dispose(); throw; }
             }

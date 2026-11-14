@@ -9,7 +9,7 @@ $ErrorActionPreference = 'Stop'
 if (-not $Resolver) {
     $Resolver = 'C:/Users/tomosandego/.t3/scratch/2026-11-13-i-noticed-that-make2d-in-2f66c87c/.venv/Lib/site-packages/rhinoinside/Rhino.Inside_v8_net8.0.dll'
 }
-if (-not $Output) { $Output = if ($Engine -eq 'm2') { 'artifacts/render/m2' } else { 'artifacts/render/m1a' } }
+if (-not $Output) { $Output = if ($Engine -eq 'm3') { 'artifacts/render/m3' } elseif ($Engine -eq 'm2') { 'artifacts/render/m2' } else { 'artifacts/render/m1a' } }
 $repo = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 & dotnet build "$PSScriptRoot/M2DPlus.Render.csproj" --nologo
 if ($LASTEXITCODE -ne 0) { throw 'Render build failed' }

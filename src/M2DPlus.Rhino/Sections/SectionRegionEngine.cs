@@ -7,6 +7,33 @@ namespace M2DPlus.Rhino.Sections;
 /// <summary>Detached compute only. No RhinoDoc, scene, scheduler, GH, or visibility calls.</summary>
 public static class SectionRegionEngine
 {
+    /// <summary>Rebuild fill/merge from certified cut regions. Visibility is unaffected by either policy.</summary>
+    internal static SectionResult Restyle(IReadOnlyList<SectionRegion> regions, SectionRequest request)
+    {
+        var result = new SectionResult(); var candidates = new List<Candidate>();
+        try
+        {
+            foreach (var region in regions)
+            {
+                var style = SectionPolicy.EffectiveStyle(region.Style, request.Hatch);
+                if (region.Status == SectionStatus.OutlineOnly)
+                {
+                    result.Regions.Add(region with { Loops = region.Loops.Select(l => new SectionLoop(l.Curve.DuplicateCurve(), l.IsHole,
+                        l.Edges.Select(e => new SectionEdge(e.Curve.DuplicateCurve(), e.Origin)).ToArray())).ToArray(), Hatch = null, Style = style });
+                    continue;
+                }
+                foreach (var face in Brep.CreatePlanarBreps(region.Loops.Select(l => l.Curve), request.Tolerance) ?? throw new SectionFailure("Restyle region failed."))
+                    candidates.Add(new(face, region.SourceIds.ToArray(), style,
+                        region.Loops.SelectMany(l => l.Edges).Where(e => (e.Origin & EdgeOrigin.PhysicalCut) != 0).Select(e => e.Curve.DuplicateCurve()).ToArray()));
+            }
+            if (request.Cuts == CutMode.Merge) candidates = Merge(candidates, request, result);
+            var ordinal = 0;
+            foreach (var candidate in candidates) result.Regions.Add(Build(candidate, $"presentation/{ordinal++}", request));
+            return result;
+        }
+        catch { result.Dispose(); throw; }
+        finally { foreach (var candidate in candidates) candidate.Dispose(); }
+    }
     private sealed record Candidate(Brep Face, string[] Sources, SectionStyleSnapshot Style, Curve[] Physical) : IDisposable
     {
         public void Dispose() { Face.Dispose(); foreach (var curve in Physical) curve.Dispose(); }
