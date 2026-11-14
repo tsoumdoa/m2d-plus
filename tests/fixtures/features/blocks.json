@@ -1,0 +1,108 @@
+{
+  "expected": {
+    "metamorphicTranslationCopies": [
+      0,
+      25,
+      0
+    ],
+    "nestedLevels": 4,
+    "rotationsDegrees": [
+      0,
+      90,
+      180,
+      270
+    ],
+    "windowCopies": 200,
+    "windowInstances": 200
+  },
+  "flavor": null,
+  "generator": {
+    "rhino": "8.36.26296.17001",
+    "runtime": "8.0.34",
+    "script": "tools/models/generate.py",
+    "sha256": "2b530e7a39cb6b72b251f62a9d996702252b51cbd054c00988e0803e55109e18"
+  },
+  "hook": false,
+  "id": "blocks",
+  "notes": [],
+  "schemaVersion": 1,
+  "seed": 20261114,
+  "sha256": "9d200af25a707e74b4bdab221c1e5f9000b5ffb717f78d47320b79e04d203aeb",
+  "sizeBytes": 241554,
+  "sourceFixtures": {},
+  "stats": {
+    "blockDefinitions": 5,
+    "blockInstances": 203,
+    "brepFaces": 24,
+    "definitionMembers": 5,
+    "expandedObjects": 403,
+    "expandedTypes": {
+      "Brep": 3,
+      "Extrusion": 400
+    },
+    "meshTriangles": 0,
+    "objectTypes": {
+      "Extrusion": 200,
+      "InstanceReferenceGeometry": 203
+    },
+    "objects": 403
+  },
+  "tier": null,
+  "tolerance": 0.0001,
+  "units": "Meters",
+  "views": [
+    {
+      "name": "Top",
+      "settings": {
+        "hidden": "on",
+        "seams": "off",
+        "tangents": "off"
+      },
+      "source": {
+        "kind": "direction keyword",
+        "value": "Top"
+      }
+    },
+    {
+      "name": "SW",
+      "settings": {
+        "hidden": "on",
+        "seams": "off",
+        "tangents": "off"
+      },
+      "source": {
+        "kind": "direction keyword",
+        "value": "SW"
+      }
+    },
+    {
+      "name": "Plan cut",
+      "plane": {
+        "origin": [
+          0,
+          0,
+          0.6
+        ],
+        "x": [
+          1,
+          0,
+          0
+        ],
+        "y": [
+          0,
+          1,
+          0
+        ]
+      },
+      "settings": {
+        "hidden": "on",
+        "seams": "off",
+        "tangents": "off"
+      },
+      "source": {
+        "kind": "GH-style plane",
+        "value": null
+      }
+    }
+  ]
+}

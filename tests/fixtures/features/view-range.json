@@ -1,0 +1,157 @@
+{
+  "expected": {
+    "beyondThreshold": [
+      "depth-4m"
+    ],
+    "farClipSource": "crosses-far-plane",
+    "farDepth": 5,
+    "thresholdStrictlyGreater": true,
+    "visibleNearThreshold": [
+      "depth-2m",
+      "depth-3m"
+    ]
+  },
+  "flavor": null,
+  "generator": {
+    "rhino": "8.36.26296.17001",
+    "runtime": "8.0.34",
+    "script": "tools/models/generate.py",
+    "sha256": "2b530e7a39cb6b72b251f62a9d996702252b51cbd054c00988e0803e55109e18"
+  },
+  "hook": true,
+  "id": "view-range",
+  "notes": [],
+  "schemaVersion": 1,
+  "seed": 20261114,
+  "sha256": "4863f32379c3e04bd0935fc0c52f2a041d6cab44a219ef4e82252f30a0646254",
+  "sizeBytes": 163887,
+  "sourceFixtures": {},
+  "stats": {
+    "blockDefinitions": 0,
+    "blockInstances": 0,
+    "brepFaces": 54,
+    "definitionMembers": 0,
+    "expandedObjects": 9,
+    "expandedTypes": {
+      "Brep": 9
+    },
+    "meshTriangles": 0,
+    "objectTypes": {
+      "Brep": 9
+    },
+    "objects": 9
+  },
+  "tier": null,
+  "tolerance": 0.0001,
+  "units": "Meters",
+  "views": [
+    {
+      "name": "Range none",
+      "plane": {
+        "origin": [
+          0,
+          0,
+          0
+        ],
+        "x": [
+          1,
+          0,
+          0
+        ],
+        "y": [
+          0,
+          1,
+          0
+        ]
+      },
+      "settings": {
+        "beyond": "3 m",
+        "depth": "5 m",
+        "fade": "on",
+        "fade.end": "90 %",
+        "fade.limit": "25 %",
+        "fade.start": "10 %",
+        "farclip": "none",
+        "hidden": "on",
+        "seams": "off",
+        "tangents": "off"
+      },
+      "source": {
+        "kind": "GH-style plane",
+        "value": null
+      }
+    },
+    {
+      "name": "Range line",
+      "plane": {
+        "origin": [
+          0,
+          0,
+          0
+        ],
+        "x": [
+          1,
+          0,
+          0
+        ],
+        "y": [
+          0,
+          1,
+          0
+        ]
+      },
+      "settings": {
+        "beyond": "3 m",
+        "depth": "5 m",
+        "fade": "on",
+        "fade.end": "90 %",
+        "fade.limit": "25 %",
+        "fade.start": "10 %",
+        "farclip": "line",
+        "hidden": "on",
+        "seams": "off",
+        "tangents": "off"
+      },
+      "source": {
+        "kind": "GH-style plane",
+        "value": null
+      }
+    },
+    {
+      "name": "Range noline",
+      "plane": {
+        "origin": [
+          0,
+          0,
+          0
+        ],
+        "x": [
+          1,
+          0,
+          0
+        ],
+        "y": [
+          0,
+          1,
+          0
+        ]
+      },
+      "settings": {
+        "beyond": "3 m",
+        "depth": "5 m",
+        "fade": "on",
+        "fade.end": "90 %",
+        "fade.limit": "25 %",
+        "fade.start": "10 %",
+        "farclip": "noline",
+        "hidden": "on",
+        "seams": "off",
+        "tangents": "off"
+      },
+      "source": {
+        "kind": "GH-style plane",
+        "value": null
+      }
+    }
+  ]
+}

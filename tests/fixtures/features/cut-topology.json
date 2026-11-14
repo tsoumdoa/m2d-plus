@@ -1,0 +1,183 @@
+{
+  "expected": {
+    "analyticSections": {
+      "chs_hollow": {
+        "area": 1.6022122533307945,
+        "holes": 1,
+        "regions": 1
+      },
+      "i_beam": {
+        "area": 1.76,
+        "holes": 0,
+        "regions": 1
+      },
+      "island-inside-rhs-void": {
+        "area": 0.25,
+        "holes": 0,
+        "regions": 1
+      },
+      "overlap-column": {
+        "area": 0.16,
+        "regions": 1
+      },
+      "overlap-slab": {
+        "area": 16,
+        "regions": 1
+      },
+      "rhs_hollow": {
+        "area": 2.04,
+        "holes": 1,
+        "regions": 1
+      }
+    },
+    "coplanar-top": {
+      "cutRegions": 0
+    },
+    "mergeDifferentStyleRegions": 2,
+    "mergeSameStyleRegions": 1,
+    "open-crossing": {
+      "hatch": null
+    }
+  },
+  "flavor": null,
+  "generator": {
+    "rhino": "8.36.26296.17001",
+    "runtime": "8.0.34",
+    "script": "tools/models/generate.py",
+    "sha256": "2b530e7a39cb6b72b251f62a9d996702252b51cbd054c00988e0803e55109e18"
+  },
+  "hook": true,
+  "id": "cut-topology",
+  "notes": [],
+  "schemaVersion": 1,
+  "seed": 20261114,
+  "sha256": "f781f51456914ad6ac721a32ac762fda922d3f3402f3330f3226daa05a356406",
+  "sizeBytes": 295239,
+  "sourceFixtures": {
+    "chs_hollow": "d33b5fc0a72cf4d4337e225ad2fd07e1e0df8414c2a0a2f39d100209124c7584",
+    "i_beam": "6fc7895295e33a4115fdccffdecf26ec6f5fc541795fed8826423e89ec53639b",
+    "rhs_hollow": "3bf85621c4d110a5124d700347b092689643d7b0cfc69ef11c40aa753bb2d32a"
+  },
+  "stats": {
+    "blockDefinitions": 0,
+    "blockInstances": 0,
+    "brepFaces": 100,
+    "definitionMembers": 0,
+    "expandedObjects": 17,
+    "expandedTypes": {
+      "Brep": 15,
+      "Extrusion": 1,
+      "PlaneSurface": 1
+    },
+    "meshTriangles": 0,
+    "objectTypes": {
+      "Brep": 15,
+      "Extrusion": 1,
+      "PlaneSurface": 1
+    },
+    "objects": 17
+  },
+  "tier": null,
+  "tolerance": 0.0001,
+  "units": "Meters",
+  "views": [
+    {
+      "name": "Top",
+      "settings": {
+        "hidden": "on",
+        "seams": "off",
+        "tangents": "off"
+      },
+      "source": {
+        "kind": "direction keyword",
+        "value": "Top"
+      }
+    },
+    {
+      "name": "SW",
+      "settings": {
+        "hidden": "on",
+        "seams": "off",
+        "tangents": "off"
+      },
+      "source": {
+        "kind": "direction keyword",
+        "value": "SW"
+      }
+    },
+    {
+      "name": "Plan cut",
+      "plane": {
+        "origin": [
+          0,
+          0,
+          0
+        ],
+        "x": [
+          1,
+          0,
+          0
+        ],
+        "y": [
+          0,
+          1,
+          0
+        ]
+      },
+      "settings": {
+        "hidden": "on",
+        "seams": "off",
+        "tangents": "off"
+      },
+      "source": {
+        "kind": "GH-style plane",
+        "value": null
+      }
+    },
+    {
+      "crop": [
+        -4,
+        4,
+        -0.3535533905932738,
+        0.3535533905932738
+      ],
+      "expected": {
+        "cutRegions": 2,
+        "holes": 0,
+        "source": "crop-L",
+        "totalArea": 2.0
+      },
+      "name": "L split rectangle",
+      "plane": {
+        "origin": [
+          17.75,
+          11.75,
+          0
+        ],
+        "x": [
+          0.7071067811865476,
+          -0.7071067811865476,
+          0
+        ],
+        "y": [
+          0.7071067811865476,
+          0.7071067811865476,
+          0
+        ]
+      },
+      "settings": {
+        "hidden": "on",
+        "seams": "off",
+        "tangents": "off"
+      },
+      "size": [
+        8,
+        0.7071067811865476
+      ],
+      "source": {
+        "kind": "rectangle",
+        "value": null
+      }
+    }
+  ]
+}
