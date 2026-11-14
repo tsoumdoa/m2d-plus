@@ -3,8 +3,7 @@ using System.Text.RegularExpressions;
 
 namespace M2DPlus.Core;
 
-/// <summary>Syntax-only stub. Keeps headers and duplicate assignments in source order.
-/// View binding, known-key validation, defaults and precedence belong to later milestones.</summary>
+/// <summary>Settings text syntax and typed, host-independent resolution. The original syntax-only API is retained.</summary>
 public static partial class Settings
 {
     public sealed record Assignment(string View, string Key, string Value, int Line);
@@ -15,7 +14,7 @@ public static partial class Settings
         var result = new List<Assignment>();
         var view = "*";
         var lineNumber = 0;
-        foreach (var raw in string.Join('\n', items).Replace("\r\n", "\n").Split('\n'))
+        foreach (var raw in string.Join('\n', items).Replace("\r\n", "\n").Replace('\r', '\n').Split('\n'))
         {
             lineNumber++;
             var line = raw.Trim();
@@ -54,14 +53,15 @@ public static partial class Settings
             throw new ArgumentOutOfRangeException(nameof(metresPerDocumentUnit));
         var match = DistancePattern().Match(text.Trim());
         if (!match.Success) throw new FormatException($"Invalid distance: {text}");
-        var number = double.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture);
+        if (!double.TryParse(match.Groups[1].Value, NumberStyles.Float, CultureInfo.InvariantCulture, out var number))
+            throw new FormatException($"Invalid distance: {text}");
         var unit = match.Groups[2].Value.ToLowerInvariant();
         var metres = unit switch
         {
             "" => metresPerDocumentUnit,
             "mm" => 0.001, "cm" => 0.01, "m" => 1, "km" => 1000,
             "in" or "\"" => 0.0254, "ft" or "'" => 0.3048,
-            _ => throw new FormatException($"Unknown distance unit: {unit}")
+            _ => throw new FormatException($"Unknown distance unit: {unit}. {Suggest(unit, ["mm", "cm", "m", "km", "in", "ft"])}")
         };
         var distance = unit.Length == 0 ? number : number * (metres / metresPerDocumentUnit);
         if (!double.IsFinite(distance)) throw new FormatException($"Non-finite distance: {text}");
