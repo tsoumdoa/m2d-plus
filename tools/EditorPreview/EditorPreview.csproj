@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Local preview of the View Range & Settings editor, built from the GHA's editor sources on public Eto.
+       Needs no Rhino, Grasshopper or licence. Not part of M2DPlus.sln and never packaged.
+       Inside Rhino the same form runs on Rhino's own Eto (WPF). -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>disable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../src/M2DPlus.Grasshopper/UI/Model/*.cs" Link="Editor/Model/%(Filename)%(Extension)" />
+    <Compile Include="../../src/M2DPlus.Grasshopper/UI/SettingsEditorForm.cs" Link="Editor/SettingsEditorForm.cs" />
+    <Compile Include="../../src/M2DPlus.Grasshopper/M2DIcons.cs" Link="Editor/M2DIcons.cs" />
+    <Using Include="System" /><Using Include="System.IO" /><Using Include="System.Linq" /><Using Include="System.Collections.Generic" />
+    <ProjectReference Include="../../src/M2DPlus.Core/M2DPlus.Core.csproj" />
+    <PackageReference Include="Eto.Forms" Version="2.9.0" />
+    <PackageReference Include="Eto.Platform.Windows" Version="2.9.0" />
+  </ItemGroup>
+</Project>
