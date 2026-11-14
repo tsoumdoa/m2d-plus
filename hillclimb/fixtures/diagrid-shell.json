@@ -1,0 +1,420 @@
+{
+  "expected": {
+    "edgeInventory": {
+      "diagrid-iso-0-0": {
+        "crease": [
+          1,
+          2,
+          3,
+          5,
+          6,
+          7
+        ],
+        "naked": [],
+        "seam": [
+          0,
+          4
+        ],
+        "tangent": []
+      },
+      "diagrid-iso-0-1": {
+        "crease": [
+          1,
+          2,
+          4,
+          5
+        ],
+        "naked": [],
+        "seam": [
+          0,
+          3
+        ],
+        "tangent": []
+      },
+      "diagrid-iso-0-2": {
+        "crease": [
+          1,
+          2,
+          4,
+          5
+        ],
+        "naked": [],
+        "seam": [
+          0,
+          3
+        ],
+        "tangent": []
+      },
+      "diagrid-iso-0-3": {
+        "crease": [
+          1,
+          2,
+          3,
+          5,
+          6,
+          7
+        ],
+        "naked": [],
+        "seam": [
+          0,
+          4
+        ],
+        "tangent": []
+      },
+      "diagrid-iso-1-0": {
+        "crease": [
+          1,
+          2,
+          4,
+          5
+        ],
+        "naked": [],
+        "seam": [
+          0,
+          3
+        ],
+        "tangent": []
+      },
+      "diagrid-iso-1-1": {
+        "crease": [
+          1,
+          2,
+          4,
+          5
+        ],
+        "naked": [],
+        "seam": [
+          0,
+          3
+        ],
+        "tangent": []
+      },
+      "diagrid-iso-1-2": {
+        "crease": [
+          1,
+          2,
+          4,
+          5
+        ],
+        "naked": [],
+        "seam": [
+          0,
+          3
+        ],
+        "tangent": []
+      },
+      "diagrid-iso-1-3": {
+        "crease": [
+          1,
+          2,
+          4,
+          5
+        ],
+        "naked": [],
+        "seam": [
+          0,
+          3
+        ],
+        "tangent": []
+      },
+      "node-0-0": {
+        "crease": [],
+        "naked": [],
+        "seam": [
+          0
+        ],
+        "tangent": []
+      },
+      "node-0-1": {
+        "crease": [],
+        "naked": [],
+        "seam": [
+          0
+        ],
+        "tangent": []
+      },
+      "node-0-2": {
+        "crease": [],
+        "naked": [],
+        "seam": [
+          0
+        ],
+        "tangent": []
+      },
+      "node-0-3": {
+        "crease": [],
+        "naked": [],
+        "seam": [
+          0
+        ],
+        "tangent": []
+      },
+      "node-1-0": {
+        "crease": [],
+        "naked": [],
+        "seam": [
+          0
+        ],
+        "tangent": []
+      },
+      "node-1-1": {
+        "crease": [],
+        "naked": [],
+        "seam": [
+          0
+        ],
+        "tangent": []
+      },
+      "node-1-2": {
+        "crease": [],
+        "naked": [],
+        "seam": [
+          0
+        ],
+        "tangent": []
+      },
+      "node-1-3": {
+        "crease": [],
+        "naked": [],
+        "seam": [
+          0
+        ],
+        "tangent": []
+      },
+      "node-2-0": {
+        "crease": [],
+        "naked": [],
+        "seam": [
+          0
+        ],
+        "tangent": []
+      },
+      "node-2-1": {
+        "crease": [],
+        "naked": [],
+        "seam": [
+          0
+        ],
+        "tangent": []
+      },
+      "node-2-2": {
+        "crease": [],
+        "naked": [],
+        "seam": [
+          0
+        ],
+        "tangent": []
+      },
+      "node-2-3": {
+        "crease": [],
+        "naked": [],
+        "seam": [
+          0
+        ],
+        "tangent": []
+      },
+      "node-3-0": {
+        "crease": [],
+        "naked": [],
+        "seam": [
+          0
+        ],
+        "tangent": []
+      },
+      "node-3-1": {
+        "crease": [],
+        "naked": [],
+        "seam": [
+          0
+        ],
+        "tangent": []
+      },
+      "node-3-2": {
+        "crease": [],
+        "naked": [],
+        "seam": [
+          0
+        ],
+        "tangent": []
+      },
+      "node-3-3": {
+        "crease": [],
+        "naked": [],
+        "seam": [
+          0
+        ],
+        "tangent": []
+      },
+      "open-roof-shell": {
+        "crease": [],
+        "naked": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "seam": [],
+        "tangent": []
+      }
+    },
+    "members": "Surface isocurves (not claimed geodesics)",
+    "merge": "Keep overlapping members/nodes separate; merge only identical resolved style",
+    "openShell": {
+      "cut": "outline only",
+      "hatch": null,
+      "solid": false,
+      "source": "open-roof-shell"
+    }
+  },
+  "family": "curved",
+  "flavor": null,
+  "generator": {
+    "dependencies": {
+      "archive.py": "c0f8f13f7f873a6f2163ae89455bc01d12bb44ee03d0b18ca10c6cb4f6f6bd67",
+      "common.py": "7842b495ce25479e4dd06bcd44732b3e34a3a7fefa4896f38199eb813c7ae04a",
+      "generate.py": "8ab7c0e78bd5ecb2e2cf28c4d739187383031319110a0fe135700f24af034a74"
+    },
+    "rhino": "8.36.26296.17001",
+    "runtime": "8.0.34",
+    "script": "tools/models/curved.py",
+    "sha256": "45eda74cb3b5e8fd123e7a6c1108a1a0d9334b66e71e0862179d38e82b545f41"
+  },
+  "hook": false,
+  "id": "diagrid-shell",
+  "notes": [],
+  "schemaVersion": 1,
+  "seed": 20261114,
+  "sha256": "a98041a1ca45a12288ba6f87d16068879bfb93282b73aea4df04471d3f9c763d",
+  "sizeBytes": 259100,
+  "sourceFixtures": {},
+  "stats": {
+    "blockDefinitions": 0,
+    "blockInstances": 0,
+    "brepFaces": 49,
+    "definitionMembers": 0,
+    "expandedObjects": 25,
+    "expandedTypes": {
+      "Brep": 25
+    },
+    "meshTriangles": 0,
+    "objectTypes": {
+      "Brep": 25
+    },
+    "objects": 25
+  },
+  "tier": null,
+  "tolerance": 0.0001,
+  "units": "Meters",
+  "views": [
+    {
+      "name": "SW",
+      "settings": {
+        "hidden": "on",
+        "seams": "off",
+        "tangents": "off"
+      },
+      "source": {
+        "kind": "direction keyword",
+        "value": "SW"
+      }
+    },
+    {
+      "name": "Front",
+      "settings": {
+        "hidden": "on",
+        "seams": "off",
+        "tangents": "off"
+      },
+      "source": {
+        "kind": "direction keyword",
+        "value": "Front"
+      }
+    },
+    {
+      "name": "Top",
+      "settings": {
+        "hidden": "on",
+        "seams": "off",
+        "tangents": "off"
+      },
+      "source": {
+        "kind": "direction keyword",
+        "value": "Top"
+      }
+    },
+    {
+      "name": "Plan cut",
+      "plane": {
+        "origin": [
+          0,
+          0,
+          5
+        ],
+        "x": [
+          1,
+          0,
+          0
+        ],
+        "y": [
+          0,
+          1,
+          0
+        ]
+      },
+      "settings": {
+        "hidden": "on",
+        "seams": "off",
+        "tangents": "off"
+      },
+      "source": {
+        "kind": "GH-style plane",
+        "value": null
+      }
+    },
+    {
+      "name": "Grazing",
+      "settings": {
+        "hidden": "on",
+        "seams": "off",
+        "tangents": "off"
+      },
+      "source": {
+        "kind": "vector",
+        "value": [
+          0.99985,
+          0.01745,
+          0.0001
+        ]
+      }
+    },
+    {
+      "name": "Roof section",
+      "plane": {
+        "origin": [
+          0,
+          0,
+          0
+        ],
+        "x": [
+          1,
+          0,
+          0
+        ],
+        "y": [
+          0,
+          0,
+          1
+        ]
+      },
+      "settings": {
+        "hidden": "on",
+        "seams": "off",
+        "tangents": "off"
+      },
+      "source": {
+        "kind": "GH-style plane",
+        "value": null
+      }
+    }
+  ]
+}

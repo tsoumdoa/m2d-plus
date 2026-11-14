@@ -1,0 +1,7651 @@
+[
+  {
+    "Id": "curved-steel/Plan cut/CHS-arc",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 455.7228,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-steel/Plan cut/CHS-3d-chord",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.05241229669120906,
+    "Actual": 0,
+    "Ms": 299.2977,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "curved-steel/Plan cut/RHS-arc",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 10.621,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-steel/Plan cut/RHS-3d-chord",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.2846649690333998,
+    "Actual": 0,
+    "Ms": 12.259,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "curved-steel/Plan cut/I-beam-filleted-web-flanges",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 318.9122,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-steel/Plan cut/helical-stair-stringer",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.37106786090606275,
+    "Actual": 0,
+    "Ms": 15.3023,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "curved-steel/Plan cut/twisted-RHS",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.08998572095932784,
+    "Actual": 0,
+    "Ms": 15.621,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "curved-steel/Plan cut/oblique-curved-CHS",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 54.4154,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-steel/Oblique hollow cut/CHS-arc",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 384.8834,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-steel/Oblique hollow cut/CHS-3d-chord",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 371.7035,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-steel/Oblique hollow cut/RHS-arc",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 9.2867,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-steel/Oblique hollow cut/RHS-3d-chord",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 12.2958,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-steel/Oblique hollow cut/I-beam-filleted-web-flanges",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 323.8964,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-steel/Oblique hollow cut/helical-stair-stringer",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 17.0132,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-steel/Oblique hollow cut/twisted-RHS",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 17.2135,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-steel/Oblique hollow cut/oblique-curved-CHS",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.7027743758729486,
+    "Actual": 0,
+    "Ms": 67.5461,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/open-roof-shell",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2217,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/diagrid-iso-0-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.03709609667766231,
+    "Actual": 0,
+    "Ms": 553.896,
+    "Reasons": [
+      "Self-intersecting Brep faces away from their shared topology."
+    ]
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/diagrid-iso-0-1",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.034676451113636,
+    "Actual": 0,
+    "Ms": 556.4258,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/diagrid-iso-0-2",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.03465631649369489,
+    "Actual": 0,
+    "Ms": 642.1907,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/diagrid-iso-0-3",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.03710611273509334,
+    "Actual": 0,
+    "Ms": 658.9469,
+    "Reasons": [
+      "Self-intersecting Brep faces away from their shared topology."
+    ]
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/diagrid-iso-1-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.044512873958744426,
+    "Actual": 0,
+    "Ms": 567.7596,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/diagrid-iso-1-1",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 608.7919,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/diagrid-iso-1-2",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 662.8114,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/diagrid-iso-1-3",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.04444727534240713,
+    "Actual": 0,
+    "Ms": 650.01,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/node-0-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.3026,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/node-0-1",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2132,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/node-0-2",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2216,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/node-0-3",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.02274961989900849,
+    "Actual": 0,
+    "Ms": 0.1922,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/node-1-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2084,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/node-1-1",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1505,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/node-1-2",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1228,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/node-1-3",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1601,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/node-2-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1681,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/node-2-1",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1068,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/node-2-2",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1366,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/node-2-3",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1436,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/node-3-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.022749619899008533,
+    "Actual": 0,
+    "Ms": 0.1411,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/node-3-1",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1372,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/node-3-2",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2141,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/node-3-3",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1612,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Roof section/open-roof-shell",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2964,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "diagrid-shell/Roof section/diagrid-iso-0-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.014537066042465095,
+    "Actual": 0,
+    "Ms": 602.2875,
+    "Reasons": [
+      "Self-intersecting Brep faces away from their shared topology."
+    ]
+  },
+  {
+    "Id": "diagrid-shell/Roof section/diagrid-iso-0-1",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.013527614324970488,
+    "Actual": 0,
+    "Ms": 654.3258,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "diagrid-shell/Roof section/diagrid-iso-0-2",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.013527774276778095,
+    "Actual": 0,
+    "Ms": 648.9523,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "diagrid-shell/Roof section/diagrid-iso-0-3",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.014537041744084442,
+    "Actual": 0,
+    "Ms": 719.5634,
+    "Reasons": [
+      "Self-intersecting Brep faces away from their shared topology."
+    ]
+  },
+  {
+    "Id": "diagrid-shell/Roof section/diagrid-iso-1-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.013689024200826586,
+    "Actual": 0,
+    "Ms": 570.2238,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "diagrid-shell/Roof section/diagrid-iso-1-1",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.013446869174428045,
+    "Actual": 0,
+    "Ms": 579.768,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "diagrid-shell/Roof section/diagrid-iso-1-2",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.013446868828801216,
+    "Actual": 0,
+    "Ms": 566.7242,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "diagrid-shell/Roof section/diagrid-iso-1-3",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.013689023585273612,
+    "Actual": 0,
+    "Ms": 566.4963,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "diagrid-shell/Roof section/node-0-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.08042472462066907,
+    "Actual": 0,
+    "Ms": 0.2979,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "diagrid-shell/Roof section/node-0-1",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1865,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Roof section/node-0-2",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1908,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Roof section/node-0-3",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1418,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Roof section/node-1-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1925,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Roof section/node-1-1",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.08042413340840047,
+    "Actual": 0,
+    "Ms": 0.1546,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "diagrid-shell/Roof section/node-1-2",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1591,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Roof section/node-1-3",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1889,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Roof section/node-2-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2073,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Roof section/node-2-1",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1665,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Roof section/node-2-2",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.08042413340840028,
+    "Actual": 0,
+    "Ms": 0.155,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "diagrid-shell/Roof section/node-2-3",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1388,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Roof section/node-3-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2195,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Roof section/node-3-1",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2273,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Roof section/node-3-2",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1891,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Roof section/node-3-3",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.08042472462066887,
+    "Actual": 0,
+    "Ms": 0.1483,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-0-0/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.284,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-0-1/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2793,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-0-2/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2132,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-0-3/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2007,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-0-4/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1939,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-0-5/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2318,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-0-6/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2076,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-1-0/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.021322988265929904,
+    "Actual": 0,
+    "Ms": 0.2626,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-1-1/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.0213229882659299,
+    "Actual": 0,
+    "Ms": 0.2582,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-1-2/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.021322988265929894,
+    "Actual": 0,
+    "Ms": 0.1984,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-1-3/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.021322988265929908,
+    "Actual": 0,
+    "Ms": 0.1892,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-1-4/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.021322988265929953,
+    "Actual": 0,
+    "Ms": 0.1929,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-1-5/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.02132298826592978,
+    "Actual": 0,
+    "Ms": 0.1786,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-1-6/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.021322988265929845,
+    "Actual": 0,
+    "Ms": 0.1395,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-2-0/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1057,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-2-1/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1075,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-2-2/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1046,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-2-3/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1357,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-2-4/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1058,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-2-5/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1066,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-2-6/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1258,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-3-0/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1015,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-3-1/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1395,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-3-2/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 8.4632,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-3-3/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2446,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-3-4/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1846,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-3-5/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1714,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-3-6/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1628,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-4-0/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.196,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-4-1/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1986,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-4-2/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2045,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-4-3/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1926,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-4-4/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1946,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-4-5/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1949,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-4-6/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1951,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-5-0/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1821,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-5-1/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2005,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-5-2/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1787,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-5-3/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1802,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-5-4/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.196,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-5-5/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1773,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-5-6/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1706,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-6-0/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1543,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-6-1/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1232,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-6-2/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1153,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-6-3/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1029,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-6-4/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.107,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-6-5/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1133,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-6-6/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1208,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-7-0/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1295,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-7-1/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1205,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-7-2/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1204,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-7-3/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1148,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-7-4/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1297,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-7-5/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1222,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-7-6/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1236,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-8-0/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1405,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-8-1/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2379,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-8-2/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1531,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-8-3/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1347,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-8-4/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1328,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-8-5/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1415,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-8-6/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2414,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-9-0/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1553,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-9-1/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1563,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-9-2/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1452,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-9-3/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1384,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-9-4/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1711,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-9-5/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1423,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-9-6/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1474,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-10-0/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.144,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-10-1/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1443,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-10-2/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.142,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-10-3/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1104,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-10-4/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1022,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-10-5/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.0965,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-10-6/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1061,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-11-0/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.021322988265929804,
+    "Actual": 0,
+    "Ms": 0.1502,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-11-1/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.021322988265929804,
+    "Actual": 0,
+    "Ms": 0.232,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-11-2/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.021322988265929817,
+    "Actual": 0,
+    "Ms": 0.2118,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-11-3/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.02132298826592972,
+    "Actual": 0,
+    "Ms": 0.2025,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-11-4/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.021322988265929745,
+    "Actual": 0,
+    "Ms": 0.2055,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-11-5/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.021322988265929856,
+    "Actual": 0,
+    "Ms": 0.2589,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-11-6/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.02132298826592985,
+    "Actual": 0,
+    "Ms": 0.2314,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-12-0/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.221,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-12-1/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1984,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-12-2/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1842,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-12-3/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1837,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-12-4/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1911,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-12-5/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1785,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-12-6/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.195,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-0-0/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1658,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-0-1/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1772,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-0-2/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1637,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-0-3/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1626,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-0-4/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1665,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-0-5/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1624,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-0-6/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1785,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-1-0/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2048,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-1-1/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1977,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-1-2/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1937,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-1-3/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1885,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-1-4/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1882,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-1-5/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1948,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-1-6/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.202,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-2-0/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.02158145509916468,
+    "Actual": 0,
+    "Ms": 0.1691,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-2-1/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.021581455099164613,
+    "Actual": 0,
+    "Ms": 0.1593,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-2-2/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.02158145509916463,
+    "Actual": 0,
+    "Ms": 0.1525,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-2-3/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.021581455099164575,
+    "Actual": 0,
+    "Ms": 0.1573,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-2-4/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.02158145509916468,
+    "Actual": 0,
+    "Ms": 0.1589,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-2-5/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.0215814550991645,
+    "Actual": 0,
+    "Ms": 0.1568,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-2-6/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.02158145509916459,
+    "Actual": 0,
+    "Ms": 0.2063,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-3-0/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1468,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-3-1/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1127,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-3-2/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1029,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-3-3/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.0994,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-3-4/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1707,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-3-5/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1358,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-3-6/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.112,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-4-0/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1334,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-4-1/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1593,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-4-2/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1764,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-4-3/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1365,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-4-4/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1996,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-4-5/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2018,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-4-6/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1895,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-5-0/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1423,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-5-1/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1421,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-5-2/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1515,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-5-3/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1444,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-5-4/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1552,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-5-5/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1413,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-5-6/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1529,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-6-0/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1505,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-6-1/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.154,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-6-2/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1428,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-6-3/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1401,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-6-4/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1501,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-6-5/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1422,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-6-6/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1513,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-7-0/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1482,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-7-1/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1677,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-7-2/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1488,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-7-3/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1611,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-7-4/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1471,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-7-5/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1429,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-7-6/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1202,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-8-0/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1329,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-8-1/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1238,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-8-2/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1189,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-8-3/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1167,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-8-4/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.132,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-8-5/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1209,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-8-6/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1195,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-9-0/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.0977,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-9-1/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1128,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-9-2/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.0939,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-9-3/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.0924,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-9-4/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.096,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-9-5/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.0957,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-9-6/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.093,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-10-0/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.02158145509916522,
+    "Actual": 0,
+    "Ms": 0.1324,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-10-1/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.021581455099165186,
+    "Actual": 0,
+    "Ms": 0.1252,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-10-2/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.021581455099165252,
+    "Actual": 0,
+    "Ms": 0.1219,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-10-3/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.021581455099165207,
+    "Actual": 0,
+    "Ms": 0.1202,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-10-4/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.02158145509916525,
+    "Actual": 0,
+    "Ms": 0.1241,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-10-5/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.021581455099165158,
+    "Actual": 0,
+    "Ms": 0.1302,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-10-6/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.02158145509916524,
+    "Actual": 0,
+    "Ms": 0.1279,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-11-0/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1534,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-11-1/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1352,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-11-2/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1196,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-11-3/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1236,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-11-4/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1238,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-11-5/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1743,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-11-6/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1401,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-12-0/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1103,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-12-1/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1142,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-12-2/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1039,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-12-3/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1012,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-12-4/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1434,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-12-5/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1678,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-12-6/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1579,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0000/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.007709263633421192,
+    "Actual": 0.007712414221405837,
+    "Ms": 129.9475,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0001/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 120.1929,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0002/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 108.3611,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0003/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 102.0674,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0004/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.007709263633421157,
+    "Actual": 0.007712414221405831,
+    "Ms": 119.1028,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0005/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 102.6244,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0006/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 118.3767,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0007/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 106.6098,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0008/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.007709263633421248,
+    "Actual": 0.007712414221405719,
+    "Ms": 110.5703,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0009/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 100.6752,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0010/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 106.8951,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0011/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 113.0873,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0012/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.007709263633421204,
+    "Actual": 0.007712414221405822,
+    "Ms": 107.0866,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0013/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 104.3311,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0014/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 117.7077,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0015/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 102.3309,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0016/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.007709263633421384,
+    "Actual": 0.007712414221406004,
+    "Ms": 131.4892,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0017/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 116.6857,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0018/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 121.0749,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0019/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 115.4001,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0020/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.007709263633421338,
+    "Actual": 0.007712414221405955,
+    "Ms": 121.571,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0021/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 103.9142,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0022/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 103.0193,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0023/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 112.6359,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0024/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.007709263633421339,
+    "Actual": 0.007712414221405745,
+    "Ms": 130.6371,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0025/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 109.468,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0026/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 85.6542,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0027/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.07689260048227646,
+    "Actual": 0,
+    "Ms": 80.9587,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0028/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.0071376207716113225,
+    "Actual": 0.007135902113290809,
+    "Ms": 119.4073,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0029/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.10156926060934247,
+    "Actual": 0,
+    "Ms": 85.3409,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0030/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 82.4996,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0031/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.07689260048227647,
+    "Actual": 0,
+    "Ms": 88.6068,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0032/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.007137620771611303,
+    "Actual": 0.007135902113290799,
+    "Ms": 119.2988,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0033/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.1015692606093425,
+    "Actual": 0,
+    "Ms": 83.1001,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0034/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 92.1354,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0035/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.07689260048227647,
+    "Actual": 0,
+    "Ms": 85.9837,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0036/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.007137620771611381,
+    "Actual": 0.00713590211329084,
+    "Ms": 111.7348,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0037/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.10156926060934249,
+    "Actual": 0,
+    "Ms": 83.8637,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0038/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 86.0462,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0039/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.07689260048227649,
+    "Actual": 0,
+    "Ms": 87.8249,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0040/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.007137620771611365,
+    "Actual": 0.007135902113290736,
+    "Ms": 116.1047,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0041/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.10156926060934253,
+    "Actual": 0,
+    "Ms": 83.3119,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0042/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 93.2416,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0043/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.0768926004822765,
+    "Actual": 0,
+    "Ms": 85.873,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0044/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.007137620771611506,
+    "Actual": 0.00713590211329108,
+    "Ms": 113.333,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0045/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.1015692606093426,
+    "Actual": 0,
+    "Ms": 86.6136,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0046/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 98.6296,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0047/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.07689260048227645,
+    "Actual": 0,
+    "Ms": 103.4596,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0048/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.007137620771611453,
+    "Actual": 0.007135902113290708,
+    "Ms": 147.968,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0049/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.10156926060934242,
+    "Actual": 0,
+    "Ms": 91.6728,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0050/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 99.8359,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0051/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.007137620771611392,
+    "Actual": 0.0071359021132908545,
+    "Ms": 119.7609,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0052/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 80.9815,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0053/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 86.459,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0054/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 82.1894,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0055/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 90.6732,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0056/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 84.6633,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0057/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 85.2673,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0058/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 121.5076,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0059/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 125.9341,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0060/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 114.9821,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0061/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 132.1579,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0062/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 120.0615,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0063/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 127.2137,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0064/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 118.8951,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0065/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 127.218,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0066/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 110.0545,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0067/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 131.2429,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0068/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 128.6637,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0069/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 128.4826,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0070/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 131.8224,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0071/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 128.138,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0072/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 118.2863,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0073/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 126.7022,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0074/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 112.1766,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0075/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 131.9647,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0076/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 131.0236,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0077/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 129.3444,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0078/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 106.0387,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0079/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 115.0888,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0080/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 133.4275,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0081/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 134.6176,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0082/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 134.9387,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0083/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 129.7634,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0084/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 126.3809,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0085/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 123.8785,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0086/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 115.5856,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0087/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 133.3444,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0088/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 130.7668,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0089/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 135.1566,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0090/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 129.2513,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0091/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 120.5936,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0092/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 99.3938,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0093/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 135.4393,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0094/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 118.4869,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0095/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 102.9131,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0096/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 109.8913,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0097/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 130.8012,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0098/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 115.3157,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0099/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 120.0657,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0100/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 107.97,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0101/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 113.3087,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0102/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 110.5304,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0103/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 111.8125,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0104/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 111.703,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0105/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 115.2884,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0106/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 114.4106,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0107/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 101.2652,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0108/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 127.7182,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0109/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 111.1732,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0110/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 119.7081,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0111/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 127.4372,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0112/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 106.0575,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0113/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 108.2559,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0114/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 119.3144,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0115/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 121.8022,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0116/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 119.1135,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0117/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 112.9639,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0118/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 113.1096,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0119/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 125.6508,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0120/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 124.003,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0121/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 109.5746,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0122/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 115.8436,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0123/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 114.0104,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0124/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 125.2813,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0125/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 133.3875,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0126/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 126.2297,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0127/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 127.1035,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0128/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 118.4317,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0129/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 131.8556,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0130/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 117.5154,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0131/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 112.3007,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0132/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 98.8299,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0133/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 124.5582,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0134/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 110.8467,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0135/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 122.2513,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0136/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 113.0641,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0137/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 117.9945,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0138/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 106.5287,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0139/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 131.5497,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0140/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 125.2847,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0141/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 134.9824,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0142/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 105.0293,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0143/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 116.4305,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0144/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 112.6054,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0145/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 129.33,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0146/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 120.3543,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0147/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 111.5056,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0148/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 125.6142,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0149/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 120.3094,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0150/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 125.4553,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0151/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 135.9287,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0152/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 119.1626,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0153/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 125.9093,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0154/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 126.9438,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0155/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 133.6941,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0156/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 128.0107,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0157/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 130.491,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0158/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 110.7265,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0159/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 137.9433,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0160/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 129.465,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0161/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 110.2166,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0162/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 103.2385,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0163/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 110.3171,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0164/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 124.9685,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0165/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 130.4291,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0166/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 116.9722,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0167/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 129.3441,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0168/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 135.3007,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0169/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 117.1196,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0170/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 109.0271,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0171/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 127.2357,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0172/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 122.9727,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0173/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 129.5268,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0174/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 125.1321,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0175/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 121.2554,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0176/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 123.1807,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0177/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 131.8578,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0178/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 116.5641,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0179/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 119.0823,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0180/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 108.8144,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0181/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 122.5411,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0182/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 130.3385,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0183/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 130.7399,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0184/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 103.648,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0185/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 110.399,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0186/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 116.1266,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0187/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 116.7074,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0188/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 92.9469,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0189/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 121.2539,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0190/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 121.2115,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0191/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 130.149,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0192/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 124.6235,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0193/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 116.2368,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0194/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 107.253,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0195/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 106.536,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0196/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 109.1346,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0197/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 124.0682,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0198/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 119.7526,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0199/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 120.7028,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0200/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 119.9804,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0201/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 131.177,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0202/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 132.2563,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0203/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 118.9017,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0204/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 117.2566,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0205/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 123.8959,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0206/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 116.1553,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0207/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 116.9051,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0208/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 110.9586,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0209/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 117.1833,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0210/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 116.7663,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0211/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 115.3451,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0212/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 100.9178,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0213/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 104.3009,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0214/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 106.8151,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0215/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 122.4606,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0216/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 130.5062,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0217/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 111.3864,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0218/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 119.3777,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0219/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 137.6227,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0220/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 119.7745,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0221/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 124.7526,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0222/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 131.9917,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0223/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 128.2009,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0224/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 128.0008,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0225/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 126.5945,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0226/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 126.4898,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0227/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 139.3787,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0228/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 136.1686,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0229/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 132.354,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0230/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 132.3837,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0231/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 132.1302,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0232/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 135.1914,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0233/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 127.2948,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0234/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 136.6155,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0235/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 123.0969,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0236/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 131.7404,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0237/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 140.4436,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0238/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 119.1309,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0239/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 129.4786,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0240/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 121.2031,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0241/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 134.2107,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0242/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 126.5243,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0243/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 131.4247,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0244/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 123.786,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0245/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 116.5602,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0246/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 123.4502,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0247/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 122.6027,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0248/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 106.5075,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0249/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 100.3849,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0250/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 125.9286,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0251/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 98.2136,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0252/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 113.2993,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0253/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 113.3256,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0254/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 127.5402,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0255/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 111.5212,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0256/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 142.894,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0257/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 135.394,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0258/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 143.8589,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0259/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 139.395,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0260/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 144.9256,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0261/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 151.9727,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0262/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 140.6556,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0263/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.00882331369227818,
+    "Actual": 0.008824316211865767,
+    "Ms": 212.7348,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0264/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 136.4596,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0265/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 128.985,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0266/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 104.6549,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0267/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.008823313692278194,
+    "Actual": 0.0088243162118656,
+    "Ms": 177.3636,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0268/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 137.8206,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0269/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 135.9437,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0270/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 128.6748,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0271/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.008823313692278149,
+    "Actual": 0.008824316211865696,
+    "Ms": 198.1803,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0272/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 146.3192,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0273/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 135.4163,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0274/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 128.4523,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0275/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.008823313692278168,
+    "Actual": 0.008824316211865704,
+    "Ms": 166.4395,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0276/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 134.6132,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0277/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 129.8904,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0278/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 132.9398,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0279/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.008823313692278135,
+    "Actual": 0.00882431621186573,
+    "Ms": 182.809,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0280/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 126.6637,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0281/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 129.7473,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0282/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 128.0979,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0283/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.008823313692278107,
+    "Actual": 0.00882431621186579,
+    "Ms": 180.7785,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0284/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 133.8422,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0285/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 138.0865,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0286/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.007709263633421192,
+    "Actual": 0.007712414221405799,
+    "Ms": 183.0531,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0287/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.07689260048227646,
+    "Actual": 0,
+    "Ms": 130.0344,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0288/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.007137620771611355,
+    "Actual": 0.0071359021132907565,
+    "Ms": 169.9935,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0289/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.00854405537832013,
+    "Actual": 0.00854322603978705,
+    "Ms": 179.5747,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0290/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.007709263633421184,
+    "Actual": 0.007712414221405851,
+    "Ms": 175.8426,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0291/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.07689260048227649,
+    "Actual": 0,
+    "Ms": 114.0944,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0292/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.007137620771611345,
+    "Actual": 0.0071359021132906654,
+    "Ms": 180.608,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0293/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.008544055378320125,
+    "Actual": 0.008543226039787008,
+    "Ms": 179.7833,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0294/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.007709263633421225,
+    "Actual": 0.007712414221405694,
+    "Ms": 144.7436,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0295/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.07689260048227647,
+    "Actual": 0,
+    "Ms": 132.7743,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0296/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.0071376207716113875,
+    "Actual": 0.007135902113290817,
+    "Ms": 162.7181,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0297/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.00854405537832016,
+    "Actual": 0.008543226039787164,
+    "Ms": 157.9282,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0298/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.0077092636334212,
+    "Actual": 0.007712414221405605,
+    "Ms": 153.5607,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0299/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.07689260048227649,
+    "Actual": 0,
+    "Ms": 106.9556,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0300/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.00713762077161136,
+    "Actual": 0.007135902113290924,
+    "Ms": 163.967,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0301/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.008544055378320039,
+    "Actual": 0.008543226039786966,
+    "Ms": 164.2279,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0302/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.007709263633421297,
+    "Actual": 0.007712414221406049,
+    "Ms": 153.7996,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0303/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.0768926004822765,
+    "Actual": 0,
+    "Ms": 124.6579,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0304/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.007137620771611484,
+    "Actual": 0.007135902113290795,
+    "Ms": 172.5217,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0305/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.008544055378320018,
+    "Actual": 0.008543226039786739,
+    "Ms": 142.4545,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0306/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.007709263633421251,
+    "Actual": 0.007712414221405853,
+    "Ms": 164.4514,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0307/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.07689260048227643,
+    "Actual": 0,
+    "Ms": 109.0042,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0308/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.00713762077161146,
+    "Actual": 0.0071359021132906845,
+    "Ms": 163.6211,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0309/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.008544055378320063,
+    "Actual": 0.008543226039787305,
+    "Ms": 178.8168,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0310/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.007709263633421308,
+    "Actual": 0.007712414221405748,
+    "Ms": 171.4994,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0311/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.007137620771611438,
+    "Actual": 0.007135902113290651,
+    "Ms": 168.8634,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0312/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 154.5673,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0313/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 140.543,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0314/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 152.6384,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0315/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 141.7691,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0316/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 157.1921,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0317/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 163.2871,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0318/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 137.475,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0319/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 157.3133,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0320/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 147.2458,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0321/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 152.9488,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0322/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 163.5257,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0323/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 165.7808,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0324/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 148.5804,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0325/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 162.5978,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0326/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 161.1768,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0327/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 148.357,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0328/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 147.1343,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0329/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 160.7978,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0330/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 155.0343,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0331/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 144.1376,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0332/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 151.1854,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0333/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 157.765,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0334/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 126.8691,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0335/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 146.0451,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0336/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 127.2369,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0337/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 165.2224,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0338/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.009106012139951594,
+    "Actual": 0.009105870717564876,
+    "Ms": 156.3229,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0339/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 138.5246,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0340/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.009106012139951564,
+    "Actual": 0.009105870717564815,
+    "Ms": 162.1329,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0341/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 116.0102,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0342/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.009106012139951651,
+    "Actual": 0.009105870717564926,
+    "Ms": 155.4338,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0343/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 159.6187,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0344/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.009106012139951594,
+    "Actual": 0.009105870717564845,
+    "Ms": 163.059,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0345/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 128.8386,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0346/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.009106012139951755,
+    "Actual": 0.009105870717564985,
+    "Ms": 110.7518,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0347/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 101.3628,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0348/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.009106012139951805,
+    "Actual": 0.009105870717565002,
+    "Ms": 109.5961,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0349/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 103.3653,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0350/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.009106012139951736,
+    "Actual": 0.00910587071756503,
+    "Ms": 111.1919,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0351/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 5.0688794374755774E-05,
+    "Actual": 0,
+    "Ms": 81.4121,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0352/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.07937753336722787,
+    "Actual": 0,
+    "Ms": 78.1425,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0353/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 5.068879437477353E-05,
+    "Actual": 0,
+    "Ms": 82.9601,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0354/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.07937753336722787,
+    "Actual": 0,
+    "Ms": 80.659,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0355/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 5.0688794374767835E-05,
+    "Actual": 0,
+    "Ms": 77.8574,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0356/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.07937753336722787,
+    "Actual": 0,
+    "Ms": 81.8993,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0357/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 5.068879437476714E-05,
+    "Actual": 0,
+    "Ms": 85.2998,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0358/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.0793775333672279,
+    "Actual": 0,
+    "Ms": 75.8551,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0359/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 5.068879437477516E-05,
+    "Actual": 0,
+    "Ms": 83.7513,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0360/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.07937753336722789,
+    "Actual": 0,
+    "Ms": 86.458,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0361/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 5.068879437476399E-05,
+    "Actual": 0,
+    "Ms": 79.8671,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0362/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.07937753336722783,
+    "Actual": 0,
+    "Ms": 79.8301,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0363/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 5.0688794374766724E-05,
+    "Actual": 0,
+    "Ms": 84.9497,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0364/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 78.4619,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0365/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 78.0184,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0366/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 76.9179,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0367/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 84.7461,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0368/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 78.6391,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0369/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 80.4865,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0370/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 90.2118,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0371/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 83.8308,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0372/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 78.4898,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0373/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 87.8224,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0374/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 84.425,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0375/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 79.7925,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0376/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 81.9513,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0377/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 84.9619,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0378/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 80.5702,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0379/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 90.3319,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0380/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 76.5398,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0381/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 89.1397,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0382/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 84.6719,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0383/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 80.3095,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0384/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 74.8624,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0385/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 79.9343,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0386/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 84.9072,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0387/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 87.5449,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0388/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 80.1386,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0389/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 79.3128,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0390/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 76.9008,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0391/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 84.8983,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0392/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 82.8621,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0393/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 87.1963,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0394/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 75.2236,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0395/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 84.8181,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0396/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 77.5122,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0397/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 78.1797,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0398/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 78.1565,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0399/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 78.9081,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0400/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 81.021,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0401/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 80.332,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0402/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 89.9727,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0403/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 91.6199,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0404/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 84.7738,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0405/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 78.2841,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0406/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 83.4372,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0407/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 76.9998,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0408/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 83.8117,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0409/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 84.2525,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0410/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 88.6338,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0411/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 86.8797,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0412/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 79.9061,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0413/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 79.1224,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0414/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 79.15,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0415/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 87.894,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0416/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 79.558,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0417/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 79.2843,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0418/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 78.0907,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0419/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 82.833,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0420/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 85.5365,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0421/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 97.032,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0422/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 82.5784,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0423/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 94.7961,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0424/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 92.6116,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0425/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 93.2918,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0426/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 87.2535,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0427/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 90.7151,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0428/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 79.4535,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0429/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 78.8192,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0430/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 85.937,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0431/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 80.6968,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0432/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 109.5299,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0433/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 78.0555,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0434/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 105.9351,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0435/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 88.0489,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0436/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 77.0399,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0437/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 79.571,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0438/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 78.8589,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0439/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 78.619,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0440/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 84.6505,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0441/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 80.5261,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0442/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 5.0688794374811644E-05,
+    "Actual": 0,
+    "Ms": 77.327,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0443/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 83.7549,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0444/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 5.0688794374811115E-05,
+    "Actual": 0,
+    "Ms": 81.7406,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0445/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 83.4685,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0446/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 5.0688794374803716E-05,
+    "Actual": 0,
+    "Ms": 79.6775,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0447/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 77.2018,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0448/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 5.068879437482913E-05,
+    "Actual": 0,
+    "Ms": 84.4246,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0449/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 76.2707,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0450/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 5.068879437482357E-05,
+    "Actual": 0,
+    "Ms": 82.0129,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0451/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 78.6609,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0452/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 5.068879437482045E-05,
+    "Actual": 0,
+    "Ms": 80.9561,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0453/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 81.0997,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0454/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 5.0688794374814036E-05,
+    "Actual": 0,
+    "Ms": 81.2236,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0455/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.009106012139951516,
+    "Actual": 0.0091058707175647,
+    "Ms": 110.7768,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0456/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.07937753336722757,
+    "Actual": 0,
+    "Ms": 78.4775,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0457/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.009106012139951469,
+    "Actual": 0.009105870717564623,
+    "Ms": 111.4677,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0458/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.07937753336722758,
+    "Actual": 0,
+    "Ms": 89.2504,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0459/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.009106012139951554,
+    "Actual": 0.00910587071756469,
+    "Ms": 117.2207,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0460/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.07937753336722757,
+    "Actual": 0,
+    "Ms": 94.1175,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0461/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.009106012139951615,
+    "Actual": 0.009105870717564933,
+    "Ms": 123.12,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0462/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.07937753336722761,
+    "Actual": 0,
+    "Ms": 79.9716,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0463/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.009106012139951693,
+    "Actual": 0.009105870717564876,
+    "Ms": 115.3889,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0464/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.0793775333672276,
+    "Actual": 0,
+    "Ms": 93.4063,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0465/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.009106012139951693,
+    "Actual": 0.009105870717564789,
+    "Ms": 109.9532,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0466/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.07937753336722754,
+    "Actual": 0,
+    "Ms": 85.9802,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0467/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.009106012139951672,
+    "Actual": 0.009105870717565382,
+    "Ms": 120.5896,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0468/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 102.3104,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0469/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 106.9224,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0470/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 105.4047,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0471/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 114.7422,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0472/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 105.301,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0473/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 105.5011,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0474/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 107.045,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0475/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 98.7951,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0476/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 108.9186,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0477/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 115.1957,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0478/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 110.2107,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0479/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 111.2166,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0480/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 123.6774,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0481/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 145.5702,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0482/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 155.6137,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0483/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 163.6499,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0484/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 162.841,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0485/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 169.9935,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0486/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 156.5734,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/glass-Brep-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2631,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "curved-facade/Plan cut/glass-mesh-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 1819.2304,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/curved-mullion-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.002520531228541636,
+    "Actual": 0,
+    "Ms": 469.4571,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "curved-facade/Plan cut/twisting-fin-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.8013,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "curved-facade/Plan cut/curved-transom-0-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 509.0549,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/curved-transom-0-3",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 438.3855,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/glass-Brep-1",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1828,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "curved-facade/Plan cut/glass-mesh-1",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 1368.525,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/curved-mullion-1",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.0025220726736210858,
+    "Actual": 0,
+    "Ms": 401.8708,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "curved-facade/Plan cut/twisting-fin-1",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1288,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "curved-facade/Plan cut/curved-transom-1-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 434.2944,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/curved-transom-1-3",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 437.9743,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/glass-Brep-2",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2906,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "curved-facade/Plan cut/glass-mesh-2",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 1380.0355,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/curved-mullion-2",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.0025216663319734293,
+    "Actual": 0,
+    "Ms": 394.7446,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "curved-facade/Plan cut/twisting-fin-2",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2186,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "curved-facade/Plan cut/curved-transom-2-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 427.1267,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/curved-transom-2-3",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 441.3602,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/glass-Brep-3",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2235,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "curved-facade/Plan cut/glass-mesh-3",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 1474.3388,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/curved-mullion-3",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.002521373782373093,
+    "Actual": 0,
+    "Ms": 452.0639,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "curved-facade/Plan cut/twisting-fin-3",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2152,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "curved-facade/Plan cut/curved-transom-3-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 444.112,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/curved-transom-3-3",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 447.762,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/glass-Brep-4",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2344,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "curved-facade/Plan cut/glass-mesh-4",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 1413.5139,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/curved-mullion-4",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.0025244976784858314,
+    "Actual": 0,
+    "Ms": 465.4744,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "curved-facade/Plan cut/twisting-fin-4",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1636,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "curved-facade/Plan cut/curved-transom-4-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 450.9344,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/curved-transom-4-3",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 433.792,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/curved-louvre-1",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 7.9876,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/curved-louvre-2",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 6.8147,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/perforated-cassette-9-circular-holes",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 56.3199,
+    "Reasons": []
+  },
+  {
+    "Id": "tangent-continuity/generated-plan/G1-filleted-box",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 3.946368401191749,
+    "Actual": 0,
+    "Ms": 779.667,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "tangent-continuity/generated-plan/G1-plane-polynomial-blend",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 1.917,
+    "Reasons": []
+  },
+  {
+    "Id": "tangent-continuity/generated-plan/G2-plane-polynomial-blend",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 2.0317,
+    "Reasons": []
+  },
+  {
+    "Id": "tangent-continuity/generated-plan/torus-seam-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 3.7706220778163795,
+    "Actual": 0,
+    "Ms": 0.2362,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "tangent-continuity/generated-plan/sphere-seam-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 2.5446765781483958,
+    "Actual": 0,
+    "Ms": 0.1834,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "tangent-continuity/generated-plan/torus-seam-1",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.5655258973697982,
+    "Actual": 0,
+    "Ms": 0.2041,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "tangent-continuity/generated-plan/sphere-seam-1",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 2.5446833137780613,
+    "Actual": 0,
+    "Ms": 0.1098,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "tangent-continuity/generated-plan/exact-edge-on-sheet",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.9804,
+    "Reasons": []
+  },
+  {
+    "Id": "tangent-continuity/generated-side/G1-filleted-box",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 777.7269,
+    "Reasons": []
+  },
+  {
+    "Id": "tangent-continuity/generated-side/G1-plane-polynomial-blend",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 1.9055,
+    "Reasons": []
+  },
+  {
+    "Id": "tangent-continuity/generated-side/G2-plane-polynomial-blend",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 1.9258,
+    "Reasons": []
+  },
+  {
+    "Id": "tangent-continuity/generated-side/torus-seam-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.565430366736444,
+    "Actual": 0,
+    "Ms": 0.2186,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "tangent-continuity/generated-side/sphere-seam-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 2.5446765781483944,
+    "Actual": 0,
+    "Ms": 0.1868,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "tangent-continuity/generated-side/torus-seam-1",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 3.7706220778163764,
+    "Actual": 0,
+    "Ms": 0.2048,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "tangent-continuity/generated-side/sphere-seam-1",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 2.544676578148393,
+    "Actual": 0,
+    "Ms": 0.1329,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "tangent-continuity/generated-side/exact-edge-on-sheet",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.0764,
+    "Reasons": []
+  },
+  {
+    "Id": "subd-vs-nurbs/Plan cut/canopy-SubD",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 96.2058,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "subd-vs-nurbs/Plan cut/canopy-NURBS",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 98.619,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "subd-vs-nurbs/Plan cut/canopy-mesh",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 9786.4247,
+    "Reasons": []
+  },
+  {
+    "Id": "generated/CHS-arc-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.49480084218233633,
+    "Actual": 0,
+    "Ms": 81.0606,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "generated/CHS-arc-30",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.5721981647040638,
+    "Actual": 0,
+    "Ms": 83.032,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "generated/CHS-arc-60",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 1.0032539126910427,
+    "Actual": 0,
+    "Ms": 74.9757,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "generated/RHS-spline",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.09882804180211929,
+    "Actual": 0,
+    "Ms": 18.5912,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "generated/twisted-RHS",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.09,
+    "Actual": 0,
+    "Ms": 17.5377,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "generated/I-beam-arc-fillets",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.43862654824574365,
+    "Actual": 0,
+    "Ms": 415.7472,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "generated/pipe-contact-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 31.9964,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "generated/pipe-contact--0.5",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 25.2557,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "generated/pipe-contact-0.5",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 30.3577,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "generated/pipe-contact--2",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.1599919997999854,
+    "Actual": 0,
+    "Ms": 31.6508,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "generated/pipe-contact-2",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 43.071,
+    "Reasons": []
+  },
+  {
+    "Id": "generated/multi-lump-straddling-no-crossing",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 5.7372,
+    "Reasons": []
+  },
+  {
+    "Id": "generated/multi-lump-one-crossing",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.7853981633974483,
+    "Actual": 0,
+    "Ms": 8.7925,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "generated/node-overlap-a",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.7853981633974483,
+    "Actual": 0,
+    "Ms": 1.0494,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "generated/node-overlap-b",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.7853981633974483,
+    "Actual": 0,
+    "Ms": 0.9969,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "generated/closed-SubD-canopy",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 14.666668489072777,
+    "Actual": 0,
+    "Ms": 643.4079,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "generated/open-shell",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 8.6208,
+    "Reasons": []
+  }
+]

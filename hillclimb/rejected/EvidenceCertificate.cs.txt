@@ -1,0 +1,240 @@
+using M2DPlus.Core.Sections;
+using Rhino.Geometry;
+using Rhino.Geometry.Intersect;
+
+namespace M2DPlus.Rhino.Sections;
+
+/// <summary>Numerical evidence for one connected material lump. Never a bounds-only fill decision.</summary>
+internal static class EvidenceCertificate
+{
+    public static List<Brep> Clip(string id, Brep source, SectionRequest request, List<SectionDiagnostic> diagnostics)
+    {
+        if (!source.IsValid || !source.IsSolid || !source.IsManifold || source.SolidOrientation != BrepSolidOrientation.Outward)
+            throw new SectionFailure("Evidence: valid closed manifold outward material required.");
+        var loops = SectionGeometry.Intersections(source, request.Plane, request.Tolerance);
+        try
+        {
+            if (loops.Length == 0) throw new SectionFailure("Evidence: no transverse section loops.");
+            CheckTransverse(source, loops, request);
+            var regions = SectionGeometry.PlanarRegions(loops, request);
+            try
+            {
+                foreach (var region in regions) CheckInterior(source, region, request);
+                var area = regions.Sum(SectionGeometry.Area);
+                CheckChordArea(source, request, area);
+                var originalVolume = Volume(source);
+                var errors = new List<string>();
+                // All routes are checked by exactly the same certificate. No route may relax a gate.
+                foreach (var route in new[] { "Trim+CapPlanarHoles", "BooleanSplit-box", "Split+JoinBreps+cap" })
+                {
+                    var negative = new List<Brep>(); var positive = new List<Brep>();
+                    try
+                    {
+                        var opposite = request.Plane; opposite.Flip();
+                        negative = Prepare(source, request.Plane, request.Tolerance, regions, route);
+                        positive = Prepare(source, opposite, request.Tolerance, regions, route);
+                        ValidateHalf(negative, source, request.Plane, request.Tolerance, area);
+                        ValidateHalf(positive, source, opposite, request.Tolerance, area);
+                        var sum = negative.Sum(Volume) + positive.Sum(Volume);
+                        if (Math.Abs(sum - originalVolume) > Math.Max(originalVolume * 1e-6, Math.Pow(request.Tolerance, 3) * 64))
+                            throw new SectionFailure("paired volume conservation failed");
+                        diagnostics.Add(new(id, SectionStatus.Crossing,
+                            $"Evidence certificate: {route}; paired volume relative error={Math.Abs(sum - originalVolume) / originalVolume:G4}; cap area={area:G10}; interior/both-side witnesses; transverse loops."));
+                        var accepted = negative; negative = new(); return accepted;
+                    }
+                    catch (Exception ex) when (ex is SectionFailure or ArgumentException or InvalidOperationException)
+                    { errors.Add(route + ": " + ex.Message); }
+                    finally { foreach (var b in negative) b.Dispose(); foreach (var b in positive) b.Dispose(); }
+                }
+                throw new SectionFailure("Evidence routes exhausted: " + string.Join("; ", errors));
+            }
+            finally { foreach (var region in regions) region.Dispose(); }
+        }
+        finally { foreach (var loop in loops) loop.Dispose(); }
+    }
+
+    private static double Volume(Brep b)
+    {
+        using var mass = VolumeMassProperties.Compute(b, true, false, false, false, 1e-9, 1e-12);
+        if (mass is null || !double.IsFinite(mass.Volume) || mass.Volume <= 0) throw new SectionFailure("Evidence: nonpositive or unavailable volume.");
+        return mass.Volume;
+    }
+
+    private static void CheckInterior(Brep source, Brep region, SectionRequest request)
+    {
+        // A concave profile/annulus centroid may be outside material. Select a verified
+        // triangle interior with the greatest boundary clearance instead.
+        var meshes = Mesh.CreateFromBrep(region, MeshingParameters.FastRenderMesh);
+        var boundaries = region.Loops.Select(l => l.To3dCurve()).ToArray();
+        var best = Point3d.Unset; var clearance = 0d;
+        try
+        {
+            foreach (var mesh in meshes)
+            foreach (var f in mesh.Faces)
+            {
+                var a = (Point3d)mesh.Vertices[f.A]; var b = (Point3d)mesh.Vertices[f.B]; var c = (Point3d)mesh.Vertices[f.C];
+                var p = new Point3d((a.X + b.X + c.X) / 3, (a.Y + b.Y + c.Y) / 3, (a.Z + b.Z + c.Z) / 3);
+                if (!SectionGeometry.Contains(region, p, request.Tolerance)) continue;
+                var distance = boundaries.Min(c => c.ClosestPoint(p, out var t) ? c.PointAt(t).DistanceTo(p) : 0);
+                if (distance > clearance) { clearance = distance; best = p; }
+            }
+        }
+        finally { foreach (var m in meshes) m.Dispose(); foreach (var c in boundaries) c.Dispose(); }
+        if (!best.IsValid || clearance <= request.Tolerance || !source.IsPointInside(best, request.Tolerance, true))
+            throw new SectionFailure("Evidence: no robust planar-region interior in material.");
+        // These are actual material witnesses, not surface/control point signs.
+        var reach = source.GetBoundingBox(true).Diagonal.Length + request.Tolerance * 4;
+        using var normalLine = new LineCurve(best - request.Plane.Normal * reach, best + request.Plane.Normal * reach);
+        var success = Intersection.CurveBrep(normalLine, source, request.Tolerance, out var overlaps, out var points);
+        foreach (var curve in overlaps) curve.Dispose();
+        if (!success) throw new SectionFailure("Evidence: normal material interval query failed.");
+        var distances = points.Select(p => Vector3d.Multiply(p - best, request.Plane.Normal)).Order().ToArray();
+        // best is strictly inside. Its nearest boundary roots delimit the connected
+        // material interval, independent of the section/trim/cap computation.
+        var below = distances.Where(d => d < 0).DefaultIfEmpty(0).Max();
+        var above = distances.Where(d => d > 0).DefaultIfEmpty(0).Min();
+        if (below >= -request.Tolerance || above <= request.Tolerance || overlaps.Length != 0)
+            throw new SectionFailure("Evidence: material not established strictly on both sides beyond tolerance.");
+    }
+
+    private static void CheckChordArea(Brep source, SectionRequest request, double regionArea)
+    {
+        var bounds = source.GetBoundingBox(Transform.PlaneToPlane(request.Plane, Plane.WorldXY));
+        // Query fitting accuracy is a numerical integration budget, not a replacement
+        // modeling tolerance: the cut plane and contact band remain unchanged.
+        var roundoff = 64 * 2.2204460492503131e-16 * Math.Max(1, source.GetBoundingBox(true).Max.MaximumCoordinate);
+        var queryTolerance = Math.Max(roundoff, Math.Min(request.Tolerance * .001, regionArea * 1e-6 / Math.Max(bounds.Diagonal.Length, request.Tolerance)));
+        double Integrate(int count)
+        {
+            var half = bounds.Diagonal.X / 2; double sum = 0;
+            for (var i = 0; i < count; i++)
+            {
+                var t = -Math.PI / 2 + Math.PI * (i + .5) / count;
+                var x = bounds.Center.X + half * Math.Sin(t);
+                using var line = new LineCurve(request.Plane.PointAt(x, bounds.Min.Y - 1), request.Plane.PointAt(x, bounds.Max.Y + 1));
+                var success = Intersection.CurveBrep(line, source, queryTolerance, out var overlaps, out var points);
+                foreach (var curve in overlaps) curve.Dispose();
+                if (!success) throw new SectionFailure("Evidence: independent area chord query failed.");
+                if (overlaps.Length != 0) throw new SectionFailure("Evidence: coincident area chord is ambiguous.");
+                var ys = points.Select(p => { request.Plane.ClosestParameter(p, out _, out var y); return y; }).Order().ToArray();
+                double length = 0;
+                for (var j = 0; j + 1 < ys.Length; j++)
+                    if (ys[j + 1] - ys[j] > queryTolerance &&
+                        source.IsPointInside(request.Plane.PointAt(x, (ys[j] + ys[j + 1]) / 2), queryTolerance, true))
+                        length += ys[j + 1] - ys[j];
+                sum += length * half * Math.Cos(t) * Math.PI / count;
+            }
+            return sum;
+        }
+        var previous = Integrate(128); var current = Integrate(256);
+        var error = Math.Abs(current - previous);
+        var allowance = Math.Max(16 * request.Tolerance * request.Tolerance, regionArea * .001);
+        for (var n = 512; error > allowance * .25 && n <= 2048; n *= 2)
+        { previous = current; current = Integrate(n); error = Math.Abs(current - previous); }
+        if (error > allowance * .25 || Math.Abs(current - regionArea) > allowance)
+            throw new SectionFailure("Evidence: independent material chord area not established.");
+    }
+
+    private static void CheckTransverse(Brep source, IReadOnlyList<Curve> loops, SectionRequest request)
+    {
+        foreach (var face in source.Faces)
+        {
+            if (face.TryGetPlane(out var p, request.Tolerance) && Math.Abs(request.Plane.DistanceTo(p.Origin)) <= request.Tolerance &&
+                Vector3d.CrossProduct(p.Normal, request.Plane.Normal).Length <= Math.Sin(request.AngleTolerance))
+                throw new SectionFailure("Evidence: planar contact in tolerance band.");
+            foreach (var loop in loops)
+            {
+                // Include NURBS span boundaries and interiors, so seams are not inferred from vertices.
+                var spans = loop.SpanCount;
+                for (var i = 0; i < spans; i++)
+                {
+                    var domain = loop.SpanDomain(i);
+                    foreach (var t in new[] { domain.Min, domain.Mid, domain.Max })
+                    {
+                        var point = loop.PointAt(t);
+                        if (!face.ClosestPoint(point, out var u, out var v) || face.PointAt(u, v).DistanceTo(point) > request.Tolerance ||
+                            face.IsPointOnFace(u, v) == PointFaceRelation.Exterior) continue;
+                        var normal = face.NormalAt(u, v);
+                        if (!normal.Unitize() || Vector3d.CrossProduct(normal, request.Plane.Normal).Length <= Math.Sin(request.AngleTolerance))
+                            throw new SectionFailure("Evidence: tangent section within tolerance band.");
+                    }
+                }
+            }
+        }
+    }
+
+    private static List<Brep> Prepare(Brep source, Plane plane, double tolerance, IReadOnlyList<Brep> caps, string route)
+    {
+        if (route == "BooleanSplit-box")
+        {
+            var bounds = source.GetBoundingBox(Transform.PlaneToPlane(plane, Plane.WorldXY));
+            var margin = Math.Max(bounds.Diagonal.Length, tolerance * 100);
+            using var box = new Box(plane, new(bounds.Min.X - margin, bounds.Max.X + margin),
+                new(bounds.Min.Y - margin, bounds.Max.Y + margin), new(bounds.Min.Z - margin, 0)).ToBrep();
+            var split = Brep.CreateBooleanSplit(source, box, tolerance) ?? Array.Empty<Brep>();
+            var result = new List<Brep>();
+            foreach (var b in split)
+            {
+                // BooleanSplit returns both halves; never infer side from the volume centroid.
+                var bb = b.GetBoundingBox(Transform.PlaneToPlane(plane, Plane.WorldXY));
+                if (bb.Max.Z <= tolerance && bb.Min.Z < -tolerance) result.Add(b); else b.Dispose();
+            }
+            return result;
+        }
+        Brep[] pieces;
+        if (route == "Trim+CapPlanarHoles") pieces = source.Trim(plane, tolerance) ?? Array.Empty<Brep>();
+        else
+        {
+            var bounds = source.GetBoundingBox(Transform.PlaneToPlane(plane, Plane.WorldXY));
+            var margin = Math.Max(bounds.Diagonal.Length, tolerance * 100);
+            using var cutter = new PlaneSurface(plane, new(bounds.Min.X - margin, bounds.Max.X + margin), new(bounds.Min.Y - margin, bounds.Max.Y + margin));
+            using var cutterBrep = cutter.ToBrep();
+            var split = source.Split(cutterBrep, tolerance) ?? Array.Empty<Brep>();
+            pieces = split.Where(b => b.GetBoundingBox(Transform.PlaneToPlane(plane, Plane.WorldXY)).Max.Z <= tolerance).ToArray();
+            foreach (var b in split.Except(pieces)) b.Dispose();
+        }
+        try
+        {
+            if (route == "Split+JoinBreps+cap")
+                return (Brep.JoinBreps(pieces.Concat(caps), tolerance) ?? Array.Empty<Brep>()).ToList();
+            var result = new List<Brep>();
+            try
+            {
+                foreach (var piece in pieces)
+                {
+                    var capped = piece.CapPlanarHoles(tolerance);
+                    if (capped is null) throw new SectionFailure("CapPlanarHoles failed");
+                    result.Add(capped);
+                }
+                return result;
+            }
+            catch { foreach (var b in result) b.Dispose(); throw; }
+        }
+        finally { foreach (var b in pieces) b.Dispose(); }
+    }
+
+    private static void ValidateHalf(IReadOnlyList<Brep> halves, Brep source, Plane plane, double tolerance, double expectedCapArea)
+    {
+        if (halves.Count == 0) throw new SectionFailure("missing half");
+        var capArea = 0d;
+        foreach (var b in halves)
+        {
+            if (b.IsSolid && b.SolidOrientation == BrepSolidOrientation.Inward) b.Flip();
+            if (!b.IsValid || !b.IsSolid || !b.IsManifold || b.SolidOrientation != BrepSolidOrientation.Outward)
+                throw new SectionFailure("invalid/open half");
+            var bounds = b.GetBoundingBox(Transform.PlaneToPlane(plane, Plane.WorldXY));
+            if (bounds.Max.Z > tolerance || bounds.Min.Z >= -tolerance || Volume(b) <= tolerance * tolerance * tolerance)
+                throw new SectionFailure("wrong-side or degenerate half");
+            foreach (var face in b.Faces)
+                if (face.TryGetPlane(out var capPlane, tolerance) && Math.Abs(plane.DistanceTo(capPlane.Origin)) <= tolerance &&
+                    Math.Abs(Vector3d.Multiply(capPlane.Normal, plane.Normal)) > 1 - 1e-10)
+                {
+                    using var cap = face.DuplicateFace(false);
+                    capArea += SectionGeometry.Area(cap);
+                }
+        }
+        if (Math.Abs(capArea - expectedCapArea) > SectionGeometry.AreaError(expectedCapArea, tolerance))
+            throw new SectionFailure($"cap area mismatch ({capArea:G8}/{expectedCapArea:G8})");
+        _ = source; // The caller validates paired conservation against the original owned lump.
+    }
+}

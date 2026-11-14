@@ -59,11 +59,11 @@ public sealed class RhinoHost : IDisposable
         // are absent, so keep its initial document alive for the full test host lifetime.
         global::Grasshopper.Kernel.GH_Document.EnableSolutions = true;
     }
-    public void Run(Action action)
+    public void Run(Action action, TimeSpan? timeout = null)
     {
         Exception? failure = null; using var complete = new ManualResetEventSlim();
         _queue.Add(() => { try { action(); } catch (Exception ex) { failure = ex; } finally { complete.Set(); } });
-        Assert.True(complete.Wait(TimeSpan.FromSeconds(90)), "Rhino test timed out");
+        Assert.True(complete.Wait(timeout ?? TimeSpan.FromSeconds(90)), "Rhino test timed out");
         if (failure is not null) ExceptionDispatchInfo.Capture(failure).Throw();
     }
     public void Dispose() { _queue.CompleteAdding(); _thread?.Join(); _queue.Dispose(); }

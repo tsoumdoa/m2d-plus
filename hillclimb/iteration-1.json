@@ -1,0 +1,7434 @@
+[
+  {
+    "Id": "curved-steel/Plan cut/CHS-arc",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 593.655,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-steel/Plan cut/CHS-3d-chord",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.05241229669120906,
+    "Actual": 0,
+    "Ms": 1036.9656,
+    "Reasons": [
+      "Evidence routes exhausted: Trim\u002BCapPlanarHoles: cap area mismatch (0.052400801/0.052403044); BooleanSplit-box: cap area mismatch (0.052403928/0.052403044); Split\u002BJoinBreps\u002Bcap: paired volume conservation failed",
+      "Crossing trim/cap could not be certified."
+    ]
+  },
+  {
+    "Id": "curved-steel/Plan cut/RHS-arc",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 13.6078,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-steel/Plan cut/RHS-3d-chord",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.2846649690333998,
+    "Actual": 0.28468856041216273,
+    "Ms": 262.8704,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-steel/Plan cut/I-beam-filleted-web-flanges",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 472.2982,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-steel/Plan cut/helical-stair-stringer",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.37106786090606275,
+    "Actual": 0.3710773437067092,
+    "Ms": 379.0731,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-steel/Plan cut/twisted-RHS",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.08998572095932784,
+    "Actual": 0.08998545875058228,
+    "Ms": 98.1663,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-steel/Plan cut/oblique-curved-CHS",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 79.5149,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-steel/Oblique hollow cut/CHS-arc",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 548.3841,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-steel/Oblique hollow cut/CHS-3d-chord",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 418.9347,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-steel/Oblique hollow cut/RHS-arc",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 13.3204,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-steel/Oblique hollow cut/RHS-3d-chord",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 18.568,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-steel/Oblique hollow cut/I-beam-filleted-web-flanges",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 445.0882,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-steel/Oblique hollow cut/helical-stair-stringer",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 34.5209,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-steel/Oblique hollow cut/twisted-RHS",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 23.917,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-steel/Oblique hollow cut/oblique-curved-CHS",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.7027743758729486,
+    "Actual": 0,
+    "Ms": 564.8376,
+    "Reasons": [
+      "Unattributed section boundary interval."
+    ]
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/open-roof-shell",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 8.0842,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/diagrid-iso-0-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.03709609667766231,
+    "Actual": 0,
+    "Ms": 757.0367,
+    "Reasons": [
+      "Self-intersecting Brep faces away from their shared topology."
+    ]
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/diagrid-iso-0-1",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.034676451113636,
+    "Actual": 0,
+    "Ms": 1495.6784,
+    "Reasons": [
+      "Evidence routes exhausted: Trim\u002BCapPlanarHoles: cap area mismatch (0.034655388/0.03465447); BooleanSplit-box: paired volume conservation failed; Split\u002BJoinBreps\u002Bcap: paired volume conservation failed",
+      "Crossing trim/cap could not be certified."
+    ]
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/diagrid-iso-0-2",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.03465631649369489,
+    "Actual": 0,
+    "Ms": 1707.5099,
+    "Reasons": [
+      "Evidence routes exhausted: Trim\u002BCapPlanarHoles: cap area mismatch (0.034655915/0.034654946); BooleanSplit-box: paired volume conservation failed; Split\u002BJoinBreps\u002Bcap: paired volume conservation failed",
+      "Crossing trim/cap could not be certified."
+    ]
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/diagrid-iso-0-3",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.03710611273509334,
+    "Actual": 0,
+    "Ms": 884.2844,
+    "Reasons": [
+      "Self-intersecting Brep faces away from their shared topology."
+    ]
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/diagrid-iso-1-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.044512873958744426,
+    "Actual": 0,
+    "Ms": 1388.3392,
+    "Reasons": [
+      "Evidence routes exhausted: Trim\u002BCapPlanarHoles: cap area mismatch (0.044512589/0.044512833); BooleanSplit-box: paired volume conservation failed; Split\u002BJoinBreps\u002Bcap: paired volume conservation failed",
+      "Crossing trim/cap could not be certified."
+    ]
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/diagrid-iso-1-1",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 761.4224,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/diagrid-iso-1-2",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 859.2184,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/diagrid-iso-1-3",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.04444727534240713,
+    "Actual": 0,
+    "Ms": 1234.3667,
+    "Reasons": [
+      "Evidence routes exhausted: Trim\u002BCapPlanarHoles: cap area mismatch (0.044512611/0.044512855); BooleanSplit-box: paired volume conservation failed; Split\u002BJoinBreps\u002Bcap: paired volume conservation failed",
+      "Crossing trim/cap could not be certified."
+    ]
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/node-0-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.3434,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/node-0-1",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2166,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/node-0-2",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1601,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/node-0-3",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.02274961989900849,
+    "Actual": 0.0227483204672765,
+    "Ms": 36.8357,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/node-1-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2362,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/node-1-1",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2399,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/node-1-2",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1781,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/node-1-3",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2297,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/node-2-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1935,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/node-2-1",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1521,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/node-2-2",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1748,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/node-2-3",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1589,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/node-3-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.022749619899008533,
+    "Actual": 0.02274832046727704,
+    "Ms": 46.3864,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/node-3-1",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2708,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/node-3-2",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1916,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/node-3-3",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1694,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Roof section/open-roof-shell",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 4.0312,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Roof section/diagrid-iso-0-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.014537066042465095,
+    "Actual": 0,
+    "Ms": 770.5113,
+    "Reasons": [
+      "Self-intersecting Brep faces away from their shared topology."
+    ]
+  },
+  {
+    "Id": "diagrid-shell/Roof section/diagrid-iso-0-1",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.013527614324970488,
+    "Actual": 0,
+    "Ms": 1483.2154,
+    "Reasons": [
+      "Evidence routes exhausted: Trim\u002BCapPlanarHoles: paired volume conservation failed; BooleanSplit-box: paired volume conservation failed; Split\u002BJoinBreps\u002Bcap: paired volume conservation failed",
+      "Crossing trim/cap could not be certified."
+    ]
+  },
+  {
+    "Id": "diagrid-shell/Roof section/diagrid-iso-0-2",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.013527774276778095,
+    "Actual": 0,
+    "Ms": 1659.4182,
+    "Reasons": [
+      "Evidence routes exhausted: Trim\u002BCapPlanarHoles: paired volume conservation failed; BooleanSplit-box: paired volume conservation failed; Split\u002BJoinBreps\u002Bcap: paired volume conservation failed",
+      "Crossing trim/cap could not be certified."
+    ]
+  },
+  {
+    "Id": "diagrid-shell/Roof section/diagrid-iso-0-3",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.014537041744084442,
+    "Actual": 0,
+    "Ms": 959.7686,
+    "Reasons": [
+      "Self-intersecting Brep faces away from their shared topology."
+    ]
+  },
+  {
+    "Id": "diagrid-shell/Roof section/diagrid-iso-1-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.013689024200826586,
+    "Actual": 0,
+    "Ms": 1142.8945,
+    "Reasons": [
+      "Evidence routes exhausted: Trim\u002BCapPlanarHoles: cap area mismatch (0.013652728/0.013652403); BooleanSplit-box: paired volume conservation failed; Split\u002BJoinBreps\u002Bcap: paired volume conservation failed",
+      "Crossing trim/cap could not be certified."
+    ]
+  },
+  {
+    "Id": "diagrid-shell/Roof section/diagrid-iso-1-1",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.013446869174428045,
+    "Actual": 0,
+    "Ms": 930.8742,
+    "Reasons": [
+      "Evidence routes exhausted: Trim\u002BCapPlanarHoles: cap area mismatch (0.013447336/0.01344688); BooleanSplit-box: cap area mismatch (0.013447169/0.01344688); Split\u002BJoinBreps\u002Bcap: paired volume conservation failed",
+      "Crossing trim/cap could not be certified."
+    ]
+  },
+  {
+    "Id": "diagrid-shell/Roof section/diagrid-iso-1-2",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.013446868828801216,
+    "Actual": 0,
+    "Ms": 1097.4421,
+    "Reasons": [
+      "Evidence routes exhausted: Trim\u002BCapPlanarHoles: cap area mismatch (0.013447335/0.013446874); BooleanSplit-box: cap area mismatch (0.013447169/0.013446874); Split\u002BJoinBreps\u002Bcap: paired volume conservation failed",
+      "Crossing trim/cap could not be certified."
+    ]
+  },
+  {
+    "Id": "diagrid-shell/Roof section/diagrid-iso-1-3",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.013689023585273612,
+    "Actual": 0,
+    "Ms": 1122.3221,
+    "Reasons": [
+      "Evidence routes exhausted: Trim\u002BCapPlanarHoles: cap area mismatch (0.013652728/0.013652403); BooleanSplit-box: paired volume conservation failed; Split\u002BJoinBreps\u002Bcap: paired volume conservation failed",
+      "Crossing trim/cap could not be certified."
+    ]
+  },
+  {
+    "Id": "diagrid-shell/Roof section/node-0-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.08042472462066907,
+    "Actual": 0.08042477292438509,
+    "Ms": 28.3322,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Roof section/node-0-1",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1876,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Roof section/node-0-2",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.3252,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Roof section/node-0-3",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.4039,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Roof section/node-1-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.5021,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Roof section/node-1-1",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.08042413340840047,
+    "Actual": 0.08042477292438467,
+    "Ms": 30.4726,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Roof section/node-1-2",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1505,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Roof section/node-1-3",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.129,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Roof section/node-2-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1454,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Roof section/node-2-1",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1393,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Roof section/node-2-2",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.08042413340840028,
+    "Actual": 0.08042477292438491,
+    "Ms": 27.965,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Roof section/node-2-3",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1581,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Roof section/node-3-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1809,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Roof section/node-3-1",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1897,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Roof section/node-3-2",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1462,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Roof section/node-3-3",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.08042472462066887,
+    "Actual": 0.08042477292438509,
+    "Ms": 27.0062,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-0-0/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2983,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-0-1/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2323,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-0-2/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1555,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-0-3/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1367,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-0-4/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1452,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-0-5/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.138,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-0-6/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2469,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-1-0/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.021322988265929904,
+    "Actual": 0.021322010946638395,
+    "Ms": 40.9491,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-1-1/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.0213229882659299,
+    "Actual": 0.021322010946638128,
+    "Ms": 50.3769,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-1-2/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.021322988265929894,
+    "Actual": 0.021322010946638607,
+    "Ms": 49.481,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-1-3/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.021322988265929908,
+    "Actual": 0.021322010946637857,
+    "Ms": 48.7668,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-1-4/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.021322988265929953,
+    "Actual": 0.021322010946638402,
+    "Ms": 50.2289,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-1-5/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.02132298826592978,
+    "Actual": 0.02132201094663863,
+    "Ms": 47.6909,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-1-6/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.021322988265929845,
+    "Actual": 0.021322010946638,
+    "Ms": 47.1838,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-2-0/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.3047,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-2-1/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1981,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-2-2/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1625,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-2-3/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1509,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-2-4/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1553,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-2-5/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1773,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-2-6/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2192,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-3-0/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1672,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-3-1/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1562,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-3-2/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1414,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-3-3/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1405,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-3-4/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.18,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-3-5/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1515,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-3-6/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1512,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-4-0/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1952,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-4-1/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1915,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-4-2/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2052,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-4-3/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1868,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-4-4/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1873,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-4-5/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1808,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-4-6/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1839,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-5-0/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1739,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-5-1/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1901,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-5-2/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1718,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-5-3/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1793,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-5-4/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1674,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-5-5/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.143,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-5-6/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1398,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-6-0/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1112,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-6-1/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1286,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-6-2/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1099,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-6-3/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1459,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-6-4/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1482,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-6-5/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1373,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-6-6/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1464,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-7-0/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1768,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-7-1/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1882,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-7-2/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.181,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-7-3/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1692,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-7-4/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1834,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-7-5/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1733,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-7-6/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1809,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-8-0/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1974,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-8-1/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1934,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-8-2/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1875,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-8-3/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1854,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-8-4/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1894,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-8-5/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1977,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-8-6/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1945,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-9-0/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1496,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-9-1/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1504,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-9-2/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1419,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-9-3/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1446,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-9-4/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1524,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-9-5/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1379,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-9-6/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1446,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-10-0/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1556,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-10-1/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1407,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-10-2/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1413,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-10-3/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1454,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-10-4/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1424,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-10-5/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1382,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-10-6/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.144,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-11-0/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.021322988265929804,
+    "Actual": 0.021322010946637715,
+    "Ms": 51.0851,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-11-1/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.021322988265929804,
+    "Actual": 0.021322010946638402,
+    "Ms": 41.3778,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-11-2/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.021322988265929817,
+    "Actual": 0.02132201094663813,
+    "Ms": 39.8542,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-11-3/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.02132298826592972,
+    "Actual": 0.021322010946638402,
+    "Ms": 38.5983,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-11-4/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.021322988265929745,
+    "Actual": 0.021322010946638402,
+    "Ms": 35.6795,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-11-5/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.021322988265929856,
+    "Actual": 0.021322010946638124,
+    "Ms": 36.9733,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-11-6/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.02132298826592985,
+    "Actual": 0.021322010946638256,
+    "Ms": 49.7338,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-12-0/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.3267,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-12-1/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2176,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-12-2/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1909,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-12-3/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1759,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-12-4/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1862,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-12-5/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1753,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-12-6/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1855,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-0-0/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1546,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-0-1/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.171,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-0-2/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1499,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-0-3/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1623,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-0-4/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1473,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-0-5/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1508,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-0-6/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1602,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-1-0/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1784,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-1-1/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1865,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-1-2/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.186,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-1-3/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1745,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-1-4/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1727,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-1-5/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.174,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-1-6/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1971,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-2-0/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.02158145509916468,
+    "Actual": 0.021580293353290717,
+    "Ms": 49.7777,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-2-1/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.021581455099164613,
+    "Actual": 0.021580293353290547,
+    "Ms": 50.1518,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-2-2/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.02158145509916463,
+    "Actual": 0.021580293353290696,
+    "Ms": 37.7396,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-2-3/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.021581455099164575,
+    "Actual": 0.021580293353290564,
+    "Ms": 35.6605,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-2-4/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.02158145509916468,
+    "Actual": 0.0215802933532907,
+    "Ms": 34.7409,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-2-5/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.0215814550991645,
+    "Actual": 0.021580293353290484,
+    "Ms": 34.1909,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-2-6/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.02158145509916459,
+    "Actual": 0.02158029335329071,
+    "Ms": 40.5391,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-3-0/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1889,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-3-1/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1089,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-3-2/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.0985,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-3-3/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1022,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-3-4/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1036,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-3-5/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.0938,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-3-6/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.0967,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-4-0/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1182,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-4-1/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1151,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-4-2/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1127,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-4-3/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1111,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-4-4/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.116,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-4-5/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1357,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-4-6/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.141,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-5-0/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1114,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-5-1/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1003,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-5-2/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1113,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-5-3/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1116,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-5-4/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1137,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-5-5/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1067,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-5-6/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1113,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-6-0/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1316,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-6-1/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1141,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-6-2/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1074,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-6-3/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1062,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-6-4/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1134,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-6-5/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1142,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-6-6/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1125,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-7-0/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1136,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-7-1/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1138,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-7-2/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1139,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-7-3/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1186,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-7-4/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1099,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-7-5/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1097,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-7-6/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1178,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-8-0/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1324,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-8-1/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1367,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-8-2/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1353,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-8-3/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1301,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-8-4/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1304,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-8-5/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1524,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-8-6/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1392,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-9-0/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1486,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-9-1/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1463,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-9-2/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1357,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-9-3/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1287,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-9-4/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.147,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-9-5/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1482,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-9-6/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.137,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-10-0/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.02158145509916522,
+    "Actual": 0.02158029335329119,
+    "Ms": 37.6763,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-10-1/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.021581455099165186,
+    "Actual": 0.021580293353291407,
+    "Ms": 34.4248,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-10-2/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.021581455099165252,
+    "Actual": 0.021580293353291417,
+    "Ms": 38.4666,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-10-3/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.021581455099165207,
+    "Actual": 0.021580293353291636,
+    "Ms": 42.3711,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-10-4/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.02158145509916525,
+    "Actual": 0.021580293353291688,
+    "Ms": 34.3872,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-10-5/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.021581455099165158,
+    "Actual": 0.021580293353291084,
+    "Ms": 37.2739,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-10-6/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.02158145509916524,
+    "Actual": 0.02158029335329069,
+    "Ms": 39.8625,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-11-0/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2819,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-11-1/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2152,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-11-2/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1838,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-11-3/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.191,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-11-4/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2392,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-11-5/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2401,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-11-6/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1936,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-12-0/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1892,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-12-1/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1679,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-12-2/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1207,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-12-3/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1667,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-12-4/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1524,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-12-5/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1427,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-12-6/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2047,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0000/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.007709263633421192,
+    "Actual": 0,
+    "Ms": 279.3841,
+    "Reasons": [
+      "Evidence routes exhausted: Trim\u002BCapPlanarHoles: paired volume conservation failed; BooleanSplit-box: paired volume conservation failed; Split\u002BJoinBreps\u002Bcap: paired volume conservation failed",
+      "Crossing trim/cap could not be certified."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0001/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 110.2642,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0002/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 149.9911,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0003/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 146.8964,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0004/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.007709263633421157,
+    "Actual": 0,
+    "Ms": 359.5197,
+    "Reasons": [
+      "Evidence routes exhausted: Trim\u002BCapPlanarHoles: paired volume conservation failed; BooleanSplit-box: paired volume conservation failed; Split\u002BJoinBreps\u002Bcap: paired volume conservation failed",
+      "Crossing trim/cap could not be certified."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0005/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 148.968,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0006/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 154.057,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0007/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 155.4135,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0008/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.007709263633421248,
+    "Actual": 0,
+    "Ms": 319.0771,
+    "Reasons": [
+      "Evidence routes exhausted: Trim\u002BCapPlanarHoles: paired volume conservation failed; BooleanSplit-box: paired volume conservation failed; Split\u002BJoinBreps\u002Bcap: paired volume conservation failed",
+      "Crossing trim/cap could not be certified."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0009/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 147.8579,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0010/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 155.8012,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0011/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 158.0706,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0012/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.007709263633421204,
+    "Actual": 0,
+    "Ms": 294.9605,
+    "Reasons": [
+      "Evidence routes exhausted: Trim\u002BCapPlanarHoles: paired volume conservation failed; BooleanSplit-box: paired volume conservation failed; Split\u002BJoinBreps\u002Bcap: paired volume conservation failed",
+      "Crossing trim/cap could not be certified."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0013/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 146.121,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0014/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 156.3079,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0015/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 156.1966,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0016/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.007709263633421384,
+    "Actual": 0,
+    "Ms": 364.1444,
+    "Reasons": [
+      "Evidence routes exhausted: Trim\u002BCapPlanarHoles: paired volume conservation failed; BooleanSplit-box: paired volume conservation failed; Split\u002BJoinBreps\u002Bcap: paired volume conservation failed",
+      "Crossing trim/cap could not be certified."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0017/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 136.4946,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0018/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 150.8327,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0019/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 143.8194,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0020/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.007709263633421338,
+    "Actual": 0,
+    "Ms": 373.5401,
+    "Reasons": [
+      "Evidence routes exhausted: Trim\u002BCapPlanarHoles: paired volume conservation failed; BooleanSplit-box: paired volume conservation failed; Split\u002BJoinBreps\u002Bcap: paired volume conservation failed",
+      "Crossing trim/cap could not be certified."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0021/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 145.9303,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0022/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 124.7214,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0023/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 109.9882,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0024/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.007709263633421339,
+    "Actual": 0,
+    "Ms": 345.1394,
+    "Reasons": [
+      "Evidence routes exhausted: Trim\u002BCapPlanarHoles: paired volume conservation failed; BooleanSplit-box: paired volume conservation failed; Split\u002BJoinBreps\u002Bcap: paired volume conservation failed",
+      "Crossing trim/cap could not be certified."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0025/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 149.7943,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0026/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 119.7074,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0027/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.07689260048227646,
+    "Actual": 0.07634893013487534,
+    "Ms": 157.5243,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0028/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.0071376207716113225,
+    "Actual": 0.007135902113290809,
+    "Ms": 243.0917,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0029/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.10156926060934247,
+    "Actual": 0.10157039939329607,
+    "Ms": 116.8973,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0030/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 111.7698,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0031/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.07689260048227647,
+    "Actual": 0.07634893013487506,
+    "Ms": 179.7069,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0032/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.007137620771611303,
+    "Actual": 0.007135902113290799,
+    "Ms": 334.6135,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0033/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.1015692606093425,
+    "Actual": 0.10157039939329664,
+    "Ms": 177.6732,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0034/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 131.029,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0035/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.07689260048227647,
+    "Actual": 0.07634893013487266,
+    "Ms": 175.1735,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0036/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.007137620771611381,
+    "Actual": 0.00713590211329084,
+    "Ms": 324.7098,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0037/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.10156926060934249,
+    "Actual": 0.10157039939329202,
+    "Ms": 176.1831,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0038/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 131.3367,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0039/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.07689260048227649,
+    "Actual": 0.07634893013487368,
+    "Ms": 163.5044,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0040/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.007137620771611365,
+    "Actual": 0.007135902113290736,
+    "Ms": 315.6219,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0041/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.10156926060934253,
+    "Actual": 0.10157039939329793,
+    "Ms": 142.0105,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0042/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 133.3767,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0043/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.0768926004822765,
+    "Actual": 0.07634893013487482,
+    "Ms": 145.8882,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0044/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.007137620771611506,
+    "Actual": 0.00713590211329108,
+    "Ms": 218.2122,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0045/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.1015692606093426,
+    "Actual": 0.10157039939329696,
+    "Ms": 108.8287,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0046/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 83.5428,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0047/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.07689260048227645,
+    "Actual": 0.07634893013487548,
+    "Ms": 108.1278,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0048/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.007137620771611453,
+    "Actual": 0.007135902113290708,
+    "Ms": 210.742,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0049/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.10156926060934242,
+    "Actual": 0.10157039939329833,
+    "Ms": 107.4862,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0050/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 91.7513,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0051/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.007137620771611392,
+    "Actual": 0.0071359021132908545,
+    "Ms": 211.5194,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0052/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 121.7004,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0053/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 119.1613,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0054/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 90.6735,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0055/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 119.8075,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0056/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 116.7005,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0057/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 119.3194,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0058/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 119.7903,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0059/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 124.6664,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0060/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 97.353,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0061/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 79.4895,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0062/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 77.2791,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0063/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 117.486,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0064/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 93.2275,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0065/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 119.9091,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0066/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 123.1409,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0067/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 127.038,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0068/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 121.4323,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0069/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 119.5319,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0070/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 122.7862,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0071/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 121.6464,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0072/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 121.0151,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0073/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 82.2163,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0074/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 75.2323,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0075/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 121.5898,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0076/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 121.411,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0077/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 126.7484,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0078/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 123.6525,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0079/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 115.577,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0080/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 76.203,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0081/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 93.989,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0082/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 114.1386,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0083/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 125.2046,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0084/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 124.8261,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0085/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 103.4517,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0086/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 85.0805,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0087/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 112.1698,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0088/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 74.0863,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0089/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 92.3865,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0090/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 89.5729,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0091/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 103.2758,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0092/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 80.7155,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0093/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 91.8124,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0094/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 79.0781,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0095/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 106.3212,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0096/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 73.1033,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0097/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 78.4005,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0098/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 83.1768,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0099/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 95.7497,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0100/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 84.7274,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0101/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 99.5112,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0102/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 80.2916,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0103/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 112.9407,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0104/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 127.9576,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0105/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 123.4557,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0106/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 119.8693,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0107/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 132.4491,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0108/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 123.4655,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0109/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 126.547,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0110/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 121.1137,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0111/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 90.0798,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0112/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 79.0431,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0113/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 115.2075,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0114/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 78.7991,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0115/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 97.1699,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0116/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 120.0337,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0117/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 131.3529,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0118/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 132.9884,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0119/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 137.3048,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0120/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 128.4111,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0121/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 129.8589,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0122/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 129.3035,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0123/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 132.0936,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0124/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 129.818,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0125/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 132.9306,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0126/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 131.1346,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0127/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 135.4666,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0128/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 125.8085,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0129/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 121.8325,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0130/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 117.8148,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0131/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 114.4838,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0132/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 108.3149,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0133/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 123.0952,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0134/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 118.9104,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0135/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 119.5148,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0136/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 110.4171,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0137/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 100.8379,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0138/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 83.8367,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0139/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 105.7333,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0140/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 98.4041,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0141/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 83.3393,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0142/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 80.0143,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0143/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 120.2158,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0144/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 129.124,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0145/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 103.6677,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0146/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 104.0689,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0147/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 132.3754,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0148/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 122.2773,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0149/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 131.5521,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0150/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 128.1679,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0151/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 123.1638,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0152/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 126.7704,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0153/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 120.9717,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0154/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 121.7443,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0155/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 133.3229,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0156/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 131.8945,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0157/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 106.3827,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0158/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 95.2228,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0159/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 106.9963,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0160/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 109.3459,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0161/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 75.3373,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0162/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 71.1277,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0163/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 81.5219,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0164/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 91.6172,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0165/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 108.3983,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0166/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 121.5078,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0167/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 131.0481,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0168/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 127.9993,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0169/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 124.0298,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0170/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 117.7648,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0171/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 117.0877,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0172/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 113.1799,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0173/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 106.6314,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0174/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 78.0505,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0175/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 78.3457,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0176/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 101.6546,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0177/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 107.2452,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0178/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 81.356,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0179/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 142.1556,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0180/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 84.344,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0181/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 119.6209,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0182/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 137.7027,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0183/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 119.4055,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0184/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 110.0702,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0185/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 118.7921,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0186/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 114.3304,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0187/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 90.0562,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0188/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 101.5599,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0189/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 124.3387,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0190/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 127.8847,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0191/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 117.6867,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0192/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 112.2081,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0193/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 101.7616,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0194/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 118.8834,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0195/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 118.6592,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0196/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 117.042,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0197/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 121.2328,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0198/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 91.7445,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0199/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 105.9126,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0200/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 134.2646,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0201/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 140.3667,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0202/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 133.3096,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0203/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 134.8515,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0204/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 131.0036,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0205/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 125.6804,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0206/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 129.2306,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0207/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 118.603,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0208/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 78.9557,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0209/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 76.3851,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0210/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 80.4064,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0211/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 79.7189,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0212/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 80.3006,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0213/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 82.0027,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0214/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 77.1144,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0215/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 81.3951,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0216/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 79.4718,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0217/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 78.8547,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0218/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 76.5334,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0219/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 111.336,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0220/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 127.0643,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0221/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 123.0857,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0222/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 123.9238,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0223/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 123.7598,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0224/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 86.7665,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0225/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 82.5987,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0226/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 107.4264,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0227/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 135.1334,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0228/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 131.3003,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0229/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 127.2583,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0230/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 130.0971,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0231/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 130.6865,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0232/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 129.7348,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0233/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 130.9686,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0234/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 132.2609,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0235/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 122.4467,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0236/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 127.7281,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0237/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 133.9679,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0238/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 134.7988,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0239/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 128.7444,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0240/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 127.5685,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0241/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 132.3937,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0242/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 124.3119,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0243/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 128.7546,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0244/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 111.2217,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0245/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 124.653,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0246/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 100.1298,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0247/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 126.4486,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0248/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 128.1433,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0249/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 127.263,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0250/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 106.1881,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0251/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 89.1147,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0252/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 126.5848,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0253/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 128.0571,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0254/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 127.3159,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0255/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 122.647,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0256/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 127.8457,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0257/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 103.9934,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0258/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 85.7233,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0259/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 118.3186,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0260/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 80.4847,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0261/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 80.2259,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0262/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 99.9501,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0263/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.00882331369227818,
+    "Actual": 0,
+    "Ms": 316.5565,
+    "Reasons": [
+      "Evidence routes exhausted: Trim\u002BCapPlanarHoles: cap area mismatch (0.0088236946/0.0088243162); BooleanSplit-box: paired volume conservation failed; Split\u002BJoinBreps\u002Bcap: paired volume conservation failed",
+      "Crossing trim/cap could not be certified."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0264/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 94.0237,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0265/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 81.2559,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0266/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 119.5517,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0267/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.008823313692278194,
+    "Actual": 0,
+    "Ms": 317.1159,
+    "Reasons": [
+      "Evidence routes exhausted: Trim\u002BCapPlanarHoles: cap area mismatch (0.0088236946/0.0088243162); BooleanSplit-box: paired volume conservation failed; Split\u002BJoinBreps\u002Bcap: paired volume conservation failed",
+      "Crossing trim/cap could not be certified."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0268/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 137.0388,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0269/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 135.7238,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0270/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 138.41,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0271/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.008823313692278149,
+    "Actual": 0,
+    "Ms": 329.1321,
+    "Reasons": [
+      "Evidence routes exhausted: Trim\u002BCapPlanarHoles: cap area mismatch (0.0088236946/0.0088243162); BooleanSplit-box: paired volume conservation failed; Split\u002BJoinBreps\u002Bcap: paired volume conservation failed",
+      "Crossing trim/cap could not be certified."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0272/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 130.7081,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0273/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 116.8164,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0274/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 125.8962,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0275/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.008823313692278168,
+    "Actual": 0,
+    "Ms": 298.173,
+    "Reasons": [
+      "Evidence routes exhausted: Trim\u002BCapPlanarHoles: cap area mismatch (0.0088236946/0.0088243162); BooleanSplit-box: paired volume conservation failed; Split\u002BJoinBreps\u002Bcap: paired volume conservation failed",
+      "Crossing trim/cap could not be certified."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0276/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 91.8273,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0277/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 110.3779,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0278/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 135.2855,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0279/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.008823313692278135,
+    "Actual": 0,
+    "Ms": 349.5711,
+    "Reasons": [
+      "Evidence routes exhausted: Trim\u002BCapPlanarHoles: cap area mismatch (0.0088236946/0.0088243162); BooleanSplit-box: paired volume conservation failed; Split\u002BJoinBreps\u002Bcap: paired volume conservation failed",
+      "Crossing trim/cap could not be certified."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0280/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 95.0528,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0281/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 126.798,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0282/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 77.2815,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0283/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.008823313692278107,
+    "Actual": 0,
+    "Ms": 281.4098,
+    "Reasons": [
+      "Evidence routes exhausted: Trim\u002BCapPlanarHoles: cap area mismatch (0.0088236946/0.0088243162); BooleanSplit-box: paired volume conservation failed; Split\u002BJoinBreps\u002Bcap: paired volume conservation failed",
+      "Crossing trim/cap could not be certified."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0284/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 117.4035,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0285/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 107.2333,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0286/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.007709263633421192,
+    "Actual": 0,
+    "Ms": 298.5641,
+    "Reasons": [
+      "Evidence routes exhausted: Trim\u002BCapPlanarHoles: paired volume conservation failed; BooleanSplit-box: paired volume conservation failed; Split\u002BJoinBreps\u002Bcap: paired volume conservation failed",
+      "Crossing trim/cap could not be certified."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0287/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.07689260048227646,
+    "Actual": 0.07634893013487372,
+    "Ms": 170.2116,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0288/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.007137620771611355,
+    "Actual": 0.0071359021132907565,
+    "Ms": 327.0046,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0289/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.00854405537832013,
+    "Actual": 0,
+    "Ms": 386.2312,
+    "Reasons": [
+      "Evidence routes exhausted: Trim\u002BCapPlanarHoles: paired volume conservation failed; BooleanSplit-box: paired volume conservation failed; Split\u002BJoinBreps\u002Bcap: paired volume conservation failed",
+      "Crossing trim/cap could not be certified."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0290/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.007709263633421184,
+    "Actual": 0,
+    "Ms": 362.6741,
+    "Reasons": [
+      "Evidence routes exhausted: Trim\u002BCapPlanarHoles: paired volume conservation failed; BooleanSplit-box: paired volume conservation failed; Split\u002BJoinBreps\u002Bcap: paired volume conservation failed",
+      "Crossing trim/cap could not be certified."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0291/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.07689260048227649,
+    "Actual": 0.07634893013487717,
+    "Ms": 159.9669,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0292/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.007137620771611345,
+    "Actual": 0.0071359021132906654,
+    "Ms": 315.8162,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0293/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.008544055378320125,
+    "Actual": 0,
+    "Ms": 389.6239,
+    "Reasons": [
+      "Evidence routes exhausted: Trim\u002BCapPlanarHoles: paired volume conservation failed; BooleanSplit-box: paired volume conservation failed; Split\u002BJoinBreps\u002Bcap: paired volume conservation failed",
+      "Crossing trim/cap could not be certified."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0294/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.007709263633421225,
+    "Actual": 0,
+    "Ms": 370.5212,
+    "Reasons": [
+      "Evidence routes exhausted: Trim\u002BCapPlanarHoles: paired volume conservation failed; BooleanSplit-box: paired volume conservation failed; Split\u002BJoinBreps\u002Bcap: paired volume conservation failed",
+      "Crossing trim/cap could not be certified."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0295/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.07689260048227647,
+    "Actual": 0.07634893013487826,
+    "Ms": 172.3604,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0296/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.0071376207716113875,
+    "Actual": 0.007135902113290817,
+    "Ms": 307.8819,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0297/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.00854405537832016,
+    "Actual": 0,
+    "Ms": 381.045,
+    "Reasons": [
+      "Evidence routes exhausted: Trim\u002BCapPlanarHoles: paired volume conservation failed; BooleanSplit-box: paired volume conservation failed; Split\u002BJoinBreps\u002Bcap: paired volume conservation failed",
+      "Crossing trim/cap could not be certified."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0298/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.0077092636334212,
+    "Actual": 0,
+    "Ms": 363.3906,
+    "Reasons": [
+      "Evidence routes exhausted: Trim\u002BCapPlanarHoles: paired volume conservation failed; BooleanSplit-box: paired volume conservation failed; Split\u002BJoinBreps\u002Bcap: paired volume conservation failed",
+      "Crossing trim/cap could not be certified."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0299/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.07689260048227649,
+    "Actual": 0.0763489301348761,
+    "Ms": 163.7781,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0300/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.00713762077161136,
+    "Actual": 0.007135902113290924,
+    "Ms": 324.5359,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0301/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.008544055378320039,
+    "Actual": 0,
+    "Ms": 331.769,
+    "Reasons": [
+      "Evidence routes exhausted: Trim\u002BCapPlanarHoles: paired volume conservation failed; BooleanSplit-box: paired volume conservation failed; Split\u002BJoinBreps\u002Bcap: paired volume conservation failed",
+      "Crossing trim/cap could not be certified."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0302/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.007709263633421297,
+    "Actual": 0,
+    "Ms": 348.7549,
+    "Reasons": [
+      "Evidence routes exhausted: Trim\u002BCapPlanarHoles: paired volume conservation failed; BooleanSplit-box: paired volume conservation failed; Split\u002BJoinBreps\u002Bcap: paired volume conservation failed",
+      "Crossing trim/cap could not be certified."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0303/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.0768926004822765,
+    "Actual": 0.07634893013487669,
+    "Ms": 165.1141,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0304/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.007137620771611484,
+    "Actual": 0.007135902113290795,
+    "Ms": 303.2465,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0305/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.008544055378320018,
+    "Actual": 0,
+    "Ms": 342.1603,
+    "Reasons": [
+      "Evidence routes exhausted: Trim\u002BCapPlanarHoles: paired volume conservation failed; BooleanSplit-box: paired volume conservation failed; Split\u002BJoinBreps\u002Bcap: paired volume conservation failed",
+      "Crossing trim/cap could not be certified."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0306/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.007709263633421251,
+    "Actual": 0,
+    "Ms": 277.3021,
+    "Reasons": [
+      "Evidence routes exhausted: Trim\u002BCapPlanarHoles: paired volume conservation failed; BooleanSplit-box: paired volume conservation failed; Split\u002BJoinBreps\u002Bcap: paired volume conservation failed",
+      "Crossing trim/cap could not be certified."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0307/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.07689260048227643,
+    "Actual": 0.07634893013487822,
+    "Ms": 114.5095,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0308/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.00713762077161146,
+    "Actual": 0.0071359021132906845,
+    "Ms": 274.2789,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0309/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.008544055378320063,
+    "Actual": 0,
+    "Ms": 377.3542,
+    "Reasons": [
+      "Evidence routes exhausted: Trim\u002BCapPlanarHoles: paired volume conservation failed; BooleanSplit-box: paired volume conservation failed; Split\u002BJoinBreps\u002Bcap: paired volume conservation failed",
+      "Crossing trim/cap could not be certified."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0310/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.007709263633421308,
+    "Actual": 0,
+    "Ms": 304.6235,
+    "Reasons": [
+      "Evidence routes exhausted: Trim\u002BCapPlanarHoles: paired volume conservation failed; BooleanSplit-box: paired volume conservation failed; Split\u002BJoinBreps\u002Bcap: paired volume conservation failed",
+      "Crossing trim/cap could not be certified."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0311/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.007137620771611438,
+    "Actual": 0.007135902113290651,
+    "Ms": 303.8109,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0312/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 140.4265,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0313/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 136.7039,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0314/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 142.9199,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0315/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 144.7374,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0316/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 138.8952,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0317/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 148.7497,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0318/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 127.2647,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0319/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 146.7868,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0320/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 158.3331,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0321/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 133.726,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0322/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 143.2701,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0323/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 152.31,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0324/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 131.4528,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0325/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 135.2643,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0326/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 125.7131,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0327/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 147.7279,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0328/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 150.6689,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0329/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 145.5142,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0330/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 151.5192,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0331/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 137.0752,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0332/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 123.8904,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0333/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 156.289,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0334/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 132.3091,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0335/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 134.3079,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0336/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 141.0181,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0337/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 163.3567,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0338/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.009106012139951594,
+    "Actual": 0,
+    "Ms": 306.2195,
+    "Reasons": [
+      "Evidence routes exhausted: Trim\u002BCapPlanarHoles: paired volume conservation failed; BooleanSplit-box: cap area mismatch (0.0091056935/0.0091058707); Split\u002BJoinBreps\u002Bcap: paired volume conservation failed",
+      "Crossing trim/cap could not be certified."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0339/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 133.3797,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0340/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.009106012139951564,
+    "Actual": 0,
+    "Ms": 308.9969,
+    "Reasons": [
+      "Evidence routes exhausted: Trim\u002BCapPlanarHoles: paired volume conservation failed; BooleanSplit-box: cap area mismatch (0.0091056935/0.0091058707); Split\u002BJoinBreps\u002Bcap: paired volume conservation failed",
+      "Crossing trim/cap could not be certified."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0341/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 122.3779,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0342/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.009106012139951651,
+    "Actual": 0,
+    "Ms": 298.1316,
+    "Reasons": [
+      "Evidence routes exhausted: Trim\u002BCapPlanarHoles: paired volume conservation failed; BooleanSplit-box: cap area mismatch (0.0091056935/0.0091058707); Split\u002BJoinBreps\u002Bcap: paired volume conservation failed",
+      "Crossing trim/cap could not be certified."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0343/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 129.6606,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0344/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.009106012139951594,
+    "Actual": 0,
+    "Ms": 306.861,
+    "Reasons": [
+      "Evidence routes exhausted: Trim\u002BCapPlanarHoles: paired volume conservation failed; BooleanSplit-box: cap area mismatch (0.0091056935/0.0091058707); Split\u002BJoinBreps\u002Bcap: paired volume conservation failed",
+      "Crossing trim/cap could not be certified."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0345/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 152.2056,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0346/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.009106012139951755,
+    "Actual": 0,
+    "Ms": 283.2923,
+    "Reasons": [
+      "Evidence routes exhausted: Trim\u002BCapPlanarHoles: paired volume conservation failed; BooleanSplit-box: cap area mismatch (0.0091056935/0.0091058707); Split\u002BJoinBreps\u002Bcap: paired volume conservation failed",
+      "Crossing trim/cap could not be certified."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0347/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 139.8213,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0348/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.009106012139951805,
+    "Actual": 0,
+    "Ms": 279.1873,
+    "Reasons": [
+      "Evidence routes exhausted: Trim\u002BCapPlanarHoles: paired volume conservation failed; BooleanSplit-box: cap area mismatch (0.0091056935/0.0091058707); Split\u002BJoinBreps\u002Bcap: paired volume conservation failed",
+      "Crossing trim/cap could not be certified."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0349/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 146.5852,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0350/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.009106012139951736,
+    "Actual": 0,
+    "Ms": 296.9417,
+    "Reasons": [
+      "Evidence routes exhausted: Trim\u002BCapPlanarHoles: paired volume conservation failed; BooleanSplit-box: cap area mismatch (0.0091056935/0.0091058707); Split\u002BJoinBreps\u002Bcap: paired volume conservation failed",
+      "Crossing trim/cap could not be certified."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0351/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 5.0688794374755774E-05,
+    "Actual": 5.1956655269288607E-05,
+    "Ms": 137.8455,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0352/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.07937753336722787,
+    "Actual": 0.07938961434126252,
+    "Ms": 143.0619,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0353/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 5.068879437477353E-05,
+    "Actual": 5.195665526930273E-05,
+    "Ms": 144.8741,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0354/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.07937753336722787,
+    "Actual": 0.07938961434126385,
+    "Ms": 161.0601,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0355/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 5.0688794374767835E-05,
+    "Actual": 5.1956655269333974E-05,
+    "Ms": 161.1906,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0356/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.07937753336722787,
+    "Actual": 0.07938961434126303,
+    "Ms": 170.7251,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0357/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 5.068879437476714E-05,
+    "Actual": 5.195665526932661E-05,
+    "Ms": 156.1256,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0358/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.0793775333672279,
+    "Actual": 0.07938961434126518,
+    "Ms": 158.3551,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0359/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 5.068879437477516E-05,
+    "Actual": 5.19566552693137E-05,
+    "Ms": 138.5873,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0360/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.07937753336722789,
+    "Actual": 0.07938961434126766,
+    "Ms": 141.6324,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0361/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 5.068879437476399E-05,
+    "Actual": 5.1956655269284175E-05,
+    "Ms": 135.0829,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0362/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.07937753336722783,
+    "Actual": 0.07938961434126329,
+    "Ms": 152.6342,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0363/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 5.0688794374766724E-05,
+    "Actual": 5.195665526930907E-05,
+    "Ms": 166.6574,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0364/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 125.2477,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0365/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 124.4505,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0366/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 122.4382,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0367/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 119.3696,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0368/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 95.6256,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0369/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 90.0923,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0370/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 125.852,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0371/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 122.7017,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0372/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 100.7544,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0373/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 83.4929,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0374/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 87.8986,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0375/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 94.727,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0376/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 93.7647,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0377/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 94.81,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0378/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 98.3582,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0379/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 109.6144,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0380/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 85.8951,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0381/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 123.6149,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0382/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 127.3508,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0383/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 128.6762,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0384/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 114.5825,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0385/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 110.3453,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0386/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 119.4168,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0387/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 112.0745,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0388/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 124.4041,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0389/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 126.9198,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0390/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 120.9456,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0391/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 112.1738,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0392/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 106.7796,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0393/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 127.7939,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0394/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 125.0576,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0395/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 113.4415,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0396/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 97.5289,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0397/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 100.5944,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0398/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 126.5868,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0399/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 130.2093,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0400/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 115.8879,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0401/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 110.601,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0402/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 113.412,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0403/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 131.3705,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0404/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 106.9877,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0405/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 84.1955,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0406/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 84.636,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0407/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 83.5549,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0408/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 120.8206,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0409/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 123.1572,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0410/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 100.7066,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0411/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 135.0881,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0412/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 113.9079,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0413/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 116.9737,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0414/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 118.6911,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0415/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 126.2891,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0416/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 119.6108,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0417/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 118.586,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0418/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 114.5434,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0419/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 175.0555,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0420/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 140.872,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0421/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 160.8527,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0422/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 158.6744,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0423/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 160.0081,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0424/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 164.3279,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0425/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 160.6805,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0426/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 162.5586,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0427/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 160.9669,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0428/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 153.8915,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0429/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 159.5032,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0430/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 150.9523,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0431/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 157.0646,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0432/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 157.7518,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0433/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 150.8161,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0434/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 156.2322,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0435/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 156.7359,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0436/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 151.1317,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0437/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 156.7197,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0438/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 152.2328,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0439/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 160.233,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0440/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 158.7134,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0441/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 157.3493,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0442/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 5.0688794374811644E-05,
+    "Actual": 5.19566552694114E-05,
+    "Ms": 211.7748,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0443/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 152.1878,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0444/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 5.0688794374811115E-05,
+    "Actual": 5.195665526939032E-05,
+    "Ms": 200.3028,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0445/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 150.7252,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0446/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 5.0688794374803716E-05,
+    "Actual": 5.195665526938734E-05,
+    "Ms": 199.6455,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0447/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 150.6275,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0448/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 5.068879437482913E-05,
+    "Actual": 5.195665526940208E-05,
+    "Ms": 212.8422,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0449/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 151.7971,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0450/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 5.068879437482357E-05,
+    "Actual": 5.195665526936607E-05,
+    "Ms": 210.0862,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0451/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 154.5228,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0452/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 5.068879437482045E-05,
+    "Actual": 5.195665526937107E-05,
+    "Ms": 215.9848,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0453/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 159.2445,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0454/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 5.0688794374814036E-05,
+    "Actual": 5.195665526940401E-05,
+    "Ms": 213.3413,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0455/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.009106012139951516,
+    "Actual": 0,
+    "Ms": 407.1619,
+    "Reasons": [
+      "Evidence routes exhausted: Trim\u002BCapPlanarHoles: paired volume conservation failed; BooleanSplit-box: cap area mismatch (0.0091056935/0.0091058707); Split\u002BJoinBreps\u002Bcap: paired volume conservation failed",
+      "Crossing trim/cap could not be certified."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0456/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.07937753336722757,
+    "Actual": 0.07938961434126861,
+    "Ms": 208.3588,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0457/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.009106012139951469,
+    "Actual": 0,
+    "Ms": 403.2499,
+    "Reasons": [
+      "Evidence routes exhausted: Trim\u002BCapPlanarHoles: paired volume conservation failed; BooleanSplit-box: cap area mismatch (0.0091056935/0.0091058707); Split\u002BJoinBreps\u002Bcap: paired volume conservation failed",
+      "Crossing trim/cap could not be certified."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0458/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.07937753336722758,
+    "Actual": 0.07938961434126464,
+    "Ms": 214.4448,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0459/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.009106012139951554,
+    "Actual": 0,
+    "Ms": 395.6735,
+    "Reasons": [
+      "Evidence routes exhausted: Trim\u002BCapPlanarHoles: paired volume conservation failed; BooleanSplit-box: cap area mismatch (0.0091056935/0.0091058707); Split\u002BJoinBreps\u002Bcap: paired volume conservation failed",
+      "Crossing trim/cap could not be certified."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0460/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.07937753336722757,
+    "Actual": 0.07938961434126388,
+    "Ms": 224.2485,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0461/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.009106012139951615,
+    "Actual": 0,
+    "Ms": 407.8889,
+    "Reasons": [
+      "Evidence routes exhausted: Trim\u002BCapPlanarHoles: paired volume conservation failed; BooleanSplit-box: cap area mismatch (0.0091056935/0.0091058707); Split\u002BJoinBreps\u002Bcap: paired volume conservation failed",
+      "Crossing trim/cap could not be certified."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0462/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.07937753336722761,
+    "Actual": 0.07938961434126898,
+    "Ms": 221.41,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0463/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.009106012139951693,
+    "Actual": 0,
+    "Ms": 399.7309,
+    "Reasons": [
+      "Evidence routes exhausted: Trim\u002BCapPlanarHoles: paired volume conservation failed; BooleanSplit-box: cap area mismatch (0.0091056935/0.0091058707); Split\u002BJoinBreps\u002Bcap: paired volume conservation failed",
+      "Crossing trim/cap could not be certified."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0464/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.0793775333672276,
+    "Actual": 0.0793896143412684,
+    "Ms": 221.154,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0465/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.009106012139951693,
+    "Actual": 0,
+    "Ms": 403.9074,
+    "Reasons": [
+      "Evidence routes exhausted: Trim\u002BCapPlanarHoles: paired volume conservation failed; BooleanSplit-box: cap area mismatch (0.0091056935/0.0091058707); Split\u002BJoinBreps\u002Bcap: paired volume conservation failed",
+      "Crossing trim/cap could not be certified."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0466/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.07937753336722754,
+    "Actual": 0.07938961434126915,
+    "Ms": 220.2934,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0467/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.009106012139951672,
+    "Actual": 0,
+    "Ms": 399.8101,
+    "Reasons": [
+      "Evidence routes exhausted: Trim\u002BCapPlanarHoles: paired volume conservation failed; BooleanSplit-box: cap area mismatch (0.0091056935/0.0091058707); Split\u002BJoinBreps\u002Bcap: paired volume conservation failed",
+      "Crossing trim/cap could not be certified."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0468/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 198.1591,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0469/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 191.0204,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0470/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 194.4133,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0471/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 190.6354,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0472/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 198.8223,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0473/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 190.2932,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0474/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 196.0544,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0475/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 197.1995,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0476/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 210.7841,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0477/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 214.2234,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0478/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 219.3366,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0479/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 194.8641,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0480/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 203.3864,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0481/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 202.2755,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0482/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 210.5015,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0483/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 205.8563,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0484/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 192.9475,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0485/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 211.1151,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0486/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 200.0517,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/glass-Brep-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 3.2985,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/glass-mesh-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 2063.5853,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/curved-mullion-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.002520531228541636,
+    "Actual": 0,
+    "Ms": 741.432,
+    "Reasons": [
+      "Evidence routes exhausted: Trim\u002BCapPlanarHoles: paired volume conservation failed; BooleanSplit-box: cap area mismatch (0.0025225259/0.0025216494); Split\u002BJoinBreps\u002Bcap: paired volume conservation failed",
+      "Crossing trim/cap could not be certified."
+    ]
+  },
+  {
+    "Id": "curved-facade/Plan cut/twisting-fin-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 1.5492,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/curved-transom-0-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 444.8306,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/curved-transom-0-3",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 432.8697,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/glass-Brep-1",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 2.1353,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/glass-mesh-1",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 1419.7114,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/curved-mullion-1",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.0025220726736210858,
+    "Actual": 0,
+    "Ms": 769.9893,
+    "Reasons": [
+      "Evidence routes exhausted: Trim\u002BCapPlanarHoles: paired volume conservation failed; BooleanSplit-box: cap area mismatch (0.0025225219/0.0025216494); Split\u002BJoinBreps\u002Bcap: paired volume conservation failed",
+      "Crossing trim/cap could not be certified."
+    ]
+  },
+  {
+    "Id": "curved-facade/Plan cut/twisting-fin-1",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 1.3712,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/curved-transom-1-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 420.1898,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/curved-transom-1-3",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 399.1735,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/glass-Brep-2",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 2.274,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/glass-mesh-2",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 1340.5759,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/curved-mullion-2",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.0025216663319734293,
+    "Actual": 0,
+    "Ms": 766.6039,
+    "Reasons": [
+      "Evidence routes exhausted: Trim\u002BCapPlanarHoles: cap area mismatch (0.0025216494/0.0025225292); BooleanSplit-box: paired volume conservation failed; Split\u002BJoinBreps\u002Bcap: paired volume conservation failed",
+      "Crossing trim/cap could not be certified."
+    ]
+  },
+  {
+    "Id": "curved-facade/Plan cut/twisting-fin-2",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 1.4624,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/curved-transom-2-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 400.0936,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/curved-transom-2-3",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 410.2263,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/glass-Brep-3",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 1.7934,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/glass-mesh-3",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 1354.2737,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/curved-mullion-3",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.002521373782373093,
+    "Actual": 0,
+    "Ms": 614.084,
+    "Reasons": [
+      "Evidence routes exhausted: Trim\u002BCapPlanarHoles: cap area mismatch (0.0025216494/0.0025225292); BooleanSplit-box: paired volume conservation failed; Split\u002BJoinBreps\u002Bcap: paired volume conservation failed",
+      "Crossing trim/cap could not be certified."
+    ]
+  },
+  {
+    "Id": "curved-facade/Plan cut/twisting-fin-3",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 1.2757,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/curved-transom-3-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 428.3333,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/curved-transom-3-3",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 475.6565,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/glass-Brep-4",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 2.0063,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/glass-mesh-4",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 1507.7341,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/curved-mullion-4",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.0025244976784858314,
+    "Actual": 0,
+    "Ms": 550.4834,
+    "Reasons": [
+      "Evidence routes exhausted: Trim\u002BCapPlanarHoles: cap area mismatch (0.0025216494/0.0025225292); BooleanSplit-box: paired volume conservation failed; Split\u002BJoinBreps\u002Bcap: paired volume conservation failed",
+      "Crossing trim/cap could not be certified."
+    ]
+  },
+  {
+    "Id": "curved-facade/Plan cut/twisting-fin-4",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 1.5287,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/curved-transom-4-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 518.2347,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/curved-transom-4-3",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 487.2751,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/curved-louvre-1",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 8.702,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/curved-louvre-2",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 7.9668,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/perforated-cassette-9-circular-holes",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 68.7277,
+    "Reasons": []
+  },
+  {
+    "Id": "tangent-continuity/generated-plan/G1-filleted-box",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 3.946368401191749,
+    "Actual": 3.946349539007336,
+    "Ms": 943.2956,
+    "Reasons": []
+  },
+  {
+    "Id": "tangent-continuity/generated-plan/G1-plane-polynomial-blend",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 1.5521,
+    "Reasons": []
+  },
+  {
+    "Id": "tangent-continuity/generated-plan/G2-plane-polynomial-blend",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 1.4036,
+    "Reasons": []
+  },
+  {
+    "Id": "tangent-continuity/generated-plan/torus-seam-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 3.7706220778163795,
+    "Actual": 3.7699112308305427,
+    "Ms": 100.6041,
+    "Reasons": []
+  },
+  {
+    "Id": "tangent-continuity/generated-plan/sphere-seam-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 2.5446765781483958,
+    "Actual": 2.5446900808106214,
+    "Ms": 59.2267,
+    "Reasons": []
+  },
+  {
+    "Id": "tangent-continuity/generated-plan/torus-seam-1",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.5655258973697982,
+    "Actual": 0.5654866846245815,
+    "Ms": 78.5382,
+    "Reasons": []
+  },
+  {
+    "Id": "tangent-continuity/generated-plan/sphere-seam-1",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 2.5446833137780613,
+    "Actual": 2.544690080810616,
+    "Ms": 44.2596,
+    "Reasons": []
+  },
+  {
+    "Id": "tangent-continuity/generated-plan/exact-edge-on-sheet",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 1.7814,
+    "Reasons": []
+  },
+  {
+    "Id": "tangent-continuity/generated-side/G1-filleted-box",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 804.3976,
+    "Reasons": []
+  },
+  {
+    "Id": "tangent-continuity/generated-side/G1-plane-polynomial-blend",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 1.8602,
+    "Reasons": []
+  },
+  {
+    "Id": "tangent-continuity/generated-side/G2-plane-polynomial-blend",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 1.948,
+    "Reasons": []
+  },
+  {
+    "Id": "tangent-continuity/generated-side/torus-seam-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.565430366736444,
+    "Actual": 0.5654866846245823,
+    "Ms": 74.8517,
+    "Reasons": []
+  },
+  {
+    "Id": "tangent-continuity/generated-side/sphere-seam-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 2.5446765781483944,
+    "Actual": 2.5446900808106228,
+    "Ms": 45.4856,
+    "Reasons": []
+  },
+  {
+    "Id": "tangent-continuity/generated-side/torus-seam-1",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 3.7706220778163764,
+    "Actual": 3.769911230830547,
+    "Ms": 106.5631,
+    "Reasons": []
+  },
+  {
+    "Id": "tangent-continuity/generated-side/sphere-seam-1",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 2.544676578148393,
+    "Actual": 2.5446900808106214,
+    "Ms": 52.3896,
+    "Reasons": []
+  },
+  {
+    "Id": "tangent-continuity/generated-side/exact-edge-on-sheet",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1984,
+    "Reasons": []
+  },
+  {
+    "Id": "subd-vs-nurbs/Plan cut/canopy-SubD",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 78.3611,
+    "Reasons": []
+  },
+  {
+    "Id": "subd-vs-nurbs/Plan cut/canopy-NURBS",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 87.7029,
+    "Reasons": []
+  },
+  {
+    "Id": "subd-vs-nurbs/Plan cut/canopy-mesh",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 9161.0731,
+    "Reasons": []
+  },
+  {
+    "Id": "generated/CHS-arc-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.49480084218233633,
+    "Actual": 0,
+    "Ms": 58.2205,
+    "Reasons": [
+      "Self-intersecting or degenerate section loop.",
+      "Crossing trim/cap could not be certified."
+    ]
+  },
+  {
+    "Id": "generated/CHS-arc-30",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.5721981647040638,
+    "Actual": 0.5721999660413936,
+    "Ms": 471.1724,
+    "Reasons": []
+  },
+  {
+    "Id": "generated/CHS-arc-60",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 1.0032539126910427,
+    "Actual": 1.0032536980837836,
+    "Ms": 373.1194,
+    "Reasons": []
+  },
+  {
+    "Id": "generated/RHS-spline",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.09882804180211929,
+    "Actual": 0.09883445980755495,
+    "Ms": 112.8273,
+    "Reasons": []
+  },
+  {
+    "Id": "generated/twisted-RHS",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.09,
+    "Actual": 0.09000000000000064,
+    "Ms": 73.5798,
+    "Reasons": []
+  },
+  {
+    "Id": "generated/I-beam-arc-fillets",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.43862654824574365,
+    "Actual": 0,
+    "Ms": 344.4797,
+    "Reasons": [
+      "Self-intersecting or degenerate section loop.",
+      "Crossing trim/cap could not be certified."
+    ]
+  },
+  {
+    "Id": "generated/pipe-contact-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 30.8274,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "generated/pipe-contact--0.5",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 30.5823,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "generated/pipe-contact-0.5",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 30.3213,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined.",
+      "Tolerance band or unverified freeform crossing; no confident fill."
+    ]
+  },
+  {
+    "Id": "generated/pipe-contact--2",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.1599919997999854,
+    "Actual": 0,
+    "Ms": 35.4802,
+    "Reasons": [
+      "Evidence: tangent section within tolerance band.",
+      "Crossing trim/cap could not be certified."
+    ]
+  },
+  {
+    "Id": "generated/pipe-contact-2",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 40.2785,
+    "Reasons": []
+  },
+  {
+    "Id": "generated/multi-lump-straddling-no-crossing",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 5.6739,
+    "Reasons": []
+  },
+  {
+    "Id": "generated/multi-lump-one-crossing",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.7853981633974483,
+    "Actual": 0.7853981730896975,
+    "Ms": 49.5581,
+    "Reasons": []
+  },
+  {
+    "Id": "generated/node-overlap-a",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.7853981633974483,
+    "Actual": 0.7853981730896975,
+    "Ms": 53.3966,
+    "Reasons": []
+  },
+  {
+    "Id": "generated/node-overlap-b",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.7853981633974483,
+    "Actual": 0.7853981730896972,
+    "Ms": 53.1014,
+    "Reasons": []
+  },
+  {
+    "Id": "generated/closed-SubD-canopy",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 14.666668489072777,
+    "Actual": 14.666666666666666,
+    "Ms": 1008.1441,
+    "Reasons": []
+  },
+  {
+    "Id": "generated/open-shell",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 8.4577,
+    "Reasons": []
+  }
+]
