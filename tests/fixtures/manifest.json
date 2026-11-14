@@ -1,0 +1,597 @@
+{
+  "schemaVersion": 1,
+  "maximumBundledSizeBytes": 2000000,
+  "notes": [
+    "P/F/U preserve the limited property verdicts of research; ok never means correct.",
+    "External entries contain metadata and originalPath only; never copy these assets into the repository.",
+    "All original research fixtures at or below 2000000 bytes are bundled without changes.",
+    "The S1a 50k fixture uses default document units (Millimeters); it is spaced, not high overlap."
+  ],
+  "fixtures": [
+    {
+      "id": "arc_3d.3dm",
+      "external": false,
+      "sha256": "69369b97122534cb5528184d946fa63fae77198e9ca5442e1f8d065049b97826",
+      "sizeBytes": 7970,
+      "units": "Meters",
+      "description": "Tilted 270° arc remains rational; projected length 4.051932; retained cut arc 2.701288.",
+      "research": {
+        "source": "../../docs/research/geometry-matrix.md",
+        "verdict": "P basic projection"
+      },
+      "path": "arc_3d.3dm"
+    },
+    {
+      "id": "block_instance.3dm",
+      "external": false,
+      "sha256": "b4873b9c7e9b33e32ac76cede2c7de870b7bfc6b82b6201dcbe58b9a7a289a2f",
+      "sizeBytes": 28633,
+      "units": "Millimeters",
+      "description": "Native AddGeometry does not expand references; MVP rejects. Private headless document supplied real definitions.",
+      "research": {
+        "source": "../../docs/research/geometry-matrix.md",
+        "verdict": "F direct"
+      },
+      "path": "block_instance.3dm"
+    },
+    {
+      "id": "block_instance_expanded.3dm",
+      "external": false,
+      "sha256": "7f932cd4f48ed3735b7ab3b7b4814b207d53a3e0f46c3d754019449ad2dc860d",
+      "sizeBytes": 41961,
+      "units": "Meters",
+      "description": "Explicitly expanded block control; tests transform normalization, not direct instance support.",
+      "research": {
+        "source": "../../docs/research/geometry-matrix.md",
+        "verdict": "F direct; expanded control"
+      },
+      "path": "block_instance_expanded.3dm"
+    },
+    {
+      "id": "block_nested_mirrored.3dm",
+      "external": false,
+      "sha256": "3b82195da0929f983c080e813e99cc2e9266fb32d67bda30e4864e06ef1793e6",
+      "sizeBytes": 28633,
+      "units": "Millimeters",
+      "description": "Same direct limitation. Two-level definition transforms and mirrored references tested after explicit expansion.",
+      "research": {
+        "source": "../../docs/research/geometry-matrix.md",
+        "verdict": "F direct"
+      },
+      "path": "block_nested_mirrored.3dm"
+    },
+    {
+      "id": "block_nested_mirrored_expanded.3dm",
+      "external": false,
+      "sha256": "f1644997ab37a42dd08ca4ec5b027166254d67f8d293039b0c75a4c47cd52d56",
+      "sizeBytes": 41975,
+      "units": "Meters",
+      "description": "Expanded nested mirrored block control; full native visibility not certified.",
+      "research": {
+        "source": "../../docs/research/geometry-matrix.md",
+        "verdict": "F direct; expanded control"
+      },
+      "path": "block_nested_mirrored_expanded.3dm"
+    },
+    {
+      "id": "box_probe.3dm",
+      "external": false,
+      "sha256": "8e7b7ed0d7ddd86da356e443d69878e06c319e5f9f250d93bdb0d0f94edd55d8",
+      "sizeBytes": 24885,
+      "units": "Meters",
+      "description": "Expected probe hidden [-1,1], visible [-3,-1]∪[1,3]. Native boundary error 2.27e-5 < 1e-4; Custom/Auto exact to rounding. Raw cut has invalid Unset proxies.",
+      "research": {
+        "source": "../../docs/research/geometry-matrix.md",
+        "verdict": "P interval; raw extraction note"
+      },
+      "path": "box_probe.3dm"
+    },
+    {
+      "id": "brep_box.3dm",
+      "external": false,
+      "sha256": "f66e5db6e3c20e691eaa93c2dafdc122e8ee9bee5fc231c2c0633cb70ec2419d",
+      "sizeBytes": 24641,
+      "units": "Meters",
+      "description": "Square visible perimeter 8; cut area 4. Custom retains coincident hidden perimeter.",
+      "research": {
+        "source": "../../docs/research/geometry-matrix.md",
+        "verdict": "P"
+      },
+      "path": "brep_box.3dm"
+    },
+    {
+      "id": "brep_concave_polysurface.3dm",
+      "external": false,
+      "sha256": "07fca2eaac0cbe65ea7b22899e33b519be0fdda4833d8760de2d1e913cd4e298",
+      "sizeBytes": 28847,
+      "units": "Meters",
+      "description": "L profile: cut area 3, one loop. Full occlusion beyond this top view uncertified.",
+      "research": {
+        "source": "../../docs/research/geometry-matrix.md",
+        "verdict": "P section"
+      },
+      "path": "brep_concave_polysurface.3dm"
+    },
+    {
+      "id": "brep_curved_sphere.3dm",
+      "external": false,
+      "sha256": "0d566bb7f63569b0160720371a23088c86a44ec7ab4543b98ab0053e406d4bfd",
+      "sizeBytes": 10257,
+      "units": "Meters",
+      "description": "Radius-1 silhouette length 2π. After cut, Visible and Cut both contain the same circular locus; style precedence required.",
+      "research": {
+        "source": "../../docs/research/geometry-matrix.md",
+        "verdict": "P basic"
+      },
+      "path": "brep_curved_sphere.3dm"
+    },
+    {
+      "id": "brep_open_box.3dm",
+      "external": false,
+      "sha256": "9e07bd74bcac0075485c608418fd8dedf62cd0e5db138f1206b31c2d30acad57",
+      "sizeBytes": 19432,
+      "units": "Meters",
+      "description": "Missing side produces an open 3-sided cut; no fill should be invented. Full visibility uncertified.",
+      "research": {
+        "source": "../../docs/research/geometry-matrix.md",
+        "verdict": "P open-cut"
+      },
+      "path": "brep_open_box.3dm"
+    },
+    {
+      "id": "brep_trimmed_curved.3dm",
+      "external": false,
+      "sha256": "4813715ca0a4ed8fee824786ca40aaa68bfe82adb40bb6c5255f13e23dee84fe",
+      "sizeBytes": 10656,
+      "units": "Meters",
+      "description": "Trimmed open sphere runs; closed equatorial region area π. No independent full trimmed-silhouette oracle.",
+      "research": {
+        "source": "../../docs/research/geometry-matrix.md",
+        "verdict": "U"
+      },
+      "path": "brep_trimmed_curved.3dm"
+    },
+    {
+      "id": "brep_trimmed_planar_annulus.3dm",
+      "external": false,
+      "sha256": "12ebca1b70d19f16edaa15ae51813b41dc2646ed28ccd174278576b046895c05",
+      "sizeBytes": 10652,
+      "units": "Meters",
+      "description": "Coplanar surface yields two loops, one annular hatch; cut-contact semantics need policy.",
+      "research": {
+        "source": "../../docs/research/geometry-matrix.md",
+        "verdict": "P topology"
+      },
+      "path": "brep_trimmed_planar_annulus.3dm"
+    },
+    {
+      "id": "chs_hollow.3dm",
+      "external": false,
+      "sha256": "d33b5fc0a72cf4d4337e225ad2fd07e1e0df8414c2a0a2f39d100209124c7584",
+      "sizeBytes": 16685,
+      "units": "Meters",
+      "description": "2 circles, one annular hatch, area 0.51π; Custom unresolved. Native/Auto preserve hole.",
+      "research": {
+        "source": "../../docs/research/geometry-matrix.md",
+        "verdict": "F Custom; P section"
+      },
+      "path": "chs_hollow.3dm"
+    },
+    {
+      "id": "circle_3d.3dm",
+      "external": false,
+      "sha256": "7b7899f2b1fa83c1962cf7bcc217c6ffdcd555ec41da905f44aad35ba3eab510",
+      "sizeBytes": 7976,
+      "units": "Meters",
+      "description": "Tilted circle projects to rational ellipse; length 5.402576, cut half 2.701288.",
+      "research": {
+        "source": "../../docs/research/geometry-matrix.md",
+        "verdict": "P basic projection"
+      },
+      "path": "circle_3d.3dm"
+    },
+    {
+      "id": "column_through_slab.3dm",
+      "external": false,
+      "sha256": "b15fc2058aabf3261861e2172fd4a77cdc9e61e76692e250d3bf89f89e3ff0c2",
+      "sizeBytes": 41953,
+      "units": "Meters",
+      "description": "Two independent closed cuts, areas 0.16 and 16, retained separately despite overlap. Top view does not reproduce oblique penetration failures.",
+      "research": {
+        "source": "../../docs/research/geometry-matrix.md",
+        "verdict": "P per-object cuts; U visibility"
+      },
+      "path": "column_through_slab.3dm"
+    },
+    {
+      "id": "curve_on_surface.3dm",
+      "external": false,
+      "sha256": "dd555d09993bbff26bdc87943dd9f886ada400bd9958f052bcd86bd5e7d6eccc",
+      "sizeBytes": 24899,
+      "units": "Meters",
+      "description": "Explicit source curve on top face remains visible length 1.6; after cutting z>0 it is removed.",
+      "research": {
+        "source": "../../docs/research/geometry-matrix.md",
+        "verdict": "P contact probe"
+      },
+      "path": "curve_on_surface.3dm"
+    },
+    {
+      "id": "elliptical_columns_100.3dm",
+      "external": false,
+      "sha256": "c97c375fa6970baf7660c85ec1119dc8fd138f4ccec82057ecd723a783945223",
+      "sizeBytes": 530159,
+      "units": "Meters",
+      "description": "100 elliptical columns; performance comparison, no full-output oracle.",
+      "research": {
+        "source": "../../docs/research/performance.md",
+        "verdict": "U full correctness; measured performance"
+      },
+      "path": "elliptical_columns_100.3dm"
+    },
+    {
+      "id": "extrusion_solid.3dm",
+      "external": false,
+      "sha256": "09eae6e5be127cbbbfa27078607fed0f1a3072fe7e0bf175a7978cc1f32119ad",
+      "sizeBytes": 7993,
+      "units": "Meters",
+      "description": "Converted extrusion yields box outline/cut, area 4.",
+      "research": {
+        "source": "../../docs/research/geometry-matrix.md",
+        "verdict": "P basic"
+      },
+      "path": "extrusion_solid.3dm"
+    },
+    {
+      "id": "frame2d-large-campus.3dm",
+      "external": true,
+      "sha256": "02a56b5803d0d6a80415bcd4a3b2b0cf44e1377ed9c7746a3cd50903238aa324",
+      "sizeBytes": 552924158,
+      "units": "Meters",
+      "description": "527 MiB generated campus, 2983 objects; full native plan performance baseline.",
+      "research": {
+        "source": "../../docs/research/performance.md",
+        "verdict": "U full correctness; measured native baseline"
+      },
+      "originalPath": "C:/Users/tomosandego/.t3/scratch/m2d-plus-research-20261114/fixtures/frame2d-large-campus.3dm"
+    },
+    {
+      "id": "frame2d-large-campus.json",
+      "external": false,
+      "sha256": "0e25d454f96e34f41b4dea9776f3b0cab59d5e76c8a7981c430784a028b24d24",
+      "sizeBytes": 1187142,
+      "units": "metres",
+      "description": "Campus generation metadata (geometry remains external). 527 MiB generated campus, 2983 objects; full native plan performance baseline.",
+      "research": {
+        "source": "../../docs/research/performance.md",
+        "verdict": "U full correctness; measured native baseline"
+      },
+      "path": "frame2d-large-campus.json"
+    },
+    {
+      "id": "i_beam.3dm",
+      "external": false,
+      "sha256": "6fc7895295e33a4115fdccffdecf26ec6f5fc541795fed8826423e89ec53639b",
+      "sizeBytes": 49169,
+      "units": "Meters",
+      "description": "Concave I profile area 1.76, one hatch. An I-beam has a concave open-sided profile, not an enclosed inner loop.",
+      "research": {
+        "source": "../../docs/research/geometry-matrix.md",
+        "verdict": "P section"
+      },
+      "path": "i_beam.3dm"
+    },
+    {
+      "id": "line_3d.3dm",
+      "external": false,
+      "sha256": "f9e4f281573187c54472d88828bd3f953ab695a7c8c7c2fc4ef3f2877599b32c",
+      "sizeBytes": 7591,
+      "units": "Meters",
+      "description": "XY length 6; cut retains length 3. No area/region expected from a line.",
+      "research": {
+        "source": "../../docs/research/geometry-matrix.md",
+        "verdict": "P projection"
+      },
+      "path": "line_3d.3dm"
+    },
+    {
+      "id": "mesh_closed_quad.3dm",
+      "external": false,
+      "sha256": "a85d50131a46feb28d1a170e6033e7dbb4fec26968044ef58eab24386dbfffb1",
+      "sizeBytes": 8487,
+      "units": "Meters",
+      "description": "Native/Auto cut Visible length 9 overlaps an 8-unit contour; Custom retraces boundary, length 18. Cut loop itself area 4.",
+      "research": {
+        "source": "../../docs/research/geometry-matrix.md",
+        "verdict": "F cut"
+      },
+      "path": "mesh_closed_quad.3dm"
+    },
+    {
+      "id": "mesh_closed_tri.3dm",
+      "external": false,
+      "sha256": "2b038aada5fe90d320ecd02121cc18c0cb4e57b85e40f18d138efdc11497f5a6",
+      "sizeBytes": 8511,
+      "units": "Meters",
+      "description": "Custom no-cut is Unresolved length 20; clipped mesh has same duplicate-boundary issue as quad cube.",
+      "research": {
+        "source": "../../docs/research/geometry-matrix.md",
+        "verdict": "F Custom/cut"
+      },
+      "path": "mesh_closed_tri.3dm"
+    },
+    {
+      "id": "mesh_nonmanifold.3dm",
+      "external": false,
+      "sha256": "ef394fe40db55259e91abd64aa35033f0e8d0ade4908212cddd0f9996f4cd578",
+      "sizeBytes": 8278,
+      "units": "Meters",
+      "description": "Custom cut adds an exact duplicate; open branched section, zero closed regions. Native runs, not certified for arbitrary non-manifold input.",
+      "research": {
+        "source": "../../docs/research/geometry-matrix.md",
+        "verdict": "F Custom; U native"
+      },
+      "path": "mesh_nonmanifold.3dm"
+    },
+    {
+      "id": "mesh_open_quad.3dm",
+      "external": false,
+      "sha256": "c94a4f99f3aba739cf8f1e47b3743a25065b4d298465107838f2f5801f725a09",
+      "sizeBytes": 8218,
+      "units": "Meters",
+      "description": "Sloped quad section is an open line; no hatch. Basic projected outline runs.",
+      "research": {
+        "source": "../../docs/research/geometry-matrix.md",
+        "verdict": "P open-cut"
+      },
+      "path": "mesh_open_quad.3dm"
+    },
+    {
+      "id": "mesh_terrain_brep_building.3dm",
+      "external": false,
+      "sha256": "9a05522daa33313bbf168914f1841c8fbd980a1b6ca0b9ab71c2144c6c9bba9b",
+      "sizeBytes": 25532,
+      "units": "Meters",
+      "description": "Building cut area 4 hatchable; terrain gives 2 open contours. Mixed visibility runs, full truth uncertified.",
+      "research": {
+        "source": "../../docs/research/geometry-matrix.md",
+        "verdict": "P section split; U full"
+      },
+      "path": "mesh_terrain_brep_building.3dm"
+    },
+    {
+      "id": "nurbs_curve_3d.3dm",
+      "external": false,
+      "sha256": "d826d226eef94e9113a4a73924c5ccd5f863dfab71ca7012cea63d645c652f86",
+      "sizeBytes": 7826,
+      "units": "Meters",
+      "description": "NURBS retained; projected length 6.059995, cut 3.029997. Shape sampled, not a complete curve-error proof.",
+      "research": {
+        "source": "../../docs/research/geometry-matrix.md",
+        "verdict": "P basic projection"
+      },
+      "path": "nurbs_curve_3d.3dm"
+    },
+    {
+      "id": "pipe_behind_glass.3dm",
+      "external": false,
+      "sha256": "d7aba4721de9cbd472c64af2cf4d6df467ed681bc84584939fc6e3bb5de5da20",
+      "sizeBytes": 30209,
+      "units": "Meters",
+      "description": "All engines treat panel as opaque; material-aware counterpart saved/tested in controls.json. Transparency is not an engine input.",
+      "research": {
+        "source": "../../docs/research/geometry-matrix.md",
+        "verdict": "P opaque contract; F transparency"
+      },
+      "path": "pipe_behind_glass.3dm"
+    },
+    {
+      "id": "pipe_behind_glass_material.3dm",
+      "external": false,
+      "sha256": "d258ff71ab098e5e163d15e137ed5f562e89661589401925f2a3969e6e817df9",
+      "sizeBytes": 31972,
+      "units": "Meters",
+      "description": "Material-aware glass control; transparency is not an MVP engine input.",
+      "research": {
+        "source": "../../docs/research/geometry-matrix.md",
+        "verdict": "P opaque contract; F transparency"
+      },
+      "path": "pipe_behind_glass_material.3dm"
+    },
+    {
+      "id": "pipe_curved.3dm",
+      "external": false,
+      "sha256": "5799396919f2dcf15737abf9dfdb1e8c8e62569d6d219d0baf119dc202e2d7fb",
+      "sizeBytes": 17722,
+      "units": "Meters",
+      "description": "Custom leaves curved silhouette intervals Unresolved with/without cut. Native/Auto run; closed pipe section hatchable.",
+      "research": {
+        "source": "../../docs/research/geometry-matrix.md",
+        "verdict": "F Custom; U native"
+      },
+      "path": "pipe_curved.3dm"
+    },
+    {
+      "id": "point.3dm",
+      "external": false,
+      "sha256": "b8bc48389f036dd82f0ca9241692a66c1d3c733794ccc78551d9d9a4066cbe6a",
+      "sizeBytes": 7543,
+      "units": "Meters",
+      "description": "Raw HLD returns one point, then zero when point is before cut. MVP validator rejects it.",
+      "research": {
+        "source": "../../docs/research/geometry-matrix.md",
+        "verdict": "F MVP; P raw"
+      },
+      "path": "point.3dm"
+    },
+    {
+      "id": "points_with_occluder.3dm",
+      "external": false,
+      "sha256": "647b104945cbb86333eaec8d3bc746563b275ce79fc8bbe890ae9971f8414208",
+      "sizeBytes": 25061,
+      "units": "Meters",
+      "description": "Point occlusion control; native occluding-section mode may drop points.",
+      "research": {
+        "source": "../../docs/research/geometry-matrix.md",
+        "verdict": "F MVP; native points control"
+      },
+      "path": "points_with_occluder.3dm"
+    },
+    {
+      "id": "polyline_3d.3dm",
+      "external": false,
+      "sha256": "83b04108dfe56d4beb34b556cacb996d416d51af00c453a2b188e6f5d5813c17",
+      "sizeBytes": 7671,
+      "units": "Meters",
+      "description": "XY projected length 5.656854; cut length 2.828427. Not a tessellation of a smooth curve.",
+      "research": {
+        "source": "../../docs/research/geometry-matrix.md",
+        "verdict": "P basic projection"
+      },
+      "path": "polyline_3d.3dm"
+    },
+    {
+      "id": "repeated_building_305.3dm",
+      "external": true,
+      "sha256": "a897c686830ed05e074e683216820442c3878fdb71b0338ea8ea77d4629ea842",
+      "sizeBytes": 4678627,
+      "units": "Meters",
+      "description": "305-object repeated building; definition-local preparation and cross-view reuse study.",
+      "research": {
+        "source": "../../docs/research/performance.md",
+        "verdict": "P per-object reuse; U full visibility"
+      },
+      "originalPath": "C:/Users/tomosandego/.t3/scratch/m2d-plus-research-20261114/fixtures/repeated_building_305.3dm"
+    },
+    {
+      "id": "rhs_hollow.3dm",
+      "external": false,
+      "sha256": "3bf85621c4d110a5124d700347b092689643d7b0cfc69ef11c40aa753bb2d32a",
+      "sizeBytes": 34469,
+      "units": "Meters",
+      "description": "Boolean-constructed valid hollow solid; 2 loops, one hatch with inner hole, area 2.04; volume asserted 4.08.",
+      "research": {
+        "source": "../../docs/research/geometry-matrix.md",
+        "verdict": "P section void"
+      },
+      "path": "rhs_hollow.3dm"
+    },
+    {
+      "id": "section_500_hatched.3dm",
+      "external": true,
+      "sha256": "ed5b102b794aaefbcddc0adf576bbe8386e5b8fd8b458cd8affd60a3a95372eb",
+      "sizeBytes": 2053144,
+      "units": "Meters",
+      "description": "First 500-object section export; pattern-table resolution corrected in resolved export.",
+      "research": {
+        "source": "../../docs/research/performance.md",
+        "verdict": "F export pattern resolution; P section topology"
+      },
+      "originalPath": "C:/Users/tomosandego/.t3/scratch/m2d-plus-research-20261114/fixtures/section_500_hatched.3dm"
+    },
+    {
+      "id": "section_500_hatched_resolved.3dm",
+      "external": true,
+      "sha256": "139bff85422d04b84d9fcdd65f1d8c412b0e855726ed49d88380f6038a49f71a",
+      "sizeBytes": 2054780,
+      "units": "Meters",
+      "description": "Resolved hatch-table export: per-object cut regions including inner voids.",
+      "research": {
+        "source": "../../docs/research/performance.md",
+        "verdict": "P hatch export/topology; U full drawing"
+      },
+      "originalPath": "C:/Users/tomosandego/.t3/scratch/m2d-plus-research-20261114/fixtures/section_500_hatched_resolved.3dm"
+    },
+    {
+      "id": "section_500_objects.3dm",
+      "external": true,
+      "sha256": "00a41dc19772a5d3c7ee3b2b3bcef7e2ee91eba060e58a30f33d14537a5235e6",
+      "sizeBytes": 8933753,
+      "units": "Meters",
+      "description": "500 solid/hollow section sources; independent hole counts/areas, not a full visibility certification.",
+      "research": {
+        "source": "../../docs/research/performance.md",
+        "verdict": "P section topology/area; U complete drawing"
+      },
+      "originalPath": "C:/Users/tomosandego/.t3/scratch/m2d-plus-research-20261114/fixtures/section_500_objects.3dm"
+    },
+    {
+      "id": "subd_converted_brep.3dm",
+      "external": false,
+      "sha256": "00252a28cf4157fc36dfbc45ce5fee49eae07c3905fbb95d533cc4e36de29b07",
+      "sizeBytes": 43659,
+      "units": "Meters",
+      "description": "SubD converted to Brep; normalization control, not universal SubD accuracy.",
+      "research": {
+        "source": "../../docs/research/geometry-matrix.md",
+        "verdict": "F direct; converted control"
+      },
+      "path": "subd_converted_brep.3dm"
+    },
+    {
+      "id": "subd_rounded_cube.3dm",
+      "external": false,
+      "sha256": "96d6aa7fdaa2a10325f797c3664237bca4374681b3d052e85aa0468c4ed92eab",
+      "sizeBytes": 10195,
+      "units": "Meters",
+      "description": "Direct SubD rejected. ToBrep normalization tested separately; no universal SubD accuracy claim.",
+      "research": {
+        "source": "../../docs/research/geometry-matrix.md",
+        "verdict": "F direct"
+      },
+      "path": "subd_rounded_cube.3dm"
+    },
+    {
+      "id": "surface_planar_open.3dm",
+      "external": false,
+      "sha256": "d6bd2d472e0763b0a8ae2d65a1b84cce533988891c5811a81ebda42ccd8ab19f",
+      "sizeBytes": 7739,
+      "units": "Meters",
+      "description": "Edge-on surface: Native visible length 2, Custom length 4 with one exact duplicate; cut is open, no hatch.",
+      "research": {
+        "source": "../../docs/research/geometry-matrix.md",
+        "verdict": "F Custom"
+      },
+      "path": "surface_planar_open.3dm"
+    },
+    {
+      "id": "text_dot.3dm",
+      "external": false,
+      "sha256": "bb2193d90f7e489258a64c604bc5388b5957508f6e0987fdb63f422e7aba7ca2",
+      "sizeBytes": 7573,
+      "units": "Meters",
+      "description": "Raw AddGeometry returns false; all MVP modes reject. No annotation-layout support.",
+      "research": {
+        "source": "../../docs/research/geometry-matrix.md",
+        "verdict": "F direct"
+      },
+      "path": "text_dot.3dm"
+    },
+    {
+      "id": "text_entity.3dm",
+      "external": false,
+      "sha256": "84d2812d615f5f35fd63eafa162ae5ea73ac47a6b4823d64a3f948d9898d1096",
+      "sizeBytes": 9303,
+      "units": "Meters",
+      "description": "Raw AddGeometry returns false; all MVP modes reject. Outline conversion/text preservation not implemented or certified.",
+      "research": {
+        "source": "../../docs/research/geometry-matrix.md",
+        "verdict": "F direct"
+      },
+      "path": "text_entity.3dm"
+    },
+    {
+      "id": "small-breps-50000.3dm",
+      "external": true,
+      "sha256": "c47db3e348ca4c19907bff84188e1aa58430a915aa08e4948121d482b32f01eb",
+      "sizeBytes": 689359654,
+      "units": "Millimeters",
+      "description": "50000 spaced boxes for ownership stress; not the projected-high-overlap fixture and no full 50k HLD solve.",
+      "research": {
+        "source": "../../docs/research/s1a-worker.md",
+        "verdict": "P snapshot ownership; U full 50k visibility"
+      },
+      "originalPath": "C:/Users/tomosandego/.t3/scratch/m2d-plus-s1a-20261114/fixtures/small-breps-50000.3dm"
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+**/bin/
+**/obj/
+**/node_modules/
+**/artifacts/
+**/dist/
+.vs/
+*.user
+*.suo
+TestResults/
+*.yak
+*.log
