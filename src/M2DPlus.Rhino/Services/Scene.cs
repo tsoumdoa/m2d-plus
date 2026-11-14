@@ -12,8 +12,14 @@ internal sealed class OwnedGeometry : IDisposable
     private readonly object _sync = new();
     internal long Bytes { get; }
     internal string? Conversion { get; }
+    internal long BrepFaces { get; }
+    internal long MeshTriangles { get; }
     internal OwnedGeometry(GeometryBase geometry, string? conversion)
-    { _geometry = geometry; Conversion = conversion; Bytes = (long)geometry.MemoryEstimate(); }
+    {
+        _geometry = geometry; Conversion = conversion; Bytes = (long)geometry.MemoryEstimate();
+        BrepFaces = geometry is Brep brep ? brep.Faces.Count : 0;
+        MeshTriangles = geometry is Mesh mesh ? mesh.Faces.TriangleCount + 2L * mesh.Faces.QuadCount : 0;
+    }
     internal GeometryBase Copy()
     {
         lock (_sync)
@@ -47,24 +53,28 @@ public sealed class PreparedScene : IDisposable
     public BoundingBox Bounds { get; }
     public double Tolerance { get; }
     public long EstimatedBytes { get; }
+    public SceneCost Cost { get; }
     public int SourceCount => _leaves.Count;
     public int PreparationCount { get; private set; }
     internal PreparedScene(string revision, List<SceneLeaf> leaves, Dictionary<string, int> unsupported, double tolerance)
     {
         Revision = revision; _leaves = leaves; Unsupported = new ReadOnlyDictionary<string, int>(unsupported); Tolerance = tolerance;
         Conversions = Array.AsReadOnly(leaves.Where(l => l.Geometry.Value.Conversion is not null)
-            .Select(l => $"{l.Identity}: {l.Geometry.Value.Conversion}").ToArray());
+            .Select(l => $"{l.Identity}: {l.Geometry.Value.Conversion}")
+            .Concat(leaves.Where(l => Combined(l.Chain).SimilarityType == TransformSimilarityType.NotSimilarity)
+                .Select(l => $"{l.Identity}: nonuniform transform; deformable geometry (curves to NURBS where required)")).ToArray());
         var bounds = BoundingBox.Empty;
-        long bytes = 0;
+        long bytes = 0, faces = 0, triangles = 0;
         foreach (var leaf in leaves)
         {
             var transform = Combined(leaf.Chain);
             bounds.Union(leaf.Geometry.Value.Bounds(transform));
             bytes += leaf.Geometry.Value.Bytes;
+            faces += leaf.Geometry.Value.BrepFaces; triangles += leaf.Geometry.Value.MeshTriangles;
         }
         Bounds = bounds;
-        // Admission estimate, not a hard native allocation cap. Large/complex scenes are refused in M1a.
-        EstimatedBytes = checked(bytes * 8 + leaves.Count * 65536L);
+        Cost = new(bytes, faces, triangles, leaves.Count);
+        EstimatedBytes = Cost.Estimate(1);
     }
     internal static Transform Combined(IEnumerable<Transform> chain)
     {
@@ -85,7 +95,14 @@ public sealed class PreparedScene : IDisposable
                 try
                 {
                     geometry.EnsurePrivateCopy();
-                    if (!geometry.Transform(Combined(leaf.Chain))) throw new InvalidOperationException("Block transform failed.");
+                    var transform = Combined(leaf.Chain);
+                    if (transform.SimilarityType == TransformSimilarityType.NotSimilarity && !geometry.IsDeformable)
+                    {
+                        if (geometry is Curve curve)
+                        { var deformable = curve.ToNurbsCurve(); geometry.Dispose(); geometry = deformable; }
+                        else if (!geometry.MakeDeformable()) throw new InvalidOperationException($"Nonuniform block transform unsupported for {geometry.GetType().Name} ({leaf.Identity}).");
+                    }
+                    if (!geometry.Transform(transform)) throw new InvalidOperationException($"Block transform failed ({leaf.Identity}); geometry was not drawn.");
                     // Transform reverses closed-solid orientation for odd reflections. Normalize after the whole chain.
                     if (geometry is Brep { SolidOrientation: BrepSolidOrientation.Inward } brep) brep.Flip();
                     if (geometry is Mesh { IsClosed: true } mesh && mesh.SolidOrientation() < 0) mesh.Flip(true, true, true);
@@ -112,9 +129,9 @@ public sealed class SceneCache : IDisposable
     private readonly Dictionary<string, LeaseEntry<OwnedGeometry>> _geometry = new();
     private readonly Dictionary<string, LeaseEntry<PreparedScene>> _scenes = new();
     private readonly object _sync = new();
-    private long _geometryBytes;
-    private long _sceneBytes;
-    private const long RetainedBudget = 128L * 1024 * 1024;
+    private readonly ByteLru<string> _retention;
+    public SceneCache(long retainedBudget = 128L * 1024 * 1024) => _retention = new(retainedBudget);
+    public long RetainedBytes { get { lock (_sync) return _retention.RetainedBytes; } }
     public int GeometryHits { get; private set; }
     public int SceneHits { get; private set; }
     internal static string Hash(string text) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(text)));
@@ -122,13 +139,12 @@ public sealed class SceneCache : IDisposable
     {
         lock (_sync)
         {
-            if (_geometry.TryGetValue(key, out var found)) { GeometryHits++; return found.Acquire(); }
+            if (_geometry.TryGetValue(key, out var found)) { GeometryHits++; _retention.Touch("g/" + key); return found.Acquire(); }
             var value = create();
             var bytes = value.Bytes;
-            if (_geometry.Count >= 512 || _geometryBytes + _sceneBytes + bytes > RetainedBudget) Clear();
             var entry = new LeaseEntry<OwnedGeometry>(value); var lease = entry.Acquire();
-            if (bytes <= RetainedBudget) { _geometry.Add(key, entry); _geometryBytes += bytes; }
-            else entry.Dispose();
+            _geometry.Add(key, entry);
+            _retention.Add("g/" + key, bytes, () => { _geometry.Remove(key); entry.Dispose(); });
             return lease;
         }
     }
@@ -138,22 +154,20 @@ public sealed class SceneCache : IDisposable
         {
             if (_scenes.TryGetValue(key, out var found))
             {
-                SceneHits++; foreach (var leaf in leaves) leaf.Geometry.Dispose(); return found.Acquire();
+                SceneHits++; _retention.Touch("s/" + key); foreach (var leaf in leaves) leaf.Geometry.Dispose(); return found.Acquire();
             }
             var scene = new PreparedScene(key, leaves, unsupported, tolerance);
-            if (_scenes.Count >= 8 || _geometryBytes + _sceneBytes + scene.EstimatedBytes > RetainedBudget) Clear();
             var added = new LeaseEntry<PreparedScene>(scene); var lease = added.Acquire();
-            if (scene.EstimatedBytes <= RetainedBudget) { _scenes.Add(key, added); _sceneBytes += scene.EstimatedBytes; }
-            else added.Dispose();
+            _scenes.Add(key, added);
+            _retention.Add("s/" + key, scene.EstimatedBytes, () => { _scenes.Remove(key); added.Dispose(); });
             return lease;
         }
     }
-    private void ClearGeometry() { foreach (var entry in _geometry.Values) entry.Dispose(); _geometry.Clear(); _geometryBytes = 0; }
     public void Clear()
     {
         lock (_sync)
         {
-            foreach (var entry in _scenes.Values) entry.Dispose(); _scenes.Clear(); _sceneBytes = 0; ClearGeometry();
+            _retention.Dispose();
         }
     }
     public void Dispose() => Clear();

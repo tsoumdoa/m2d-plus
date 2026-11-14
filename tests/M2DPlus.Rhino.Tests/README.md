@@ -37,9 +37,17 @@ Run both native hosting runtimes **serially** with:
 
 The second run uses `DOTNET_ROLL_FORWARD=LatestMajor` and asserts runtime major 10
 inside the GHA load/solve test. It does not change the owner's Rhino runtime
-setting. TRX results are in `TestResults/m1a-rhino-net8.trx` and `m1a-rhino-net10.trx`.
+setting. TRX results are in `TestResults/m1b-rhino-net8.trx` and `m1b-rhino-net10.trx`.
 The harness keeps a host document alive for GH's process-wide document witness,
 and pumps scheduled GH solutions without showing an editor. Both runs load the
 installed native Rhino build and the built GHA; no binaries are installed or
 copied to Grasshopper Libraries. These checks do not certify a future worker or
 replace an installed-Yak interactive check.
+
+M1b adds all bundled uncut fixture property gates (P/F/U), primitive and Model
+Object/View adapters through the actual GH component, named-view crop and
+perspective partial failure, 80-level nonuniform/mirrored and 24-level linked
+blocks, binary fingerprints, stable order, native extraction failure assertions,
+estimate refusal, and 305-object/six-view and 5k-box smokes. Times are recorded,
+never gated. Use `-BuildingFixture` (or `M2D_BUILDING_FIXTURE` for direct runs)
+for an alternate research fixture path. See [M1b notes](../../docs/design/m1b-notes.md).
