@@ -1,0 +1,496 @@
+{
+  "sourceCommit": "4be80bbb938db757fa029e4a2505d06c841850ff",
+  "branch": "hc/sec-c2-xval",
+  "productionChanges": false,
+  "runtimeScores": [
+    {
+      "iteration": 0,
+      "summary": "Independent C 804-case cross-validation of D commit 4be80bbb; analytically corrected 12 CHS oracles, unchanged 0.2 percent allowance",
+      "gate": {
+        "passed": false,
+        "failures": [
+          "diagrid-shell/Roof section/diagrid-iso-1-0: wrong fill 0.013652403421501069, expected 0.013689024200826586 \u00c2\u00b13.067100284988392E-05",
+          "diagrid-shell/Roof section/diagrid-iso-1-3: wrong fill 0.013652402807115792, expected 0.013689023585273612 \u00c2\u00b13.0670996701719885E-05",
+          "Licensed test failed: M2DPlus.Rhino.Tests.EvidenceCertificationTests.FullEvidenceScore"
+        ]
+      },
+      "primary": 0.9147727272727273,
+      "secondary": {
+        "medianMs": 123.1024,
+        "crossingMedianMs": 151.0603,
+        "certified": 161,
+        "crossing": 176,
+        "cases": 804,
+        "uncertain": {
+          "Self-intersecting Brep faces away from their shared topology.": 4,
+          "No trustworthy halfspace certificate; source quarantined. D: transversality cannot be bounded away from tangency.": 7,
+          "D: transversality cannot be bounded away from tangency.": 7,
+          "No trustworthy halfspace certificate; source quarantined. Self-intersecting or degenerate section loop.": 2,
+          "Self-intersecting or degenerate section loop.": 2
+        }
+      },
+      "loadNote": "Serial owned Rhino.Inside; shared machine, no isolation or timing speedup claim",
+      "runtime": "8.0.34",
+      "rhino": "8.36.26296.17001",
+      "fixtures": {
+        "curved-steel": "4E01947B69FC703C5A0C54471429E2B4CD98A13E42ECAD85433FAD1F38DA5D5F",
+        "diagrid-shell": "A98041A1CA45A12288BA6F87D16068879BFB93282B73AEA4DF04471D3F9C763D",
+        "space-frame": "FB0C6525F01BB330F06AF8E40A642B0BF4FAEF16B23BEE5263FE314C7A36C0C6",
+        "curved-facade": "0E4C788ABA9DC95CD6520CD6DFF4E4EF9E84984F86C939CA297DA14688A2AA6B",
+        "tangent-continuity": "F5FD9B3FEAF05522FD6FD6B3DB4C455D94743C76552E3F011DB017166F967461",
+        "subd-vs-nurbs": "6A26158F6626AC1273E124901B0BCCDE6D431D80C88D41D9A8EF852FD814E8F6"
+      },
+      "oracle": "D8923DAB12C0DB108B6871BD1F94F172A25287F5D865F943A3F80C461A79B993",
+      "engine": "EE82119235EB3A6499BCD7B1A15F4AF9A3222792E26407850554CD678A2984FC",
+      "licensedGate": {
+        "total": "143",
+        "failed": "1"
+      }
+    },
+    {
+      "iteration": 0,
+      "summary": "Independent C 804-case cross-validation of D commit 4be80bbb; analytically corrected 12 CHS oracles, unchanged 0.2 percent allowance",
+      "gate": {
+        "passed": false,
+        "failures": [
+          "diagrid-shell/Roof section/diagrid-iso-1-0: wrong fill 0.013652403421501069, expected 0.013689024200826586 \u00c2\u00b13.067100284988392E-05",
+          "diagrid-shell/Roof section/diagrid-iso-1-3: wrong fill 0.013652402807115792, expected 0.013689023585273612 \u00c2\u00b13.0670996701719885E-05",
+          "Licensed test failed: M2DPlus.Rhino.Tests.EvidenceCertificationTests.FullEvidenceScore"
+        ]
+      },
+      "primary": 0.9147727272727273,
+      "secondary": {
+        "medianMs": 118.3064,
+        "crossingMedianMs": 150.6232,
+        "certified": 161,
+        "crossing": 176,
+        "cases": 804,
+        "uncertain": {
+          "Self-intersecting Brep faces away from their shared topology.": 4,
+          "No trustworthy halfspace certificate; source quarantined. D: transversality cannot be bounded away from tangency.": 7,
+          "D: transversality cannot be bounded away from tangency.": 7,
+          "No trustworthy halfspace certificate; source quarantined. Self-intersecting or degenerate section loop.": 2,
+          "Self-intersecting or degenerate section loop.": 2
+        }
+      },
+      "loadNote": "Serial owned Rhino.Inside; shared machine, no isolation or timing speedup claim",
+      "runtime": "10.0.15",
+      "rhino": "8.36.26296.17001",
+      "fixtures": {
+        "curved-steel": "4E01947B69FC703C5A0C54471429E2B4CD98A13E42ECAD85433FAD1F38DA5D5F",
+        "diagrid-shell": "A98041A1CA45A12288BA6F87D16068879BFB93282B73AEA4DF04471D3F9C763D",
+        "space-frame": "FB0C6525F01BB330F06AF8E40A642B0BF4FAEF16B23BEE5263FE314C7A36C0C6",
+        "curved-facade": "0E4C788ABA9DC95CD6520CD6DFF4E4EF9E84984F86C939CA297DA14688A2AA6B",
+        "tangent-continuity": "F5FD9B3FEAF05522FD6FD6B3DB4C455D94743C76552E3F011DB017166F967461",
+        "subd-vs-nurbs": "6A26158F6626AC1273E124901B0BCCDE6D431D80C88D41D9A8EF852FD814E8F6"
+      },
+      "oracle": "D8923DAB12C0DB108B6871BD1F94F172A25287F5D865F943A3F80C461A79B993",
+      "engine": "EE82119235EB3A6499BCD7B1A15F4AF9A3222792E26407850554CD678A2984FC",
+      "licensedGate": {
+        "total": "143",
+        "failed": "1"
+      }
+    }
+  ],
+  "uncertainCases": [
+    {
+      "Id": "diagrid-shell/Plan cut/diagrid-iso-0-0",
+      "Crossing": true,
+      "Certified": false,
+      "Expected": 0.03709609667766231,
+      "Actual": 0,
+      "Ms": 803.0125,
+      "Reasons": [
+        "Self-intersecting Brep faces away from their shared topology."
+      ]
+    },
+    {
+      "Id": "diagrid-shell/Plan cut/diagrid-iso-0-3",
+      "Crossing": true,
+      "Certified": false,
+      "Expected": 0.03710611273509334,
+      "Actual": 0,
+      "Ms": 923.0055,
+      "Reasons": [
+        "Self-intersecting Brep faces away from their shared topology."
+      ]
+    },
+    {
+      "Id": "diagrid-shell/Roof section/diagrid-iso-0-0",
+      "Crossing": true,
+      "Certified": false,
+      "Expected": 0.014537066042465095,
+      "Actual": 0,
+      "Ms": 781.0704,
+      "Reasons": [
+        "Self-intersecting Brep faces away from their shared topology."
+      ]
+    },
+    {
+      "Id": "diagrid-shell/Roof section/diagrid-iso-0-3",
+      "Crossing": true,
+      "Certified": false,
+      "Expected": 0.014537041744084442,
+      "Actual": 0,
+      "Ms": 908.3028,
+      "Reasons": [
+        "Self-intersecting Brep faces away from their shared topology."
+      ]
+    },
+    {
+      "Id": "diagrid-shell/Roof section/node-0-0",
+      "Crossing": true,
+      "Certified": false,
+      "Expected": 0.08042472462066907,
+      "Actual": 0,
+      "Ms": 1.0562,
+      "Reasons": [
+        "No trustworthy halfspace certificate; source quarantined. D: transversality cannot be bounded away from tangency.",
+        "D: transversality cannot be bounded away from tangency."
+      ]
+    },
+    {
+      "Id": "diagrid-shell/Roof section/node-1-1",
+      "Crossing": true,
+      "Certified": false,
+      "Expected": 0.08042413340840047,
+      "Actual": 0,
+      "Ms": 0.4815,
+      "Reasons": [
+        "No trustworthy halfspace certificate; source quarantined. D: transversality cannot be bounded away from tangency.",
+        "D: transversality cannot be bounded away from tangency."
+      ]
+    },
+    {
+      "Id": "diagrid-shell/Roof section/node-2-2",
+      "Crossing": true,
+      "Certified": false,
+      "Expected": 0.08042413340840028,
+      "Actual": 0,
+      "Ms": 0.4525,
+      "Reasons": [
+        "No trustworthy halfspace certificate; source quarantined. D: transversality cannot be bounded away from tangency.",
+        "D: transversality cannot be bounded away from tangency."
+      ]
+    },
+    {
+      "Id": "diagrid-shell/Roof section/node-3-3",
+      "Crossing": true,
+      "Certified": false,
+      "Expected": 0.08042472462066887,
+      "Actual": 0,
+      "Ms": 0.5761,
+      "Reasons": [
+        "No trustworthy halfspace certificate; source quarantined. D: transversality cannot be bounded away from tangency.",
+        "D: transversality cannot be bounded away from tangency."
+      ]
+    },
+    {
+      "Id": "tangent-continuity/generated-plan/sphere-seam-1",
+      "Crossing": true,
+      "Certified": false,
+      "Expected": 2.5446833137780613,
+      "Actual": 0,
+      "Ms": 0.7957,
+      "Reasons": [
+        "No trustworthy halfspace certificate; source quarantined. D: transversality cannot be bounded away from tangency.",
+        "D: transversality cannot be bounded away from tangency."
+      ]
+    },
+    {
+      "Id": "tangent-continuity/generated-side/sphere-seam-0",
+      "Crossing": true,
+      "Certified": false,
+      "Expected": 2.5446765781483944,
+      "Actual": 0,
+      "Ms": 0.959,
+      "Reasons": [
+        "No trustworthy halfspace certificate; source quarantined. D: transversality cannot be bounded away from tangency.",
+        "D: transversality cannot be bounded away from tangency."
+      ]
+    },
+    {
+      "Id": "generated/CHS-arc-0",
+      "Crossing": true,
+      "Certified": false,
+      "Expected": 0.49480084218233633,
+      "Actual": 0,
+      "Ms": 116.6109,
+      "Reasons": [
+        "No trustworthy halfspace certificate; source quarantined. Self-intersecting or degenerate section loop.",
+        "Self-intersecting or degenerate section loop."
+      ]
+    },
+    {
+      "Id": "generated/I-beam-arc-fillets",
+      "Crossing": true,
+      "Certified": false,
+      "Expected": 0.43862654824574365,
+      "Actual": 0,
+      "Ms": 632.5603,
+      "Reasons": [
+        "No trustworthy halfspace certificate; source quarantined. Self-intersecting or degenerate section loop.",
+        "Self-intersecting or degenerate section loop."
+      ]
+    },
+    {
+      "Id": "generated/pipe-contact--2",
+      "Crossing": true,
+      "Certified": false,
+      "Expected": 0.1599919997999854,
+      "Actual": 0,
+      "Ms": 30.9883,
+      "Reasons": [
+        "No trustworthy halfspace certificate; source quarantined. D: transversality cannot be bounded away from tangency.",
+        "D: transversality cannot be bounded away from tangency."
+      ]
+    }
+  ],
+  "areaOutliers": [
+    {
+      "Id": "diagrid-shell/Roof section/diagrid-iso-1-0",
+      "Crossing": true,
+      "Certified": false,
+      "Expected": 0.013689024200826586,
+      "Actual": 0.013652403421501069,
+      "Ms": 846.6602,
+      "Reasons": []
+    },
+    {
+      "Id": "diagrid-shell/Roof section/diagrid-iso-1-3",
+      "Crossing": true,
+      "Certified": false,
+      "Expected": 0.013689023585273612,
+      "Actual": 0.013652402807115792,
+      "Ms": 878.2113,
+      "Reasons": []
+    }
+  ],
+  "refinementAudit": {
+    "8": [
+      {
+        "id": "diagrid-shell/Roof section/diagrid-iso-1-0",
+        "expected": 0.013689024200826586,
+        "allowance": 3.067100284988392e-05,
+        "actual": 0.013652403421501069,
+        "delta": -3.6620779325516675e-05,
+        "plane": {
+          "origin": [
+            0,
+            0,
+            0
+          ],
+          "x": [
+            1,
+            0,
+            0
+          ],
+          "y": [
+            0,
+            0,
+            1
+          ]
+        },
+        "tolerance": 0.0001,
+        "angleTolerance": 0.001,
+        "prepareVisibility": true,
+        "loops": [
+          {
+            "count": 2,
+            "holes": 1
+          }
+        ],
+        "requiresQuarantine": false,
+        "refinement": {
+          "128": 0.01280939954328482,
+          "256": 0.013823151877268468,
+          "512": 0.013744128513105018,
+          "1024": 0.013685731246378348,
+          "2048": 0.013689024200826632,
+          "4096": 0.013633437839016568,
+          "8192": 0.013652098943457348,
+          "16384": 0.013652708673183583,
+          "32768": 0.013651859773900968,
+          "65536": 0.013652043501039853
+        },
+        "pointOverload65536": 0.013652043501039868,
+        "faces": [
+          "NurbsSurface",
+          "NurbsSurface",
+          "PlaneSurface",
+          "PlaneSurface"
+        ]
+      },
+      {
+        "id": "diagrid-shell/Roof section/diagrid-iso-1-3",
+        "expected": 0.013689023585273612,
+        "allowance": 3.0670996701719885e-05,
+        "actual": 0.013652402807115792,
+        "delta": -3.662077815782053e-05,
+        "plane": {
+          "origin": [
+            0,
+            0,
+            0
+          ],
+          "x": [
+            1,
+            0,
+            0
+          ],
+          "y": [
+            0,
+            0,
+            1
+          ]
+        },
+        "tolerance": 0.0001,
+        "angleTolerance": 0.001,
+        "prepareVisibility": true,
+        "loops": [
+          {
+            "count": 2,
+            "holes": 1
+          }
+        ],
+        "requiresQuarantine": false,
+        "refinement": {
+          "128": 0.012809399239062505,
+          "256": 0.013823151263874359,
+          "512": 0.01374412790033977,
+          "1024": 0.01368573063574229,
+          "2048": 0.013689023585273623,
+          "4096": 0.013633437226068832,
+          "8192": 0.013652098328932749,
+          "16384": 0.013652708058653963,
+          "32768": 0.0136518591594026,
+          "65536": 0.013652042886594452
+        },
+        "pointOverload65536": 0.013652042886594443,
+        "faces": [
+          "NurbsSurface",
+          "NurbsSurface",
+          "PlaneSurface",
+          "PlaneSurface"
+        ]
+      }
+    ],
+    "10": [
+      {
+        "id": "diagrid-shell/Roof section/diagrid-iso-1-0",
+        "expected": 0.013689024200826586,
+        "allowance": 3.067100284988392e-05,
+        "actual": 0.013652403421501069,
+        "delta": -3.6620779325516675e-05,
+        "plane": {
+          "origin": [
+            0,
+            0,
+            0
+          ],
+          "x": [
+            1,
+            0,
+            0
+          ],
+          "y": [
+            0,
+            0,
+            1
+          ]
+        },
+        "tolerance": 0.0001,
+        "angleTolerance": 0.001,
+        "prepareVisibility": true,
+        "loops": [
+          {
+            "count": 2,
+            "holes": 1
+          }
+        ],
+        "requiresQuarantine": false,
+        "refinement": {
+          "128": 0.01280939954328482,
+          "256": 0.013823151877268468,
+          "512": 0.013744128513105018,
+          "1024": 0.013685731246378348,
+          "2048": 0.013689024200826632,
+          "4096": 0.013633437839016568,
+          "8192": 0.013652098943457348,
+          "16384": 0.013652708673183583,
+          "32768": 0.013651859773900968,
+          "65536": 0.013652043501039853
+        },
+        "pointOverload65536": 0.013652043501039868,
+        "faces": [
+          "NurbsSurface",
+          "NurbsSurface",
+          "PlaneSurface",
+          "PlaneSurface"
+        ]
+      },
+      {
+        "id": "diagrid-shell/Roof section/diagrid-iso-1-3",
+        "expected": 0.013689023585273612,
+        "allowance": 3.0670996701719885e-05,
+        "actual": 0.013652402807115792,
+        "delta": -3.662077815782053e-05,
+        "plane": {
+          "origin": [
+            0,
+            0,
+            0
+          ],
+          "x": [
+            1,
+            0,
+            0
+          ],
+          "y": [
+            0,
+            0,
+            1
+          ]
+        },
+        "tolerance": 0.0001,
+        "angleTolerance": 0.001,
+        "prepareVisibility": true,
+        "loops": [
+          {
+            "count": 2,
+            "holes": 1
+          }
+        ],
+        "requiresQuarantine": false,
+        "refinement": {
+          "128": 0.012809399239062505,
+          "256": 0.013823151263874359,
+          "512": 0.01374412790033977,
+          "1024": 0.01368573063574229,
+          "2048": 0.013689023585273623,
+          "4096": 0.013633437226068832,
+          "8192": 0.013652098328932749,
+          "16384": 0.013652708058653963,
+          "32768": 0.0136518591594026,
+          "65536": 0.013652042886594452
+        },
+        "pointOverload65536": 0.013652042886594443,
+        "faces": [
+          "NurbsSurface",
+          "NurbsSurface",
+          "PlaneSurface",
+          "PlaneSurface"
+        ]
+      }
+    ]
+  },
+  "interpretation": "Two frozen-C area failures reproduced on both runtimes. Independent high-resolution chords strongly support D and expose false early convergence of the frozen C oracle. Frozen expectations and allowance remain unchanged; no proven engine wrong fill is claimed.",
+  "uncertainByUniqueCase": {
+    "transversality": 7,
+    "faceIntersections": 4,
+    "degenerateOrSelfIntersectingLoops": 2
+  },
+  "emittedCrossings": 163,
+  "all12CorrectedCHSMatch": true,
+  "oracleSHA256": "D8923DAB12C0DB108B6871BD1F94F172A25287F5D865F943A3F80C461A79B993"
+}

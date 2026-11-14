@@ -1,0 +1,7282 @@
+[
+  {
+    "Id": "curved-steel/Plan cut/CHS-arc",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 589.5331,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-steel/Plan cut/CHS-3d-chord",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.05241229669120906,
+    "Actual": 0.05240304408019684,
+    "Ms": 623.2112,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-steel/Plan cut/RHS-arc",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 14.9737,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-steel/Plan cut/RHS-3d-chord",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.2846649690333998,
+    "Actual": 0.2846885604133928,
+    "Ms": 124.0863,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-steel/Plan cut/I-beam-filleted-web-flanges",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 470.9913,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-steel/Plan cut/helical-stair-stringer",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.37106786090606275,
+    "Actual": 0.371077343706707,
+    "Ms": 177.0396,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-steel/Plan cut/twisted-RHS",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.08998572095932784,
+    "Actual": 0.08998545875058234,
+    "Ms": 54.4327,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-steel/Plan cut/oblique-curved-CHS",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 89.6314,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-steel/Oblique hollow cut/CHS-arc",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 556.949,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-steel/Oblique hollow cut/CHS-3d-chord",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 447.4516,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-steel/Oblique hollow cut/RHS-arc",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 13.9657,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-steel/Oblique hollow cut/RHS-3d-chord",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 18.895,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-steel/Oblique hollow cut/I-beam-filleted-web-flanges",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 478.9864,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-steel/Oblique hollow cut/helical-stair-stringer",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 25.2676,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-steel/Oblique hollow cut/twisted-RHS",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 24.3,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-steel/Oblique hollow cut/oblique-curved-CHS",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.7027743758729486,
+    "Actual": 0.702908485064524,
+    "Ms": 240.4365,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/open-roof-shell",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 12.317,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/diagrid-iso-0-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.03709609667766231,
+    "Actual": 0,
+    "Ms": 803.0125,
+    "Reasons": [
+      "Self-intersecting Brep faces away from their shared topology."
+    ]
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/diagrid-iso-0-1",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.034676451113636,
+    "Actual": 0.03465446951860674,
+    "Ms": 1081.5629,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/diagrid-iso-0-2",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.03465631649369489,
+    "Actual": 0.0346549459715976,
+    "Ms": 1179.6008,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/diagrid-iso-0-3",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.03710611273509334,
+    "Actual": 0,
+    "Ms": 923.0055,
+    "Reasons": [
+      "Self-intersecting Brep faces away from their shared topology."
+    ]
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/diagrid-iso-1-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.044512873958744426,
+    "Actual": 0.044512832551619724,
+    "Ms": 951.1332,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/diagrid-iso-1-1",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 785.3182,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/diagrid-iso-1-2",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 814.7532,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/diagrid-iso-1-3",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.04444727534240713,
+    "Actual": 0.04451285475589242,
+    "Ms": 990.1328,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/node-0-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.4042,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/node-0-1",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2179,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/node-0-2",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2054,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/node-0-3",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.02274961989900849,
+    "Actual": 0.0227483204672765,
+    "Ms": 24.7244,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/node-1-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2715,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/node-1-1",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1623,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/node-1-2",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1639,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/node-1-3",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2034,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/node-2-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1942,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/node-2-1",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1356,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/node-2-2",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1613,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/node-2-3",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1463,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/node-3-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.022749619899008533,
+    "Actual": 0.02274832046727704,
+    "Ms": 23.7128,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/node-3-1",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.3917,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/node-3-2",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1783,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Plan cut/node-3-3",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1342,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Roof section/open-roof-shell",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 7.1422,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Roof section/diagrid-iso-0-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.014537066042465095,
+    "Actual": 0,
+    "Ms": 781.0704,
+    "Reasons": [
+      "Self-intersecting Brep faces away from their shared topology."
+    ]
+  },
+  {
+    "Id": "diagrid-shell/Roof section/diagrid-iso-0-1",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.013527614324970488,
+    "Actual": 0.013530361477070546,
+    "Ms": 884.2105,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Roof section/diagrid-iso-0-2",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.013527774276778095,
+    "Actual": 0.01353051910148793,
+    "Ms": 986.0372,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Roof section/diagrid-iso-0-3",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.014537041744084442,
+    "Actual": 0,
+    "Ms": 908.3028,
+    "Reasons": [
+      "Self-intersecting Brep faces away from their shared topology."
+    ]
+  },
+  {
+    "Id": "diagrid-shell/Roof section/diagrid-iso-1-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.013689024200826586,
+    "Actual": 0.013652403421501069,
+    "Ms": 846.6602,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Roof section/diagrid-iso-1-1",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.013446869174428045,
+    "Actual": 0.013446880048093773,
+    "Ms": 908.698,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Roof section/diagrid-iso-1-2",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.013446868828801216,
+    "Actual": 0.013446874116654243,
+    "Ms": 880.0168,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Roof section/diagrid-iso-1-3",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.013689023585273612,
+    "Actual": 0.013652402807115792,
+    "Ms": 878.2113,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Roof section/node-0-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.08042472462066907,
+    "Actual": 0,
+    "Ms": 1.0562,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined. D: transversality cannot be bounded away from tangency.",
+      "D: transversality cannot be bounded away from tangency."
+    ]
+  },
+  {
+    "Id": "diagrid-shell/Roof section/node-0-1",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.236,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Roof section/node-0-2",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2279,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Roof section/node-0-3",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.181,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Roof section/node-1-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2532,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Roof section/node-1-1",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.08042413340840047,
+    "Actual": 0,
+    "Ms": 0.4815,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined. D: transversality cannot be bounded away from tangency.",
+      "D: transversality cannot be bounded away from tangency."
+    ]
+  },
+  {
+    "Id": "diagrid-shell/Roof section/node-1-2",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1338,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Roof section/node-1-3",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1513,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Roof section/node-2-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2917,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Roof section/node-2-1",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1751,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Roof section/node-2-2",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.08042413340840028,
+    "Actual": 0,
+    "Ms": 0.4525,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined. D: transversality cannot be bounded away from tangency.",
+      "D: transversality cannot be bounded away from tangency."
+    ]
+  },
+  {
+    "Id": "diagrid-shell/Roof section/node-2-3",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1739,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Roof section/node-3-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2592,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Roof section/node-3-1",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.299,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Roof section/node-3-2",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1891,
+    "Reasons": []
+  },
+  {
+    "Id": "diagrid-shell/Roof section/node-3-3",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.08042472462066887,
+    "Actual": 0,
+    "Ms": 0.5761,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined. D: transversality cannot be bounded away from tangency.",
+      "D: transversality cannot be bounded away from tangency."
+    ]
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-0-0/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.4162,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-0-1/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2903,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-0-2/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1639,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-0-3/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2677,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-0-4/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2251,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-0-5/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2048,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-0-6/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.219,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-1-0/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.021322988265929904,
+    "Actual": 0.021322010946638395,
+    "Ms": 32.953,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-1-1/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.0213229882659299,
+    "Actual": 0.021322010946638128,
+    "Ms": 25.1808,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-1-2/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.021322988265929894,
+    "Actual": 0.021322010946638607,
+    "Ms": 27.7208,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-1-3/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.021322988265929908,
+    "Actual": 0.021322010946637857,
+    "Ms": 29.7372,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-1-4/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.021322988265929953,
+    "Actual": 0.021322010946638402,
+    "Ms": 29.808,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-1-5/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.02132298826592978,
+    "Actual": 0.02132201094663863,
+    "Ms": 27.7221,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-1-6/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.021322988265929845,
+    "Actual": 0.021322010946638,
+    "Ms": 30.4814,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-2-0/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.3114,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-2-1/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1816,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-2-2/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1651,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-2-3/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1569,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-2-4/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1683,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-2-5/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1501,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-2-6/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1292,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-3-0/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1244,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-3-1/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1222,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-3-2/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1328,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-3-3/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1171,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-3-4/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1176,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-3-5/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.179,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-3-6/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1207,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-4-0/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.152,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-4-1/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.154,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-4-2/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2164,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-4-3/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.191,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-4-4/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2262,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-4-5/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2492,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-4-6/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1509,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-5-0/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1503,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-5-1/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2442,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-5-2/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1936,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-5-3/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1968,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-5-4/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2019,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-5-5/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1904,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-5-6/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2017,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-6-0/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1386,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-6-1/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1103,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-6-2/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.105,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-6-3/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.0985,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-6-4/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1012,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-6-5/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.093,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-6-6/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1008,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-7-0/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1304,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-7-1/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1211,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-7-2/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1209,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-7-3/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1135,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-7-4/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1211,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-7-5/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1167,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-7-6/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1215,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-8-0/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1326,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-8-1/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1243,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-8-2/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1265,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-8-3/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.14,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-8-4/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1325,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-8-5/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1287,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-8-6/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1295,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-9-0/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.0982,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-9-1/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1215,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-9-2/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1158,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-9-3/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1162,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-9-4/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1281,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-9-5/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1166,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-9-6/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1186,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-10-0/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1398,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-10-1/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1534,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-10-2/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1217,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-10-3/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1238,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-10-4/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.118,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-10-5/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1303,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-10-6/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1573,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-11-0/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.021322988265929804,
+    "Actual": 0.021322010946637715,
+    "Ms": 35.0199,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-11-1/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.021322988265929804,
+    "Actual": 0.021322010946638402,
+    "Ms": 30.4362,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-11-2/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.021322988265929817,
+    "Actual": 0.02132201094663813,
+    "Ms": 29.8212,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-11-3/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.02132298826592972,
+    "Actual": 0.021322010946638402,
+    "Ms": 28.5376,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-11-4/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.021322988265929745,
+    "Actual": 0.021322010946638402,
+    "Ms": 26.5387,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-11-5/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.021322988265929856,
+    "Actual": 0.021322010946638124,
+    "Ms": 25.6633,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-11-6/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.02132298826592985,
+    "Actual": 0.021322010946638256,
+    "Ms": 24.3316,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-12-0/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.279,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-12-1/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.173,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-12-2/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1803,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-12-3/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.153,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-12-4/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1877,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-12-5/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1531,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-0-12-6/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1552,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-0-0/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1326,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-0-1/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1745,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-0-2/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1525,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-0-3/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1184,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-0-4/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.222,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-0-5/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1753,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-0-6/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2011,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-1-0/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.162,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-1-1/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1477,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-1-2/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1779,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-1-3/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1487,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-1-4/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1299,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-1-5/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1411,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-1-6/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1357,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-2-0/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.02158145509916468,
+    "Actual": 0.021580293353290717,
+    "Ms": 24.3116,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-2-1/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.021581455099164613,
+    "Actual": 0.021580293353290547,
+    "Ms": 30.2095,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-2-2/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.02158145509916463,
+    "Actual": 0.021580293353290696,
+    "Ms": 30.2192,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-2-3/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.021581455099164575,
+    "Actual": 0.021580293353290564,
+    "Ms": 30.2494,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-2-4/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.02158145509916468,
+    "Actual": 0.0215802933532907,
+    "Ms": 29.0639,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-2-5/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.0215814550991645,
+    "Actual": 0.021580293353290484,
+    "Ms": 29.391,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-2-6/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.02158145509916459,
+    "Actual": 0.02158029335329071,
+    "Ms": 28.7282,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-3-0/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2937,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-3-1/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1972,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-3-2/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1689,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-3-3/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.152,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-3-4/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1855,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-3-5/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1522,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-3-6/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1543,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-4-0/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1966,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-4-1/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1859,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-4-2/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.172,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-4-3/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1877,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-4-4/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1895,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-4-5/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1812,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-4-6/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1828,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-5-0/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1425,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-5-1/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1385,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-5-2/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1915,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-5-3/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1754,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-5-4/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1729,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-5-5/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1537,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-5-6/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1634,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-6-0/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1578,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-6-1/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1677,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-6-2/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1593,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-6-3/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1655,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-6-4/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1581,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-6-5/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1481,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-6-6/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1739,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-7-0/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1707,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-7-1/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1702,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-7-2/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1658,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-7-3/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2015,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-7-4/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1767,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-7-5/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1654,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-7-6/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1669,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-8-0/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2456,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-8-1/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1956,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-8-2/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1809,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-8-3/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1742,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-8-4/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1772,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-8-5/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1923,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-8-6/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1833,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-9-0/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1532,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-9-1/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1623,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-9-2/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1491,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-9-3/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1547,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-9-4/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1813,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-9-5/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1589,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-9-6/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1584,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-10-0/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.02158145509916522,
+    "Actual": 0.02158029335329119,
+    "Ms": 28.6654,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-10-1/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.021581455099165186,
+    "Actual": 0.021580293353291407,
+    "Ms": 31.0159,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-10-2/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.021581455099165252,
+    "Actual": 0.021580293353291417,
+    "Ms": 28.6327,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-10-3/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.021581455099165207,
+    "Actual": 0.021580293353291636,
+    "Ms": 27.893,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-10-4/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.02158145509916525,
+    "Actual": 0.021580293353291688,
+    "Ms": 27.0469,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-10-5/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.021581455099165158,
+    "Actual": 0.021580293353291084,
+    "Ms": 27.2401,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-10-6/sphere-node/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.02158145509916524,
+    "Actual": 0.02158029335329069,
+    "Ms": 29.9783,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-11-0/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.3695,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-11-1/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2574,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-11-2/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2289,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-11-3/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.209,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-11-4/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2044,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-11-5/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2048,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-11-6/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2207,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-12-0/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1671,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-12-1/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1796,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-12-2/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1667,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-12-3/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1579,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-12-4/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1893,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-12-5/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1677,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/node-1-12-6/sphere-node/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1816,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0000/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.007709263633421192,
+    "Actual": 0.007712414221405837,
+    "Ms": 157.601,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0001/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 136.3972,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0002/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 153.4151,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0003/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 161.7935,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0004/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.007709263633421157,
+    "Actual": 0.007712414221405831,
+    "Ms": 163.3985,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0005/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 145.957,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0006/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 157.7975,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0007/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 160.0463,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0008/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.007709263633421248,
+    "Actual": 0.007712414221405719,
+    "Ms": 156.0331,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0009/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 143.6573,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0010/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 152.9922,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0011/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 145.2266,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0012/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.007709263633421204,
+    "Actual": 0.007712414221405822,
+    "Ms": 153.9425,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0013/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 149.0306,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0014/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 159.4784,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0015/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 151.5479,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0016/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.007709263633421384,
+    "Actual": 0.007712414221406004,
+    "Ms": 167.4651,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0017/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 142.2847,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0018/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 152.5314,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0019/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 161.937,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0020/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.007709263633421338,
+    "Actual": 0.007712414221405955,
+    "Ms": 155.1221,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0021/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 151.3352,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0022/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 148.2256,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0023/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 161.8697,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0024/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.007709263633421339,
+    "Actual": 0.007712414221405745,
+    "Ms": 182.4895,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0025/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 153.3609,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0026/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 120.9615,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0027/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.07634893013487501,
+    "Actual": 0.07634893013487534,
+    "Ms": 151.2267,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0028/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.0071376207716113225,
+    "Actual": 0.007135902113290809,
+    "Ms": 173.4029,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0029/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.10156926060934247,
+    "Actual": 0.1015703993932961,
+    "Ms": 151.2793,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0030/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 118,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0031/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.07634893013487501,
+    "Actual": 0.07634893013487509,
+    "Ms": 143.2774,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0032/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.007137620771611303,
+    "Actual": 0.007135902113290799,
+    "Ms": 152.0899,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0033/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.1015692606093425,
+    "Actual": 0.10157039939329657,
+    "Ms": 133.0047,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0034/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 113.7159,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0035/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.076348930134875,
+    "Actual": 0.0763489301348727,
+    "Ms": 146.6311,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0036/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.007137620771611381,
+    "Actual": 0.00713590211329084,
+    "Ms": 156.1743,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0037/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.10156926060934249,
+    "Actual": 0.10157039939329204,
+    "Ms": 136.1962,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0038/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 124.7084,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0039/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.07634893013487502,
+    "Actual": 0.07634893013487368,
+    "Ms": 143.6862,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0040/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.007137620771611365,
+    "Actual": 0.007135902113290736,
+    "Ms": 160.2856,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0041/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.10156926060934253,
+    "Actual": 0.10157039939329793,
+    "Ms": 152.7112,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0042/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 129.471,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0043/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.07634893013487502,
+    "Actual": 0.07634893013487482,
+    "Ms": 155.2962,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0044/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.007137620771611506,
+    "Actual": 0.00713590211329108,
+    "Ms": 174.1302,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0045/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.1015692606093426,
+    "Actual": 0.10157039939329701,
+    "Ms": 146.3847,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0046/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 115.3192,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0047/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.07634893013487497,
+    "Actual": 0.07634893013487547,
+    "Ms": 143.8811,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0048/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.007137620771611453,
+    "Actual": 0.007135902113290708,
+    "Ms": 171.6384,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0049/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.10156926060934242,
+    "Actual": 0.10157039939329827,
+    "Ms": 149.2033,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0050/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 131.522,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0051/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.007137620771611392,
+    "Actual": 0.0071359021132908545,
+    "Ms": 181.2291,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0052/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 122.2992,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0053/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 125.9725,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0054/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 122.8626,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0055/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 131.6232,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0056/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 110.206,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0057/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 120.0229,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0058/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 119.0187,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0059/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 119.0355,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0060/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 91.5045,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0061/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 125.0053,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0062/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 127.9891,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0063/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 131.159,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0064/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 94.4082,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0065/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 127.5507,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0066/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 128.6239,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0067/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 119.8927,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0068/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 122.1132,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0069/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 122.4852,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0070/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 109.1639,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0071/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 105.0728,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0072/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 109.2041,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0073/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 125.5631,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0074/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 115.6732,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0075/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 128.9575,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0076/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 122.9388,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0077/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 109.5578,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0078/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 122.2113,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0079/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 119.7749,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0080/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 116.0546,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0081/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 128.7088,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0082/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 128.9846,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0083/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 113.9265,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0084/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 113.5533,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0085/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 125.9831,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0086/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 119.2582,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0087/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 129.2654,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0088/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 126.3845,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0089/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 126.5535,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0090/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 98.78,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0091/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 117.8192,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0092/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 120.8098,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0093/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 126.123,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0094/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 110.3382,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0095/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 112.7699,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0096/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 109.5667,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0097/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 128.324,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0098/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 125.0933,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0099/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 122.6106,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0100/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 127.0171,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0101/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 130.6392,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0102/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 117.2402,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0103/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 127.9079,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0104/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 131.6422,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0105/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 127.3117,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0106/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 118.8032,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0107/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 106.3587,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0108/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 99.9602,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0109/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 123.2302,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0110/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 125.3354,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0111/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 118.4843,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0112/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 113.4103,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0113/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 107.8276,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0114/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 130.339,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0115/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 126.016,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0116/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 128.1139,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0117/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 126.2377,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0118/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 125.7124,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0119/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 131.4623,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0120/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 122.5142,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0121/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 126.2995,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0122/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 93.231,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0123/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 100.1755,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0124/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 93.3987,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0125/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 119.3004,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0126/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 115.3399,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0127/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 126.272,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0128/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 104.3651,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0129/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 133.3407,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0130/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 117.5641,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0131/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 123.4819,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0132/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 104.4806,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0133/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 104.0946,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0134/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 118.0942,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0135/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 123.461,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0136/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 110.1317,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0137/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 124.7237,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0138/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 118.7581,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0139/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 128.5518,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0140/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 125.7011,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0141/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 129.0925,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0142/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 123.45,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0143/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 121.8928,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0144/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 121.4282,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0145/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 126.8019,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0146/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 93.9395,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0147/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 111.9483,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0148/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 98.8045,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0149/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 131.306,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0150/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 115.5338,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0151/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 132.0739,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0152/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 127.9462,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0153/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 139.8009,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0154/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 128.757,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0155/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 134.6666,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0156/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 126.0411,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0157/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 128.9949,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0158/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 105.8292,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0159/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 132.3964,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0160/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 132.2999,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0161/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 128.3907,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0162/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 119.7644,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0163/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 133.4973,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0164/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 123.7012,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0165/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 121.8851,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0166/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 116.8418,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0167/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 121.2388,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0168/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 101.1594,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0169/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 118.6654,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0170/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 122.5923,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0171/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 131.085,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0172/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 122.3691,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0173/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 126.7296,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0174/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 124.0209,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0175/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 128.5062,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0176/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 122.8326,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0177/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 121.8804,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0178/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 121.4749,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0179/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 124.5908,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0180/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 126.0415,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0181/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 120.4571,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0182/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 121.3697,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0183/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 105.4553,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0184/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 107.4387,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0185/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 128.29,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0186/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 128.1954,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0187/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 123.9599,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0188/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 122.5958,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0189/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 135.2474,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0190/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 131.4144,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0191/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 118.2669,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0192/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 108.7091,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0193/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 128.2265,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0194/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 110.0873,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0195/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 123.9931,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0196/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 115.2996,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0197/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 127.8813,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0198/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 131.4178,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0199/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 115.1114,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0200/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 110.7599,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0201/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 127.4981,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0202/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 121.2501,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0203/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 130.103,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0204/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 119.7643,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0205/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 122.388,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0206/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 129.1014,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0207/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 127.1052,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0208/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 127.1882,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0209/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 123.6325,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0210/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 120.0966,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0211/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 124.397,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0212/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 112.848,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0213/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 123.7655,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0214/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 123.3741,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0215/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 126.0704,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0216/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 127.0198,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0217/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 128.458,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0218/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 117.6305,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0219/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 129.3033,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0220/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 120.3453,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0221/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 125.5984,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0222/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 121.0766,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0223/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 128.5795,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0224/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 125.5949,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0225/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 129.6207,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0226/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 121.1444,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0227/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 130.7021,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0228/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 130.8447,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0229/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 126.6718,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0230/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 114.4462,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0231/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 118.5472,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0232/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 124.5033,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0233/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 106.8777,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0234/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 131.3953,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0235/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 120.8528,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0236/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 129.0943,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0237/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 123.9149,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0238/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 125.2146,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0239/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 101.1325,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0240/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 108.3613,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0241/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 129.8196,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0242/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 130.5115,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0243/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 125.6598,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0244/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 123.2031,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0245/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 117.98,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0246/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 127.3716,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0247/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 113.8934,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0248/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 114.8943,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0249/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 121.5545,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0250/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 120.1135,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0251/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 128.1778,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0252/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 127.844,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0253/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 100.2721,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0254/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 118.1426,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0255/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 124.726,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0256/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 116.6385,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0257/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 133.393,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0258/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 134.9711,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0259/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 135.7343,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0260/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 138.368,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0261/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 136.2537,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0262/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 129.77,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0263/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.00882331369227818,
+    "Actual": 0.008824316211865767,
+    "Ms": 178.8108,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0264/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 124.4574,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0265/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 133.6145,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0266/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 118.0871,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0267/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.008823313692278194,
+    "Actual": 0.0088243162118656,
+    "Ms": 180.1803,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0268/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 135.0792,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0269/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 128.9133,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0270/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 127.4435,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0271/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.008823313692278149,
+    "Actual": 0.008824316211865696,
+    "Ms": 159.3997,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0272/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 121.8298,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0273/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 110.6914,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0274/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 112.5558,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0275/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.008823313692278168,
+    "Actual": 0.008824316211865704,
+    "Ms": 167.5052,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0276/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 134.1574,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0277/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 127.4968,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0278/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 129.1148,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0279/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.008823313692278135,
+    "Actual": 0.00882431621186573,
+    "Ms": 180.1011,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0280/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 132.3698,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0281/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 129.2619,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0282/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 126.8351,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0283/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.008823313692278107,
+    "Actual": 0.00882431621186579,
+    "Ms": 170.0467,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0284/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 115.1606,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0285/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 131.9164,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0286/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.007709263633421192,
+    "Actual": 0.007712414221405799,
+    "Ms": 166.2598,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0287/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.07634893013487501,
+    "Actual": 0.07634893013487372,
+    "Ms": 133.5373,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0288/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.007137620771611355,
+    "Actual": 0.0071359021132907565,
+    "Ms": 156.6697,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0289/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.00854405537832013,
+    "Actual": 0.00854322603978705,
+    "Ms": 176.7904,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0290/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.007709263633421184,
+    "Actual": 0.007712414221405851,
+    "Ms": 157.4717,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0291/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.07634893013487501,
+    "Actual": 0.07634893013487716,
+    "Ms": 134.6561,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0292/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.007137620771611345,
+    "Actual": 0.0071359021132906654,
+    "Ms": 155.0951,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0293/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.008544055378320125,
+    "Actual": 0.008543226039787008,
+    "Ms": 169.3611,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0294/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.007709263633421225,
+    "Actual": 0.007712414221405694,
+    "Ms": 179.7494,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0295/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.076348930134875,
+    "Actual": 0.07634893013487826,
+    "Ms": 161.2397,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0296/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.0071376207716113875,
+    "Actual": 0.007135902113290817,
+    "Ms": 168.4856,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0297/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.00854405537832016,
+    "Actual": 0.008543226039787164,
+    "Ms": 177.5242,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0298/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.0077092636334212,
+    "Actual": 0.007712414221405605,
+    "Ms": 167.4181,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0299/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.07634893013487502,
+    "Actual": 0.0763489301348761,
+    "Ms": 146.3484,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0300/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.00713762077161136,
+    "Actual": 0.007135902113290924,
+    "Ms": 176.5362,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0301/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.008544055378320039,
+    "Actual": 0.008543226039786966,
+    "Ms": 172.0503,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0302/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.007709263633421297,
+    "Actual": 0.007712414221406049,
+    "Ms": 173.7175,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0303/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.07634893013487502,
+    "Actual": 0.0763489301348767,
+    "Ms": 150.5441,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0304/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.007137620771611484,
+    "Actual": 0.007135902113290795,
+    "Ms": 166.9507,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0305/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.008544055378320018,
+    "Actual": 0.008543226039786739,
+    "Ms": 164.4159,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0306/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.007709263633421251,
+    "Actual": 0.007712414221405853,
+    "Ms": 169.1848,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0307/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.07634893013487497,
+    "Actual": 0.07634893013487822,
+    "Ms": 126.7392,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0308/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.00713762077161146,
+    "Actual": 0.0071359021132906845,
+    "Ms": 151.0603,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0309/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.008544055378320063,
+    "Actual": 0.008543226039787305,
+    "Ms": 174.6854,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0310/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.007709263633421308,
+    "Actual": 0.007712414221405748,
+    "Ms": 157.3173,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0311/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.007137620771611438,
+    "Actual": 0.007135902113290651,
+    "Ms": 153.1736,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0312/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 156.7724,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0313/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 161.5279,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0314/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 157.2788,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0315/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 156.5973,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0316/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 150.7654,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0317/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 157.0294,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0318/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 151.5792,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0319/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 139.9849,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0320/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 136.0185,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0321/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 124.8167,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0322/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 117.9356,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0323/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 144.3534,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0324/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 160.2388,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0325/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 156.1129,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0326/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 146.0888,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0327/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 153.4513,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0328/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 147.5156,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0329/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 156.3156,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0330/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 145.7329,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0331/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 152.0823,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0332/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 149.3041,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0333/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 150.906,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0334/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 148.1435,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0335/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 161.5021,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0336/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 150.4863,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0337/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 157.1725,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0338/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.009106012139951594,
+    "Actual": 0.009105870717564876,
+    "Ms": 158.5498,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0339/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 136.0289,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0340/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.009106012139951564,
+    "Actual": 0.009105870717564815,
+    "Ms": 158.8248,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0341/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 113.0099,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0342/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.009106012139951651,
+    "Actual": 0.009105870717564926,
+    "Ms": 150.1436,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0343/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 138.5206,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0344/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.009106012139951594,
+    "Actual": 0.009105870717564845,
+    "Ms": 163.5721,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0345/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 147.7423,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0346/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.009106012139951755,
+    "Actual": 0.009105870717564985,
+    "Ms": 168.1059,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0347/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 151.2319,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0348/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.009106012139951805,
+    "Actual": 0.009105870717565002,
+    "Ms": 142.2123,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0349/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 152.9112,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0350/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.009106012139951736,
+    "Actual": 0.00910587071756503,
+    "Ms": 163.9133,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0351/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 5.0688794374755774E-05,
+    "Actual": 5.1956655269288607E-05,
+    "Ms": 138.7147,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0352/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.07937753336722787,
+    "Actual": 0.07938961434126249,
+    "Ms": 150.3496,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0353/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 5.068879437477353E-05,
+    "Actual": 5.195665526930273E-05,
+    "Ms": 148.0528,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0354/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.07937753336722787,
+    "Actual": 0.07938961434126385,
+    "Ms": 121.6641,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0355/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 5.0688794374767835E-05,
+    "Actual": 5.1956655269333974E-05,
+    "Ms": 146.1538,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0356/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.07937753336722787,
+    "Actual": 0.07938961434126304,
+    "Ms": 149.0013,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0357/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 5.068879437476714E-05,
+    "Actual": 5.195665526932661E-05,
+    "Ms": 142.7649,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0358/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.0793775333672279,
+    "Actual": 0.07938961434126518,
+    "Ms": 129.946,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0359/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 5.068879437477516E-05,
+    "Actual": 5.19566552693137E-05,
+    "Ms": 117.974,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0360/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.07937753336722789,
+    "Actual": 0.07938961434126766,
+    "Ms": 153.0513,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0361/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 5.068879437476399E-05,
+    "Actual": 5.1956655269284175E-05,
+    "Ms": 141.7724,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0362/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.07937753336722783,
+    "Actual": 0.07938961434126329,
+    "Ms": 149.6856,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0363/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 5.0688794374766724E-05,
+    "Actual": 5.195665526930907E-05,
+    "Ms": 146.7477,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0364/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 123.9867,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0365/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 124.3555,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0366/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 116.4338,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0367/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 122.4971,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0368/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 129.0324,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0369/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 131.171,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0370/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 128.3564,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0371/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 125.0567,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0372/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 127.6899,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0373/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 124.0567,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0374/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 129.6438,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0375/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 123.2349,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0376/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 108.0934,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0377/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 134.2357,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0378/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 129.4443,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0379/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 130.5099,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0380/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 124.7728,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0381/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 130.957,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0382/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 121.5062,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0383/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 131.9404,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0384/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 122.1477,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0385/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 120.412,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0386/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 124.2646,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0387/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 125.2543,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0388/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 121.3536,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0389/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 123.878,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0390/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 118.8849,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0391/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 122.847,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0392/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 123.1024,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0393/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 130.7828,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0394/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 125.0013,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0395/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 132.8049,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0396/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 121.492,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0397/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 121.864,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0398/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 133.627,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0399/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 127.5227,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0400/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 120.8014,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0401/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 114.8495,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0402/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 117.7832,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0403/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 130.1003,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0404/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 124.5698,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0405/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 111.3323,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0406/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 127.6223,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0407/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 125.9551,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0408/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 132.6761,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0409/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 127.9514,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0410/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 126.448,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0411/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 123.9694,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0412/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 123.5394,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0413/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 125.418,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0414/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 123.3168,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0415/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 120.7912,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0416/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 127.5824,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0417/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 124.5027,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0418/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 132.956,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0419/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 129.7231,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0420/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 128.8806,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0421/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 129.631,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0422/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 125.8553,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0423/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 138.9576,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0424/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 130.635,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0425/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 133.9366,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0426/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 134.1518,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0427/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 134.5939,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0428/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 126.6533,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0429/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 125.8625,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0430/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 121.4057,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0431/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 127.4708,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0432/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 124.8245,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0433/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 126.9731,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0434/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 129.2595,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0435/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 120.4061,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0436/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 118.9797,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0437/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 124.1459,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0438/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 120.6201,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0439/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 124.8564,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0440/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 129.067,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0441/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 130.8005,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0442/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 5.0688794374811644E-05,
+    "Actual": 5.19566552694114E-05,
+    "Ms": 128.6695,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0443/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 122.6212,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0444/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 5.0688794374811115E-05,
+    "Actual": 5.195665526939032E-05,
+    "Ms": 141.8541,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0445/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 120.4921,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0446/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 5.0688794374803716E-05,
+    "Actual": 5.195665526938734E-05,
+    "Ms": 139.6627,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0447/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 125.0182,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0448/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 5.068879437482913E-05,
+    "Actual": 5.195665526940208E-05,
+    "Ms": 150.8673,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0449/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 137.2902,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0450/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 5.068879437482357E-05,
+    "Actual": 5.195665526936607E-05,
+    "Ms": 146.7047,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0451/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 125.4295,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0452/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 5.068879437482045E-05,
+    "Actual": 5.195665526937107E-05,
+    "Ms": 148.451,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0453/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 133.365,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0454/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 5.0688794374814036E-05,
+    "Actual": 5.195665526940401E-05,
+    "Ms": 148.3244,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0455/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.009106012139951516,
+    "Actual": 0.0091058707175647,
+    "Ms": 176.4328,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0456/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.07937753336722757,
+    "Actual": 0.07938961434126864,
+    "Ms": 148.1734,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0457/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.009106012139951469,
+    "Actual": 0.009105870717564623,
+    "Ms": 163.3353,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0458/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.07937753336722758,
+    "Actual": 0.07938961434126465,
+    "Ms": 153.1129,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0459/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.009106012139951554,
+    "Actual": 0.00910587071756469,
+    "Ms": 173.4688,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0460/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.07937753336722757,
+    "Actual": 0.07938961434126385,
+    "Ms": 154.0849,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0461/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.009106012139951615,
+    "Actual": 0.009105870717564933,
+    "Ms": 173.0242,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0462/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.07937753336722761,
+    "Actual": 0.07938961434126897,
+    "Ms": 149.1245,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0463/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.009106012139951693,
+    "Actual": 0.009105870717564876,
+    "Ms": 169.7666,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0464/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.0793775333672276,
+    "Actual": 0.0793896143412684,
+    "Ms": 142.0902,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0465/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.009106012139951693,
+    "Actual": 0.009105870717564789,
+    "Ms": 176.8166,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0466/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.07937753336722754,
+    "Actual": 0.07938961434126914,
+    "Ms": 155.398,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0467/CHS-unit/member-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.009106012139951672,
+    "Actual": 0.009105870717565382,
+    "Ms": 172.9838,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0468/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 165.361,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0469/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 152.9615,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0470/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 155.3552,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0471/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 150.918,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0472/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 159.0444,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0473/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 162.3489,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0474/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 161.5307,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0475/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 157.2025,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0476/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 164.855,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0477/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 154.2767,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0478/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 159.6086,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0479/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 142.7804,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0480/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 156.2304,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0481/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 147.4395,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0482/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 159.1059,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0483/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 155.5184,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0484/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 150.2106,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0485/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 158.1526,
+    "Reasons": []
+  },
+  {
+    "Id": "space-frame/Plan cut/CHS-0486/CHS-unit/member-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 159.2383,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/glass-Brep-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 3.058,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/glass-mesh-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 1529.1118,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/curved-mullion-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.002520531228541636,
+    "Actual": 0.0025216494440202584,
+    "Ms": 578.5721,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/twisting-fin-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 1.9661,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/curved-transom-0-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 490.2009,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/curved-transom-0-3",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 496.634,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/glass-Brep-1",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 2.9243,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/glass-mesh-1",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 1616.1843,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/curved-mullion-1",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.0025220726736210858,
+    "Actual": 0.002521649444020276,
+    "Ms": 554.888,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/twisting-fin-1",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 2.3892,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/curved-transom-1-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 484.4055,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/curved-transom-1-3",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 477.34,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/glass-Brep-2",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 3.7108,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/glass-mesh-2",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 1634.9978,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/curved-mullion-2",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.0025216663319734293,
+    "Actual": 0.002522529172121943,
+    "Ms": 511.0613,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/twisting-fin-2",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 2.62,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/curved-transom-2-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 492.5832,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/curved-transom-2-3",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 497.2727,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/glass-Brep-3",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 7.2482,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/glass-mesh-3",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 1669.9104,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/curved-mullion-3",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.002521373782373093,
+    "Actual": 0.0025225291721219416,
+    "Ms": 562.8664,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/twisting-fin-3",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 2.9181,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/curved-transom-3-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 507.8496,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/curved-transom-3-3",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 489.0846,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/glass-Brep-4",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 3.3452,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/glass-mesh-4",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 1645.9049,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/curved-mullion-4",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.0025244976784858314,
+    "Actual": 0.0025225291721218445,
+    "Ms": 606.4499,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/twisting-fin-4",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 2.7445,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/curved-transom-4-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 569.2731,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/curved-transom-4-3",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 510.9041,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/curved-louvre-1",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 8.4179,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/curved-louvre-2",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 7.8636,
+    "Reasons": []
+  },
+  {
+    "Id": "curved-facade/Plan cut/perforated-cassette-9-circular-holes",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 75.7673,
+    "Reasons": []
+  },
+  {
+    "Id": "tangent-continuity/generated-plan/G1-filleted-box",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 3.946368401191749,
+    "Actual": 3.946349539007336,
+    "Ms": 964.692,
+    "Reasons": []
+  },
+  {
+    "Id": "tangent-continuity/generated-plan/G1-plane-polynomial-blend",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 1.8341,
+    "Reasons": []
+  },
+  {
+    "Id": "tangent-continuity/generated-plan/G2-plane-polynomial-blend",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 1.8487,
+    "Reasons": []
+  },
+  {
+    "Id": "tangent-continuity/generated-plan/torus-seam-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 3.7706220778163795,
+    "Actual": 3.7699112308305427,
+    "Ms": 71.8232,
+    "Reasons": []
+  },
+  {
+    "Id": "tangent-continuity/generated-plan/sphere-seam-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 2.5446765781483958,
+    "Actual": 2.5446900808106214,
+    "Ms": 31.481,
+    "Reasons": []
+  },
+  {
+    "Id": "tangent-continuity/generated-plan/torus-seam-1",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.5655258973697982,
+    "Actual": 0.5654866846245815,
+    "Ms": 81.7495,
+    "Reasons": []
+  },
+  {
+    "Id": "tangent-continuity/generated-plan/sphere-seam-1",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 2.5446833137780613,
+    "Actual": 0,
+    "Ms": 0.7957,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined. D: transversality cannot be bounded away from tangency.",
+      "D: transversality cannot be bounded away from tangency."
+    ]
+  },
+  {
+    "Id": "tangent-continuity/generated-plan/exact-edge-on-sheet",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.2354,
+    "Reasons": []
+  },
+  {
+    "Id": "tangent-continuity/generated-side/G1-filleted-box",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 832.3794,
+    "Reasons": []
+  },
+  {
+    "Id": "tangent-continuity/generated-side/G1-plane-polynomial-blend",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 1.9067,
+    "Reasons": []
+  },
+  {
+    "Id": "tangent-continuity/generated-side/G2-plane-polynomial-blend",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 1.876,
+    "Reasons": []
+  },
+  {
+    "Id": "tangent-continuity/generated-side/torus-seam-0",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.565430366736444,
+    "Actual": 0.5654866846245823,
+    "Ms": 77.0938,
+    "Reasons": []
+  },
+  {
+    "Id": "tangent-continuity/generated-side/sphere-seam-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 2.5446765781483944,
+    "Actual": 0,
+    "Ms": 0.959,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined. D: transversality cannot be bounded away from tangency.",
+      "D: transversality cannot be bounded away from tangency."
+    ]
+  },
+  {
+    "Id": "tangent-continuity/generated-side/torus-seam-1",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 3.7706220778163764,
+    "Actual": 3.769911230830547,
+    "Ms": 68.3366,
+    "Reasons": []
+  },
+  {
+    "Id": "tangent-continuity/generated-side/sphere-seam-1",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 2.544676578148393,
+    "Actual": 2.5446900808106214,
+    "Ms": 32.3223,
+    "Reasons": []
+  },
+  {
+    "Id": "tangent-continuity/generated-side/exact-edge-on-sheet",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 0.1967,
+    "Reasons": []
+  },
+  {
+    "Id": "subd-vs-nurbs/Plan cut/canopy-SubD",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 115.8697,
+    "Reasons": []
+  },
+  {
+    "Id": "subd-vs-nurbs/Plan cut/canopy-NURBS",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 118.5675,
+    "Reasons": []
+  },
+  {
+    "Id": "subd-vs-nurbs/Plan cut/canopy-mesh",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 10632.9092,
+    "Reasons": []
+  },
+  {
+    "Id": "generated/CHS-arc-0",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.49480084218233633,
+    "Actual": 0,
+    "Ms": 116.6109,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined. Self-intersecting or degenerate section loop.",
+      "Self-intersecting or degenerate section loop."
+    ]
+  },
+  {
+    "Id": "generated/CHS-arc-30",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.5721981647040638,
+    "Actual": 0.5721999660413936,
+    "Ms": 182.7047,
+    "Reasons": []
+  },
+  {
+    "Id": "generated/CHS-arc-60",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 1.0032539126910427,
+    "Actual": 1.0032536980837836,
+    "Ms": 233.8327,
+    "Reasons": []
+  },
+  {
+    "Id": "generated/RHS-spline",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.09882804180211929,
+    "Actual": 0.09883445989209003,
+    "Ms": 65.842,
+    "Reasons": []
+  },
+  {
+    "Id": "generated/twisted-RHS",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.09,
+    "Actual": 0.0900000000000007,
+    "Ms": 62.1274,
+    "Reasons": []
+  },
+  {
+    "Id": "generated/I-beam-arc-fillets",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.43862654824574365,
+    "Actual": 0,
+    "Ms": 632.5603,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined. Self-intersecting or degenerate section loop.",
+      "Self-intersecting or degenerate section loop."
+    ]
+  },
+  {
+    "Id": "generated/pipe-contact-0",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 31.3585,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined. Conservative bounds and actual vertex witnesses; analytic-face and trim/cap validation required.",
+      "Conservative bounds and actual vertex witnesses; analytic-face and trim/cap validation required."
+    ]
+  },
+  {
+    "Id": "generated/pipe-contact--0.5",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 30.257,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined. Conservative bounds and actual vertex witnesses; analytic-face and trim/cap validation required.",
+      "Conservative bounds and actual vertex witnesses; analytic-face and trim/cap validation required."
+    ]
+  },
+  {
+    "Id": "generated/pipe-contact-0.5",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 29.9019,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined. Conservative bounds and actual vertex witnesses; analytic-face and trim/cap validation required.",
+      "Conservative bounds and actual vertex witnesses; analytic-face and trim/cap validation required."
+    ]
+  },
+  {
+    "Id": "generated/pipe-contact--2",
+    "Crossing": true,
+    "Certified": false,
+    "Expected": 0.1599919997999854,
+    "Actual": 0,
+    "Ms": 30.9883,
+    "Reasons": [
+      "No trustworthy halfspace certificate; source quarantined. D: transversality cannot be bounded away from tangency.",
+      "D: transversality cannot be bounded away from tangency."
+    ]
+  },
+  {
+    "Id": "generated/pipe-contact-2",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 43.0595,
+    "Reasons": []
+  },
+  {
+    "Id": "generated/multi-lump-straddling-no-crossing",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 5.902,
+    "Reasons": []
+  },
+  {
+    "Id": "generated/multi-lump-one-crossing",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.7853981633974483,
+    "Actual": 0.7853981730896975,
+    "Ms": 40.1621,
+    "Reasons": []
+  },
+  {
+    "Id": "generated/node-overlap-a",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.7853981633974483,
+    "Actual": 0.7853981730896975,
+    "Ms": 28.838,
+    "Reasons": []
+  },
+  {
+    "Id": "generated/node-overlap-b",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 0.7853981633974483,
+    "Actual": 0.7853981730896972,
+    "Ms": 27.6835,
+    "Reasons": []
+  },
+  {
+    "Id": "generated/closed-SubD-canopy",
+    "Crossing": true,
+    "Certified": true,
+    "Expected": 14.666668489072777,
+    "Actual": 14.666666666666666,
+    "Ms": 972.7961,
+    "Reasons": []
+  },
+  {
+    "Id": "generated/open-shell",
+    "Crossing": false,
+    "Certified": false,
+    "Expected": 0,
+    "Actual": 0,
+    "Ms": 8.2479,
+    "Reasons": []
+  }
+]

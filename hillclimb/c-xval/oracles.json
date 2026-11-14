@@ -1,0 +1,4724 @@
+{
+  "curved-steel/Plan cut/CHS-arc": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "curved-steel/Plan cut/CHS-3d-chord": {
+    "Area": 0.05241229669120906,
+    "Error": 1.3794337845804416E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "curved-steel/Plan cut/RHS-arc": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "curved-steel/Plan cut/RHS-3d-chord": {
+    "Area": 0.2846649690333998,
+    "Error": 6.822983400101013E-05,
+    "Open": false,
+    "Holes": null
+  },
+  "curved-steel/Plan cut/I-beam-filleted-web-flanges": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "curved-steel/Plan cut/helical-stair-stringer": {
+    "Area": 0.37106786090606275,
+    "Error": 5.533093490822649E-05,
+    "Open": false,
+    "Holes": null
+  },
+  "curved-steel/Plan cut/twisted-RHS": {
+    "Area": 0.08998572095932784,
+    "Error": 3.3275761942008764E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "curved-steel/Plan cut/oblique-curved-CHS": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "curved-steel/Oblique hollow cut/CHS-arc": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "curved-steel/Oblique hollow cut/CHS-3d-chord": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "curved-steel/Oblique hollow cut/RHS-arc": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "curved-steel/Oblique hollow cut/RHS-3d-chord": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "curved-steel/Oblique hollow cut/I-beam-filleted-web-flanges": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "curved-steel/Oblique hollow cut/helical-stair-stringer": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "curved-steel/Oblique hollow cut/twisted-RHS": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "curved-steel/Oblique hollow cut/oblique-curved-CHS": {
+    "Area": 0.7027743758729486,
+    "Error": 7.200423102471376E-05,
+    "Open": false,
+    "Holes": null
+  },
+  "diagrid-shell/Plan cut/open-roof-shell": {
+    "Area": 0,
+    "Error": 0,
+    "Open": true,
+    "Holes": null
+  },
+  "diagrid-shell/Plan cut/diagrid-iso-0-0": {
+    "Area": 0.03709609667766231,
+    "Error": 7.820515982004395E-05,
+    "Open": false,
+    "Holes": null
+  },
+  "diagrid-shell/Plan cut/diagrid-iso-0-1": {
+    "Area": 0.034676451113636,
+    "Error": 3.280908549491146E-05,
+    "Open": false,
+    "Holes": null
+  },
+  "diagrid-shell/Plan cut/diagrid-iso-0-2": {
+    "Area": 0.03465631649369489,
+    "Error": 1.2157188946565478E-05,
+    "Open": false,
+    "Holes": null
+  },
+  "diagrid-shell/Plan cut/diagrid-iso-0-3": {
+    "Area": 0.03710611273509334,
+    "Error": 8.851226627112213E-05,
+    "Open": false,
+    "Holes": null
+  },
+  "diagrid-shell/Plan cut/diagrid-iso-1-0": {
+    "Area": 0.044512873958744426,
+    "Error": 1.5674903758589043E-05,
+    "Open": false,
+    "Holes": null
+  },
+  "diagrid-shell/Plan cut/diagrid-iso-1-1": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "diagrid-shell/Plan cut/diagrid-iso-1-2": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "diagrid-shell/Plan cut/diagrid-iso-1-3": {
+    "Area": 0.04444727534240713,
+    "Error": 4.9943176323716254E-05,
+    "Open": false,
+    "Holes": null
+  },
+  "diagrid-shell/Plan cut/node-0-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "diagrid-shell/Plan cut/node-0-1": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "diagrid-shell/Plan cut/node-0-2": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "diagrid-shell/Plan cut/node-0-3": {
+    "Area": 0.02274961989900849,
+    "Error": 6.540711365611573E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "diagrid-shell/Plan cut/node-1-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "diagrid-shell/Plan cut/node-1-1": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "diagrid-shell/Plan cut/node-1-2": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "diagrid-shell/Plan cut/node-1-3": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "diagrid-shell/Plan cut/node-2-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "diagrid-shell/Plan cut/node-2-1": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "diagrid-shell/Plan cut/node-2-2": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "diagrid-shell/Plan cut/node-2-3": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "diagrid-shell/Plan cut/node-3-0": {
+    "Area": 0.022749619899008533,
+    "Error": 6.540711365559532E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "diagrid-shell/Plan cut/node-3-1": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "diagrid-shell/Plan cut/node-3-2": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "diagrid-shell/Plan cut/node-3-3": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "diagrid-shell/Roof section/open-roof-shell": {
+    "Area": 0,
+    "Error": 0,
+    "Open": true,
+    "Holes": null
+  },
+  "diagrid-shell/Roof section/diagrid-iso-0-0": {
+    "Area": 0.014537066042465095,
+    "Error": 7.851561089500941E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "diagrid-shell/Roof section/diagrid-iso-0-1": {
+    "Area": 0.013527614324970488,
+    "Error": 4.769083560879871E-05,
+    "Open": false,
+    "Holes": null
+  },
+  "diagrid-shell/Roof section/diagrid-iso-0-2": {
+    "Area": 0.013527774276778095,
+    "Error": 4.769202719811377E-05,
+    "Open": false,
+    "Holes": null
+  },
+  "diagrid-shell/Roof section/diagrid-iso-0-3": {
+    "Area": 0.014537041744084442,
+    "Error": 7.85180008405599E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "diagrid-shell/Roof section/diagrid-iso-1-0": {
+    "Area": 0.013689024200826586,
+    "Error": 3.292954448230745E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "diagrid-shell/Roof section/diagrid-iso-1-1": {
+    "Area": 0.013446869174428045,
+    "Error": 7.532138168902733E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "diagrid-shell/Roof section/diagrid-iso-1-2": {
+    "Area": 0.013446868828801216,
+    "Error": 7.532138131684241E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "diagrid-shell/Roof section/diagrid-iso-1-3": {
+    "Area": 0.013689023585273612,
+    "Error": 3.2929495311726648E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "diagrid-shell/Roof section/node-0-0": {
+    "Area": 0.08042472462066907,
+    "Error": 4.73112296422995E-08,
+    "Open": false,
+    "Holes": null
+  },
+  "diagrid-shell/Roof section/node-0-1": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "diagrid-shell/Roof section/node-0-2": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "diagrid-shell/Roof section/node-0-3": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "diagrid-shell/Roof section/node-1-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "diagrid-shell/Roof section/node-1-1": {
+    "Area": 0.08042413340840047,
+    "Error": 6.385234985195609E-07,
+    "Open": false,
+    "Holes": null
+  },
+  "diagrid-shell/Roof section/node-1-2": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "diagrid-shell/Roof section/node-1-3": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "diagrid-shell/Roof section/node-2-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "diagrid-shell/Roof section/node-2-1": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "diagrid-shell/Roof section/node-2-2": {
+    "Area": 0.08042413340840028,
+    "Error": 6.385234985889499E-07,
+    "Open": false,
+    "Holes": null
+  },
+  "diagrid-shell/Roof section/node-2-3": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "diagrid-shell/Roof section/node-3-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "diagrid-shell/Roof section/node-3-1": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "diagrid-shell/Roof section/node-3-2": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "diagrid-shell/Roof section/node-3-3": {
+    "Area": 0.08042472462066887,
+    "Error": 4.731122985046632E-08,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-0-0/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-0-1/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-0-2/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-0-3/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-0-4/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-0-5/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-0-6/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-1-0/sphere-node/member-0": {
+    "Area": 0.021322988265929904,
+    "Error": 1.5914186561952204E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-1-1/sphere-node/member-0": {
+    "Area": 0.0213229882659299,
+    "Error": 1.5914186561952204E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-1-2/sphere-node/member-0": {
+    "Area": 0.021322988265929894,
+    "Error": 1.5914186562611399E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-1-3/sphere-node/member-0": {
+    "Area": 0.021322988265929908,
+    "Error": 1.5914186561050148E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-1-4/sphere-node/member-0": {
+    "Area": 0.021322988265929953,
+    "Error": 1.5914186562264454E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-1-5/sphere-node/member-0": {
+    "Area": 0.02132298826592978,
+    "Error": 1.5914186561674648E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-1-6/sphere-node/member-0": {
+    "Area": 0.021322988265929845,
+    "Error": 1.591418656216037E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-2-0/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-2-1/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-2-2/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-2-3/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-2-4/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-2-5/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-2-6/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-3-0/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-3-1/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-3-2/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-3-3/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-3-4/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-3-5/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-3-6/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-4-0/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-4-1/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-4-2/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-4-3/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-4-4/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-4-5/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-4-6/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-5-0/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-5-1/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-5-2/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-5-3/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-5-4/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-5-5/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-5-6/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-6-0/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-6-1/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-6-2/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-6-3/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-6-4/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-6-5/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-6-6/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-7-0/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-7-1/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-7-2/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-7-3/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-7-4/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-7-5/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-7-6/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-8-0/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-8-1/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-8-2/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-8-3/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-8-4/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-8-5/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-8-6/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-9-0/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-9-1/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-9-2/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-9-3/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-9-4/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-9-5/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-9-6/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-10-0/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-10-1/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-10-2/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-10-3/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-10-4/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-10-5/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-10-6/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-11-0/sphere-node/member-0": {
+    "Area": 0.021322988265929804,
+    "Error": 1.5914186561882815E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-11-1/sphere-node/member-0": {
+    "Area": 0.021322988265929804,
+    "Error": 1.5914186561119537E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-11-2/sphere-node/member-0": {
+    "Area": 0.021322988265929817,
+    "Error": 1.5914186561744037E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-11-3/sphere-node/member-0": {
+    "Area": 0.02132298826592972,
+    "Error": 1.5914186561570565E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-11-4/sphere-node/member-0": {
+    "Area": 0.021322988265929745,
+    "Error": 1.5914186561709343E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-11-5/sphere-node/member-0": {
+    "Area": 0.021322988265929856,
+    "Error": 1.5914186561709343E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-11-6/sphere-node/member-0": {
+    "Area": 0.02132298826592985,
+    "Error": 1.5914186561431787E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-12-0/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-12-1/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-12-2/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-12-3/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-12-4/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-12-5/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-0-12-6/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-0-0/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-0-1/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-0-2/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-0-3/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-0-4/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-0-5/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-0-6/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-1-0/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-1-1/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-1-2/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-1-3/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-1-4/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-1-5/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-1-6/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-2-0/sphere-node/member-0": {
+    "Area": 0.02158145509916468,
+    "Error": 6.5504481418753036E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-2-1/sphere-node/member-0": {
+    "Area": 0.021581455099164613,
+    "Error": 6.550448141920406E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-2-2/sphere-node/member-0": {
+    "Area": 0.02158145509916463,
+    "Error": 6.550448141979387E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-2-3/sphere-node/member-0": {
+    "Area": 0.021581455099164575,
+    "Error": 6.55044814196204E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-2-4/sphere-node/member-0": {
+    "Area": 0.02158145509916468,
+    "Error": 6.550448141951631E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-2-5/sphere-node/member-0": {
+    "Area": 0.0215814550991645,
+    "Error": 6.550448141909998E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-2-6/sphere-node/member-0": {
+    "Area": 0.02158145509916459,
+    "Error": 6.550448141854487E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-3-0/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-3-1/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-3-2/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-3-3/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-3-4/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-3-5/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-3-6/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-4-0/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-4-1/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-4-2/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-4-3/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-4-4/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-4-5/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-4-6/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-5-0/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-5-1/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-5-2/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-5-3/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-5-4/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-5-5/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-5-6/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-6-0/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-6-1/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-6-2/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-6-3/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-6-4/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-6-5/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-6-6/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-7-0/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-7-1/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-7-2/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-7-3/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-7-4/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-7-5/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-7-6/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-8-0/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-8-1/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-8-2/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-8-3/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-8-4/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-8-5/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-8-6/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-9-0/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-9-1/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-9-2/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-9-3/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-9-4/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-9-5/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-9-6/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-10-0/sphere-node/member-0": {
+    "Area": 0.02158145509916522,
+    "Error": 6.550448141934284E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-10-1/sphere-node/member-0": {
+    "Area": 0.021581455099165186,
+    "Error": 6.550448141955101E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-10-2/sphere-node/member-0": {
+    "Area": 0.021581455099165252,
+    "Error": 6.550448141868365E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-10-3/sphere-node/member-0": {
+    "Area": 0.021581455099165207,
+    "Error": 6.5504481418440785E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-10-4/sphere-node/member-0": {
+    "Area": 0.02158145509916525,
+    "Error": 6.550448141930815E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-10-5/sphere-node/member-0": {
+    "Area": 0.021581455099165158,
+    "Error": 6.550448141934284E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-10-6/sphere-node/member-0": {
+    "Area": 0.02158145509916524,
+    "Error": 6.550448141885712E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-11-0/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-11-1/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-11-2/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-11-3/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-11-4/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-11-5/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-11-6/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-12-0/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-12-1/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-12-2/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-12-3/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-12-4/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-12-5/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/node-1-12-6/sphere-node/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0000/CHS-unit/member-0": {
+    "Area": 0.007709263633421192,
+    "Error": 1.3589839079671678E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0001/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0002/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0003/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0004/CHS-unit/member-0": {
+    "Area": 0.007709263633421157,
+    "Error": 1.3589839080460978E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0005/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0006/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0007/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0008/CHS-unit/member-0": {
+    "Area": 0.007709263633421248,
+    "Error": 1.3589839080140054E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0009/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0010/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0011/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0012/CHS-unit/member-0": {
+    "Area": 0.007709263633421204,
+    "Error": 1.3589839079715046E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0013/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0014/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0015/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0016/CHS-unit/member-0": {
+    "Area": 0.007709263633421384,
+    "Error": 1.3589839080894658E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0017/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0018/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0019/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0020/CHS-unit/member-0": {
+    "Area": 0.007709263633421338,
+    "Error": 1.3589839080426283E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0021/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0022/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0023/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0024/CHS-unit/member-0": {
+    "Area": 0.007709263633421339,
+    "Error": 1.358983908106813E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0025/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0026/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0027/CHS-unit/member-0": {
+    "Area": 0.07634893013487501,
+    "Error": 0,
+    "Open": false,
+    "Holes": 0
+  },
+  "space-frame/Plan cut/CHS-0028/CHS-unit/member-0": {
+    "Area": 0.0071376207716113225,
+    "Error": 1.0995806048108223E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0029/CHS-unit/member-0": {
+    "Area": 0.10156926060934247,
+    "Error": 1.0024499682639854E-05,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0030/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0031/CHS-unit/member-0": {
+    "Area": 0.07634893013487501,
+    "Error": 0,
+    "Open": false,
+    "Holes": 0
+  },
+  "space-frame/Plan cut/CHS-0032/CHS-unit/member-0": {
+    "Area": 0.007137620771611303,
+    "Error": 1.0995806047830667E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0033/CHS-unit/member-0": {
+    "Area": 0.1015692606093425,
+    "Error": 1.0024499682501076E-05,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0034/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0035/CHS-unit/member-0": {
+    "Area": 0.076348930134875,
+    "Error": 0,
+    "Open": false,
+    "Holes": 0
+  },
+  "space-frame/Plan cut/CHS-0036/CHS-unit/member-0": {
+    "Area": 0.007137620771611381,
+    "Error": 1.0995806047509743E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0037/CHS-unit/member-0": {
+    "Area": 0.10156926060934249,
+    "Error": 1.0024499682445565E-05,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0038/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0039/CHS-unit/member-0": {
+    "Area": 0.07634893013487502,
+    "Error": 0,
+    "Open": false,
+    "Holes": 0
+  },
+  "space-frame/Plan cut/CHS-0040/CHS-unit/member-0": {
+    "Area": 0.007137620771611365,
+    "Error": 1.0995806048498535E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0041/CHS-unit/member-0": {
+    "Area": 0.10156926060934253,
+    "Error": 1.0024499683014554E-05,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0042/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0043/CHS-unit/member-0": {
+    "Area": 0.07634893013487502,
+    "Error": 0,
+    "Open": false,
+    "Holes": 0
+  },
+  "space-frame/Plan cut/CHS-0044/CHS-unit/member-0": {
+    "Area": 0.007137620771611506,
+    "Error": 1.099580604750107E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0045/CHS-unit/member-0": {
+    "Area": 0.1015692606093426,
+    "Error": 1.0024499682639854E-05,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0046/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0047/CHS-unit/member-0": {
+    "Area": 0.07634893013487497,
+    "Error": 0,
+    "Open": false,
+    "Holes": 0
+  },
+  "space-frame/Plan cut/CHS-0048/CHS-unit/member-0": {
+    "Area": 0.007137620771611453,
+    "Error": 1.0995806047665868E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0049/CHS-unit/member-0": {
+    "Area": 0.10156926060934242,
+    "Error": 1.0024499682195764E-05,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0050/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0051/CHS-unit/member-0": {
+    "Area": 0.007137620771611392,
+    "Error": 1.099580604896691E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0052/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0053/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0054/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0055/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0056/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0057/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0058/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0059/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0060/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0061/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0062/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0063/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0064/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0065/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0066/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0067/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0068/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0069/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0070/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0071/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0072/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0073/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0074/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0075/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0076/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0077/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0078/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0079/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0080/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0081/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0082/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0083/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0084/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0085/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0086/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0087/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0088/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0089/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0090/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0091/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0092/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0093/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0094/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0095/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0096/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0097/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0098/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0099/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0100/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0101/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0102/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0103/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0104/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0105/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0106/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0107/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0108/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0109/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0110/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0111/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0112/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0113/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0114/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0115/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0116/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0117/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0118/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0119/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0120/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0121/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0122/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0123/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0124/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0125/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0126/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0127/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0128/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0129/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0130/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0131/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0132/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0133/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0134/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0135/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0136/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0137/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0138/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0139/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0140/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0141/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0142/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0143/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0144/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0145/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0146/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0147/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0148/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0149/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0150/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0151/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0152/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0153/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0154/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0155/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0156/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0157/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0158/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0159/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0160/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0161/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0162/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0163/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0164/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0165/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0166/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0167/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0168/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0169/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0170/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0171/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0172/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0173/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0174/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0175/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0176/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0177/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0178/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0179/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0180/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0181/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0182/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0183/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0184/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0185/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0186/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0187/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0188/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0189/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0190/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0191/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0192/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0193/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0194/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0195/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0196/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0197/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0198/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0199/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0200/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0201/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0202/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0203/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0204/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0205/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0206/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0207/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0208/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0209/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0210/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0211/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0212/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0213/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0214/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0215/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0216/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0217/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0218/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0219/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0220/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0221/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0222/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0223/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0224/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0225/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0226/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0227/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0228/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0229/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0230/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0231/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0232/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0233/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0234/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0235/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0236/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0237/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0238/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0239/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0240/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0241/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0242/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0243/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0244/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0245/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0246/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0247/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0248/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0249/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0250/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0251/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0252/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0253/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0254/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0255/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0256/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0257/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0258/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0259/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0260/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0261/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0262/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0263/CHS-unit/member-0": {
+    "Area": 0.00882331369227818,
+    "Error": 3.976285181296786E-05,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0264/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0265/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0266/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0267/CHS-unit/member-0": {
+    "Area": 0.008823313692278194,
+    "Error": 3.976285181295572E-05,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0268/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0269/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0270/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0271/CHS-unit/member-0": {
+    "Area": 0.008823313692278149,
+    "Error": 2.9170316309896915E-05,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0272/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0273/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0274/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0275/CHS-unit/member-0": {
+    "Area": 0.008823313692278168,
+    "Error": 3.976285181295572E-05,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0276/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0277/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0278/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0279/CHS-unit/member-0": {
+    "Area": 0.008823313692278135,
+    "Error": 3.976285181290021E-05,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0280/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0281/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0282/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0283/CHS-unit/member-0": {
+    "Area": 0.008823313692278107,
+    "Error": 3.9762851812874186E-05,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0284/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0285/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0286/CHS-unit/member-0": {
+    "Area": 0.007709263633421192,
+    "Error": 1.358983907931606E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0287/CHS-unit/member-0": {
+    "Area": 0.07634893013487501,
+    "Error": 0,
+    "Open": false,
+    "Holes": 0
+  },
+  "space-frame/Plan cut/CHS-0288/CHS-unit/member-0": {
+    "Area": 0.007137620771611355,
+    "Error": 1.0995806048229653E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0289/CHS-unit/member-0": {
+    "Area": 0.00854405537832013,
+    "Error": 1.3117064799842565E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0290/CHS-unit/member-0": {
+    "Area": 0.007709263633421184,
+    "Error": 1.3589839079211977E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0291/CHS-unit/member-0": {
+    "Area": 0.07634893013487501,
+    "Error": 0,
+    "Open": false,
+    "Holes": 0
+  },
+  "space-frame/Plan cut/CHS-0292/CHS-unit/member-0": {
+    "Area": 0.007137620771611345,
+    "Error": 1.0995806047492396E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0293/CHS-unit/member-0": {
+    "Area": 0.008544055378320125,
+    "Error": 1.311706479968644E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0294/CHS-unit/member-0": {
+    "Area": 0.007709263633421225,
+    "Error": 1.3589839080547714E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0295/CHS-unit/member-0": {
+    "Area": 0.076348930134875,
+    "Error": 0,
+    "Open": false,
+    "Holes": 0
+  },
+  "space-frame/Plan cut/CHS-0296/CHS-unit/member-0": {
+    "Area": 0.0071376207716113875,
+    "Error": 1.0995806048073528E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0297/CHS-unit/member-0": {
+    "Area": 0.00854405537832016,
+    "Error": 1.3117064799478273E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0298/CHS-unit/member-0": {
+    "Area": 0.0077092636334212,
+    "Error": 1.358983907837931E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0299/CHS-unit/member-0": {
+    "Area": 0.07634893013487502,
+    "Error": 0,
+    "Open": false,
+    "Holes": 0
+  },
+  "space-frame/Plan cut/CHS-0300/CHS-unit/member-0": {
+    "Area": 0.00713762077161136,
+    "Error": 1.0995806047821993E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0301/CHS-unit/member-0": {
+    "Area": 0.008544055378320039,
+    "Error": 1.3117064799842565E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0302/CHS-unit/member-0": {
+    "Area": 0.007709263633421297,
+    "Error": 1.358983907981913E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0303/CHS-unit/member-0": {
+    "Area": 0.07634893013487502,
+    "Error": 0,
+    "Open": false,
+    "Holes": 0
+  },
+  "space-frame/Plan cut/CHS-0304/CHS-unit/member-0": {
+    "Area": 0.007137620771611484,
+    "Error": 1.0995806048116896E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0305/CHS-unit/member-0": {
+    "Area": 0.008544055378320018,
+    "Error": 1.3117064799721134E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0306/CHS-unit/member-0": {
+    "Area": 0.007709263633421251,
+    "Error": 1.3589839079394123E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0307/CHS-unit/member-0": {
+    "Area": 0.07634893013487497,
+    "Error": 0,
+    "Open": false,
+    "Holes": 0
+  },
+  "space-frame/Plan cut/CHS-0308/CHS-unit/member-0": {
+    "Area": 0.00713762077161146,
+    "Error": 1.0995806048880175E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0309/CHS-unit/member-0": {
+    "Area": 0.008544055378320063,
+    "Error": 1.311706479999869E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0310/CHS-unit/member-0": {
+    "Area": 0.007709263633421308,
+    "Error": 1.3589839077954302E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0311/CHS-unit/member-0": {
+    "Area": 0.007137620771611438,
+    "Error": 1.0995806048706702E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0312/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0313/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0314/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0315/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0316/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0317/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0318/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0319/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0320/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0321/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0322/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0323/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0324/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0325/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0326/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0327/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0328/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0329/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0330/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0331/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0332/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0333/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0334/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0335/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0336/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0337/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0338/CHS-unit/member-0": {
+    "Area": 0.009106012139951594,
+    "Error": 2.3200386708738946E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0339/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0340/CHS-unit/member-0": {
+    "Area": 0.009106012139951564,
+    "Error": 2.3200386708669557E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0341/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0342/CHS-unit/member-0": {
+    "Area": 0.009106012139951651,
+    "Error": 2.3200386708183834E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0343/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0344/CHS-unit/member-0": {
+    "Area": 0.009106012139951594,
+    "Error": 2.3200386709311405E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0345/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0346/CHS-unit/member-0": {
+    "Area": 0.009106012139951755,
+    "Error": 2.320038670821853E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0347/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0348/CHS-unit/member-0": {
+    "Area": 0.009106012139951805,
+    "Error": 2.3200386707923626E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0349/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0350/CHS-unit/member-0": {
+    "Area": 0.009106012139951736,
+    "Error": 2.320038670840935E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0351/CHS-unit/member-0": {
+    "Area": 5.0688794374755774E-05,
+    "Error": 3.0629815722282887E-07,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0352/CHS-unit/member-0": {
+    "Area": 0.07937753336722787,
+    "Error": 9.339161172183807E-08,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0353/CHS-unit/member-0": {
+    "Area": 5.068879437477353E-05,
+    "Error": 3.062981572662715E-07,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0354/CHS-unit/member-0": {
+    "Area": 0.07937753336722787,
+    "Error": 9.339161173571586E-08,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0355/CHS-unit/member-0": {
+    "Area": 5.0688794374767835E-05,
+    "Error": 3.0629815733469143E-07,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0356/CHS-unit/member-0": {
+    "Area": 0.07937753336722787,
+    "Error": 9.339161172183807E-08,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0357/CHS-unit/member-0": {
+    "Area": 5.068879437476714E-05,
+    "Error": 3.062981571813649E-07,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0358/CHS-unit/member-0": {
+    "Area": 0.0793775333672279,
+    "Error": 9.339161170796029E-08,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0359/CHS-unit/member-0": {
+    "Area": 5.068879437477516E-05,
+    "Error": 3.062981572860243E-07,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0360/CHS-unit/member-0": {
+    "Area": 0.07937753336722789,
+    "Error": 9.339161172183807E-08,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0361/CHS-unit/member-0": {
+    "Area": 5.068879437476399E-05,
+    "Error": 3.062981573153791E-07,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0362/CHS-unit/member-0": {
+    "Area": 0.07937753336722783,
+    "Error": 9.339161172183807E-08,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0363/CHS-unit/member-0": {
+    "Area": 5.0688794374766724E-05,
+    "Error": 3.0629815727810285E-07,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0364/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0365/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0366/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0367/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0368/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0369/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0370/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0371/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0372/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0373/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0374/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0375/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0376/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0377/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0378/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0379/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0380/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0381/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0382/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0383/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0384/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0385/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0386/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0387/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0388/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0389/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0390/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0391/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0392/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0393/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0394/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0395/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0396/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0397/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0398/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0399/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0400/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0401/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0402/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0403/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0404/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0405/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0406/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0407/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0408/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0409/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0410/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0411/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0412/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0413/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0414/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0415/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0416/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0417/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0418/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0419/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0420/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0421/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0422/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0423/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0424/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0425/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0426/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0427/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0428/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0429/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0430/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0431/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0432/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0433/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0434/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0435/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0436/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0437/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0438/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0439/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0440/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0441/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0442/CHS-unit/member-0": {
+    "Area": 5.0688794374811644E-05,
+    "Error": 3.062981571867724E-07,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0443/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0444/CHS-unit/member-0": {
+    "Area": 5.0688794374811115E-05,
+    "Error": 3.0629815717607943E-07,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0445/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0446/CHS-unit/member-0": {
+    "Area": 5.0688794374803716E-05,
+    "Error": 3.062981571835333E-07,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0447/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0448/CHS-unit/member-0": {
+    "Area": 5.068879437482913E-05,
+    "Error": 3.062981572220564E-07,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0449/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0450/CHS-unit/member-0": {
+    "Area": 5.068879437482357E-05,
+    "Error": 3.0629815717298945E-07,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0451/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0452/CHS-unit/member-0": {
+    "Area": 5.068879437482045E-05,
+    "Error": 3.062981571519695E-07,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0453/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0454/CHS-unit/member-0": {
+    "Area": 5.0688794374814036E-05,
+    "Error": 3.0629815717599134E-07,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0455/CHS-unit/member-0": {
+    "Area": 0.009106012139951516,
+    "Error": 2.3200386708999154E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0456/CHS-unit/member-0": {
+    "Area": 0.07937753336722757,
+    "Error": 9.339161176347144E-08,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0457/CHS-unit/member-0": {
+    "Area": 0.009106012139951469,
+    "Error": 2.320038670889507E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0458/CHS-unit/member-0": {
+    "Area": 0.07937753336722758,
+    "Error": 9.339161174959365E-08,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0459/CHS-unit/member-0": {
+    "Area": 0.009106012139951554,
+    "Error": 2.32003867093461E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0460/CHS-unit/member-0": {
+    "Area": 0.07937753336722757,
+    "Error": 9.339161176347144E-08,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0461/CHS-unit/member-0": {
+    "Area": 0.009106012139951615,
+    "Error": 2.320038670920732E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0462/CHS-unit/member-0": {
+    "Area": 0.07937753336722761,
+    "Error": 9.339161173571586E-08,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0463/CHS-unit/member-0": {
+    "Area": 0.009106012139951693,
+    "Error": 2.3200386708808335E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0464/CHS-unit/member-0": {
+    "Area": 0.0793775333672276,
+    "Error": 9.339161176347144E-08,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0465/CHS-unit/member-0": {
+    "Area": 0.009106012139951693,
+    "Error": 2.320038670908589E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0466/CHS-unit/member-0": {
+    "Area": 0.07937753336722754,
+    "Error": 9.339161179122701E-08,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0467/CHS-unit/member-0": {
+    "Area": 0.009106012139951672,
+    "Error": 2.32003867093461E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0468/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0469/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0470/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0471/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0472/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0473/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0474/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0475/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0476/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0477/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0478/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0479/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0480/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0481/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0482/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0483/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0484/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0485/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "space-frame/Plan cut/CHS-0486/CHS-unit/member-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "curved-facade/Plan cut/glass-Brep-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": true,
+    "Holes": null
+  },
+  "curved-facade/Plan cut/glass-mesh-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": true,
+    "Holes": null
+  },
+  "curved-facade/Plan cut/curved-mullion-0": {
+    "Area": 0.002520531228541636,
+    "Error": 1.302670510587925E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "curved-facade/Plan cut/twisting-fin-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": true,
+    "Holes": null
+  },
+  "curved-facade/Plan cut/curved-transom-0-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "curved-facade/Plan cut/curved-transom-0-3": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "curved-facade/Plan cut/glass-Brep-1": {
+    "Area": 0,
+    "Error": 0,
+    "Open": true,
+    "Holes": null
+  },
+  "curved-facade/Plan cut/glass-mesh-1": {
+    "Area": 0,
+    "Error": 0,
+    "Open": true,
+    "Holes": null
+  },
+  "curved-facade/Plan cut/curved-mullion-1": {
+    "Area": 0.0025220726736210858,
+    "Error": 7.731812981200993E-07,
+    "Open": false,
+    "Holes": null
+  },
+  "curved-facade/Plan cut/twisting-fin-1": {
+    "Area": 0,
+    "Error": 0,
+    "Open": true,
+    "Holes": null
+  },
+  "curved-facade/Plan cut/curved-transom-1-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "curved-facade/Plan cut/curved-transom-1-3": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "curved-facade/Plan cut/glass-Brep-2": {
+    "Area": 0,
+    "Error": 0,
+    "Open": true,
+    "Holes": null
+  },
+  "curved-facade/Plan cut/glass-mesh-2": {
+    "Area": 0,
+    "Error": 0,
+    "Open": true,
+    "Holes": null
+  },
+  "curved-facade/Plan cut/curved-mullion-2": {
+    "Area": 0.0025216663319734293,
+    "Error": 2.5937541880006326E-07,
+    "Open": false,
+    "Holes": null
+  },
+  "curved-facade/Plan cut/twisting-fin-2": {
+    "Area": 0,
+    "Error": 0,
+    "Open": true,
+    "Holes": null
+  },
+  "curved-facade/Plan cut/curved-transom-2-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "curved-facade/Plan cut/curved-transom-2-3": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "curved-facade/Plan cut/glass-Brep-3": {
+    "Area": 0,
+    "Error": 0,
+    "Open": true,
+    "Holes": null
+  },
+  "curved-facade/Plan cut/glass-mesh-3": {
+    "Area": 0,
+    "Error": 0,
+    "Open": true,
+    "Holes": null
+  },
+  "curved-facade/Plan cut/curved-mullion-3": {
+    "Area": 0.002521373782373093,
+    "Error": 2.5778137060323766E-07,
+    "Open": false,
+    "Holes": null
+  },
+  "curved-facade/Plan cut/twisting-fin-3": {
+    "Area": 0,
+    "Error": 0,
+    "Open": true,
+    "Holes": null
+  },
+  "curved-facade/Plan cut/curved-transom-3-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "curved-facade/Plan cut/curved-transom-3-3": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "curved-facade/Plan cut/glass-Brep-4": {
+    "Area": 0,
+    "Error": 0,
+    "Open": true,
+    "Holes": null
+  },
+  "curved-facade/Plan cut/glass-mesh-4": {
+    "Area": 0,
+    "Error": 0,
+    "Open": true,
+    "Holes": null
+  },
+  "curved-facade/Plan cut/curved-mullion-4": {
+    "Area": 0.0025244976784858314,
+    "Error": 8.785924512449104E-07,
+    "Open": false,
+    "Holes": null
+  },
+  "curved-facade/Plan cut/twisting-fin-4": {
+    "Area": 0,
+    "Error": 0,
+    "Open": true,
+    "Holes": null
+  },
+  "curved-facade/Plan cut/curved-transom-4-0": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "curved-facade/Plan cut/curved-transom-4-3": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "curved-facade/Plan cut/curved-louvre-1": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "curved-facade/Plan cut/curved-louvre-2": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "curved-facade/Plan cut/perforated-cassette-9-circular-holes": {
+    "Area": 0,
+    "Error": 0,
+    "Open": true,
+    "Holes": null
+  },
+  "tangent-continuity/generated-plan/G1-filleted-box": {
+    "Area": 3.946368401191749,
+    "Error": 5.6198238323368344E-05,
+    "Open": false,
+    "Holes": null
+  },
+  "tangent-continuity/generated-plan/G1-plane-polynomial-blend": {
+    "Area": 0,
+    "Error": 0,
+    "Open": true,
+    "Holes": null
+  },
+  "tangent-continuity/generated-plan/G2-plane-polynomial-blend": {
+    "Area": 0,
+    "Error": 0,
+    "Open": true,
+    "Holes": null
+  },
+  "tangent-continuity/generated-plan/torus-seam-0": {
+    "Area": 3.7706220778163795,
+    "Error": 0.0006143022393927389,
+    "Open": false,
+    "Holes": null
+  },
+  "tangent-continuity/generated-plan/sphere-seam-0": {
+    "Area": 2.5446765781483958,
+    "Error": 1.34712593387043E-05,
+    "Open": false,
+    "Holes": null
+  },
+  "tangent-continuity/generated-plan/torus-seam-1": {
+    "Area": 0.5655258973697982,
+    "Error": 0.00021632228274026666,
+    "Open": false,
+    "Holes": null
+  },
+  "tangent-continuity/generated-plan/sphere-seam-1": {
+    "Area": 2.5446833137780613,
+    "Error": 6.735629669574195E-06,
+    "Open": false,
+    "Holes": null
+  },
+  "tangent-continuity/generated-plan/exact-edge-on-sheet": {
+    "Area": 0,
+    "Error": 0,
+    "Open": true,
+    "Holes": null
+  },
+  "tangent-continuity/generated-side/G1-filleted-box": {
+    "Area": 0,
+    "Error": 0,
+    "Open": false,
+    "Holes": null
+  },
+  "tangent-continuity/generated-side/G1-plane-polynomial-blend": {
+    "Area": 0,
+    "Error": 0,
+    "Open": true,
+    "Holes": null
+  },
+  "tangent-continuity/generated-side/G2-plane-polynomial-blend": {
+    "Area": 0,
+    "Error": 0,
+    "Open": true,
+    "Holes": null
+  },
+  "tangent-continuity/generated-side/torus-seam-0": {
+    "Area": 0.565430366736444,
+    "Error": 4.4340514010476895E-05,
+    "Open": false,
+    "Holes": null
+  },
+  "tangent-continuity/generated-side/sphere-seam-0": {
+    "Area": 2.5446765781483944,
+    "Error": 1.3471259337816122E-05,
+    "Open": false,
+    "Holes": null
+  },
+  "tangent-continuity/generated-side/torus-seam-1": {
+    "Area": 3.7706220778163764,
+    "Error": 0.000614302239393183,
+    "Open": false,
+    "Holes": null
+  },
+  "tangent-continuity/generated-side/sphere-seam-1": {
+    "Area": 2.544676578148393,
+    "Error": 1.34712593387043E-05,
+    "Open": false,
+    "Holes": null
+  },
+  "tangent-continuity/generated-side/exact-edge-on-sheet": {
+    "Area": 0,
+    "Error": 0,
+    "Open": true,
+    "Holes": null
+  },
+  "subd-vs-nurbs/Plan cut/canopy-SubD": {
+    "Area": 0,
+    "Error": 0,
+    "Open": true,
+    "Holes": null
+  },
+  "subd-vs-nurbs/Plan cut/canopy-NURBS": {
+    "Area": 0,
+    "Error": 0,
+    "Open": true,
+    "Holes": null
+  },
+  "subd-vs-nurbs/Plan cut/canopy-mesh": {
+    "Area": 0,
+    "Error": 0,
+    "Open": true,
+    "Holes": null
+  }
+}

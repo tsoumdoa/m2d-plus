@@ -1,0 +1,44 @@
+{
+  "iteration": 0,
+  "summary": "Independent C 804-case cross-validation of D commit 4be80bbb; analytically corrected 12 CHS oracles, unchanged 0.2 percent allowance",
+  "gate": {
+    "passed": false,
+    "failures": [
+      "diagrid-shell/Roof section/diagrid-iso-1-0: wrong fill 0.013652403421501069, expected 0.013689024200826586 ±3.067100284988392E-05",
+      "diagrid-shell/Roof section/diagrid-iso-1-3: wrong fill 0.013652402807115792, expected 0.013689023585273612 ±3.0670996701719885E-05",
+      "Licensed test failed: M2DPlus.Rhino.Tests.EvidenceCertificationTests.FullEvidenceScore"
+    ]
+  },
+  "primary": 0.9147727272727273,
+  "secondary": {
+    "medianMs": 123.1024,
+    "crossingMedianMs": 151.0603,
+    "certified": 161,
+    "crossing": 176,
+    "cases": 804,
+    "uncertain": {
+      "Self-intersecting Brep faces away from their shared topology.": 4,
+      "No trustworthy halfspace certificate; source quarantined. D: transversality cannot be bounded away from tangency.": 7,
+      "D: transversality cannot be bounded away from tangency.": 7,
+      "No trustworthy halfspace certificate; source quarantined. Self-intersecting or degenerate section loop.": 2,
+      "Self-intersecting or degenerate section loop.": 2
+    }
+  },
+  "loadNote": "Serial owned Rhino.Inside; shared machine, no isolation or timing speedup claim",
+  "runtime": "8.0.34",
+  "rhino": "8.36.26296.17001",
+  "fixtures": {
+    "curved-steel": "4E01947B69FC703C5A0C54471429E2B4CD98A13E42ECAD85433FAD1F38DA5D5F",
+    "diagrid-shell": "A98041A1CA45A12288BA6F87D16068879BFB93282B73AEA4DF04471D3F9C763D",
+    "space-frame": "FB0C6525F01BB330F06AF8E40A642B0BF4FAEF16B23BEE5263FE314C7A36C0C6",
+    "curved-facade": "0E4C788ABA9DC95CD6520CD6DFF4E4EF9E84984F86C939CA297DA14688A2AA6B",
+    "tangent-continuity": "F5FD9B3FEAF05522FD6FD6B3DB4C455D94743C76552E3F011DB017166F967461",
+    "subd-vs-nurbs": "6A26158F6626AC1273E124901B0BCCDE6D431D80C88D41D9A8EF852FD814E8F6"
+  },
+  "oracle": "D8923DAB12C0DB108B6871BD1F94F172A25287F5D865F943A3F80C461A79B993",
+  "engine": "EE82119235EB3A6499BCD7B1A15F4AF9A3222792E26407850554CD678A2984FC",
+  "licensedGate": {
+    "total": "143",
+    "failed": "1"
+  }
+}

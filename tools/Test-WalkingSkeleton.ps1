@@ -3,6 +3,7 @@
 param(
     [string]$Resolver = $env:M2D_RHINO_INSIDE,
     [string]$Filter = '',
+    [ValidateSet(8, 10)][int[]]$RuntimeMajors = @(8, 10),
     [string]$RhinoSystem = 'C:/Program Files/Rhino 8/System',
     [string]$BuildingFixture = 'C:/Users/tomosandego/.t3/scratch/m2d-plus-research-20261114/fixtures/repeated_building_305.3dm'
 )
@@ -22,7 +23,7 @@ try {
     $env:M2D_RHINO_SYSTEM = $RhinoSystem
     $env:M2D_BUILDING_FIXTURE = $BuildingFixture
     $testFilter = if ($Filter) { @('--filter', $Filter) } else { @() }
-    foreach ($major in 8, 10) {
+    foreach ($major in $RuntimeMajors) {
         $env:M2D_EXPECT_RUNTIME = "$major"
         $env:DOTNET_ROLL_FORWARD = if ($major -eq 10) { 'LatestMajor' } else { 'LatestPatch' }
         & dotnet test (Join-Path $repo 'tests/M2DPlus.Core.Tests') -c Debug --no-build --nologo --logger "trx;LogFileName=m3-core-net$major.trx"
