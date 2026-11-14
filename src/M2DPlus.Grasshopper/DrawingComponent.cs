@@ -5,11 +5,11 @@ using Grasshopper.Kernel.Types;
 
 namespace M2DPlus.Grasshopper;
 
-public sealed class DrawingComponent : GH_Component
+public sealed partial class DrawingComponent : GH_Component
 {
     public DrawingComponent() : base("M2D+ Drawing", "M2D+",
         "Hidden-line plans, sections, elevations and axonometrics from your model and a view. Runs in the background. Double-click for view range and settings; click Bake on the component to bake to tidy layers.",
-        "M2D+", "Drawing") { }
+        "M2D+", "Drawing") { Message = "Pick a view"; }
 
     // Stable component GUID, generated once for M0. Never change; append future inputs only.
     public override Guid ComponentGuid => new("c8d0f9fe-5498-45dd-8caf-10201b80d211");
@@ -44,9 +44,8 @@ public sealed class DrawingComponent : GH_Component
 
     protected override void SolveInstance(IGH_DataAccess da)
     {
-        // No document capture, worker, preview or engine in M0. Explicitly publish empty trees.
         for (var i = 0; i < Params.Output.Count; i++)
             da.SetDataTree(i, new GH_Structure<IGH_Goo>());
-        AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, "M2D+ engine not implemented yet (M0 skeleton)");
+        SolveDrawing(da);
     }
 }

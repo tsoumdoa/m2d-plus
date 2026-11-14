@@ -5,7 +5,8 @@ authors:
 license: MIT
 description: >
   Make2D-style plans, sections, elevations and axonometric drawings for Rhino 8
-  and Grasshopper on Windows. Pre-alpha M0 skeleton; drawing engine not implemented.
+  and Grasshopper on Windows. Pre-alpha M1a: small-scene uncut direction/vector views,
+  native hidden lines and points, asynchronous generation-safe output. Sections and Bake deferred.
 url: https://github.com/tsoumdoa/m2d-plus
 icon: icon.png
 keywords:
