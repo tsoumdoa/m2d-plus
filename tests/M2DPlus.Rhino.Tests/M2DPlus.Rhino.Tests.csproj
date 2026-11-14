@@ -8,6 +8,9 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/M2DPlus.Rhino/M2DPlus.Rhino.csproj" />
+    <ProjectReference Include="../../src/M2DPlus.Grasshopper/M2DPlus.Grasshopper.csproj" ReferenceOutputAssembly="false" />
+    <PackageReference Include="Grasshopper" Version="$(RhinoApiVersion)" ExcludeAssets="runtime" />
+    <Reference Update="Grasshopper;GH_IO"><Private>false</Private></Reference>
     <PackageReference Include="RhinoCommon" Version="$(RhinoApiVersion)" ExcludeAssets="runtime" />
     <Reference Update="RhinoCommon"><Private>false</Private></Reference>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
@@ -15,4 +18,7 @@
     <PackageReference Include="xunit.runner.visualstudio" Version="3.0.2" PrivateAssets="all" />
     <None Include="../fixtures/brep_box.3dm" Link="fixtures/brep_box.3dm" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
+  <Target Name="CopyGhaForLoadTest" AfterTargets="Build">
+    <Copy SourceFiles="../../src/M2DPlus.Grasshopper/bin/$(Configuration)/net8.0-windows/M2DPlus.Grasshopper.gha" DestinationFolder="$(OutDir)" />
+  </Target>
 </Project>
