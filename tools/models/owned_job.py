@@ -6,6 +6,8 @@ Closing the job terminates descendants even if the venv launcher exits first.
 import ctypes as C
 from ctypes import wintypes as W
 import os
+import json
+from pathlib import Path
 import subprocess
 import time
 
@@ -32,7 +34,7 @@ class Memory(C.Structure):
                 'QuotaPeakNonPagedPoolUsage', 'QuotaNonPagedPoolUsage', 'PagefileUsage', 'PeakPagefileUsage', 'PrivateUsage')]
 
 
-def run(command, log_path, seconds, gib):
+def run(command, log_path, seconds, gib, admission_path=None, admission_timeout=3600):
     if os.name != 'nt':
         raise RuntimeError('This licensed local harness requires Windows')
     k = C.WinDLL('kernel32', use_last_error=True)
@@ -58,6 +60,10 @@ def run(command, log_path, seconds, gib):
         k.CloseHandle(job)
         raise C.WinError(C.get_last_error())
     started = time.perf_counter()
+    admission_path = Path(admission_path) if admission_path is not None else None
+    if admission_path is not None:
+        admission_path.unlink(missing_ok=True)
+    execution_started = None if admission_path is not None else started
     peak = 0; samples = []; reason = None; process = None
     try:
         with open(log_path, 'w', encoding='utf-8') as log:
@@ -92,12 +98,22 @@ def run(command, log_path, seconds, gib):
                         finally:
                             k.CloseHandle(handle)
                 peak = max(peak, private)
-                elapsed = time.perf_counter() - started
+                now = time.perf_counter()
+                elapsed = now - started
+                if execution_started is None and admission_path.exists():
+                    admission = json.loads(admission_path.read_text(encoding='utf-8'))
+                    if admission.get('status') == 'admitted':
+                        # Windows perf_counter uses the system QPC across processes.
+                        # Clamp the worker timestamp to this supervisor's lifetime.
+                        execution_started = min(now, max(started, float(admission['admittedPerfCounter'])))
                 if not samples or elapsed - samples[-1]['seconds'] >= 1:
-                    samples.append({'seconds': round(elapsed, 3), 'privateBytes': private})
+                    samples.append({'seconds': round(elapsed, 3), 'privateBytes': private,
+                                    'phase': 'execution' if execution_started is not None else 'admission'})
                 if not pids:
                     break
-                if elapsed > seconds:
+                if execution_started is None and elapsed > admission_timeout:
+                    reason = 'admission_timeout'
+                if execution_started is not None and now - execution_started > seconds:
                     reason = 'wall_timeout'
                 if private >= limits.JobMemoryLimit * .98:
                     reason = 'private_memory_limit'
@@ -109,9 +125,12 @@ def run(command, log_path, seconds, gib):
             process.wait(timeout=15)
             measured = Extended()
             k.QueryInformationJobObject(job, 9, C.byref(measured), C.sizeof(measured), None)
-            return {'status': reason or ('exited' if process.returncode == 0 else 'worker_crash'),
+            elapsed = time.perf_counter() - started
+            admission_seconds = (execution_started - started) if execution_started is not None else elapsed
+            return {'status': reason or ('exited' if process.returncode == 0 and execution_started is not None else 'worker_crash'),
                     'exitCode': process.returncode, 'ownedRootPid': process.pid,
-                    'wallSeconds': time.perf_counter() - started, 'peakPrivateBytes': peak,
+                    'wallSeconds': elapsed - admission_seconds, 'elapsedSeconds': elapsed,
+                    'admissionSeconds': admission_seconds, 'peakPrivateBytes': peak,
                     'jobPeakMemoryBytes': measured.PeakJobMemoryUsed,
                     'limits': {'wallSeconds': seconds, 'privateGiB': gib}, 'samples': samples,
                     'memoryMethod': 'sum of job-member PrivateUsage sampled every 200 ms; Windows hard job memory cap'}
