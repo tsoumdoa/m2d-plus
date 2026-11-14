@@ -52,6 +52,7 @@ public sealed partial class DrawingComponent
         var inputViews = new List<IGH_Goo>();
         if (!da.GetDataList(1, inputViews) || inputViews.Count == 0) { Message = "Pick a view"; return; }
         if (_started) return;
+        if (!Ui.ShouldStart()) { Message = "Paused · out of date"; return; }
         // Resolve once on the host thread. No worker ever reads ActiveDoc.
         var document = RhinoDoc.ActiveDoc;
         if (document is null) { Message = "Error"; AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "No Rhino document is open."); return; }
