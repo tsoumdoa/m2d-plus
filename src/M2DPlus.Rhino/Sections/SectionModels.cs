@@ -28,10 +28,11 @@ public sealed record SectionRegion(string Id, IReadOnlyList<SectionLoop> Loops, 
 public sealed class SectionResult : IDisposable
 {
     public List<SectionRegion> Regions { get; } = new();
+    public Dictionary<string, PhysicalClipResult> Visibility { get; } = new(StringComparer.Ordinal);
     public List<ComponentClassification> Components { get; } = new();
     public List<SectionDiagnostic> Diagnostics { get; } = new();
     public bool RequiresQuarantine => Diagnostics.Any(d => d.Status is SectionStatus.Uncertain or SectionStatus.Unsupported);
-    public void Dispose() { foreach (var region in Regions) region.Dispose(); }
+    public void Dispose() { foreach (var region in Regions) region.Dispose(); foreach (var clip in Visibility.Values) clip.Dispose(); }
 }
 public sealed record VisibilityPiece(string SourceId, Brep Geometry, IReadOnlyList<SectionEdge> Edges) : IDisposable
 {

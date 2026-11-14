@@ -1,0 +1,83 @@
+{
+  "sources": [
+    {
+      "source": "b00-f01-c004-RHS-000484/RHS-member",
+      "bounds": "6.0200000000000005,11.52,3 - 6.38,11.879999999999999,6"
+    },
+    {
+      "source": "b00-f01-c004-wall-pier-000486/wall-pier-member",
+      "bounds": "6,6,3 - 6.2,7,6"
+    },
+    {
+      "source": "b00-f01-c004-wall-pier-000487/wall-pier-member",
+      "bounds": "6,9,3 - 6.2,10,6"
+    }
+  ],
+  "raw": {
+    "Projecting": 16,
+    "Duplicate": 20,
+    "Visible": 4,
+    "Hidden": 6,
+    "Unset": 4
+  },
+  "indices": [
+    -1,
+    -1,
+    -1,
+    -1
+  ],
+  "plane": {
+    "origin": [
+      9.0,
+      6.0,
+      0
+    ],
+    "x": [
+      1,
+      0,
+      0
+    ],
+    "y": [
+      0,
+      0,
+      1
+    ]
+  },
+  "clips": [
+    {
+      "origin": [
+        9.0,
+        6.0,
+        0.0
+      ],
+      "normal": [
+        0.0,
+        -1.0,
+        0.0
+      ]
+    }
+  ],
+  "camera": {
+    "location": [
+      9.053553390593274,
+      -46.32466994868157,
+      3.225
+    ],
+    "direction": [
+      -0.0,
+      1.0,
+      -0.0
+    ],
+    "up": [
+      0.0,
+      0.0,
+      1.0
+    ],
+    "distance": 50.349669948681566
+  },
+  "archiveSha256": "e3d21376310b6729fefd74dd57ad05a0a70fafa30d20e9aff426424cb3a96c7e",
+  "parentModel": "perf-S-blocks.3dm",
+  "parentSha256": "cf1cc777055080929607a7905db52419fa1e4ab7ebabfe7cd7f703588faf1412",
+  "rhino": "8.36.26296.17001",
+  "runtime": "8.0.34"
+}

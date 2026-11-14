@@ -13,7 +13,7 @@ public static class SectionRegionEngine
     }
 
     public static SectionResult Compute(IEnumerable<SectionSource> sources, SectionRequest request,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default, bool prepareVisibility = false, Plane? farPlane = null)
     {
         SectionGeometry.Validate(request);
         var ordered = sources.OrderBy(s => s.Id, StringComparer.Ordinal).ToArray();
@@ -21,6 +21,7 @@ public static class SectionRegionEngine
             throw new ArgumentException("Source ids must be nonempty and unique.");
         var result = new SectionResult();
         var candidates = new List<Candidate>();
+        var outlineOrdinals = new Dictionary<string, int>(StringComparer.Ordinal);
         try
         {
             foreach (var source in ordered)
@@ -34,6 +35,12 @@ public static class SectionRegionEngine
                     ValidateStyle(style);
                     if (request.Hatch == HatchMode.Styles && source.Style.Background == BackgroundMode.Viewport)
                         result.Diagnostics.Add(new(source.Id, SectionStatus.Crossing, "Viewport background resolved to object display colour."));
+                    if (prepareVisibility)
+                    {
+                        var visibility = PhysicalSectionClipper.Clip(source, request, farPlane);
+                        result.Visibility.Add(source.Id, visibility);
+                        result.Diagnostics.AddRange(visibility.Diagnostics);
+                    }
                     using var copy = SectionGeometry.Convert(source.Geometry, request.Tolerance);
                     var components = SectionGeometry.MaterialComponents(copy, request.Tolerance);
                     try
@@ -53,14 +60,22 @@ public static class SectionRegionEngine
                                 if (loops.Length == 0) throw new SectionFailure("Crossing certificate has no transverse intersection.");
                                 if (!component.IsSolid)
                                 {
-                                    AddOutlines(source.Id, loops, style, request, result);
+                                    AddOutlines(source.Id, loops, style, request, result, outlineOrdinals);
                                     result.Diagnostics.Add(new(source.Id, SectionStatus.OutlineOnly, "Open source: section outline only, Hatch null."));
                                     continue;
                                 }
-                                var checkDiagnostics = new List<SectionDiagnostic>();
-                                var clipped = PhysicalSectionClipper.Halfspace(source.Id, component, request, checkDiagnostics);
-                                foreach (var piece in clipped) piece.Dispose();
-                                if (checkDiagnostics.Count != 0) throw new SectionFailure("Crossing trim/cap could not be certified.");
+                                if (prepareVisibility)
+                                {
+                                    if (!result.Visibility[source.Id].Succeeded && !(farPlane is { } fp && -request.Plane.DistanceTo(fp.Origin) <= request.Tolerance))
+                                        throw new SectionFailure("Crossing trim/cap could not be certified.");
+                                }
+                                else
+                                {
+                                    var checkDiagnostics = new List<SectionDiagnostic>();
+                                    var clipped = PhysicalSectionClipper.Halfspace(source.Id, component, request, checkDiagnostics);
+                                    foreach (var piece in clipped) piece.Dispose();
+                                    if (checkDiagnostics.Count != 0) throw new SectionFailure("Crossing trim/cap could not be certified.");
+                                }
                                 var regions = SectionGeometry.PlanarRegions(loops, request);
                                 try
                                 {
@@ -86,6 +101,7 @@ public static class SectionRegionEngine
             ReportOverlaps(candidates, request, result);
             if (request.Cuts == CutMode.Merge) candidates = Merge(candidates, request, result);
             var failedSources = new HashSet<string>(StringComparer.Ordinal);
+            var ordinals = new Dictionary<string, int>(StringComparer.Ordinal);
             foreach (var candidate in candidates.OrderBy(c => SectionPolicy.MembershipKey(c.Sources), StringComparer.Ordinal)
                 .ThenBy(c => c.Face.GetBoundingBox(Transform.PlaneToPlane(request.Plane, Plane.WorldXY)).Min.X)
                 .ThenBy(c => c.Face.GetBoundingBox(Transform.PlaneToPlane(request.Plane, Plane.WorldXY)).Min.Y)
@@ -93,7 +109,8 @@ public static class SectionRegionEngine
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 var key = SectionPolicy.MembershipKey(candidate.Sources);
-                var ordinal = result.Regions.Count(r => r.SourceIds.SequenceEqual(candidate.Sources));
+                var ordinal = ordinals.GetValueOrDefault(key);
+                ordinals[key] = ordinal + 1;
                 try { result.Regions.Add(Build(candidate, $"{key}/region/{ordinal}", request)); }
                 catch (Exception ex) when (ex is SectionFailure or ArgumentException or InvalidOperationException)
                 {
@@ -176,7 +193,7 @@ public static class SectionRegionEngine
     }
 
     private static void AddOutlines(string id, IEnumerable<Curve> curves, SectionStyleSnapshot style,
-        SectionRequest request, SectionResult result)
+        SectionRequest request, SectionResult result, Dictionary<string, int> ordinals)
     {
         using var crop = request.Crop?.ToNurbsCurve();
         foreach (var curve in curves)
@@ -193,7 +210,8 @@ public static class SectionRegionEngine
             {
                 if (crop is not null && crop.Contains(part.PointAtNormalizedLength(.5), request.Plane, request.Tolerance) == PointContainment.Outside)
                 { part.Dispose(); continue; }
-                var ordinal = result.Regions.Count(r => r.SourceIds.Contains(id));
+                var ordinal = ordinals.GetValueOrDefault(id);
+                ordinals[id] = ordinal + 1;
                 result.Regions.Add(new($"{SectionPolicy.MembershipKey(new[] { id })}/outline/{ordinal}",
                     new[] { new SectionLoop(part, false, new[] { new SectionEdge(part.DuplicateCurve(), EdgeOrigin.PhysicalCut) }) },
                     null, new[] { id }, style, SectionStatus.OutlineOnly, 0, "Open geometry has no material fill."));

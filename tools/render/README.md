@@ -34,3 +34,15 @@ This hashes every top-level geometry with JSON + SHA-256, then binary archive +
 SHA-256; logs wall time, current-thread managed allocation, geometry bytes,
 faces/triangles and one/six-view admission estimates. It is one sequential pass,
 not a statistically controlled speed benchmark. Large files stay external.
+
+## M2 cut views
+
+`./tools/render/Render.ps1 -Engine m2` writes `artifacts/render/m2/` by default.
+It draws Plane/long-section/Box/Rectangle cuts of the research 305-building and
+RHS/CHS/section-style controls. Each Cut region renders with all holes, its source
+or style colour and its solid/line hatch. Line-pattern raster preview is simplified
+(minimum two-pixel spacing and approximate dashes/origin); it is not CAD export.
+No UI or bake code is involved. The sheet, SVGs, PNGs and results manifest are all
+local artifacts. The manifest retains native build/runtime, engine and fixture
+hashes, timings and full Info, including uncertainty. Run this serially with the
+licensed test harness and other research hosts.

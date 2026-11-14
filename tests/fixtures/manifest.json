@@ -14,7 +14,7 @@
       "sha256": "69369b97122534cb5528184d946fa63fae77198e9ca5442e1f8d065049b97826",
       "sizeBytes": 7970,
       "units": "Meters",
-      "description": "Tilted 270° arc remains rational; projected length 4.051932; retained cut arc 2.701288.",
+      "description": "Tilted 270Â° arc remains rational; projected length 4.051932; retained cut arc 2.701288.",
       "research": {
         "source": "../../docs/research/geometry-matrix.md",
         "verdict": "P basic projection"
@@ -79,7 +79,7 @@
       "sha256": "8e7b7ed0d7ddd86da356e443d69878e06c319e5f9f250d93bdb0d0f94edd55d8",
       "sizeBytes": 24885,
       "units": "Meters",
-      "description": "Expected probe hidden [-1,1], visible [-3,-1]∪[1,3]. Native boundary error 2.27e-5 < 1e-4; Custom/Auto exact to rounding. Raw cut has invalid Unset proxies.",
+      "description": "Expected probe hidden [-1,1], visible [-3,-1]âˆª[1,3]. Native boundary error 2.27e-5 < 1e-4; Custom/Auto exact to rounding. Raw cut has invalid Unset proxies.",
       "research": {
         "source": "../../docs/research/geometry-matrix.md",
         "verdict": "P interval; raw extraction note"
@@ -118,7 +118,7 @@
       "sha256": "0d566bb7f63569b0160720371a23088c86a44ec7ab4543b98ab0053e406d4bfd",
       "sizeBytes": 10257,
       "units": "Meters",
-      "description": "Radius-1 silhouette length 2π. After cut, Visible and Cut both contain the same circular locus; style precedence required.",
+      "description": "Radius-1 silhouette length 2Ï€. After cut, Visible and Cut both contain the same circular locus; style precedence required.",
       "research": {
         "source": "../../docs/research/geometry-matrix.md",
         "verdict": "P basic"
@@ -144,7 +144,7 @@
       "sha256": "4813715ca0a4ed8fee824786ca40aaa68bfe82adb40bb6c5255f13e23dee84fe",
       "sizeBytes": 10656,
       "units": "Meters",
-      "description": "Trimmed open sphere runs; closed equatorial region area π. No independent full trimmed-silhouette oracle.",
+      "description": "Trimmed open sphere runs; closed equatorial region area Ï€. No independent full trimmed-silhouette oracle.",
       "research": {
         "source": "../../docs/research/geometry-matrix.md",
         "verdict": "U"
@@ -170,7 +170,7 @@
       "sha256": "d33b5fc0a72cf4d4337e225ad2fd07e1e0df8414c2a0a2f39d100209124c7584",
       "sizeBytes": 16685,
       "units": "Meters",
-      "description": "2 circles, one annular hatch, area 0.51π; Custom unresolved. Native/Auto preserve hole.",
+      "description": "2 circles, one annular hatch, area 0.51Ï€; Custom unresolved. Native/Auto preserve hole.",
       "research": {
         "source": "../../docs/research/geometry-matrix.md",
         "verdict": "F Custom; P section"
@@ -1720,6 +1720,15 @@
       "sidecarSha256": "f5d10391505cca2006b47a6c9ce671087e2c869637d82d2400a47366a96472b8",
       "path": "features/view-sources.3dm",
       "sidecar": "features/view-sources.json"
+    },
+    {
+      "id": "sections/unset-native-slot.3dm",
+      "external": false,
+      "sha256": "e3d21376310b6729fefd74dd57ad05a0a70fafa30d20e9aff426424cb3a96c7e",
+      "sizeBytes": 69163,
+      "units": "Meters",
+      "description": "Three expanded S-tier sources reduced from perf-S-blocks long section; four native null slots (Unset index -1); not missing stroke geometry. Reproduction values in adjacent JSON.",
+      "path": "sections/unset-native-slot.3dm"
     }
   ],
   "localModelSuite": {

@@ -37,7 +37,7 @@ Run both native hosting runtimes **serially** with:
 
 The second run uses `DOTNET_ROLL_FORWARD=LatestMajor` and asserts runtime major 10
 inside the GHA load/solve test. It does not change the owner's Rhino runtime
-setting. TRX results are in `TestResults/m1b-rhino-net8.trx` and `m1b-rhino-net10.trx`.
+setting. TRX results are in `TestResults/m2-rhino-net8.trx` and `m2-rhino-net10.trx`.
 The harness keeps a host document alive for GH's process-wide document witness,
 and pumps scheduled GH solutions without showing an editor. Both runs load the
 installed native Rhino build and the built GHA; no binaries are installed or
@@ -51,3 +51,10 @@ blocks, binary fingerprints, stable order, native extraction failure assertions,
 estimate refusal, and 305-object/six-view and 5k-box smokes. Times are recorded,
 never gated. Use `-BuildingFixture` (or `M2D_BUILDING_FIXTURE` for direct runs)
 for an alternate research fixture path. See [M1b notes](../../docs/design/m1b-notes.md).
+
+M2 wiring adds actual component Cut/Hatch tree/null alignment, adversarial retained
+curve and point visibility, Box/source depth, near/far precedence, selected clipping
+scope, flipped native parity, host style definitions/Parent chains, three-source
+empty-slot extraction and bounded genuine Unset regressions. See
+[M2 wiring notes](../../docs/design/m2-wiring.md) for the measured Unset classes,
+extracted fixture provenance, conservative supported domain and render commands.

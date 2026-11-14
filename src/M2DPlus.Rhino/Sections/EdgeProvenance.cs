@@ -12,8 +12,13 @@ internal static class EdgeProvenance
     {
         var overlaps = new List<(Interval Interval, EdgeOrigin Origin)>();
         var parameters = new SortedSet<double> { curve.Domain.T0, curve.Domain.T1 };
+        var bounds = curve.GetBoundingBox(true);
         foreach (var reference in references)
         {
+            var other = reference.Curve.GetBoundingBox(true);
+            if (bounds.Min.X > other.Max.X + tolerance || bounds.Max.X < other.Min.X - tolerance ||
+                bounds.Min.Y > other.Max.Y + tolerance || bounds.Max.Y < other.Min.Y - tolerance ||
+                bounds.Min.Z > other.Max.Z + tolerance || bounds.Max.Z < other.Min.Z - tolerance) continue;
             using var events = Intersection.CurveCurve(curve, reference.Curve, tolerance, tolerance);
             foreach (var item in events)
             {
