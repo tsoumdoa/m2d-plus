@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+  </PropertyGroup>
+  <ItemGroup>
+    <Using Remove="System.Drawing" /><Using Remove="System.Windows.Forms" />
+    <!-- Compile the current engine unchanged into the isolated research executable.
+         Internal access avoids exposing any experimental product API. -->
+    <Compile Include="../../src/M2DPlus.Rhino/**/*.cs" Exclude="../../src/M2DPlus.Rhino/obj/**;../../src/M2DPlus.Rhino/bin/**" />
+    <ProjectReference Include="../../src/M2DPlus.Core/M2DPlus.Core.csproj" />
+    <PackageReference Include="RhinoCommon" Version="$(RhinoApiVersion)" ExcludeAssets="runtime" />
+  </ItemGroup>
+</Project>
+
