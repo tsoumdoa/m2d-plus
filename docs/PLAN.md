@@ -77,6 +77,11 @@ Each milestone is a set of small PRs. Sol implements, Claude reviews and commits
 | **M5** | Calibrated heavy-job admission, bounded parallel workers, campus + 50k/high-overlap tests, cancellation/resource recovery, UI responsiveness. Partitioning/convex routing ship only if their gates passed. | Campus set completes within the memory policy, and Rhino stays responsive |
 | **M6** | Release checks, documented supported/uncertain domains and worker/licence behaviour, examples, installed-Yak smoke tests, public beta. | Public beta |
 
+## Spike decisions
+
+- **S1a (2026-11-14): go** for the worker route, with one persistent worker and named pipes. It must match the host runtime (Rhino 8.36 defaults to .NET 10). See [s1a-worker.md](research/s1a-worker.md).
+- **S2 (2026-11-14): route C.** Owned copies are physically trimmed and capped before HLD, with no global native clipping planes. Section regions are built independently. Points are classified against the same clipped occluders. The far plane is trimmed physically, and the Far clip curves are made from their own intersections. Scope is resolved before clipping. Exact contact is never nudged. See [s2-clipping.md](research/s2-clipping.md).
+
 ## Working rules
 
 - Sol (Codex `gpt-6.1-sol`) implements and tests. Astra (`gpt-6-astra`) reviews designs. Opus handles UX work. Claude reviews, commits and opens PRs.
