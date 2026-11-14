@@ -592,6 +592,240 @@
         "verdict": "P snapshot ownership; U full 50k visibility"
       },
       "originalPath": "C:/Users/tomosandego/.t3/scratch/m2d-plus-s1a-20261114/fixtures/small-breps-50000.3dm"
+    },
+    {
+      "id": "sections/block_expanded.3dm",
+      "external": false,
+      "sha256": "be7a1dec826737af4f0db6cf0d53f7d0df38dacc4d50371978f2cea667a4b9ff",
+      "sizeBytes": 24855,
+      "units": "Meters",
+      "description": "S2 frozen adversarial/semantic fixture; see s2-clipping.md evidence inventory. Not a blanket correctness verdict.",
+      "research": {
+        "source": "../../docs/research/s2-clipping.md",
+        "verdict": "P/F/U per property in S2; M2 acceptance tests carry independent oracles"
+      },
+      "path": "sections/block_expanded.3dm"
+    },
+    {
+      "id": "sections/block_straddle.3dm",
+      "external": false,
+      "sha256": "8fc7fa66a305dcc05a2815f2ce2762e2bf0e62051d6fc9ac16d383f93c955563",
+      "sizeBytes": 27620,
+      "units": "Meters",
+      "description": "S2 frozen adversarial/semantic fixture; see s2-clipping.md evidence inventory. Not a blanket correctness verdict.",
+      "research": {
+        "source": "../../docs/research/s2-clipping.md",
+        "verdict": "P/F/U per property in S2; M2 acceptance tests carry independent oracles"
+      },
+      "path": "sections/block_straddle.3dm"
+    },
+    {
+      "id": "sections/cp_api.3dm",
+      "external": false,
+      "sha256": "7acf27dc5c0cad247d7b98d584cac75924b0d7a92b8454b947673f51bef42629",
+      "sizeBytes": 10343,
+      "units": "Meters",
+      "description": "S2 frozen adversarial/semantic fixture; see s2-clipping.md evidence inventory. Not a blanket correctness verdict.",
+      "research": {
+        "source": "../../docs/research/s2-clipping.md",
+        "verdict": "P/F/U per property in S2; M2 acceptance tests carry independent oracles"
+      },
+      "path": "sections/cp_api.3dm"
+    },
+    {
+      "id": "sections/crossing_curve.3dm",
+      "external": false,
+      "sha256": "9029bb1c07750c41f43a1bae89080818dd20381e91e356bce69bd0aa9cb37037",
+      "sizeBytes": 24855,
+      "units": "Meters",
+      "description": "S2 frozen adversarial/semantic fixture; see s2-clipping.md evidence inventory. Not a blanket correctness verdict.",
+      "research": {
+        "source": "../../docs/research/s2-clipping.md",
+        "verdict": "P/F/U per property in S2; M2 acceptance tests carry independent oracles"
+      },
+      "path": "sections/crossing_curve.3dm"
+    },
+    {
+      "id": "sections/depth.3dm",
+      "external": false,
+      "sha256": "418bfb7a98fd6868c4b3dfc37d6bdbfac159da0b73da144f0a76266362bb4d27",
+      "sizeBytes": 25433,
+      "units": "Meters",
+      "description": "S2 frozen adversarial/semantic fixture; see s2-clipping.md evidence inventory. Not a blanket correctness verdict.",
+      "research": {
+        "source": "../../docs/research/s2-clipping.md",
+        "verdict": "P/F/U per property in S2; M2 acceptance tests carry independent oracles"
+      },
+      "path": "sections/depth.3dm"
+    },
+    {
+      "id": "sections/mesh_straddle.3dm",
+      "external": false,
+      "sha256": "5bc2a390f2a688258da2358c4576130fa80d6b94b487cfcf3acf08dbd36a529e",
+      "sizeBytes": 8698,
+      "units": "Meters",
+      "description": "S2 frozen adversarial/semantic fixture; see s2-clipping.md evidence inventory. Not a blanket correctness verdict.",
+      "research": {
+        "source": "../../docs/research/s2-clipping.md",
+        "verdict": "P/F/U per property in S2; M2 acceptance tests carry independent oracles"
+      },
+      "path": "sections/mesh_straddle.3dm"
+    },
+    {
+      "id": "sections/points_cut_solid.3dm",
+      "external": false,
+      "sha256": "936ca620160462daee7716b282c5a0825ae70df875621938bb23765e9776b4c5",
+      "sizeBytes": 25367,
+      "units": "Meters",
+      "description": "S2 frozen adversarial/semantic fixture; see s2-clipping.md evidence inventory. Not a blanket correctness verdict.",
+      "research": {
+        "source": "../../docs/research/s2-clipping.md",
+        "verdict": "P/F/U per property in S2; M2 acceptance tests carry independent oracles"
+      },
+      "path": "sections/points_cut_solid.3dm"
+    },
+    {
+      "id": "sections/region_box.3dm",
+      "external": false,
+      "sha256": "13ccf77edffea5a46e682d373669975e37bb3cd76ee7a02518dbe244381c0d26",
+      "sizeBytes": 28104,
+      "units": "Meters",
+      "description": "S2 frozen adversarial/semantic fixture; see s2-clipping.md evidence inventory. Not a blanket correctness verdict.",
+      "research": {
+        "source": "../../docs/research/s2-clipping.md",
+        "verdict": "P/F/U per property in S2; M2 acceptance tests carry independent oracles"
+      },
+      "path": "sections/region_box.3dm"
+    },
+    {
+      "id": "sections/region_branches.3dm",
+      "external": false,
+      "sha256": "b20b7eaca4048523a642e9adee5b0c71c4a39ad7ab06232d80ed591195bfcb90",
+      "sizeBytes": 61439,
+      "units": "Meters",
+      "description": "S2 frozen adversarial/semantic fixture; see s2-clipping.md evidence inventory. Not a blanket correctness verdict.",
+      "research": {
+        "source": "../../docs/research/s2-clipping.md",
+        "verdict": "P/F/U per property in S2; M2 acceptance tests carry independent oracles"
+      },
+      "path": "sections/region_branches.3dm"
+    },
+    {
+      "id": "sections/region_chs.3dm",
+      "external": false,
+      "sha256": "7d31ab9a5b811dc9b0be2457dd1eeb156d0c88d914b84ab3c3e6cd6c31ca163a",
+      "sizeBytes": 24915,
+      "units": "Meters",
+      "description": "S2 frozen adversarial/semantic fixture; see s2-clipping.md evidence inventory. Not a blanket correctness verdict.",
+      "research": {
+        "source": "../../docs/research/s2-clipping.md",
+        "verdict": "P/F/U per property in S2; M2 acceptance tests carry independent oracles"
+      },
+      "path": "sections/region_chs.3dm"
+    },
+    {
+      "id": "sections/region_rhs.3dm",
+      "external": false,
+      "sha256": "5bb8e2a97816005dd66380a8f8ace7db7e727f69b21c2cdfb88a4057305f2460",
+      "sizeBytes": 41413,
+      "units": "Meters",
+      "description": "S2 frozen adversarial/semantic fixture; see s2-clipping.md evidence inventory. Not a blanket correctness verdict.",
+      "research": {
+        "source": "../../docs/research/s2-clipping.md",
+        "verdict": "P/F/U per property in S2; M2 acceptance tests carry independent oracles"
+      },
+      "path": "sections/region_rhs.3dm"
+    },
+    {
+      "id": "sections/removed_occluder.3dm",
+      "external": false,
+      "sha256": "a3ddc948fcbf628bdbe012e74580069a845854039fda8b3844e01436b143418c",
+      "sizeBytes": 25043,
+      "units": "Meters",
+      "description": "S2 frozen adversarial/semantic fixture; see s2-clipping.md evidence inventory. Not a blanket correctness verdict.",
+      "research": {
+        "source": "../../docs/research/s2-clipping.md",
+        "verdict": "P/F/U per property in S2; M2 acceptance tests carry independent oracles"
+      },
+      "path": "sections/removed_occluder.3dm"
+    },
+    {
+      "id": "sections/rhs_void.3dm",
+      "external": false,
+      "sha256": "0dcdb54da4c2a5879f538b5657d1e6f5b239581a9e3d9cfdc16bcc39b18b9c7d",
+      "sizeBytes": 34667,
+      "units": "Meters",
+      "description": "S2 frozen adversarial/semantic fixture; see s2-clipping.md evidence inventory. Not a blanket correctness verdict.",
+      "research": {
+        "source": "../../docs/research/s2-clipping.md",
+        "verdict": "P/F/U per property in S2; M2 acceptance tests carry independent oracles"
+      },
+      "path": "sections/rhs_void.3dm"
+    },
+    {
+      "id": "sections/scope_resolved.3dm",
+      "external": false,
+      "sha256": "2ded059599c3409067cac28bc22ed9ee57b4adcaf633f18863b9bd959c754111",
+      "sizeBytes": 26870,
+      "units": "Meters",
+      "description": "S2 frozen adversarial/semantic fixture; see s2-clipping.md evidence inventory. Not a blanket correctness verdict.",
+      "research": {
+        "source": "../../docs/research/s2-clipping.md",
+        "verdict": "P/F/U per property in S2; M2 acceptance tests carry independent oracles"
+      },
+      "path": "sections/scope_resolved.3dm"
+    },
+    {
+      "id": "sections/scoped_depth.3dm",
+      "external": false,
+      "sha256": "2f2376d731d3940438efabe14aac091d313c2a87fbef66033f58f8e8ef2a7cb5",
+      "sizeBytes": 25033,
+      "units": "Meters",
+      "description": "S2 frozen adversarial/semantic fixture; see s2-clipping.md evidence inventory. Not a blanket correctness verdict.",
+      "research": {
+        "source": "../../docs/research/s2-clipping.md",
+        "verdict": "P/F/U per property in S2; M2 acceptance tests carry independent oracles"
+      },
+      "path": "sections/scoped_depth.3dm"
+    },
+    {
+      "id": "sections/section_styles.3dm",
+      "external": false,
+      "sha256": "a700d84c7502bc105448cefa72fbf3d729b51e30fadf8b73dc43924e25416afd",
+      "sizeBytes": 86546,
+      "units": "Meters",
+      "description": "S2 frozen adversarial/semantic fixture; see s2-clipping.md evidence inventory. Not a blanket correctness verdict.",
+      "research": {
+        "source": "../../docs/research/s2-clipping.md",
+        "verdict": "P/F/U per property in S2; M2 acceptance tests carry independent oracles"
+      },
+      "path": "sections/section_styles.3dm"
+    },
+    {
+      "id": "sections/straddle_front_removed.3dm",
+      "external": false,
+      "sha256": "65f561ae0a81e2f8c22fcffade111a910075bbe9cf6d1041b206e67c5374aa3e",
+      "sizeBytes": 42147,
+      "units": "Meters",
+      "description": "S2 frozen adversarial/semantic fixture; see s2-clipping.md evidence inventory. Not a blanket correctness verdict.",
+      "research": {
+        "source": "../../docs/research/s2-clipping.md",
+        "verdict": "P/F/U per property in S2; M2 acceptance tests carry independent oracles"
+      },
+      "path": "sections/straddle_front_removed.3dm"
+    },
+    {
+      "id": "sections/tapered_depth.3dm",
+      "external": false,
+      "sha256": "ae91a8541d9ed73f46975b0cfaa5e1eb2a542b1b5399c7027b362b8a36931764",
+      "sizeBytes": 11215,
+      "units": "Meters",
+      "description": "S2 frozen adversarial/semantic fixture; see s2-clipping.md evidence inventory. Not a blanket correctness verdict.",
+      "research": {
+        "source": "../../docs/research/s2-clipping.md",
+        "verdict": "P/F/U per property in S2; M2 acceptance tests carry independent oracles"
+      },
+      "path": "sections/tapered_depth.3dm"
     }
   ]
 }

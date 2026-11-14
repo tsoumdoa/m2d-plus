@@ -24,6 +24,10 @@ box, independently checks its volume, and reads the frozen `brep_box.3dm` fixtur
 M1a adds lifecycle races during a real HLD progress callback, independent analytic
 interval/point/mirror oracles, filtering/normalization, shared preparation and live
 GH async publication. See [implementation notes](../../docs/design/m1a-notes.md).
+Section tests use frozen root/S2 fixtures and generated analytic geometry, rectangle
+areas, circle integrals, loop/hole/region counts, containment and independent volume
+checks. They cover crop, merge, contact, cap/provenance and embedded-pattern hatch
+save/reopen. See [the API and supported-domain notes](../../docs/design/m2-sections.md).
 
 Run both native hosting runtimes **serially** with:
 
