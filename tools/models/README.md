@@ -8,6 +8,96 @@ capture script uses only its newly launched process's document. The suite never
 attaches to an existing interactive process, installs a plug-in, or terminates a
 process by name. No binaries go into GH Libraries.
 
+## Curved/freeform extension
+
+`curved.py` adds six focused feature archives and S/M/L/XL curved buildings in
+blocks/exploded forms (500/5,000/20,000/50,000 objects). It reuses the existing
+geometry/archive and owned-job helpers. Each tier has ten views, including a
+grazing elevation and a section through the roof structure. The CHS diagrid
+follows surface isocurves; it is not described as a geodesic solution. The
+filleted I-beam explicitly preserves its tangent face boundaries.
+
+Run these commands **serially**, using `$py` from the environment below:
+
+```powershell
+& $py -B -u tools/models/curved.py --features --tiers S,M,L,XL
+& $py -B -u tools/models/validate.py --features
+& $py -B -u tools/models/validate_pairs.py --curved --tiers S,M,L,XL
+& $py -B -u tools/models/curved.py --features --out artifacts/curved-repeat
+& $py -B -u tools/models/validate.py --features --compare artifacts/curved-repeat
+# Exact IDs prevent an existing orthogonal collection from being rerun.
+$features = 'curved-steel,diagrid-shell,space-frame,curved-facade,tangent-continuity,subd-vs-nurbs'
+$tiers = 'curved-perf-S-blocks,curved-perf-S-exploded,curved-perf-M-blocks,curved-perf-M-exploded,curved-perf-L-blocks,curved-perf-L-exploded'
+& $py -B -u tools/models/run.py --select $features --threads off --wall 600 --memory 8
+& $py -B -u tools/models/run.py --select $tiers --threads off --wall 600 --memory 8
+& $py -B -u tools/models/run.py --select curved-perf-XL-blocks,curved-perf-XL-exploded --xl-once --threads off --wall 600 --memory 8
+dotnet build tools/models/renderer/ModelRenderer.csproj -c Release
+& $py -B -u tools/models/screenshots.py --select "$features,$tiers,curved-perf-XL-blocks,curved-perf-XL-exploded" --offscreen --wall 600 --memory 16
+& $py -B tools/models/freeze.py --all-features
+& $py -B tools/models/curved_assess.py
+& $py -B tools/models/curved_report.py
+```
+
+To carry the original gallery and timing evidence into a new worktree, pass
+`--orthogonal-baseline <previous-worktree>/artifacts/baseline` to
+`curved_report.py` once. It copies only the prior HTML and summary JSON into the
+current gitignored baseline directory, records source hashes, and never writes
+to the original worktree. Subsequent runs retain the local copies. This report
+appends a **Curved** gallery and a Markdown section, preserving the earlier
+orthogonal research. Use `curved_report.py` for the combined extension report;
+the original `report.py` regenerates the original-format report.
+
+Every new feature has `hook: false`. `freeze.py` now updates only supplied model
+IDs, so generating a partial suite cannot erase earlier manifest entries.
+`curved_checks.py` adds independent hole/area, tangent-edge, closed-solid and
+sampled mesh/NURBS deviation checks. The oblique torus-cut area is numerically
+integrated from its analytic parametrization, without calling HLD. Sidecars
+record source-at-generation hashes; byte-repeat checks compare archives, while
+generator metadata may differ after later edits to unrelated constructors.
+`curved_assess.py` compares extracted paths for the seam-setting pairs and
+records Unset/capped attempts. It preserves additional manual observations from
+`artifacts/baseline/curved-visual-findings.json`; visual defects are not inferred
+solely from an Unset count.
+
+The raw adapter honors `tangents` and `seams` per view. The continuity fixture
+tests all four setting combinations. Curved trials use MT off to compare with
+the earlier orthogonal MT-off rows. No assertion treats HLD as a visibility
+oracle or treats Unset proxies as valid geometry.
+
+Optional PNG exports of native SVG drawings use a small local rasterizer:
+
+```powershell
+npm install --prefix artifacts/render-tools --no-audit --no-fund @resvg/resvg-js@2.6.2
+node tools/models/render_native.cjs artifacts/baseline/curved-steel__Oblique-hollow-cut__off__native.svg
+```
+
+This neither starts Rhino nor opens a browser. The original native SVG remains
+unchanged; fixed pixel stroke widths are converted for the 1200×800 PNG export.
+The curved gallery uses these PNGs for drawings larger than 1 MB, with a link
+to each full SVG. Retain the baseline folder alongside its HTML when sharing.
+
+## Shared research admission
+
+The baseline controller now yields the shared mutex **after every view** and
+leaves a 30-second mutex-free handoff window (`--yield-seconds`). A waiting view
+queues on the mutex before loading Rhino. Its admission wait is outside the
+600-second execution cap; `--admission-timeout` defaults to 3,600 seconds and
+limits only that queued wait. The Windows Job Object still contains the worker
+before any launcher code runs, including while it waits. Nothing interrupts an
+active solve to hand over admission.
+
+Results distinguish `admissionSeconds`, execution `wallSeconds`, and total
+`elapsedSeconds`, and record `coordination` context. Use `--coordination-note`
+to identify shared research sessions. These timings are indicative: the mutex
+serializes cooperating Rhino work but does not make the whole desktop quiescent.
+The worker's `.admission.json` records waiting/admitted state. A local
+`coordination-control.json` with `pauseBeforeModels` can hold the next named
+model before Rhino initialization; it never pauses an active solve.
+
+Construction/validation helpers retain fail-fast admission; run them serially.
+
+## Original orthogonal suite
+
 From the repository root in PowerShell, on the research machine:
 
 ```powershell
@@ -28,7 +118,7 @@ Start-Process artifacts/baseline/index.html
 The venv is used read-only (`-B` prevents import caches). The suite explicitly
 hosts .NET 8; it does not change the owner's interactive Rhino runtime. All
 Rhino work is serial, including generation and validation. A named mutex
-rejects overlapping suite workers across worktrees. The generated files live
+serializes suite workers across worktrees. The generated files live
 under gitignored `artifacts/models/`; SVGs, JSON measurements, logs and the
 self-contained HTML contact sheet live under `artifacts/baseline/`.
 
@@ -78,8 +168,9 @@ Verify generated features and repeatability, without invoking HLD:
 Validation includes native archive read logs, geometry validity, archive hashes,
 feature size limits, stored clipping metadata, independent hollow-profile
 area/region/hole checks and the two-region L crop. These checks do not claim full
-visibility correctness. The six unlicensed harness tests exercise nested CRC
-repair, rejection without mutation and the owned-process handshake/timeout.
+visibility correctness. The ten unlicensed harness tests exercise queued admission,
+mutex handoff, the independent area oracle, nested CRC repair, rejection without
+mutation and the owned-process handshake/timeout.
 
 To prepare the small fixtures and their manifest entries for a reviewer:
 
@@ -143,13 +234,15 @@ the Python venv launcher. The job has a hard aggregate memory limit and
 kill-on-close. Descendant private memory is polled every 200 ms, with the peak
 retained and the logged time series decimated to roughly one second. The Windows
 job peak is recorded separately. A timeout or cap terminates only
-this job. `--wall` is total worker wall time, not merely HLD compute time. The
+this job. `--wall` covers execution after admission (including Rhino startup,
+scene loading and extraction), not merely HLD compute time. The
 watchdog JSON retains samples and termination reason even without a drawing.
 
 ## Native adapter and future M2D+ comparison
 
 `native.py` calls raw `HiddenLineDrawing.Compute` with hidden on and
-tangent/seam edges off. It recursively resolves instance definitions and passes
+tangent/seam edges off by default, honoring each view's explicit edge settings.
+It recursively resolves instance definitions and passes
 their cumulative transforms to `AddGeometry`; SubD-to-Brep normalization is
 explicitly recorded. Native clipping planes implement the input cut/depth/crop
 volume, including participation lists. The adapter does not implement a

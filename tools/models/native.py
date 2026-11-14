@@ -108,7 +108,11 @@ def run(model, sidecar, descriptor, multiple_threads, emit_phase):
     parameters.AbsoluteTolerance = model.Settings.ModelAbsoluteTolerance
     parameters.Flatten = False
     parameters.IncludeHiddenCurves = True
-    parameters.IncludeTangentEdges = False; parameters.IncludeTangentSeams = False
+    settings = descriptor.get('settings', {})
+    parameters.IncludeTangentEdges = settings.get('tangents', 'off') == 'on'
+    parameters.IncludeTangentSeams = settings.get('seams', 'off') == 'on'
+    result['nativeEdgeSettings'] = {'tangents': parameters.IncludeTangentEdges,
+                                  'seams': parameters.IncludeTangentSeams}
     parameters.SetViewport(vp)
     if scope is None:
         for clip in clips:

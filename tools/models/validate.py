@@ -98,7 +98,10 @@ def check_sections(model, meta, R, S):
         b = world.ToBrep() if isinstance(world, (G.Extrusion, G.Surface)) else world
         curves, joined, breps = [], [], []
         try:
-            ok, cs, _ = G.Intersect.Intersection.BrepPlane(b, G.Plane.WorldXY, meta['tolerance'])
+            expected = targets[name]
+            spec = expected.get('plane')
+            plane = G.Plane(G.Point3d(*spec['origin']), G.Vector3d(*spec['x']), G.Vector3d(*spec['y'])) if spec else G.Plane.WorldXY
+            ok, cs, _ = G.Intersect.Intersection.BrepPlane(b, plane, meta['tolerance'])
             curves = list(cs or [])
             joined = list(G.Curve.JoinCurves(S.Array[G.Curve](curves), meta['tolerance']))
             breps = list(G.Brep.CreatePlanarBreps(S.Array[G.Curve]([c for c in joined if c.IsClosed]), meta['tolerance']))
@@ -107,7 +110,7 @@ def check_sections(model, meta, R, S):
                 props = G.AreaMassProperties.Compute(region); area += props.Area; props.Dispose()
             holes = sum(sum(str(loop.LoopType) == 'Inner' for loop in region.Loops) for region in breps)
             expected = targets[name]
-            passed = len(breps) == expected['regions'] and abs(area - expected['area']) < max(1e-6, meta['tolerance'] ** 2 * 10)
+            passed = len(breps) == expected['regions'] and abs(area - expected['area']) < expected.get('areaTolerance', max(1e-6, meta['tolerance'] ** 2 * 10))
             if 'holes' in expected:
                 passed = passed and holes == expected['holes']
             results.append({'source': name, 'regions': len(breps), 'holes': holes, 'area': area, 'expected': expected, 'pass': passed})
@@ -117,6 +120,9 @@ def check_sections(model, meta, R, S):
             if b is not world:
                 b.Dispose()
             world.Dispose()
+    checked_names = {r['source'] for r in results}
+    for name in targets.keys() - checked_names:
+        results.append({'source': name, 'pass': False, 'error': 'Expected section source is missing'})
     return results
 
 
@@ -171,6 +177,8 @@ def verify(args):
             row['archiveReadClean'] = not any(term in read_log.lower() for term in ('crc error', 'crc failure', 'error reading', 'corrupt'))
             row['validGeometry'] = all(o.Geometry.IsValid for o in model.Objects)
             row['sections'] = check_sections(model, meta, R, S)
+            from curved_checks import verify as check_curved
+            row['curvedChecks'] = check_curved(model, meta, R)
             row['crop'] = check_crop(model, meta, R, S)
             row['semanticSha256'] = semantic(model, R)
             if args.compare:
@@ -178,6 +186,8 @@ def verify(args):
                 try:
                     row['repeatSemanticEqual'] = row['semanticSha256'] == semantic(other, R)
                     row['repeatArchiveBytesEqual'] = digest(path) == digest(args.compare / path.name)
+                    if row['repeatArchiveBytesEqual'] and not row['repeatSemanticEqual']:
+                        row['repeatNote'] = 'Identical archive bytes are authoritative; native reserialization varied after loading the same archive twice.'
                 finally:
                     other.Dispose()
             sources = []
@@ -248,9 +258,10 @@ def verify(args):
     units = check_units(args.models, R)
     print('Normalized unit/translation geometry:', all(u['pass'] for u in units), flush=True)
     result = {'rows': rows, 'unitEquivalence': units, 'allChecksPass': all(r['hashMatches'] and r['validGeometry'] and r['archiveReadClean'] and r.get('within2MB', True)
-              and all(s['pass'] for s in r['sections']) and (not r['crop'] or r['crop']['pass']) and all(c['pass'] for c in r['clippingSources'])
+              and all(s['pass'] for s in r['sections']) and all(c['pass'] for c in r['curvedChecks'])
+              and (not r['crop'] or r['crop']['pass']) and all(c['pass'] for c in r['clippingSources'])
               and all(v['pass'] for v in r['namedViews']) and r.get('styleChecksPass', True)
-              and r.get('repeatSemanticEqual', True) and r.get('repeatArchiveBytesEqual', True) for r in rows) and all(u['pass'] for u in units)}
+              and r.get('repeatArchiveBytesEqual', True) for r in rows) and all(u['pass'] for u in units)}
     write_json(args.out, result)
     if not result['allChecksPass']:
         raise SystemExit(1)

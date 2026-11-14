@@ -10,16 +10,22 @@ def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--models', type=Path, default=ROOT / 'artifacts/models')
     p.add_argument('--tiers', default='XS,S,M,L')
+    p.add_argument('--curved', action='store_true')
     args = p.parse_args()
     R, _ = initialize(); G = R.Geometry
     rows = []
+    prefix = 'curved-perf' if args.curved else 'perf'
     for tier in args.tiers.split(','):
-        blocks = R.FileIO.File3dm.Read(str(args.models / f'perf-{tier}-blocks.3dm'))
-        exploded = R.FileIO.File3dm.Read(str(args.models / f'perf-{tier}-exploded.3dm'))
+        blocks = R.FileIO.File3dm.Read(str(args.models / f'{prefix}-{tier}-blocks.3dm'))
+        exploded = R.FileIO.File3dm.Read(str(args.models / f'{prefix}-{tier}-exploded.3dm'))
         try:
             camera_checks = []
+            section_checks = []
             for form, scene in [('blocks', blocks), ('exploded', exploded)]:
-                meta = json.loads((args.models / f'perf-{tier}-{form}.json').read_text())
+                meta = json.loads((args.models / f'{prefix}-{tier}-{form}.json').read_text())
+                if args.curved:
+                    from curved_checks import verify_tier_sections
+                    section_checks.extend(dict(c, form=form) for c in verify_tier_sections(scene, meta, R))
                 named = {v.Name: v for v in scene.AllNamedViews}
                 for descriptor in meta['views']:
                     p = descriptor['plane']; vp = named[descriptor['name']].Viewport
@@ -51,12 +57,13 @@ def main():
                     a.Dispose(); b.Dispose()
             row = {'tier': tier, 'checkedObjects': checked, 'comparisonToleranceMetres': tolerance,
                    'mismatches': mismatches, 'unmatchedExplodedObjects': list(actual),
-                   'cameraChecks': camera_checks, 'pass': not mismatches and not actual and all(c['pass'] for c in camera_checks),
+                   'cameraChecks': camera_checks, 'sectionChecks': section_checks,
+                   'pass': not mismatches and not actual and all(c['pass'] for c in camera_checks + section_checks),
                    'method': 'Expanded world geometry; Brep.IsDuplicate at 0.001 × model tolerance, exact GeometryEquals for meshes.'}
             rows.append(row); print(tier, checked, 'equivalent', row['pass'], flush=True)
         finally:
             blocks.Dispose(); exploded.Dispose()
-    write_json(args.models / 'pair-validation.json', {'rows': rows, 'allChecksPass': all(r['pass'] for r in rows)})
+    write_json(args.models / ('curved-pair-validation.json' if args.curved else 'pair-validation.json'), {'rows': rows, 'allChecksPass': all(r['pass'] for r in rows)})
     if not all(r['pass'] for r in rows):
         raise SystemExit(1)
 

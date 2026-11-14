@@ -1,14 +1,29 @@
 """Fast, unlicensed local tests: archive safety and owned-process isolation."""
 import os
+import math
 from pathlib import Path
 import struct
+import subprocess
 import sys
 import tempfile
 import unittest
 import uuid
 import zlib
+import time
 
 from archive import canonicalize
+
+
+class AreaOracleTests(unittest.TestCase):
+    def test_torus_normal_cut_reduces_to_analytic_annulus(self):
+        # A normal cut is an exact circular annulus, independently of bend radius.
+        # Check the numerical oracle without Rhino or its intersection code.
+        from curved import torus_cut_area
+        expected = math.pi * (.6**2 - .45**2)
+        for radius in (1, 4, 100):
+            with self.subTest(bend_radius=radius):
+                actual = torus_cut_area(radius, .6, 0, 32768) - torus_cut_area(radius, .45, 0, 32768)
+                self.assertAlmostEqual(actual, expected, delta=5e-8)
 
 
 def chunk(code, body, crc_body=None):
@@ -55,6 +70,48 @@ class ArchiveTests(unittest.TestCase):
 
 @unittest.skipUnless(os.name == 'nt', 'Windows Job Objects')
 class SupervisorTests(unittest.TestCase):
+    def test_queued_admission_is_outside_execution_budget(self):
+        from owned_job import run
+        with tempfile.TemporaryDirectory() as temp:
+            marker = Path(temp) / 'admission.json'
+            marker.write_text('{"status":"admitted","admittedPerfCounter":0}')
+            code = ("import sys,time,json,pathlib; assert sys.stdin.readline().strip()=='go'; "
+                    "time.sleep(1.2); p=pathlib.Path(sys.argv[1]); q=p.with_suffix('.tmp'); q.write_text(json.dumps(dict(status='admitted',admittedPerfCounter=time.perf_counter()))); q.replace(p); time.sleep(.1)")
+            result = run([sys.executable,'-B','-c',code,str(marker)],Path(temp)/'worker.log',.8,.5,
+                         admission_path=marker,admission_timeout=5)
+        self.assertEqual(result['status'],'exited')
+        self.assertGreater(result['admissionSeconds'],1)
+        self.assertLess(result['wallSeconds'],.8)
+        self.assertGreater(result['elapsedSeconds'],1.2)
+
+    def test_admission_timeout_does_not_report_compute_timeout(self):
+        from owned_job import run
+        with tempfile.TemporaryDirectory() as temp:
+            result = run([sys.executable,'-B','-c',"import sys,time; assert sys.stdin.readline().strip()=='go'; time.sleep(30)"],
+                         Path(temp)/'worker.log',.2,.5,admission_path=Path(temp)/'admission.json',admission_timeout=.5)
+        self.assertEqual(result['status'],'admission_timeout')
+        self.assertEqual(result['wallSeconds'],0)
+        self.assertGreater(result['admissionSeconds'],.5)
+        self.assertLess(result['elapsedSeconds'],3)
+
+    def test_waiting_mutex_contender_acquires_after_owner_releases(self):
+        from common import SerialRhino
+        mutex_name = 'Local\\M2DPlusHarnessTest-' + str(uuid.uuid4())
+        with tempfile.TemporaryDirectory() as temp:
+            marker = Path(temp)/'acquired'
+            code = "import sys,pathlib; from common import SerialRhino;\nwith SerialRhino(wait_seconds=5,name=sys.argv[1]): pathlib.Path(sys.argv[2]).write_text('acquired')"
+            with SerialRhino(name=mutex_name):
+                child = subprocess.Popen([sys.executable,'-B','-c',code,mutex_name,str(marker)],
+                                         cwd=Path(__file__).parent,creationflags=subprocess.CREATE_NO_WINDOW)
+                time.sleep(.2)
+                self.assertFalse(marker.exists())
+            try:
+                self.assertEqual(child.wait(timeout=5),0)
+                self.assertEqual(marker.read_text(),'acquired')
+            finally:
+                if child.poll() is None:
+                    child.kill(); child.wait()
+
     def test_timeout_terminates_only_launched_job_including_descendant(self):
         from owned_job import run
         code = "import sys,subprocess,time; assert sys.stdin.readline().strip()=='go'; subprocess.Popen([sys.executable,'-c','import time;time.sleep(30)']); time.sleep(30)"

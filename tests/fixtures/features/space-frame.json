@@ -39,7 +39,7 @@
     "rhino": "8.36.26296.17001",
     "runtime": "8.0.34",
     "script": "tools/models/curved.py",
-    "sha256": "526e97097e24b395c7d8ab4ce618e18ec8d4fb71580aa9e80b0d462607399459"
+    "sha256": "45eda74cb3b5e8fd123e7a6c1108a1a0d9334b66e71e0862179d38e82b545f41"
   },
   "hook": false,
   "id": "space-frame",

@@ -274,7 +274,7 @@
     "rhino": "8.36.26296.17001",
     "runtime": "8.0.34",
     "script": "tools/models/curved.py",
-    "sha256": "1659d640dc80db6a5b47a5a54bc2e44a5e20d905942d9edcaf6b028b7e931ba9"
+    "sha256": "45eda74cb3b5e8fd123e7a6c1108a1a0d9334b66e71e0862179d38e82b545f41"
   },
   "hook": false,
   "id": "curved-steel",
