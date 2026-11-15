@@ -59,11 +59,18 @@ public sealed class ViewDrawing : IDisposable
     public int ProjectingSegments { get; internal set; }
     public int EmptyNativeSlots { get; internal set; }
     public int ZeroLengthNativeSegments { get; internal set; }
+    public int ToleranceDroppedPieces { get; internal set; }
+    public int SubToleranceSourceEdges { get; internal set; }
+    public int SubToleranceBoundsGaps { get; internal set; }
+    public int UncertainSectionComponents { get; internal set; }
+    public string? ToleranceWarning => ToleranceDroppedPieces + SubToleranceSourceEdges + SubToleranceBoundsGaps + UncertainSectionComponents == 0 ? null :
+        $"Detail may be lost or uncertain at tolerance {Tolerance:G6} document units: {ToleranceDroppedPieces} adapter tolerance drops; {SubToleranceSourceEdges} source edges at or below 2 x tolerance; {SubToleranceBoundsGaps} close source-bound gaps; {UncertainSectionComponents} uncertain section components. See Info; use a finer document tolerance or tolerance = override when needed.";
     public double Seconds { get; internal set; }
     public string Info => $"{Name}: {(Error ?? "finished")} · {Seconds:F3} s\n" +
         $"{Report.Route}; deterministic={!MultipleThreads}; tolerance={Tolerance:R}; validation: {Report.ValidationDomain}\n" +
         $"Visible={Pieces.Count(p => p.Class == LineClass.Visible)}, hidden={Pieces.Count(p => p.Class == LineClass.Hidden)}, unresolved={Report.UncertainCount}, hidden points={HiddenPoints}; " +
         $"invalid extraction={Report.InvalidExtractionCount}; duplicate={DuplicateSegments}; projecting={ProjectingSegments}; empty slots={EmptyNativeSlots}; zero length={ZeroLengthNativeSegments}; quarantined={Report.Quarantined}\n" +
+        $"Tolerance counts: adapter tolerance drops={ToleranceDroppedPieces}; source edges at or below 2 x tolerance={SubToleranceSourceEdges}; close source-bound gaps={SubToleranceBoundsGaps}; uncertain section components={UncertainSectionComponents}. Native internal drops=unknown; risk counts are not measured native loss counts.\n" +
         $"Unsupported: {string.Join(", ", Report.UnsupportedByType.Select(p => $"{p.Key}={p.Value}"))}\n" +
         string.Join("; ", Report.Normalisation.Concat(Diagnostics)) +
         $"\nCut regions={Regions.Count}, Hatch={Regions.Count(r => r.Region.Hatch is not null)}, Beyond={Pieces.Count(p => p.Class == LineClass.Beyond)}, Far clip={Pieces.Count(p => p.Class == LineClass.FarClip)}; weights={Weights.BandName}.";
@@ -111,10 +118,15 @@ public static class NativeDrawing
                 {
                     progress?.Report(new(JobPhase.Preparing, 0, scene.SourceCount));
                     var prepared = scene.Prepare(ct);
+                    var edgeCensus = new Dictionary<double, int>(); // per distinct drawing tolerance (overrides may differ per view)
                     for (var index = 0; index < views.Count; index++)
                     {
                         ct.ThrowIfCancellationRequested(); progress?.Report(new(JobPhase.Drawing, index, views.Count));
-                        results.Add(SolveView(scene, prepared, views[index], settings, ct));
+                        var drawing = SolveView(scene, prepared, views[index], settings, ct);
+                        results.Add(drawing);
+                        if (!edgeCensus.TryGetValue(drawing.Tolerance, out var census))
+                            edgeCensus[drawing.Tolerance] = census = ToleranceDiagnostics.SourceEdgeCensus(prepared, drawing.Tolerance, ct);
+                        ToleranceDiagnostics.Apply(drawing, prepared, census, ct);
                     }
                     BeforeCompletion?.Invoke();
                     ct.ThrowIfCancellationRequested(); progress?.Report(new(JobPhase.Complete, views.Count, views.Count));

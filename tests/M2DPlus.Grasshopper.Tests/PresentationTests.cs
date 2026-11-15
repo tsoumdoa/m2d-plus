@@ -97,7 +97,7 @@ public sealed class PresentationTests
     [Fact]
     public void EveryCatalogFieldIsACoreKeyAndEveryOptionParses()
     {
-        var probe = new ViewSettingsContext("p", "P", ViewSourceKind.Plane, true, 1, .001);
+        var probe = new ViewSettingsContext("p", "P", ViewSourceKind.Plane, true, 1, .000001);
         foreach (var field in SettingsCatalog.Fields)
         {
             Assert.Contains(field.Key, Settings.Keys);

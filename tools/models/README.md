@@ -1,5 +1,9 @@
 # Local model suite
 
+The licence-free `small_features.py` generator is a separate, small-detail suite.
+It writes frozen archives directly to `tests/fixtures/small/` without starting Rhino.
+See that directory's README for its analytic truth and serial .NET 8/10 measurement.
+
 These generators and native baselines are **manual and local only**. Nothing here
 is invoked by CI, `dotnet test`, the pre-commit hook or packaging. They require
 licensed Rhino 8 on Windows x64 and a Python environment with Rhino.Inside.

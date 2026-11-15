@@ -117,6 +117,8 @@ public static partial class Settings
             if (views[i].Source is ViewSourceKind.Rectangle or ViewSourceKind.Box && values["crop"].AuthoredValue is CropMode.Off)
                 diagnostics.Add(new(DiagnosticSeverity.Remark, "Rectangle and Box views always crop; crop = off applies to named views.", i, Key: "crop"));
             result.Add(new(views[i], values));
+            if (TolerancePolicy.ScaleWarning((double)values["tolerance"].Value!, (double)values["scale"].Value!, units) is { } toleranceWarning)
+                diagnostics.Add(new(DiagnosticSeverity.Warning, toleranceWarning, i, Key: "tolerance"));
         }
         return new(result.ToImmutable(), diagnostics.ToImmutableArray());
 

@@ -1,0 +1,173 @@
+{
+  "change": "Required scale/detail warnings and counts; output geometry preserved; final boundary and native-gap oracle",
+  "disposition": "Reporting retained; numerical engines unchanged; gate failed, no eligible winner",
+  "fixtureManifestSha256": "600e0680e7114e2b594f450a806889f3ff8afbd73211af89e7ef5a8cd5e80021",
+  "iteration": "2",
+  "oracleRevision": 2,
+  "results": [
+    {
+      "correct": 2044,
+      "engines": {
+        "certificate": {
+          "correct": 121,
+          "expected": 152,
+          "failedRows": 31,
+          "invalid": 0,
+          "timing": {
+            "0.001": {
+              "medianFineOverCoarse": 2.0641524810869156,
+              "pairs": 76
+            },
+            "0.01": {
+              "medianFineOverCoarse": 1.0976114534131116,
+              "pairs": 76
+            }
+          },
+          "unresolved": 47
+        },
+        "exact": {
+          "correct": 532,
+          "expected": 536,
+          "failedRows": 4,
+          "invalid": 0,
+          "timing": {
+            "0.001": {
+              "medianFineOverCoarse": 1.186504104190076,
+              "pairs": 44
+            },
+            "0.01": {
+              "medianFineOverCoarse": 1.1634869901739906,
+              "pairs": 44
+            }
+          },
+          "unresolved": 0
+        },
+        "native": {
+          "correct": 1253,
+          "expected": 1264,
+          "failedRows": 11,
+          "invalid": 0,
+          "timing": {
+            "0.001": {
+              "medianFineOverCoarse": 0.9825292671611079,
+              "pairs": 80
+            },
+            "0.01": {
+              "medianFineOverCoarse": 1.008642418494025,
+              "pairs": 80
+            }
+          },
+          "unresolved": 0
+        },
+        "regions": {
+          "correct": 138,
+          "expected": 160,
+          "failedRows": 22,
+          "invalid": 0,
+          "timing": {
+            "0.001": {
+              "medianFineOverCoarse": 1.2845764340936778,
+              "pairs": 80
+            },
+            "0.01": {
+              "medianFineOverCoarse": 1.2696561771777926,
+              "pairs": 80
+            }
+          },
+          "unresolved": 11
+        }
+      },
+      "evidence": "hillclimb\\small-features\\evidence\\2-net10.json.gz",
+      "evidenceSha256": "7abfe74cd9b8be12e443fac4f3a0fa36bbc7426398738367058897fbb44e6c26",
+      "expected": 2112,
+      "fraction": 0.9678030303030303,
+      "gate": false,
+      "metamorphic": false,
+      "rhino": "8.36.26296.17001",
+      "runtime": "10.0.15",
+      "wrongFill": 0
+    },
+    {
+      "correct": 2044,
+      "engines": {
+        "certificate": {
+          "correct": 121,
+          "expected": 152,
+          "failedRows": 31,
+          "invalid": 0,
+          "timing": {
+            "0.001": {
+              "medianFineOverCoarse": 1.9655114622595864,
+              "pairs": 76
+            },
+            "0.01": {
+              "medianFineOverCoarse": 1.414740455942688,
+              "pairs": 76
+            }
+          },
+          "unresolved": 47
+        },
+        "exact": {
+          "correct": 532,
+          "expected": 536,
+          "failedRows": 4,
+          "invalid": 0,
+          "timing": {
+            "0.001": {
+              "medianFineOverCoarse": 1.343724721476013,
+              "pairs": 44
+            },
+            "0.01": {
+              "medianFineOverCoarse": 1.3072688802232029,
+              "pairs": 44
+            }
+          },
+          "unresolved": 0
+        },
+        "native": {
+          "correct": 1253,
+          "expected": 1264,
+          "failedRows": 11,
+          "invalid": 0,
+          "timing": {
+            "0.001": {
+              "medianFineOverCoarse": 0.9576247986137498,
+              "pairs": 80
+            },
+            "0.01": {
+              "medianFineOverCoarse": 0.9841410403965307,
+              "pairs": 80
+            }
+          },
+          "unresolved": 0
+        },
+        "regions": {
+          "correct": 138,
+          "expected": 160,
+          "failedRows": 22,
+          "invalid": 0,
+          "timing": {
+            "0.001": {
+              "medianFineOverCoarse": 1.313534494991214,
+              "pairs": 80
+            },
+            "0.01": {
+              "medianFineOverCoarse": 1.4336881387258966,
+              "pairs": 80
+            }
+          },
+          "unresolved": 11
+        }
+      },
+      "evidence": "hillclimb\\small-features\\evidence\\2-net8.json.gz",
+      "evidenceSha256": "130a3a93b46fc25343072c6c44eca6f8273716d4eef6c22e59d8073a1770c1a3",
+      "expected": 2112,
+      "fraction": 0.9678030303030303,
+      "gate": false,
+      "metamorphic": false,
+      "rhino": "8.36.26296.17001",
+      "runtime": "8.0.34",
+      "wrongFill": 0
+    }
+  ]
+}

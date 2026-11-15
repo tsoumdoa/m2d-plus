@@ -94,7 +94,10 @@ public static class DrawingPresentation
                 var result = new ViewDrawing { Name = original.Name, Error = original.Error, Frame = original.Frame,
                     Report = original.Report, Settings = settings, Seconds = original.Seconds, Tolerance = original.Tolerance,
                     MultipleThreads = original.MultipleThreads, HiddenPoints = original.HiddenPoints, DuplicateSegments = original.DuplicateSegments,
-                    ProjectingSegments = original.ProjectingSegments, EmptyNativeSlots = original.EmptyNativeSlots, ZeroLengthNativeSegments = original.ZeroLengthNativeSegments };
+                    ProjectingSegments = original.ProjectingSegments, EmptyNativeSlots = original.EmptyNativeSlots, ZeroLengthNativeSegments = original.ZeroLengthNativeSegments,
+                    ToleranceDroppedPieces = original.ToleranceDroppedPieces, SubToleranceSourceEdges = original.SubToleranceSourceEdges,
+                    SubToleranceBoundsGaps = original.SubToleranceBoundsGaps,
+                    UncertainSectionComponents = original.UncertainSectionComponents };
                 results.Add(result); result._diagnostics.AddRange(original.Diagnostics.Where(d => metadata is null || !d.StartsWith("Style ", StringComparison.Ordinal)));
                 var frame = original.Frame; frame.Transform(transform); result.Frame = frame;
                 if (settings is not null) result._diagnostics.Add(settings.Describe());
