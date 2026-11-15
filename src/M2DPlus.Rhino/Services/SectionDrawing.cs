@@ -9,7 +9,11 @@ using Point = Rhino.Geometry.Point;
 
 namespace M2DPlus.Rhino.Services;
 
-public sealed record DrawingRegion(SectionRegion Region, int[] SourcePath);
+public sealed record DrawingRegion(SectionRegion Region, int[] SourcePath)
+{
+    public int SourceItem { get; init; }
+    internal SourceSection Source { get; init; } = SourceSection.Plain;
+}
 
 /// <summary>One route C solve. Certified clips remain owned through native extraction and point rays.</summary>
 internal static class SectionDrawing
@@ -21,10 +25,10 @@ internal static class SectionDrawing
     {
         var timer = Stopwatch.StartNew(); var invalid = 0; var quarantine = scene.HasPotentialOccluderUnsupported;
         var uncertainSources = new HashSet<string>(StringComparer.Ordinal); var uncertainRegions = new List<BoundingBox>();
-        var result = new ViewDrawing { Name = view.Name, Tolerance = scene.Tolerance, MultipleThreads = settings.MultipleThreads,
-            Frame = view.Resolve(scene.Bounds, scene.Tolerance) };
-        var cut = view.Cut!; var tol = scene.Tolerance;
-        var request = new SectionRequest(cut.Plane, tol, .001, cut.Crop);
+        var result = new ViewDrawing { Name = view.Name, Tolerance = view.Settings?.Tolerance ?? scene.Tolerance, MultipleThreads = settings.MultipleThreads,
+            Frame = DrawingFrames.Resolve(view, sources, scene.Bounds, view.Settings?.Tolerance ?? scene.Tolerance) };
+        var cut = view.Cut!; var tol = view.Settings?.Tolerance ?? scene.Tolerance;
+        var request = new SectionRequest(cut.Plane, tol, .001, cut.Crop, CutMode.Separate, HatchMode.Styles);
         var autoDepth = scene.Bounds.IsValid ? Math.Max(0, -scene.Bounds.GetCorners().Min(cut.Plane.DistanceTo)) + tol * 10 : tol * 10;
         var range = new ViewRange(cut.SourceDepth ?? autoDepth, farClip: cut.FarClip, tolerance: tol);
         Plane? far = range.ClipsFar ? new Plane(cut.Plane.Origin - cut.Plane.Normal * range.Depth, -cut.Plane.XAxis, cut.Plane.YAxis) : null;
@@ -47,16 +51,17 @@ internal static class SectionDrawing
                 if (!footprint.IsValid) quarantine = true;
                 else { uncertainSources.Add(affected.Identity); uncertainRegions.Add(footprint); }
             }
-            result._diagnostics.Add($"Route C; depth={range.Depth:R}; farclip={range.FarClip}; regime={range.Regime}; cuts=separate; hatch=styles; no native clipping planes.");
+            result._diagnostics.Add($"Admission: {scene.Cost.GeometryBytes} geometry bytes; {scene.Cost.BrepFaces} faces; {scene.Cost.MeshTriangles} triangles; {scene.SourceCount} sources.");
+            result._diagnostics.Add($"Route C; depth={range.Depth:R}; farclip={range.FarClip}; regime={range.Regime}; cuts={request.Cuts}; hatch={request.Hatch}; no native clipping planes.");
             result._diagnostics.AddRange(sections.Diagnostics.Select(d => $"{d.SourceId}: {d.Status}: {d.Message}"));
             result._diagnostics.AddRange(bodies.Select(s => $"Style {s.Identity}: {s.Section.Rule}; raw ARGB={cut.Style(s).PatternColour:x8}; source={cut.Style(s).ObjectColour:x8}"));
-            var byId = sources.ToDictionary(s => s.Identity, StringComparer.Ordinal);
+            var byId = sources.GroupBy(s => s.Identity).ToDictionary(g => g.Key, g => g.First(), StringComparer.Ordinal);
             foreach (var region in sections.Regions.ToArray())
             {
-                var source = byId[region.SourceIds[0]];
+                var source = region.SourceIds.Select(id => byId[id]).OrderBy(s => s.Path, Comparer<int[]>.Create((a,b) => { for (var i=0;i<Math.Min(a.Length,b.Length);i++) { var c=a[i].CompareTo(b[i]); if(c!=0)return c; } return a.Length.CompareTo(b.Length); })).First();
                 // Whole excluded foreground occluders can cover regions. Preserve full region topology only
                 // when its projected footprint is disjoint; ambiguous presentation is explicitly unresolved.
-                var blocked = sources.Where(s => !cut.Participates(s) && s.Geometry is Brep or Mesh)
+                var blocked = sources.Where(s => !cut.Participates(s) && !(view.Settings?.Glass == GlassMode.Clear && s.Section.Transparent) && s.Geometry is Brep or Mesh)
                     .Any(s => ProjectedOverlap(s.Geometry, region, cut.Plane, tol));
                 foreach (var loop in region.Loops) cutLoci.Add(loop.Curve.DuplicateCurve());
                 if (blocked)
@@ -65,7 +70,7 @@ internal static class SectionDrawing
                     result._diagnostics.Add($"{source.Identity}: section presentation overlaps an excluded foreground occluder; region/Hatch withheld, outline Unresolved.");
                     continue;
                 }
-                result.Regions.Add(new(region, (int[])source.Path.Clone())); sections.Regions.Remove(region);
+                result.Regions.Add(new(region, (int[])source.Path.Clone()) { Source = source.Section, SourceItem = source.SourceItem }); sections.Regions.Remove(region);
             }
 
             foreach (var source in sources)
@@ -106,6 +111,15 @@ internal static class SectionDrawing
                         (far is null || far.Value.DistanceTo(point.Location) <= 0)) registered.Add((point, new(source)));
                 }
             }
+            if (view.Settings?.Glass == GlassMode.Clear)
+            {
+                foreach (var entry in registered.Where(p => p.Tag.Source.Section.Transparent && p.Geometry is Brep or Mesh).ToArray())
+                {
+                    registered.Remove(entry);
+                    foreach (var curve in GlassGeometry.Features(entry.Geometry, view))
+                    { owned.Add(curve); registered.Add((curve, entry.Tag)); }
+                }
+            }
             var occluders = registered.Where(p => !p.Tag.Far && p.Geometry is Brep or Mesh).Select(p => p.Geometry).ToArray();
             using var viewport = new ViewportInfo(); var frame = result.Frame;
             var radius = Math.Max(1, scene.Bounds.IsValid ? scene.Bounds.Diagonal.Length : 1);
@@ -114,7 +128,7 @@ internal static class SectionDrawing
             viewport.SetCameraDirection(view.Direction); viewport.SetCameraUp(frame.Plane.YAxis);
             viewport.SetFrustum(frame.X.Min, frame.X.Max, frame.Y.Min, frame.Y.Max, .001, radius * 10 + 100);
             var parameters = new HiddenLineDrawingParameters { AbsoluteTolerance = tol, Flatten = false,
-                IncludeHiddenCurves = true, IncludeTangentEdges = false, IncludeTangentSeams = false };
+                IncludeHiddenCurves = view.Settings?.Hidden ?? Settings.DefaultHidden, IncludeTangentEdges = view.Settings?.Tangents ?? false, IncludeTangentSeams = view.Settings?.Seams ?? false };
             parameters.SetViewport(viewport);
             var curvesAndBodies = registered.Where(p => p.Geometry is not Point).ToArray();
             foreach (var entry in curvesAndBodies)
@@ -122,6 +136,7 @@ internal static class SectionDrawing
                 { invalid++; quarantine = true; result._diagnostics.Add($"Native rejected {entry.Tag.Source.Identity}"); }
             if (curvesAndBodies.Length != 0)
             {
+                NativeDrawing.CountHld();
                 using var drawing = HiddenLineDrawing.Compute(parameters, settings.MultipleThreads, NativeDrawing.NativeProgress, token);
                 if (drawing is null || !drawing.WorldToHiddenLine.TryGetInverse(out var inverse)) throw new InvalidOperationException("Route C HLD failed.");
                 var project = Transform.PlanarProjection(cut.Plane) * inverse;
@@ -147,7 +162,9 @@ internal static class SectionDrawing
                     if (visibility == HiddenLineDrawingSegment.Visibility.Projecting) { result.ProjectingSegments++; continue; }
                     if (segment.ParentCurve?.SourceObject?.Tag is not Candidate candidate || segment.CurveGeometry is not { } proxy)
                     { invalid++; quarantine = true; continue; }
+                    if (visibility == HiddenLineDrawingSegment.Visibility.Hidden && view.Settings?.Hidden == false) continue;
                     if (candidate.Far && visibility != HiddenLineDrawingSegment.Visibility.Visible) continue;
+                    using var depthCurve = proxy.DuplicateCurve(); depthCurve.Transform(inverse);
                     using var curve = proxy.DuplicateCurve(); curve.EnsurePrivateCopy();
                     if (!curve.Transform(project) || !curve.IsValid) throw new InvalidOperationException("Invalid Route C extraction.");
                     var classification = candidate.Far ? LineClass.FarClip : visibility == HiddenLineDrawingSegment.Visibility.Visible
@@ -167,8 +184,8 @@ internal static class SectionDrawing
                                 using (part)
                                 {
                                     if (cut.Crop is { } crop)
-                                        foreach (var cropped in NativeDrawing.Crop(part, crop, tol)) result.Pieces.Add(new(cropped, candidate.Source, kind));
-                                    else result.Pieces.Add(new(part.DuplicateCurve(), candidate.Source, kind));
+                                        foreach (var cropped in NativeDrawing.Crop(part, crop, tol)) result.Pieces.Add(new(cropped, candidate.Source, kind, depthCurve.Trim(cropped.Domain)) { Profile = segment.IsSceneSilhouette });
+                                    else result.Pieces.Add(new(part.DuplicateCurve(), candidate.Source, kind, depthCurve.Trim(part.Domain)) { Profile = segment.IsSceneSilhouette });
                                 }
                             }
                         }
@@ -181,7 +198,7 @@ internal static class SectionDrawing
                 if (Hidden(point, occluders, cut.Plane.Normal, radius, tol)) { result.HiddenPoints++; continue; }
                 var location = cut.Plane.ClosestPoint(point);
                 if (cut.Crop is { } crop && !NativeDrawing.Inside(location, crop, tol)) continue;
-                result.Pieces.Add(new(new Point(location), entry.Tag.Source, LineClass.Visible));
+                result.Pieces.Add(new(new Point(location), entry.Tag.Source, LineClass.Visible, new Point(point)));
             }
         }
         catch (OperationCanceledException) { result.Dispose(); throw; }
