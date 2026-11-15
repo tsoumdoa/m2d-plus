@@ -84,12 +84,14 @@ def resolve(model, descriptor, leaves, R):
     return pl, bounds, frame, clips, scope, depth, cut
 
 
-def run(model, sidecar, descriptor, multiple_threads, emit_phase):
+def run(model, sidecar, descriptor, multiple_threads, emit_phase, polyline_fallback=None):
     import Rhino as R
     import System as S
     G = R.Geometry
     started = time.perf_counter()
     leaves = list(expand(model, R))
+    if descriptor.get('reverseSourceOrder'):
+        leaves.reverse()
     result = {'engine': 'native', 'status': 'running', 'expandedObjects': len(leaves),
               'multipleThreads': multiple_threads, 'unsupported': [], 'normalizations': [], 'extractionErrors': [],
               'notImplementedByRawHld': ['section styles/hatches', 'beyond/fade classification', 'glass=clear',
@@ -163,6 +165,7 @@ def run(model, sidecar, descriptor, multiple_threads, emit_phase):
             paths = defaultdict(list); points = []; raw = Counter(); kinds = Counter(); lengths = defaultdict(float)
             tolerance = model.Settings.ModelAbsoluteTolerance
             counts = Counter(); unset = 0; sampled = 0; hidden_cuts = 0
+            loci = []
             for segment in drawing.Segments:
                 visibility = str(segment.SegmentVisibility); raw[visibility] += 1
                 if visibility == 'Unset':
@@ -177,7 +180,7 @@ def run(model, sidecar, descriptor, multiple_threads, emit_phase):
                 source_counts[tag][visibility] += 1
                 if visibility not in ('Visible', 'Hidden'):
                     continue
-                curve = None
+                curve = polyline = None
                 try:
                     curve = segment.CurveGeometry.ToNurbsCurve()
                     if curve is None or not curve.IsValid:
@@ -185,16 +188,25 @@ def run(model, sidecar, descriptor, multiple_threads, emit_phase):
                     curve.Transform(flat)
                     category = 'Cut' if ('Section' in kind and visibility == 'Visible') else visibility
                     counts[category] += 1; lengths[category] += curve.GetLength()
-                    polyline = curve.ToPolyline(tolerance, math.pi / 36, 0, 0)
-                    if polyline is None:
-                        raise ValueError('SVG tessellation failed')
-                    ok, poly = polyline.TryGetPolyline()
+                    ok, poly = curve.TryGetPolyline()
                     if not ok:
-                        polyline.Dispose(); raise ValueError('Polyline conversion failed')
-                    coords = [(float(p.X), -float(p.Y)) for p in poly]
-                    polyline.Dispose(); sampled += len(coords)
+                        polyline = curve.ToPolyline(tolerance, math.pi / 36, 0, 0)
+                        if polyline is not None: ok, poly = polyline.TryGetPolyline()
+                    if ok and poly is not None and poly.Count >= 2:
+                        coords = [(float(p.X), -float(p.Y)) for p in poly]
+                    else:
+                        fallback = polyline_fallback(curve,tolerance) if polyline_fallback else None
+                        if not fallback or not fallback['Success']:
+                            raise ValueError('SVG tessellation failed: '+str(fallback.get('Error') if fallback else 'no bounded fallback'))
+                        coords = [(float(p[0]),-float(p[1])) for p in fallback['Points']]
+                        result.setdefault('tessellationFallbacks',[]).append({'source':tag,'visibility':visibility,
+                            'errorBound':fallback['ErrorBound'],'pointOnly':fallback['PointOnly'],
+                            'method':'positive-weight rational Bezier control-hull subdivision'})
                     if any(not math.isfinite(x) or not math.isfinite(y) for x, y in coords):
                         raise ValueError('Nonfinite SVG coordinates')
+                    if descriptor.get('recordLoci'):
+                        loci.append({'class':category, 'source':tag, 'points':[[x,-y] for x,y in coords]})
+                    sampled += len(coords)
                     render_class = category
                     if 'Section' in kind and visibility == 'Hidden':
                         render_class = 'HiddenCut'; hidden_cuts += 1
@@ -202,6 +214,7 @@ def run(model, sidecar, descriptor, multiple_threads, emit_phase):
                 except Exception as e:
                     result['extractionErrors'].append({'visibility': visibility, 'source': tag, 'error': str(e)[:1000]})
                 finally:
+                    if polyline is not None: polyline.Dispose()
                     if curve:
                         curve.Dispose()
             point_counts = Counter()
@@ -216,6 +229,8 @@ def run(model, sidecar, descriptor, multiple_threads, emit_phase):
                           hiddenCutPieces=hidden_cuts, svgVertices=sampled, sourceCounts={k: dict(v) for k, v in source_counts.items()},
                           frame=frame, status='extraction_partial' if result['extractionErrors'] or unset else 'ok',
                           solveWallSeconds=time.perf_counter() - started)
+            if descriptor.get('recordLoci'):
+                result['loci'] = loci
             return result, svg(paths, points, frame, descriptor['name'])
         finally:
             drawing.Dispose()

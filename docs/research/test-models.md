@@ -527,3 +527,187 @@ The identified shared-session views below accumulated 4170.1 s of measured admis
 - **curved-perf-M-exploded / curved-perf-L-blocks / SW axo / Plan upper**: Inspected the final PNGs: the three twisting M towers and five freeform L plan rings remain recognizable. The L upper-plan cut removes the roof by construction; its absence compared with the unclipped shaded Top reference is expected. Dense overlap and partial extraction remain; no additional specific visibility defect was certified from these overview images.
 
 The **Curved** section of `artifacts/baseline/index.html` embeds shaded SW/Front feature references, SW/Front/Top tier references, previews of all completed native drawings and the comparison chart. Drawings over 1 MB use compact PNG previews with links to full native SVGs beside the HTML; retain that folder when sharing the gallery. Shaded images are explicitly the offscreen CPU mesh fallback. Native SVG curves are tessellated only for display. The screenshot list is `artifacts/models/screenshots/curved-manifest.json`.
+
+<!-- VIEW CASES START -->
+## View cases (5–8)
+
+Local-only extension at `origin/main` 80981d7 (PRs #1–#14). Generators: `tools/models/view_cases.py`; runner adapter: `view_engine.py` + `tools/render/ViewCaseRunner.cs`; managed-only audits/report: `view_audit.py` / `view_report.py`. No CI, installation, commit or push. Large archives and every drawing remain gitignored. Only the 20 JSON view definitions and expectations are frozen in `tests/fixtures/view-cases/`, with manifest hashes and `hook: false`; all generated geometry is ignored.
+
+| Model | Objects | Views |
+|---|---:|---:|
+| view-curved-facade | 33 | 18 |
+| view-curved-perf-M-blocks | 5000 | 49 |
+| view-curved-perf-S-blocks | 500 | 49 |
+| view-curved-steel | 8 | 43 |
+| view-diagrid-shell | 25 | 69 |
+| view-grid-curved-perf-M-blocks-00 | 5000 | 12 |
+| view-grid-curved-perf-M-blocks-17 | 5000 | 12 |
+| view-grid-curved-perf-M-blocks-45 | 5000 | 12 |
+| view-grid-curved-perf-S-blocks-00 | 500 | 12 |
+| view-grid-curved-perf-S-blocks-17 | 500 | 12 |
+| view-grid-curved-perf-S-blocks-45 | 500 | 12 |
+| view-grid-perf-M-blocks-00 | 5000 | 12 |
+| view-grid-perf-M-blocks-17 | 5000 | 12 |
+| view-grid-perf-M-blocks-45 | 5000 | 12 |
+| view-grid-perf-S-blocks-00 | 500 | 12 |
+| view-grid-perf-S-blocks-17 | 500 | 12 |
+| view-grid-perf-S-blocks-45 | 500 | 12 |
+| view-planar-control | 2 | 2 |
+| view-round-tower | 29 | 26 |
+| view-space-frame | 669 | 23 |
+
+Case 5 uses the original blocks-form S/M orthogonal and curved geometry, rotated rigidly about world Z by 17° and 45°. Four unrotated control archives supply matching views. Each has four grid elevations, two grid sections, two plan levels and SW/SE/NE/NW axos. Coordinates are compared in co-rotated frames; no scale fitting or best-fit deformation is allowed. The model and view rotations should cancel.
+
+Cases 6–7 cover five interior normalized-parameter stations (.125, .25, .5, .75, .875) per selected rail/profile family. Steel includes arc/spline CHS and RHS, the filleted I, twisted RHS, helical stringer and large curved CHS. All eight distinct diagrid isocurves are covered. Repeated buildings use the first instance of each curved mullion/transom/roof-diagonal prototype; the existing space frame has straight CHS chords, so four connection families are explicitly labeled as straight. This is archetype coverage, not five cuts of every repeated instance. Facade views use five plan-guide stations; tilted roof planes are 15°, 30°, 60° from vertical. Plan guides are not claimed exact parametrizations of the doubly curved glass.
+
+Case 8 uses twelve diametral planes at 15° increments, each looking both ways: 24 distinct directions over 360°, plus two reference plans. The new round tower has an annular core, four annular slabs, twelve columns and twelve curved curtain-wall sectors, with a 30° rotational period. Diagrid and curved tiers are not rotationally periodic, so their radial series has no fabricated symmetry pass. For multi-building tiers the centre axis is the first tower at world X=Y=0; the complete surrounding scene remains present.
+
+Every sidecar stores GH Plane, Rectangle and Box values and the GUID/front/back of a persisted Extrusion view box. The bridge reads the saved object through `ViewRequest.Parse(Guid, document)`, the same resolver called by the component, and checks normal/up, front plane, crop and depth against all three GH value forms. `view_aux.py component` additionally solves six representative planes through the real registered GH component, with the saved box GUID and document-mode geometry; it checks nine outputs and aligned Cut/Hatch branch paths. This does not claim 423 full GH UI solves.
+
+Raw native HLD runs first with native clipping, MT off; main `NativeDrawing` runs route C with physical trim/cap and the stability certificate. Both see the complete same scene, excluding view objects. Native evidence is checkpointed before route C, so an engine timeout cannot erase the completed baseline. The owned-process cap is 600 seconds / 8 GiB for features/S; after the first curved-M timeout the owner requested 120 seconds for remaining M views, with S/features prioritized. The already active second M attempt retained its original cap. Admission is excluded; normal priority and a five-second mutex-free handoff. Queued auxiliary work uses the same slot. Timings are indicative shared-machine measurements, not quiescent benchmarks.
+
+The exact planar kernel runs only for a wholly eligible scene. Even the “orthogonal” building tiers contain CHS, curved fins and SubD: they are explicitly ineligible, not silently tested as a planar subset. Two small oblique planar control views run the production exact kernel against its independent rational oracle and raw native HLD.
+
+Analytic normal-profile expectations are CHS π(R²−r²), two loops; RHS .4×.6−.3×.5 = .09 m², two loops; filleted I .44−(4−π)×.04² m², one loop. The twisted loft is sampled at its interpolation stations with the prescribed profile rotation. The helical sweep has no assumed exact profile area. Engine region area/loops and independently reassembled output-polyline area/containment are retained separately; RHS output bounds are checked in its co-rotated frame. No production intersection routine supplies the expected area.
+
+The native profile audit uses visible section ink: raw HLD supplies no region objects. A failed loop reconstruction can therefore reflect hidden/absent cut edges rather than an incorrect intersection area. The main engine region-area oracle is reported separately.
+
+Locus audits union coincident support-line intervals with Unresolved > Visible/Cut > Hidden, then sample both directions at 0.05 m (minimum eight subdivisions per segment), at four times model tolerance to cover display-chord approximation. Missing ink, Unresolved/confident differences and confident Visible/Hidden swaps are counted separately. These are sampled locus checks, not a continuous Hausdorff certificate. Collector failures are retained and make the affected metamorphic pair incomplete, never a pass. When Rhino tessellation fails on a valid curve, the collector subdivides positive-weight rational Bézier spans until their control hull bounds chord error by model tolerance. Analytic-circle and independently evaluated rational-cubic tests validate the implementation. Zero-extent returned curves retain their point coordinates and diagnostics; point loci do not contribute to the common line-locus union. Small closed loops are preserved. Original collector failures and retry history remain in `artifacts/view-retries/` and `view-cases/retries.json`. Native Duplicate/Unset counts flag possible quirks; they never automatically excuse a disagreement. Native ordering attribution needs an explicit rerun.
+
+Current measured inventory (capped/incomplete views remain in the denominator):
+
+```json
+{
+  "models": 20,
+  "views": 423,
+  "cases": {
+    "6": 140,
+    "7": 33,
+    "8": 104,
+    "5": 146
+  },
+  "status": {
+    "complete": 263,
+    "wall_timeout": 2,
+    "skipped_owner_decision": 158
+  },
+  "sectionOracles": {
+    "pass": 68,
+    "fail": 73,
+    "unknown": 122,
+    "incomplete": 160
+  },
+  "nativeCutProfileAudits": {
+    "pass": 89,
+    "fail": 52,
+    "unknown": 122,
+    "incomplete": 160
+  },
+  "m2dOutputProfileAudits": {
+    "pass": 68,
+    "fail": 73,
+    "unknown": 122,
+    "incomplete": 160
+  },
+  "m2dUnresolvedPieces": 79902,
+  "boundedTessellationFallbacks": {
+    "native": 17,
+    "m2d": 4
+  },
+  "zeroExtentFallbackPoints": {
+    "native": 1,
+    "m2d": 2
+  },
+  "locusCollectorIncompleteViews": 0,
+  "disagreementViewsByClass": {
+    "missingInkSamples": 214,
+    "uncertaintyClassSamples": 177,
+    "confidentVisibleHiddenSwapSamples": 216
+  },
+  "exactPlanar": {
+    "pass": 2
+  },
+  "metamorphic": {
+    "native/rotation/incomplete": 48,
+    "m2d/rotation/incomplete": 48,
+    "native/rotation/fail": 35,
+    "m2d/rotation/fail": 38,
+    "native/rotation/pass": 13,
+    "m2d/rotation/pass": 10,
+    "native/radial periodicity/fail": 16,
+    "m2d/radial periodicity/pass": 13,
+    "native/radial periodicity/pass": 6,
+    "m2d/radial periodicity/fail": 9
+  },
+  "completedLocusDisagreements": 250
+}
+```
+
+Per-view timings, native diagnostics, M2D+ Unresolved counts, analytic region verdicts, canonical locus audits and metamorphic results are linked from `artifacts/baseline/index.html` → **View cases**. Full JSONs and M2D+ SVG/PNG renders are in `artifacts/baseline/view-cases/`. Shaded SW/Front references use the labeled offscreen CPU mesh fallback at `artifacts/view-models/screenshots/`; no existing Rhino process is used.
+
+### View cases: observed failures
+
+**Execution stopped by owner decision.** The active curved-S roof-diagonal station 5 finished; all subsequent cases were skipped. No optional M probes were started. Normal-priority native jobs ran serially, releasing the shared Rhino slot between views; only this task's owned controllers/jobs were stopped. A queued worker exited before Rhino admission and is counted as skipped, not an engine crash; its original admission/watch logs remain.
+
+**Inventory:** 20 models, 423 defined views; 263 complete, 2 timeouts, 158 owner-skipped. Twelve grid archives (eight rotated and four controls), six curved/feature extensions, a round tower and a two-box planar control. Cases 5/6/7/8 contain 146/140/33/104 views. The review set contains only 20 JSON view-definition/expectation fixtures; all geometry, screenshots, timings and output loci remain ignored artifacts.
+
+**Severity order and causal attribution.** Reproducers below are the smallest existing suite scenes exhibiting each class (two-box control: 2 objects; steel: 8; diagrid: 25; tower: 29). They are not claimed to be delta-minimized. Native HLD is a comparator, not the truth oracle. Route C uses native HLD after physical clipping; the exact planar kernel is separate.
+
+| Rank / class | Small reproducer(s) | Responsible engine and consequence |
+|---|---|---|
+| 1. Wrong-Visible, independently confirmed | [view-planar-control / Planar oblique 45](../../artifacts/baseline/view-cases/view-planar-control__Planar-oblique-45__off__view_engine.analytic-rays.json) | **Native HLD**, inherited unchanged by route C. At world (1,-0.5,0) and (1,-0.5,1), the frontmost cross-box edge is inside the opaque box; the viewing ray hits its foreground face at (1.5,-1,z). Both engines output Visible. Exact planar kernel and independent box-ray oracle say Hidden. Fix or quarantine this before trusting confident native visibility. |
+| 2. False-Hidden / missing visible ink | [view-planar-control / Planar oblique 17](../../artifacts/baseline/view-cases/view-planar-control__Planar-oblique-17__off__view_engine.analytic-rays.json) | **Native HLD**, inherited by route C. Rays from (1,-1.5,0/1) immediately leave the cross-box and move away from the other box, yet the edges are Hidden. Exact kernel says Visible. Reversing the two input objects preserves this failure; it is not explained by input order in this control. |
+| 3. Certified crossing fails physical trim | [view-curved-steel / Normal RHS-arc station 3](../../artifacts/baseline/view-cases/view-curved-steel__Normal-RHS-arc-station-3__off__view_engine.json) (also RHS-arc station 2) | **Route C sections**: certificate D succeeds, then “Certified crossing produced no trimmed geometry.” Expected 0.09 m² / 2 loops; emitted 0 / 0. Raw visible cut-profile audit passes at station 3. Missing region/ink; 2 Unresolved pieces are conservative, not wrong-Visible. |
+| 4. Section-loop certificate rejection | [view-curved-steel / Normal I-beam-filleted-web-flanges station 3](../../artifacts/baseline/view-cases/view-curved-steel__Normal-I-beam-filleted-web-flanges-station-3__off__view_engine.json); [view-curved-facade / Normal curved-mullion-2 station 2](../../artifacts/baseline/view-cases/view-curved-facade__Normal-curved-mullion-2-station-2__off__view_engine.json) | **Route C sections** reject self-intersecting/degenerate loops and withhold the region. I profile expects 0.4386265482 m² / 1 loop; mullion expects 0.0025132741 m² / 2 loops. Both emit 0 / 0. Missing section output, not a measured wrong area on an emitted region. I case has 0 Unresolved pieces despite an explicit uncertainty diagnostic; mullion has 135. Whether rejection is over-conservative requires isolating the intersection loop. |
+| 5. Source self-intersection guard | [view-diagrid-shell / Normal diagrid-iso-0-0 station 1](../../artifacts/baseline/view-cases/view-diagrid-shell__Normal-diagrid-iso-0-0-station-1__off__view_engine.json) (also station 2) | **Route C validation** reports self-intersecting Brep faces away from shared topology and excludes the source. Missing region; not evidence that its guard is incorrect. The generator's nominal CHS area remains an expectation, but a self-intersecting sweep is outside the certified solid domain. Review source construction and validator together before relaxing this guard. |
+| 6. Region removed by uncertainty propagation | [view-curved-steel / Normal twisted-RHS station 4](../../artifacts/baseline/view-cases/view-curved-steel__Normal-twisted-RHS-station-4__off__view_engine.json); [view-diagrid-shell / Normal diagrid-iso-1-0 station 3](../../artifacts/baseline/view-cases/view-diagrid-shell__Normal-diagrid-iso-1-0-station-3__off__view_engine.json) | **Native Unset → route C quarantine** in twisted RHS (2 invalid native segments, 53 Unresolved); **route C scene-footprint quarantine** in diagrid (other sources rejected). Target certificate succeeds, but final region is withheld. Conservative Unresolved is harmless for visibility truth, yet the missing region is a real completeness limitation. Do not “fix” it by relabeling Visible. |
+| 7. Remaining orientation / periodicity instability | [view-round-tower / Radial 030 forward](../../artifacts/baseline/view-cases/view-round-tower__Radial-030-forward__off__view_engine.json); [view-grid-curved-perf-S-blocks-17 / South elevation](../../artifacts/baseline/view-cases/view-grid-curved-perf-S-blocks-17__South-elevation__off__view_engine.json) | **Native and route C paths**, not the exact planar kernel. Equivalent-angle outputs differ; raw native also fails metamorphic pairs. Missing ink, confidence changes and confident class swaps are distinct evidence classes. Except for ranks 1–2, this audit cannot tell which confident side is correct or whether Duplicate/order/clipping caused it. Treat unresolved confident swaps as high-priority triage, not as proved wrong-Visible counts. |
+| 8. Section performance | [view-grid-curved-perf-S-blocks-00 / West elevation](../../artifacts/baseline/view-cases/view-grid-curved-perf-S-blocks-00__West-elevation__off__view_engine.json); [view-curved-perf-M-blocks / Normal b00-f00-bay00-mullion-000002 station 1](../../artifacts/baseline/view-cases/view-curved-perf-M-blocks__Normal-b00-f00-bay00-mullion-000002-station-1__off__view_engine.json) | **Route C sections**: curved-S West takes 112.105 s, first HLD observed at 101.002 s (capture 0.126 s); much time precedes HLD. M mullion stations 1/2 hit 600.090/600.080 s execution caps in phase `m2d`. They predate the phase probe, so no finer attribution is available. Remaining M cap is 120 s, but those runs were skipped. |
+
+The exact planar kernel passed **2/2** independent rational-oracle controls, with no Unresolved output. No exact-kernel failure was found in this run; this says nothing about ineligible curved scenes. Duplicate records alone do not prove missing ink, and Unset evidence is separated from benign empty/zero-length slots. The 17° order reversal tested both orders of the two-object control; no general order-independence claim is made.
+
+**Why the section oracle reported 69 fails.** Those were completed attempts with a numeric analytic area/loop expectation. Every failed target emitted zero material regions (area 0, loops 0), rather than a subtly wrong area. This end-to-end completeness oracle deliberately counts safety withholding as a failure to deliver the expected section; it does not classify every such failure as an unsafe geometry algorithm.
+
+| Cause of zero target region | Owner snapshot (69) | Final |
+|---|---:|---:|
+| certified trim failed | 3 | 3 |
+| section-loop certificate rejected | 37 | 40 |
+| source self-intersection guard | 14 | 15 |
+| native Unset propagated to region | 1 | 1 |
+| region withheld by scene uncertainty | 14 | 14 |
+
+The last class is a code-supported inference from successful target certificates, other source uncertainty, and the final region-removal rule in `src/M2DPlus.Rhino/Services/SectionDrawing.cs`; the saved result does not trace every individual region-removal decision. Native Unset on twisted RHS is directly logged. No additional native isolation runs were made after the owner stopped the matrix.
+
+**Why 167 were incomplete.** At the quoted snapshot, 164 views had not run, one was starting, and two M views timed out: 165 without a completed solve plus 2 caps. These are not 167 section-kernel failures. The 121 “unknown” rows were completed views without an independent numeric area/loop oracle (e.g. elevations, axos, freeform/tilted cuts); unknown is not pass. After the final active solve, section results are {"fail": 73, "incomplete": 160, "pass": 68, "unknown": 122}. Incomplete now consists of owner-skipped cases and the two timeouts. Native visible-cut profile reconstruction is a separate audit: HLD exposes no region objects, and hidden cut edges can prevent a closed-loop reconstruction.
+
+**Locus evidence:** 250 completed views disagree; 216 have confident Visible/Hidden swaps, 214 missing ink, 177 uncertainty-class differences. Classes overlap; these counts must not be added. Total reported M2D+ Unresolved pieces: 79902; collector-incomplete views: 0. Comparisons use canonical support-line unions and bidirectional samples (0.05 m spacing, at least 8 per segment, 4× model tolerance). They are not a continuous-locus proof. The report retains per-view timing, region/loop, Unresolved and mismatch evidence in the local [gallery](../../artifacts/baseline/index.html).
+
+**Metamorphics:** for 48 completed S rotation pairs per engine, main M2D+ is 10 pass / 38 fail, native is 13 / 35; the 48 M pairs per engine remain incomplete. For 22 equivalent-angle tower pairs, M2D+ is 13 / 9 and native 6 / 16. These are classed-locus verdicts after co-rotating the view, with no best-fit scale/deformation. Geometry-only and confidence-only details remain in `metamorphic.json` and each pair's audit.
+
+**Review and reproduction:** unchanged engine from `origin/main` 80981d7; generated definitions cover all 423 views. Use the exact model/view names above with `tools/models/run.py --select ... --views ... --engine view_engine --threads off`; any future M probe must use `--wall 120`. The local stop receipt blocks deferred queues. No CI jobs, installs, commits or pushes were made. Shaded references cover SW + Front for every model; six real GH component/view-box checks passed. Definitions-only fixtures and manual unlicensed harness checks accompany the generators.
+
+**Validation:** Debug and Release builds pass with zero warnings; 201 Core and 40 GH UI tests pass; forced local hook passes. Manual checks: 11 view-contract/oracle/collector tests and 10 harness tests pass. No further licensed runs were made during wrap-up.
+
+### View cases: performance timeouts
+
+Every capped attempt is a finding for the next section-performance work, not a correctness verdict. `elapsed` is execution wall time after admission, including startup/capture and any completed native baseline. The phase identifies the engine active when the owned job was stopped. Later workers sample the managed native-call counter once per second: `m2d/pre-native` means route C had not yet called HLD; `m2d/native-or-extraction` means that call had started. This probe touches no live geometry or document and does not change the engine. The first two M attempts predate the probe. Completed native timing remains in the per-view JSON.
+
+| Model / view | Engine | Phase reached | Elapsed s |
+|---|---|---|---:|
+| view-curved-perf-M-blocks / Normal b00-f00-bay00-mullion-000002 station 1 | M2D+ route C | m2d | 600.090 |
+| view-curved-perf-M-blocks / Normal b00-f00-bay00-mullion-000002 station 2 | M2D+ route C | m2d | 600.080 |
+
+Largest observed delays before the first M2D+ HLD call (one-second sampling, includes capture):
+
+| Model / view | Before first HLD, s | Capture s | Engine total s |
+|---|---:|---:|---:|
+| view-grid-curved-perf-S-blocks-17 / West elevation | 105.013 | 0.116 | 116.753 |
+| view-grid-curved-perf-S-blocks-45 / SE axo | 105.009 | 0.136 | 125.893 |
+| view-grid-curved-perf-S-blocks-00 / NW axo | 105.005 | 0.105 | 125.825 |
+| view-grid-curved-perf-S-blocks-45 / East elevation | 104.013 | 0.108 | 114.041 |
+| view-grid-curved-perf-S-blocks-45 / North elevation | 103.014 | 0.128 | 119.074 |
+| view-grid-curved-perf-S-blocks-00 / West elevation | 103.013 | 0.125 | 114.240 |
+| view-grid-curved-perf-S-blocks-00 / East elevation | 103.013 | 0.164 | 113.591 |
+| view-grid-curved-perf-S-blocks-00 / Section transverse | 103.008 | 0.138 | 107.277 |
+| view-grid-curved-perf-S-blocks-45 / NW axo | 103.003 | 0.105 | 123.582 |
+| view-grid-curved-perf-S-blocks-17 / Section long overlap | 103.003 | 0.121 | 112.667 |
