@@ -1,8 +1,5 @@
-using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Runtime.ExceptionServices;
 using Rhino.Geometry;
-using Rhino.Runtime.InProcess;
 using Xunit;
 
 [assembly: CollectionBehavior(DisableTestParallelization = true, MaxParallelThreads = 1)]
@@ -19,40 +16,20 @@ public sealed class RhinoFactAttribute : FactAttribute
     }
 }
 
-public sealed class RhinoSmokeTests
+[Collection("Rhino")]
+public sealed class RhinoSmokeTests(RhinoHost host)
 {
     [RhinoFact]
     [Trait("Category", "RhinoIntegration")]
     public void LicensedRhinoInsideCreatesBrepAndReadsFrozenFixture()
     {
-        Exception? failure = null;
-        var thread = new Thread(() =>
-        {
-            try
-            {
-                var resolverPath = Environment.GetEnvironmentVariable("M2D_RHINO_INSIDE")
-                    ?? throw new InvalidOperationException("Set M2D_RHINO_INSIDE to a runtime-compatible Rhino.Inside resolver DLL.");
-                var systemDirectory = Environment.GetEnvironmentVariable("M2D_RHINO_SYSTEM")
-                    ?? @"C:\Program Files\Rhino 8\System";
-                var resolver = Assembly.LoadFrom(Path.GetFullPath(resolverPath));
-                resolver.GetType("RhinoInside.Resolver", throwOnError: true)!
-                    .GetMethod("Initialize", new[] { typeof(string) })!
-                    .Invoke(null, new object[] { systemDirectory });
-                RunRhino();
-            }
-            catch (Exception ex) { failure = ex; }
-        });
-        thread.SetApartmentState(ApartmentState.STA);
-        thread.Start();
-        thread.Join();
-        if (failure is not null) ExceptionDispatchInfo.Capture(failure).Throw();
+        host.Run(RunRhino);
     }
 
     // Prevent JIT from loading RhinoCommon before the resolver is initialized.
     [MethodImpl(MethodImplOptions.NoInlining)]
     private static void RunRhino()
     {
-        using var core = new RhinoCore(new[] { "/nosplash", "/notemplate" }, WindowStyle.NoWindow);
         using var brep = Brep.CreateFromBox(new BoundingBox(Point3d.Origin, new Point3d(1, 2, 3)));
         Assert.NotNull(brep);
         Assert.True(brep.IsValid);

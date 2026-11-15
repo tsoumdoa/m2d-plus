@@ -5,9 +5,12 @@
 M2D+ is an MIT open-source Grasshopper plugin for Rhino 8 on Windows, for Make2D-style
 plans, sections, elevations and axonometric drawings from a model and a view.
 
-**Status: pre-alpha.** M0 registers **M2D+ → Drawing → M2D+ Drawing** with the final
-four inputs and nine outputs. It returns empty outputs and an “engine not implemented”
-remark. Drawing, settings editor, async work and Bake are future milestones.
+**Status: pre-alpha M1a.** **M2D+ → Drawing → M2D+ Drawing** draws small scenes
+asynchronously with native hidden lines. Wire `Top`, `Front`, another direction keyword,
+or a Vector into View. Empty Geometry draws the visible document. Visible curves and
+points, Hidden, Unresolved, Frame and Info are available; other outputs remain empty.
+Sections, named views, Target placement, the settings editor and Bake are future milestones.
+See [M1a notes](docs/design/m1a-notes.md) for ownership, validation and admission limits.
 
 Install only through Yak: drop a locally built `.yak` onto Rhino, accept installation,
 then restart Rhino. There is no public package yet. Don't copy DLLs into Grasshopper

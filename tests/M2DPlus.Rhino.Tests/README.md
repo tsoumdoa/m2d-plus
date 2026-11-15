@@ -1,8 +1,8 @@
 # Licensed Rhino integration tests
 
-Plain `dotnet test` discovers a skipped smoke test and never initializes Rhino.
+Plain `dotnet test` discovers skipped integration tests and never initializes Rhino.
 The pre-commit hook and Pack-Yak run Core tests only. Integration tests are serial
-and initialize their own in-process RhinoCore on an STA thread; they never attach
+and share one in-process RhinoCore on one STA host thread; they never attach
 to or terminate an interactive Rhino session. A compatible Windows x64 runtime,
 installed licensed Rhino 8 and McNeel Rhino.Inside resolver are required.
 
@@ -21,8 +21,21 @@ The existing resolver on the M0 research machine is at
 `C:/Users/tomosandego/.t3/scratch/2026-11-13-i-noticed-that-make2d-in-2f66c87c/.venv/Lib/site-packages/rhinoinside/Rhino.Inside_v8_net8.0.dll`.
 No resolver binary or licence is redistributed. The smoke test constructs a solid
 box, independently checks its volume, and reads the frozen `brep_box.3dm` fixture.
-Future tests add full-output oracles, not production-engine-derived expectations.
+M1a adds lifecycle races during a real HLD progress callback, independent analytic
+interval/point/mirror oracles, filtering/normalization, shared preparation and live
+GH async publication. See [implementation notes](../../docs/design/m1a-notes.md).
 
-These tests host .NET 8 explicitly. Rhino 8.36's interactive default on this machine
-is .NET 10; see [S1a](../../docs/research/s1a-worker.md). A passing .NET 8 smoke test
-does not certify the future worker against a .NET 10 host.
+Run both native hosting runtimes **serially** with:
+
+```powershell
+./tools/Test-WalkingSkeleton.ps1 -Resolver 'C:/path/to/Rhino.Inside_v8_net8.0.dll'
+```
+
+The second run uses `DOTNET_ROLL_FORWARD=LatestMajor` and asserts runtime major 10
+inside the GHA load/solve test. It does not change the owner's Rhino runtime
+setting. TRX results are in `TestResults/m1a-rhino-net8.trx` and `m1a-rhino-net10.trx`.
+The harness keeps a host document alive for GH's process-wide document witness,
+and pumps scheduled GH solutions without showing an editor. Both runs load the
+installed native Rhino build and the built GHA; no binaries are installed or
+copied to Grasshopper Libraries. These checks do not certify a future worker or
+replace an installed-Yak interactive check.
