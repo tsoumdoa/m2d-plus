@@ -4,10 +4,11 @@ import argparse
 import json
 import sys
 import os
+from contextlib import nullcontext
 from run import DEFAULT_MODELS, MODELS_ROOT
 ROOT=Path(__file__).resolve().parents[2]
 sys.path.insert(0,str(ROOT/'tools/models'))
-from common import write_json, digest
+from common import write_json, digest, SerialRhino
 from owned_job import run
 
 def completed_watch(case):
@@ -27,6 +28,7 @@ def main():
     p.add_argument('--resolver',type=Path,default=Path(os.environ['M2D_RHINO_INSIDE']) if os.environ.get('M2D_RHINO_INSIDE') else None,help='Compatible Rhino.Inside resolver DLL; defaults to M2D_RHINO_INSIDE')
     p.add_argument('--trace-native',action='store_true')
     p.add_argument('--resume',action='store_true',help='Reuse completed rows only for an identical compiled engine and model')
+    p.add_argument('--serial-mutex',action='store_true',help='Share model-suite admission with other local owned Rhino harnesses')
     p.add_argument('--watchdog-seconds',type=int,default=1800,help='Owned-model wall budget including independent exact adjudication; memory stays capped at 16 GiB')
     p.add_argument('--output',type=Path,default=ROOT/'artifacts/hc-perf/composition')
     a=p.parse_args();a.output.mkdir(parents=True,exist_ok=True)
@@ -72,7 +74,8 @@ def main():
         if a.publication:
             command=['dotnet',str(compiled/'M2DPlus.HcPerf.dll'),str(batch),str(a.resolver.resolve())]
         print(f'{Path(model).stem}: '+', '.join(c['view'] for c in requests),flush=True)
-        watch=run(command,requests[0]['output']+'.batch.log',a.watchdog_seconds,16)
+        with SerialRhino(wait_seconds=None) if a.serial_mutex else nullcontext():
+            watch=run(command,requests[0]['output']+'.batch.log',a.watchdog_seconds,16)
         for case in requests:write_json(case['output']+'.watch.json',watch)
         if watch['status']!='exited': print('FAILED',watch,flush=True)
     rows=[json.loads(Path(c['output']+'.gate.json').read_text()) if Path(c['output']+'.gate.json').exists() else {'passed':False,'disagreements':0,'model':c['path'],'view':c['view'],'executionFailure':True} for c in selected]

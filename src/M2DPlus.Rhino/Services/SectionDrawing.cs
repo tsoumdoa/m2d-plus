@@ -25,6 +25,11 @@ internal static class SectionDrawing
     {
         var timer = Stopwatch.StartNew(); var invalid = 0; var quarantine = scene.HasPotentialOccluderUnsupported;
         var uncertainSources = new HashSet<string>(StringComparer.Ordinal); var uncertainRegions = new List<BoundingBox>();
+        var localSources = new HashSet<string>(StringComparer.Ordinal);
+        // Snapshot region/occluder evidence before visibility. Native candidate
+        // classifications cannot invalidate an independent section certificate.
+        var regionUncertainSources = new HashSet<string>(StringComparer.Ordinal);
+        var regionUncertainRegions = new List<BoundingBox>();
         var result = new ViewDrawing { Name = view.Name, Tolerance = view.Settings?.Tolerance ?? scene.Tolerance, MultipleThreads = settings.MultipleThreads,
             Frame = DrawingFrames.Resolve(view, sources, scene.Bounds, view.Settings?.Tolerance ?? scene.Tolerance) };
         var cut = view.Cut!; var tol = view.Settings?.Tolerance ?? scene.Tolerance;
@@ -55,6 +60,8 @@ internal static class SectionDrawing
                 if (!footprint.IsValid) quarantine = true;
                 else { uncertainSources.Add(affected.Identity); uncertainRegions.Add(footprint); }
             }
+            regionUncertainSources.UnionWith(uncertainSources);
+            regionUncertainRegions.AddRange(uncertainRegions);
             result._diagnostics.Add($"Admission: {scene.Cost.GeometryBytes} geometry bytes; {scene.Cost.BrepFaces} faces; {scene.Cost.MeshTriangles} triangles; {scene.SourceCount} sources.");
             result._diagnostics.Add($"Route C; depth={range.Depth:R}; farclip={range.FarClip}; regime={range.Regime}; cuts={request.Cuts}; hatch={request.Hatch}; no native clipping planes.");
             result._diagnostics.AddRange(sections.Diagnostics.Select(d => $"{d.SourceId}: {d.Status}: {d.Message}"));
@@ -215,7 +222,10 @@ internal static class SectionDrawing
                         else
                         {
                             invalid++;
-                            if (evidence.Source is { } affected) uncertainSources.Add(affected.Identity);
+                            if (!settings.NativeOnly && NativeUncertainty.RetainLocal(segment, evidence, inverse, result, uncertainRegions,
+                                (id, world) => settings.ObserveCompositionRecord?.Invoke(id, -1, false, LineClass.Unresolved, world)))
+                                localSources.Add(evidence.Source!.Identity);
+                            else if (evidence.Source is { } affected) uncertainSources.Add(affected.Identity);
                             else if (evidence.Bounds is { } bounds) uncertainRegions.Add(bounds);
                             else quarantine = true;
                             result._diagnostics.Add($"Unset segment {segment.Index}: {evidence.Kind}; source={evidence.Source?.Identity}; bounds={evidence.Bounds}; {evidence.Detail}");
@@ -282,16 +292,11 @@ internal static class SectionDrawing
             foreach (var curve in suppression.Concat(cutLoci).Concat(farLoci)) curve.Dispose();
             if (quarantine || uncertainSources.Count != 0 || uncertainRegions.Count != 0)
             {
-                foreach (var piece in result.Pieces.ToArray())
-                {
-                    using var geometry = piece.CopyGeometry();
-                    if (!quarantine && !uncertainSources.Contains(piece.SourceIdentity) && !uncertainRegions.Any(b => NativeUncertainty.Affects(b, geometry.GetBoundingBox(true), tol))) continue;
-                    if (geometry is Point) { result.Pieces.Remove(piece); piece.Dispose(); }
-                    else piece.Class = LineClass.Unresolved;
-                }
+                try { NativeUncertainty.ApplyFootprints(result, sources, quarantine, uncertainSources, uncertainRegions, tol, token, !settings.NativeOnly, localSources); }
+                catch { result.Dispose(); throw; }
                 foreach (var region in result.Regions.ToArray())
                 {
-                    if (!quarantine && !region.Region.SourceIds.Any(uncertainSources.Contains) && !region.Region.Loops.Any(l => uncertainRegions.Any(b => NativeUncertainty.Affects(b, l.Curve.GetBoundingBox(true), tol)))) continue;
+                    if (!quarantine && !region.Region.SourceIds.Any(regionUncertainSources.Contains) && !region.Region.Loops.Any(l => regionUncertainRegions.Any(b => NativeUncertainty.Affects(b, l.Curve.GetBoundingBox(true), tol)))) continue;
                     var source = sources.First(s => s.Identity == region.Region.SourceIds[0]);
                     foreach (var loop in region.Region.Loops) result.Pieces.Add(new(loop.Curve.DuplicateCurve(), source, LineClass.Unresolved));
                     region.Region.Dispose(); result.Regions.Remove(region);

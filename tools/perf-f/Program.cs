@@ -92,6 +92,7 @@ internal static class Program
 #if !PERFF_BASELINE
             var visibilityTrace = new List<object>();
             using var rayEvidence = new NativeRayEvidence();
+            using var census = new UncertaintyCensus();
 #endif
             try
             {
@@ -100,6 +101,8 @@ internal static class Program
                 var solve = typeof(NativeDrawing).GetMethod("SolveView", BindingFlags.NonPublic | BindingFlags.Static)!;
                 var nativeSettings = new NativeSettings();
 #if !PERFF_BASELINE
+                if (variant == "census") nativeSettings = nativeSettings with { ObserveCompositionRecord = census.Capture,
+                    ObserveNativeInputs = rayEvidence.Capture };
                 if (variant == "audit-off") nativeSettings = nativeSettings with { Verification = new(MaxSamples:0) };
                 if (variant == "trace-native") nativeSettings = nativeSettings with
                 {
@@ -110,6 +113,9 @@ internal static class Program
 #endif
                 var drawn = (ViewDrawing)solve.Invoke(null, new object[] { scene, prepared, view, nativeSettings, limit.Token })!;
 #if !PERFF_BASELINE
+                if (variant == "census") File.WriteAllText(Path.Combine(output,stem+"-causes.json"),JsonSerializer.Serialize(census.Measure(drawn)));
+                if (variant == "census" && Environment.GetEnvironmentVariable("PERFF_UNCERTAINTY_BASELINE") is { } baseline)
+                    rayEvidence.AuditRestored(drawn,baseline,Path.Combine(output,stem+"-restored-audit.json"),scene.Bounds);
                 if (variant == "trace-native") File.WriteAllText(Path.Combine(output,stem+"-foreign-records.json"),JsonSerializer.Serialize(visibilityTrace));
                 if (variant == "trace-native" && Environment.GetEnvironmentVariable("PERFF_RAY_POINTS") is { } rayPoints)
                     rayEvidence.Write(rayPoints,Path.Combine(output,stem+"-ray-evidence.json"),drawn.Frame.Plane,scene.Bounds,scene.Tolerance);
@@ -187,7 +193,8 @@ internal static class Program
             using var geometry = item.CopyGeometry();
             var points = geometry is Curve curve ? Points(curve) : geometry is Point point ? Flat(new[] { point.Location }) : Array.Empty<double>();
             var key = $"{item.Class}|{item.SourceIdentity}|{item.Profile}|{string.Join(",", points.Select(N))}";
-            pieces.Add((key, new { c = item.Class.ToString(), s = item.SourceIdentity, profile = item.Profile, exact = geometry is Curve c2 && c2.TryGetPolyline(out _), p = points }));
+            pieces.Add((key, new { c = item.Class.ToString(), s = item.SourceIdentity, profile = item.Profile, exact = geometry is Curve c2 && c2.TryGetPolyline(out _), p = points,
+                length = geometry is Curve measured ? measured.GetLength() : 0, solved = item.SolvedClass.ToString(), key = item.GeometricKey }));
         }
         var regions = new List<(string Key, object Value)>();
         foreach (var entry in drawing.Regions)
