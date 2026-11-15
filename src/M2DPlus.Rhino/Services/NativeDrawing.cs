@@ -6,7 +6,11 @@ using Rhino.Geometry;
 
 namespace M2DPlus.Rhino.Services;
 
-public sealed record NativeSettings(bool MultipleThreads = false);
+public sealed record NativeSettings(bool MultipleThreads = false)
+{
+    /// <summary>Opt-in certified raster prepass for uncut views; null keeps the plain native route.</summary>
+    public M2DPlus.Rhino.Visibility.RasterOptions? Raster { get; init; }
+}
 public sealed class DrawingPiece : IDisposable
 {
     private readonly GeometryBase _geometry;
@@ -33,6 +37,17 @@ public sealed class DrawingPiece : IDisposable
         GeometricKey = FormattableString.Invariant($"{bounds.Min.X:R},{bounds.Min.Y:R},{bounds.Min.Z:R},{bounds.Max.X:R},{bounds.Max.Y:R},{bounds.Max.Z:R}/") +
             GeometryFingerprint.Compute(geometry);
     }
+    /// <summary>The same source and class with new geometry (used to trim a piece).</summary>
+    internal DrawingPiece(DrawingPiece from, GeometryBase geometry, GeometryBase? depthGeometry)
+    {
+        DepthGeometry = depthGeometry; Source = from.Source; SourceItem = from.SourceItem; _geometry = geometry;
+        SourceIdentity = from.SourceIdentity; _path = (int[])from._path.Clone(); Class = from.Class; Profile = from.Profile;
+        Intensity = from.Intensity; Depths = from.Depths;
+        var bounds = geometry.GetBoundingBox(true);
+        GeometricKey = FormattableString.Invariant($"{bounds.Min.X:R},{bounds.Min.Y:R},{bounds.Min.Z:R},{bounds.Max.X:R},{bounds.Max.Y:R},{bounds.Max.Z:R}/") +
+            GeometryFingerprint.Compute(geometry);
+    }
+    internal GeometryBase Geometry => _geometry;
     public GeometryBase CopyGeometry()
     {
         var copy = _geometry.Duplicate();
@@ -60,6 +75,11 @@ public sealed class ViewDrawing : IDisposable
     public int EmptyNativeSlots { get; internal set; }
     public int ZeroLengthNativeSegments { get; internal set; }
     public double Seconds { get; internal set; }
+    public M2DPlus.Rhino.Visibility.PrepassStats? Prepass { get; internal set; }
+    /// <summary>Sources the prepass removed from the native solve (culled or outside the crop).</summary>
+    internal IReadOnlyList<string> RemovedSources { get; set; } = Array.Empty<string>();
+    /// <summary>Sources whose output the prepass emitted itself (bench attribution).</summary>
+    internal IReadOnlySet<string> DirectSources { get; set; } = new HashSet<string>();
     public string Info => $"{Name}: {(Error ?? "finished")} · {Seconds:F3} s\n" +
         $"{Report.Route}; deterministic={!MultipleThreads}; tolerance={Tolerance:R}; validation: {Report.ValidationDomain}\n" +
         $"Visible={Pieces.Count(p => p.Class == LineClass.Visible)}, hidden={Pieces.Count(p => p.Class == LineClass.Hidden)}, unresolved={Report.UncertainCount}, hidden points={HiddenPoints}; " +
@@ -78,6 +98,17 @@ public sealed class DrawingBatch : IDisposable
     public bool Complete { get; }
     internal DrawingBatch(RequestIdentity identity, List<ViewDrawing> views) { Identity = identity; Views = views.AsReadOnly(); Complete = true; }
     public void Dispose() { foreach (var view in Views) view.Dispose(); }
+}
+
+/// <summary>Output of one native HLD call before it is merged into a view.</summary>
+internal sealed class NativeSink
+{
+    internal List<DrawingPiece> Pieces { get; } = new();
+    internal List<string> Diagnostics { get; } = new();
+    internal HashSet<string> UncertainSources { get; } = new(StringComparer.Ordinal);
+    internal List<BoundingBox> UncertainRegions { get; } = new();
+    internal int EmptyNativeSlots, ZeroLengthNativeSegments, DuplicateSegments, ProjectingSegments, HiddenPoints, Invalid, Contradictions;
+    internal bool Quarantine;
 }
 
 /// <summary>Compute boundary: accepts only owned scenes and value requests; never resolves a document.</summary>
@@ -123,7 +154,7 @@ public static class NativeDrawing
                 catch { foreach (var result in results) result.Dispose(); throw; }
             }, token).ConfigureAwait(false);
     }
-    private static ViewDrawing SolveView(PreparedScene scene, IReadOnlyList<PreparedLeaf> sources, ViewRequest view, NativeSettings settings, CancellationToken token)
+    internal static ViewDrawing SolveView(PreparedScene scene, IReadOnlyList<PreparedLeaf> sources, ViewRequest view, NativeSettings settings, CancellationToken token)
     {
         var tolerance = view.Settings?.Tolerance ?? scene.Tolerance;
         if (view.Settings is { } effective)
@@ -148,93 +179,64 @@ public static class NativeDrawing
         var quarantine = scene.HasPotentialOccluderUnsupported;
         var uncertainSources = new HashSet<string>(StringComparer.Ordinal);
         var uncertainRegions = new List<BoundingBox>();
+        var viewFrame = default(Rectangle3d);
+        IReadOnlySet<string> certifiedHidden = new HashSet<string>();
+        var contradictions = 0;
         try
         {
             if (view.Error is not null) { result.Error = view.Error; return result; }
-            result.Frame = view.Resolve(scene.Bounds, tolerance);
+            result.Frame = viewFrame = view.Resolve(scene.Bounds, tolerance);
             result._diagnostics.Add($"Admission: {scene.Cost.GeometryBytes} geometry bytes; {scene.Cost.BrepFaces} faces; {scene.Cost.MeshTriangles} triangles; {scene.SourceCount} sources. Native multipleThreads={settings.MultipleThreads} (serial global scheduler).");
             if (sources.Count == 0) return result;
-            using var viewport = new ViewportInfo();
-            var frame = result.Frame; var radius = scene.Bounds.IsValid ? Math.Max(scene.Bounds.Diagonal.Length, 1) : 1;
-            viewport.IsParallelProjection = true;
-            viewport.SetCameraLocation(frame.Plane.Origin + frame.Plane.ZAxis * (radius * 4 + 10));
-            viewport.SetCameraDirection(view.Direction); viewport.SetCameraUp(frame.Plane.YAxis);
-            viewport.SetFrustum(frame.X.Min, frame.X.Max, frame.Y.Min, frame.Y.Max, .001, radius * 10 + 100);
-            var parameters = new HiddenLineDrawingParameters { AbsoluteTolerance = tolerance, Flatten = false,
-                IncludeHiddenCurves = view.Settings?.Hidden ?? Settings.DefaultHidden, IncludeTangentEdges = view.Settings?.Tangents ?? false, IncludeTangentSeams = view.Settings?.Seams ?? false };
-            parameters.SetViewport(viewport);
-            foreach (var source in sources)
+            var nativeSources = sources;
+            if (settings.Raster is { } raster && sources.Count != 0)
             {
-                token.ThrowIfCancellationRequested();
-                if (!parameters.AddGeometry(source.Geometry, source)) { invalid++; quarantine = true; result._diagnostics.Add($"Native rejected {source.Identity}"); }
-            }
-            CountHld();
-            using var drawing = HiddenLineDrawing.Compute(parameters, settings.MultipleThreads, NativeProgress, token);
-            token.ThrowIfCancellationRequested();
-            if (drawing is null) throw new InvalidOperationException("Native HLD returned null without cancellation.");
-            if (!drawing.WorldToHiddenLine.TryGetInverse(out var inverse)) throw new InvalidOperationException("Invalid native frame.");
-            var toPlane = Transform.PlanarProjection(frame.Plane) * inverse;
-            foreach (var segment in drawing.Segments)
-            {
-                token.ThrowIfCancellationRequested();
-                var visibility = segment.SegmentVisibility;
-                // Unset may be a non-dereferenceable proxy. Check it before ParentCurve or CurveGeometry.
-                if (visibility == HiddenLineDrawingSegment.Visibility.Unset)
+                var prepass = M2DPlus.Rhino.Visibility.RasterPrepass.Classify(sources, view, viewFrame, scene.Bounds, tolerance, raster, token);
+                result.Prepass = prepass.Stats; result.HiddenPoints += prepass.HiddenPoints; result.RemovedSources = prepass.Removed; result.DirectSources = prepass.Direct;
+                nativeSources = prepass.Remaining; certifiedHidden = prepass.CulledNative;
+                var hidden = view.Settings?.Hidden ?? Settings.DefaultHidden;
+                void Direct(PreparedLeaf source, Curve projected, Curve world, LineClass cls, bool profile)
                 {
-                    var evidence = NativeUncertainty.Inspect(segment, tag => tag as PreparedLeaf, toPlane);
-                    if (evidence.Kind == UnsetKind.EmptySlot) result.EmptyNativeSlots++;
-                    else if (evidence.Kind == UnsetKind.ZeroLength) result.ZeroLengthNativeSegments++;
-                    else
+                    try
                     {
-                        invalid++;
-                        if (evidence.Source is { } affected) uncertainSources.Add(affected.Identity);
-                        else if (evidence.Bounds is { } bounds) uncertainRegions.Add(bounds);
-                        else quarantine = true;
-                        result._diagnostics.Add($"Unset segment {segment.Index}: {evidence.Kind}; source={evidence.Source?.Identity}; bounds={evidence.Bounds}; {evidence.Detail}");
+                        if (cls == LineClass.Hidden && !hidden) { projected.Dispose(); world.Dispose(); return; }
+                        if (view.Named is { Crop: true })
+                        {
+                            foreach (var clipped in Crop(projected, viewFrame, tolerance)) result.Pieces.Add(new(clipped, source, cls, world.DuplicateCurve()) { Profile = profile });
+                            projected.Dispose(); world.Dispose();
+                        }
+                        else result.Pieces.Add(new(projected, source, cls, world) { Profile = profile });
                     }
-                    continue;
+                    catch { projected.Dispose(); world.Dispose(); throw; }
                 }
-                if (visibility == HiddenLineDrawingSegment.Visibility.Hidden && view.Settings?.Hidden == false) continue;
-                var parent = segment.ParentCurve;
-                if (parent?.SourceObject?.Tag is not PreparedLeaf source)
-                { invalid++; quarantine = true; result._diagnostics.Add($"Parentless/source-less segment {segment.Index}"); continue; }
-                if (visibility == HiddenLineDrawingSegment.Visibility.Duplicate) { result.DuplicateSegments++; continue; }
-                if (visibility == HiddenLineDrawingSegment.Visibility.Projecting) { result.ProjectingSegments++; continue; }
-                var proxy = segment.CurveGeometry;
-                if (proxy is null) { invalid++; uncertainSources.Add(source.Identity); result._diagnostics.Add($"Null geometry {segment.Index}: {source.Identity}"); continue; }
-                var owned = proxy.DuplicateCurve();
-                try
+                if (hidden)
                 {
-                    owned.EnsurePrivateCopy();
-                    using var depthCurve = proxy.DuplicateCurve(); depthCurve.Transform(inverse);
-                    if (!owned.Transform(toPlane) || !owned.IsValid) throw new InvalidOperationException("Native curve extraction failed.");
-                    var classification = visibility switch
-                    {
-                        HiddenLineDrawingSegment.Visibility.Visible => LineClass.Visible,
-                        HiddenLineDrawingSegment.Visibility.Hidden => LineClass.Hidden, _ => LineClass.Unresolved
-                    };
-                    if (view.Named is { Crop: true })
-                    {
-                        foreach (var clipped in Crop(owned, frame, tolerance)) result.Pieces.Add(new(clipped, source, classification, depthCurve.Trim(clipped.Domain)) { Profile = segment.IsSceneSilhouette });
-                        owned.Dispose();
-                    }
-                    else result.Pieces.Add(new(owned, source, classification, depthCurve.DuplicateCurve()) { Profile = segment.IsSceneSilhouette });
+                    // Generate the certified-hidden candidates in parallel; add them in source order (deterministic output).
+                    var culled = prepass.CulledDirect.Select(s => (Source: s, Curved: false)).Concat(prepass.CulledCurved.Select(s => (Source: s, Curved: true))).ToArray();
+                    var curves = new List<(Curve, Curve)>[culled.Length];
+                    Parallel.For(0, culled.Length, new ParallelOptions { CancellationToken = token }, k => curves[k] = (culled[k].Curved
+                        ? M2DPlus.Rhino.Visibility.RasterPrepass.CurvedHiddenCurves(culled[k].Source, viewFrame, tolerance, raster)
+                        : M2DPlus.Rhino.Visibility.RasterPrepass.HiddenCurves(culled[k].Source, viewFrame, tolerance, raster)).ToList());
+                    for (var k = 0; k < culled.Length; k++)
+                        foreach (var (projected, world) in curves[k]) Direct(culled[k].Source, projected, world, LineClass.Hidden, false);
                 }
-                catch { owned.Dispose(); throw; }
+                foreach (var source in prepass.Isolated)
+                {
+                    if (source.Geometry is Point point)
+                    {
+                        var world = point.Location; var location = world; location.Transform(Transform.PlanarProjection(viewFrame.Plane));
+                        if (view.Named is { Crop: true } && !Inside(location, viewFrame, tolerance)) continue;
+                        result.Pieces.Add(new(new Point(location), source, LineClass.Visible, new Point(world)));
+                        continue;
+                    }
+                    foreach (var (projected, world, cls, profile) in M2DPlus.Rhino.Visibility.RasterPrepass.IsolatedCurves(source, viewFrame, tolerance, raster))
+                        Direct(source, projected, world, cls, profile);
+                }
+                result._diagnostics.Add($"Raster prepass: {prepass.Stats}");
             }
-            foreach (var point in drawing.Points)
-            {
-                token.ThrowIfCancellationRequested();
-                if (point.PointVisibility == HiddenLineDrawingPoint.Visibility.Unset || point.SourceObject?.Tag is not PreparedLeaf source || !point.Location.IsValid)
-                { invalid++; quarantine = true; result._diagnostics.Add("Invalid native point extraction"); continue; }
-                if (point.PointVisibility == HiddenLineDrawingPoint.Visibility.Hidden) { result.HiddenPoints++; continue; }
-                if (point.PointVisibility != HiddenLineDrawingPoint.Visibility.Visible)
-                { invalid++; quarantine = true; result._diagnostics.Add("Uncertain native point"); continue; }
-                var world = point.Location; world.Transform(inverse);
-                var location = point.Location; location.Transform(toPlane);
-                if (view.Named is { Crop: true } && !Inside(location, frame, tolerance)) continue;
-                result.Pieces.Add(new(new Point(location), source, LineClass.Visible, new Point(world)));
-            }
+            if (nativeSources.Count != 0) { var sink = new NativeSink(); RunNative(nativeSources, sink); Merge(sink); }
+            if (settings.Raster is not null) VisibleOverHidden(result, viewFrame, tolerance);
+            if (contradictions != 0) result._diagnostics.Add($"Raster certificate contradicted by native on {contradictions} pieces (native marked certified-hidden pieces visible).");
         }
         catch (OperationCanceledException) { result.Dispose(); throw; }
         catch (Exception ex) { result.Dispose(); result.Error = ex.Message; quarantine = true; }
@@ -256,7 +258,151 @@ public static class NativeDrawing
                 scene.Unsupported, scene.Conversions, quarantine);
             result.Seconds = timer.Elapsed.TotalSeconds;
         }
+        void Merge(NativeSink sink)
+        {
+            result.Pieces.AddRange(sink.Pieces); result._diagnostics.AddRange(sink.Diagnostics);
+            result.EmptyNativeSlots += sink.EmptyNativeSlots; result.ZeroLengthNativeSegments += sink.ZeroLengthNativeSegments;
+            result.DuplicateSegments += sink.DuplicateSegments; result.ProjectingSegments += sink.ProjectingSegments; result.HiddenPoints += sink.HiddenPoints;
+            invalid += sink.Invalid; quarantine |= sink.Quarantine; contradictions += sink.Contradictions;
+            uncertainSources.UnionWith(sink.UncertainSources); uncertainRegions.AddRange(sink.UncertainRegions);
+        }
+        void RunNative(IReadOnlyList<PreparedLeaf> subset, NativeSink sink)
+        {
+            using var viewport = new ViewportInfo();
+            var radius = scene.Bounds.IsValid ? Math.Max(scene.Bounds.Diagonal.Length, 1) : 1;
+            viewport.IsParallelProjection = true;
+            viewport.SetCameraLocation(viewFrame.Plane.Origin + viewFrame.Plane.ZAxis * (radius * 4 + 10));
+            viewport.SetCameraDirection(view.Direction); viewport.SetCameraUp(viewFrame.Plane.YAxis);
+            var clip = viewFrame; var crop = view.Named is { Crop: true };
+            viewport.SetFrustum(clip.X.Min, clip.X.Max, clip.Y.Min, clip.Y.Max, .001, radius * 10 + 100);
+            var parameters = new HiddenLineDrawingParameters { AbsoluteTolerance = tolerance, Flatten = false,
+                // Raster route: always solve with hidden curves on (native can drop visible geometry with them off) and filter below.
+                IncludeHiddenCurves = settings.Raster is not null || (view.Settings?.Hidden ?? Settings.DefaultHidden), IncludeTangentEdges = view.Settings?.Tangents ?? false, IncludeTangentSeams = view.Settings?.Seams ?? false };
+            parameters.SetViewport(viewport);
+            foreach (var source in subset)
+            {
+                token.ThrowIfCancellationRequested();
+                if (!parameters.AddGeometry(source.Geometry, source)) { sink.Invalid++; sink.Quarantine = true; sink.Diagnostics.Add($"Native rejected {source.Identity}"); }
+            }
+            CountHld();
+            using var drawing = HiddenLineDrawing.Compute(parameters, settings.MultipleThreads, NativeProgress, token);
+            token.ThrowIfCancellationRequested();
+            if (drawing is null) throw new InvalidOperationException("Native HLD returned null without cancellation.");
+            if (!drawing.WorldToHiddenLine.TryGetInverse(out var inverse)) throw new InvalidOperationException("Invalid native viewFrame.");
+            var toPlane = Transform.PlanarProjection(viewFrame.Plane) * inverse;
+            foreach (var segment in drawing.Segments)
+            {
+                token.ThrowIfCancellationRequested();
+                var visibility = segment.SegmentVisibility;
+                // Unset may be a non-dereferenceable proxy. Check it before ParentCurve or CurveGeometry.
+                if (visibility == HiddenLineDrawingSegment.Visibility.Unset)
+                {
+                    var evidence = NativeUncertainty.Inspect(segment, tag => tag as PreparedLeaf, toPlane);
+                    if (evidence.Kind == UnsetKind.EmptySlot) sink.EmptyNativeSlots++;
+                    else if (evidence.Kind == UnsetKind.ZeroLength) sink.ZeroLengthNativeSegments++;
+                    else
+                    {
+                        sink.Invalid++;
+                        if (evidence.Source is { } affected) sink.UncertainSources.Add(affected.Identity);
+                        else if (evidence.Bounds is { } bounds) sink.UncertainRegions.Add(bounds);
+                        else sink.Quarantine = true;
+                        sink.Diagnostics.Add($"Unset segment {segment.Index}: {evidence.Kind}; source={evidence.Source?.Identity}; bounds={evidence.Bounds}; {evidence.Detail}");
+                    }
+                    continue;
+                }
+                if (visibility == HiddenLineDrawingSegment.Visibility.Hidden && view.Settings?.Hidden == false) continue;
+                var parent = segment.ParentCurve;
+                if (parent?.SourceObject?.Tag is not PreparedLeaf source)
+                { sink.Invalid++; sink.Quarantine = true; sink.Diagnostics.Add($"Parentless/source-less segment {segment.Index}"); continue; }
+                if (visibility == HiddenLineDrawingSegment.Visibility.Duplicate) { sink.DuplicateSegments++; continue; }
+                if (visibility == HiddenLineDrawingSegment.Visibility.Projecting) { sink.ProjectingSegments++; continue; }
+                var proxy = segment.CurveGeometry;
+                if (proxy is null) { sink.Invalid++; sink.UncertainSources.Add(source.Identity); sink.Diagnostics.Add($"Null geometry {segment.Index}: {source.Identity}"); continue; }
+                var owned = proxy.DuplicateCurve();
+                try
+                {
+                    owned.EnsurePrivateCopy();
+                    using var depthCurve = proxy.DuplicateCurve(); depthCurve.Transform(inverse);
+                    if (!owned.Transform(toPlane) || !owned.IsValid) throw new InvalidOperationException("Native curve extraction failed.");
+                    if (visibility == HiddenLineDrawingSegment.Visibility.Visible && certifiedHidden.Contains(source.Identity)) sink.Contradictions++;
+                    var classification = visibility switch
+                    {
+                        HiddenLineDrawingSegment.Visibility.Visible => LineClass.Visible,
+                        HiddenLineDrawingSegment.Visibility.Hidden => LineClass.Hidden, _ => LineClass.Unresolved
+                    };
+                    if (crop)
+                    {
+                        foreach (var clipped in Crop(owned, clip, tolerance)) sink.Pieces.Add(new(clipped, source, classification, depthCurve.Trim(clipped.Domain)) { Profile = segment.IsSceneSilhouette });
+                        owned.Dispose();
+                    }
+                    else sink.Pieces.Add(new(owned, source, classification, depthCurve.DuplicateCurve()) { Profile = segment.IsSceneSilhouette });
+                }
+                catch { owned.Dispose(); throw; }
+            }
+            foreach (var point in drawing.Points)
+            {
+                token.ThrowIfCancellationRequested();
+                if (point.PointVisibility == HiddenLineDrawingPoint.Visibility.Unset || point.SourceObject?.Tag is not PreparedLeaf source || !point.Location.IsValid)
+                { sink.Invalid++; sink.Quarantine = true; sink.Diagnostics.Add("Invalid native point extraction"); continue; }
+                if (point.PointVisibility == HiddenLineDrawingPoint.Visibility.Hidden) { sink.HiddenPoints++; continue; }
+                if (point.PointVisibility != HiddenLineDrawingPoint.Visibility.Visible)
+                { sink.Invalid++; sink.Quarantine = true; sink.Diagnostics.Add("Uncertain native point"); continue; }
+                var world = point.Location; world.Transform(inverse);
+                var location = point.Location; location.Transform(toPlane);
+                if (crop && !Inside(location, clip, tolerance)) continue;
+                sink.Pieces.Add(new(new Point(location), source, LineClass.Visible, new Point(world)));
+            }
+        }
         return result;
+    }
+
+    /// <summary>
+    /// Drawing-locus convention (as in the exact planar kernel): where a hidden locus coincides with a visible locus within
+    /// tolerance, the visible wins and the hidden span is removed. Applied to linear hidden pieces (trimmed exactly by line
+    /// parameter); other hidden pieces are kept whole.
+    /// </summary>
+    private static void VisibleOverHidden(ViewDrawing result, Rectangle3d frame, double tolerance)
+    {
+        var plane = frame.Plane; var visible = new List<(double, double, double, double)>();
+        (double, double) Uv(Point3d p) { plane.ClosestParameter(p, out var u, out var v); return (u, v); }
+        foreach (var piece in result.Pieces)
+        {
+            if (piece.Class != LineClass.Visible || piece.Geometry is not Curve curve) continue;
+            Point3d[] points;
+            if (curve.IsLinear(tolerance)) points = new[] { curve.PointAtStart, curve.PointAtEnd };
+            else
+            {
+                // Chords within tolerance/4 of the curve: coincidence is decided within 3/4 tolerance of the true locus.
+                using var polyline = curve.ToPolyline(tolerance / 4, 0.02, 0, 0);
+                if (polyline is null || !polyline.TryGetPolyline(out var pl)) continue;
+                points = pl.ToArray();
+            }
+            for (var k = 1; k < points.Length; k++) { var (ax, ay) = Uv(points[k - 1]); var (bx, by) = Uv(points[k]); visible.Add((ax, ay, bx, by)); }
+        }
+        if (visible.Count == 0) return;
+        var index = new M2DPlus.Core.Visibility.Raster.VisibleOverHidden(visible, .75 * tolerance, Math.Max(frame.Width, frame.Height) / 512);
+        var removed = 0; var trimmed = 0;
+        for (var n = result.Pieces.Count - 1; n >= 0; n--)
+        {
+            var piece = result.Pieces[n];
+            if (piece.Class != LineClass.Hidden || piece.Geometry is not Curve curve || !curve.IsLinear(tolerance)) continue;
+            // Trim by parameter fraction only where the parameterisation is affine (midpoint maps to the midpoint).
+            if (curve.PointAt(curve.Domain.Mid).DistanceTo((curve.PointAtStart + curve.PointAtEnd) / 2) > tolerance / 10) continue;
+            var (ax, ay) = Uv(curve.PointAtStart); var (bx, by) = Uv(curve.PointAtEnd);
+            var keep = index.Remaining(ax, ay, bx, by).Where(g => (g.T1 - g.T0) * Math.Sqrt((bx - ax) * (bx - ax) + (by - ay) * (by - ay)) > tolerance).ToList();
+            if (keep.Count == 1 && keep[0].T0 <= 0 && keep[0].T1 >= 1) continue;
+            result.Pieces.RemoveAt(n);
+            var domain = curve.Domain; var depth = piece.DepthGeometry as Curve;
+            foreach (var (t0, t1) in keep)
+            {
+                var interval = new Interval(domain.ParameterAt(t0), domain.ParameterAt(t1));
+                var part = curve.Trim(interval); var partDepth = depth?.Trim(new Interval(depth.Domain.ParameterAt(t0), depth.Domain.ParameterAt(t1)));
+                if (part is null) { partDepth?.Dispose(); continue; }
+                result.Pieces.Insert(n, new DrawingPiece(piece, part, partDepth)); trimmed++;
+            }
+            piece.Dispose(); removed++;
+        }
+        if (removed != 0) result._diagnostics.Add($"Visible over hidden: {removed} hidden pieces coincident with visible loci removed or trimmed ({trimmed} parts kept).");
     }
 
     internal static int ComparePieces(DrawingPiece a, DrawingPiece b)
