@@ -9,6 +9,7 @@ using System.Text;
 using System.Text.Json;
 using M2DPlus.Core;
 using M2DPlus.Rhino.Services;
+using M2DPlus.Core.Sections;
 using Rhino;
 using Rhino.Geometry;
 using Rhino.Runtime.InProcess;
@@ -35,7 +36,7 @@ internal static class Program
         using var core = new RhinoCore(new[] { "/nosplash", "/notemplate" }, WindowStyle.NoWindow);
         var output = Path.GetFullPath(args[2], args[1]); Directory.CreateDirectory(output);
         if (args[3] == "fingerprints") { Benchmark(args.Skip(4), output); return; }
-        IRenderEngine engine = args[3] switch { "m2d" => new M2DEngine(), "raw" => new RawHldEngine(), _ => throw new ArgumentException("Unknown engine adapter (m2d or raw)") };
+        IRenderEngine engine = args[3] switch { "m2d" or "m2" => new M2DEngine(), "raw" => new RawHldEngine(), _ => throw new ArgumentException("Unknown engine adapter (m2d or raw)") };
         var cards = new StringBuilder(); var records = new List<object>();
         var process = Process.GetCurrentProcess(); var engineSha256 = FileHash(typeof(NativeDrawing).Assembly.Location);
         foreach (var file in args.Skip(4))
@@ -48,7 +49,9 @@ internal static class Program
             using var capture = new SceneCapture(document, watch, cache: cache);
             while (!capture.Step(TimeSpan.FromMilliseconds(12))) { }
             var lease = capture.Accept(); var captureMs = timer.Elapsed.TotalMilliseconds; var cost = lease.Value.Cost;
-            using var batch = engine.Draw(lease, new[] { "Top", "Front", "Right", "SW" }.Select(v => ViewRequest.Parse(v)).ToArray());
+            var bounds = lease.Value.Bounds;
+            var views = args[3] == "m2" ? CutViews(bounds) : new[] { "Top", "Front", "Right", "SW" }.Select(v => ViewRequest.Parse(v)).ToArray();
+            using var batch = engine.Draw(lease, views);
             foreach (var view in batch.Views)
             {
                 var name = Path.GetFileNameWithoutExtension(file) + "-" + view.Name;
@@ -63,8 +66,21 @@ internal static class Program
             }
         }
         File.WriteAllText(Path.Combine(output, "results.json"), JsonSerializer.Serialize(new { engine = engine.Name, engineSha256, rhino = RhinoApp.Version.ToString(), runtime = Environment.Version.ToString(), multipleThreads = false, workers = 0, records }, new JsonSerializerOptions { WriteIndented = true }));
-        File.WriteAllText(Path.Combine(output, "index.html"), "<!doctype html><html><meta charset='utf-8'><title>M2D+ renders</title><style>body{margin:24px;background:#eee;color:#222;font:14px system-ui}h1{font-size:25px}main{display:grid;grid-template-columns:repeat(auto-fit,minmax(560px,1fr));gap:20px}article{background:white;padding:16px;border:1px solid #ccc;border-radius:8px}h2{font-size:17px}.pair{display:flex}.pair>div{width:50%;background:white}.pair svg{width:100%;height:260px}.pair .dark{background:#15191e}.dark .visible{stroke:#f5f5f5}.dark .point{fill:#f5f5f5}pre{white-space:pre-wrap;font-size:12px}</style><h1>M2D+ baseline renders</h1><p>" + WebUtility.HtmlEncode(engine.Name) + " · serial HLD, multipleThreads=false · solid visible, dashed hidden, orange unresolved, cobalt frame · light / dark</p><main>" + cards + "</main></html>");
+        File.WriteAllText(Path.Combine(output, "index.html"), "<!doctype html><html><meta charset='utf-8'><title>M2D+ renders</title><style>body{margin:24px;background:#eee;color:#222;font:14px system-ui}h1{font-size:25px}main{display:grid;grid-template-columns:repeat(auto-fit,minmax(560px,1fr));gap:20px}article{background:white;padding:16px;border:1px solid #ccc;border-radius:8px}h2{font-size:17px}.pair{display:flex}.pair>div{width:50%;background:white}.pair svg{width:100%;height:260px}.pair .dark{background:#15191e}.dark .visible{stroke:#f5f5f5}.dark .point{fill:#f5f5f5}pre{white-space:pre-wrap;font-size:12px}</style><h1>M2D+ section renders</h1><p>" + WebUtility.HtmlEncode(engine.Name) + " · serial HLD, multipleThreads=false · solid visible, dashed hidden, orange unresolved, cobalt frame · light / dark</p><main>" + cards + "</main></html>");
         Console.WriteLine(Path.Combine(output, "index.html"));
+    }
+
+    private static ViewRequest[] CutViews(BoundingBox bounds)
+    {
+        var z = bounds.Min.Z + Math.Min(1.2, bounds.Diagonal.Z * .4);
+        var plan = new Plane(new Point3d(0, 0, z), Vector3d.XAxis, Vector3d.YAxis);
+        var section = new Plane(new Point3d(0, bounds.Center.Y, 0), Vector3d.XAxis, Vector3d.ZAxis);
+        var boxPlane = Plane.WorldXY;
+        var box = new Box(boxPlane, new Interval(bounds.Min.X, bounds.Max.X), new Interval(bounds.Min.Y, bounds.Max.Y), new Interval(bounds.Min.Z, z));
+        return new[] { ViewRequest.Parse(plan) with { Name = "Plan-storey" }, ViewRequest.Parse(section) with { Name = "Long-section" },
+            ViewRequest.Parse(box) with { Name = "Box" }, ViewRequest.Parse(new Rectangle3d(plan,
+                new Interval(bounds.Min.X + bounds.Diagonal.X * .25, bounds.Max.X - bounds.Diagonal.X * .25),
+                new Interval(bounds.Min.Y, bounds.Max.Y))) with { Name = "Cropped-plan" } };
     }
 
     private static void Benchmark(IEnumerable<string> files, string output)
@@ -101,6 +117,55 @@ internal static class Program
         using var bitmap = new Bitmap(800, 560); using var graphics = Graphics.FromImage(bitmap);
         graphics.Clear(Color.White); graphics.SmoothingMode = SmoothingMode.AntiAlias;
         var svg = new StringBuilder("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 560' fill='none' stroke-width='1.1'>");
+        foreach (var entry in view.Regions)
+        {
+            var region = entry.Region;
+            using var path = new GraphicsPath(FillMode.Alternate); var commands = new StringBuilder();
+            foreach (var loop in region.Loops)
+            {
+                using var polyline = loop.Curve.ToPolyline(Math.Max(width, height) / 3000, .03, 0, Math.Max(width, height) / 80);
+                if (polyline is null || !polyline.TryGetPolyline(out var points) || points.Count < 2) continue;
+                var mapped = points.Select(Map).ToArray();
+                if (loop.Curve.IsClosed && mapped.Length >= 3) path.AddPolygon(mapped); else path.AddLines(mapped);
+                commands.Append("M" + string.Join("L", mapped.Select(p => $"{p.X:F3},{p.Y:F3}")) + (loop.Curve.IsClosed ? "Z" : ""));
+            }
+            string Colour(uint argb) => $"#{argb & 0xffffff:x6}";
+            void Fill(uint argb)
+            {
+                using var brush = new SolidBrush(Color.FromArgb(unchecked((int)argb))); graphics.FillPath(brush, path);
+                svg.Append($"<path d='{commands}' fill='{Colour(argb)}' fill-rule='evenodd' stroke='none'/>");
+            }
+            if (region.Hatch is not null)
+            {
+                if (region.Style.Background != BackgroundMode.None) Fill(region.Style.BackgroundColour);
+                if (region.Style.Pattern is { Solid: true }) Fill(region.Style.PatternColour);
+                else if (region.Style.Pattern is { } pattern)
+                {
+                    var id = "h" + svg.Length;
+                    svg.Append($"<defs><clipPath id='{id}'><path d='{commands}' clip-rule='evenodd'/></clipPath></defs><g clip-path='url(#{id})'>");
+                    var state = graphics.Save(); graphics.SetClip(path);
+                    using var pen = new Pen(Color.FromArgb(unchecked((int)region.Style.PatternColour)), .8f);
+                    foreach (var line in pattern.Lines)
+                    {
+                        var angle = region.Style.Rotation + line.Angle; var dx = Math.Cos(angle); var dy = -Math.Sin(angle);
+                        var spacing = Math.Max(2, Math.Abs(-line.Offset.X * Math.Sin(line.Angle) + line.Offset.Y * Math.Cos(line.Angle)) * region.Style.Scale * scale);
+                        if (line.Dashes.Count != 0) pen.DashStyle = DashStyle.Dash;
+                        for (var offset = -1100d; offset <= 1100; offset += spacing)
+                        {
+                            var x = 400 - dy * offset; var y = 280 + dx * offset;
+                            var a = new PointF((float)(x - dx * 1100), (float)(y - dy * 1100)); var b = new PointF((float)(x + dx * 1100), (float)(y + dy * 1100));
+                            graphics.DrawLine(pen, a, b); svg.Append($"<path stroke='{Colour(region.Style.PatternColour)}' d='M{a.X:F3},{a.Y:F3}L{b.X:F3},{b.Y:F3}'/>");
+                        }
+                    }
+                    graphics.Restore(state); svg.Append("</g>");
+                }
+            }
+            if (region.Style.Boundary.Visible)
+            {
+                using var pen = new Pen(Color.FromArgb(unchecked((int)region.Style.Boundary.Colour)), (float)(1.8 * region.Style.Boundary.WidthScale)); graphics.DrawPath(pen, path);
+                svg.Append($"<path d='{commands}' stroke='{Colour(region.Style.Boundary.Colour)}' stroke-width='{1.8 * region.Style.Boundary.WidthScale:F2}'/>");
+            }
+        }
         // Hidden first; solid visible strokes remain legible at coincident boundaries.
         foreach (var item in view.Items.OrderBy(i => i.Class == LineClass.Hidden ? 0 : 1))
         {

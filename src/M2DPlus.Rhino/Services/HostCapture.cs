@@ -26,7 +26,7 @@ public sealed class DocumentWatch : IDisposable
         RhinoDoc.AddRhinoObject += ObjectChanged; RhinoDoc.DeleteRhinoObject += ObjectChanged;
         RhinoDoc.UndeleteRhinoObject += ObjectChanged;
         RhinoDoc.ModifyObjectAttributes += AttributesChanged;
-        RhinoDoc.LayerTableEvent += LayerChanged;
+        RhinoDoc.LayerTableEvent += LayerChanged; RhinoDoc.HatchPatternTableEvent += HatchChanged;
         RhinoDoc.InstanceDefinitionTableEvent += DefinitionChanged;
         RhinoDoc.CloseDocument += Closed;
     }
@@ -38,9 +38,10 @@ public sealed class DocumentWatch : IDisposable
             { NormalObjects = true, LockedObjects = true, HiddenObjects = true, IdefObjects = true, ReferenceObjects = true });
         return string.Join("|", objects.Select(o => $"{o.Id}:{o.RuntimeSerialNumber}:{o.Attributes.ToJSON(new global::Rhino.FileIO.SerializationOptions())}")) +
             string.Join("|", document.InstanceDefinitions.Where(d => !d.IsDeleted).Select(d => $"{d.Id}:{string.Join(',', d.GetObjects().Select(o => o.RuntimeSerialNumber))}")) +
-            string.Join("|", document.Layers.Where(l => !l.IsDeleted).Select(l => $"{l.Id}:{l.IsVisible}:{l.FullPath}")) +
+            string.Join("|", document.Layers.Where(l => !l.IsDeleted).Select(l => $"{l.Id}:{l.IsVisible}:{l.FullPath}:{l.ToJSON(new global::Rhino.FileIO.SerializationOptions())}")) +
             document.ModelAbsoluteTolerance.ToString("R", CultureInfo.InvariantCulture) + document.ModelUnitSystem +
-            string.Join("|", document.NamedViews.Select(v => ViewRequest.Parse(v).Revision));
+            string.Join("|", document.NamedViews.Select(v => ViewRequest.Parse(v).Revision)) +
+            string.Join("|", document.HatchPatterns.Where(p => !p.IsDeleted).Select(p => p.ToJSON(new global::Rhino.FileIO.SerializationOptions())));
     }
     public void VerifyHostState()
     {
@@ -64,6 +65,7 @@ public sealed class DocumentWatch : IDisposable
     }
     private void AttributesChanged(object? sender, RhinoModifyObjectAttributesEventArgs e) => Touch(e.Document.RuntimeSerialNumber);
     private void LayerChanged(object? sender, global::Rhino.DocObjects.Tables.LayerTableEventArgs e) => Touch(e.Document.RuntimeSerialNumber);
+    private void HatchChanged(object? sender, global::Rhino.DocObjects.Tables.HatchPatternTableEventArgs e) => Touch(e.Document.RuntimeSerialNumber);
     private void DefinitionChanged(object? sender, global::Rhino.DocObjects.Tables.InstanceDefinitionTableEventArgs e) => Touch(e.Document.RuntimeSerialNumber);
     private void Closed(object? sender, DocumentEventArgs e)
     {
@@ -74,7 +76,7 @@ public sealed class DocumentWatch : IDisposable
     {
         RhinoDoc.AddRhinoObject -= ObjectChanged; RhinoDoc.DeleteRhinoObject -= ObjectChanged;
         RhinoDoc.UndeleteRhinoObject -= ObjectChanged;
-        RhinoDoc.ModifyObjectAttributes -= AttributesChanged; RhinoDoc.LayerTableEvent -= LayerChanged;
+        RhinoDoc.ModifyObjectAttributes -= AttributesChanged; RhinoDoc.LayerTableEvent -= LayerChanged; RhinoDoc.HatchPatternTableEvent -= HatchChanged;
         RhinoDoc.InstanceDefinitionTableEvent -= DefinitionChanged; RhinoDoc.CloseDocument -= Closed;
     }
 }
@@ -84,7 +86,7 @@ public sealed record CaptureInput(object Value, int[] Path, string Identity);
 /// <summary>Host-only incremental capture. No document/table/reference survives into PreparedScene.</summary>
 public sealed class SceneCapture : IDisposable
 {
-    private sealed record Pending(object Value, int[] Path, string Identity, Transform[] Chain, Guid[] Definitions);
+    private sealed record Pending(object Value, int[] Path, string Identity, Transform[] Chain, Guid[] Definitions, SourceSection? Section = null);
     private readonly int _thread = Environment.CurrentManagedThreadId;
     private readonly RhinoDoc _document;
     private readonly DocumentWatch _watch;
@@ -173,7 +175,7 @@ public sealed class SceneCapture : IDisposable
             value = obj;
         }
         uint? sourceSerial = null;
-        if (value is RhinoObject source) { sourceSerial = source.RuntimeSerialNumber; value = source.Geometry; }
+        if (value is RhinoObject source) { sourceSerial = source.RuntimeSerialNumber; item = item with { Section = SectionCapture.Capture(_document, source, item.Section) }; value = source.Geometry; }
         if (value is InstanceReferenceGeometry instance)
         {
             var definition = _document.InstanceDefinitions.FindId(instance.ParentIdefId);
@@ -185,7 +187,7 @@ public sealed class SceneCapture : IDisposable
             {
                 if (!Included(leaf)) continue;
                 _pending.Enqueue(new(leaf.Id, item.Path, item.Identity + "/" + definition.Id + "/" + leaf.Id,
-                    item.Chain.Append(instance.Xform).ToArray(), item.Definitions.Append(definition.Id).ToArray()));
+                    item.Chain.Append(instance.Xform).ToArray(), item.Definitions.Append(definition.Id).ToArray(), item.Section));
             }
             return;
         }
@@ -213,7 +215,7 @@ public sealed class SceneCapture : IDisposable
             var normalisationType = temporary ? value.GetType().Name : geometry.GetType().Name;
             var key = $"{_watch.DocumentSerial}/{localId}/{fingerprint}/normalise-v2/{normalisationType}";
             var lease = _cache.Geometry(key, () => Normalise(geometry, temporary ? value.GetType().Name : null));
-            _leaves.Add(new(item.Identity, key, item.Path, item.Chain, lease));
+            _leaves.Add(new(item.Identity, key, item.Path, item.Chain, lease, item.Section ?? SourceSection.Plain));
         }
         finally { if (temporary) geometry?.Dispose(); }
     }
@@ -257,7 +259,7 @@ public sealed class SceneCapture : IDisposable
         });
         static string Matrix(Transform t) => string.Join(",", Enumerable.Range(0, 4)
             .SelectMany(r => Enumerable.Range(0, 4).Select(c => t[r, c].ToString("R", CultureInfo.InvariantCulture))));
-        var signature = string.Join("|", _leaves.Select(l => l.Identity + ":" + l.Key + ":" + string.Join(",", l.Path) + ":" + string.Join(";", l.Chain.Select(Matrix))));
+        var signature = string.Join("|", _leaves.Select(l => l.Identity + ":" + l.Key + ":" + l.Section.Revision + ":" + string.Join(",", l.Path) + ":" + string.Join(";", l.Chain.Select(Matrix))));
         signature += string.Join("|", _unsupported.OrderBy(p => p.Key)) + _tolerance.ToString("R", CultureInfo.InvariantCulture);
         var lease = _cache.Scene(SceneCache.Hash(signature), _leaves, _unsupported, _tolerance);
         _accepted = true; return lease;

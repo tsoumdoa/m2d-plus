@@ -3,6 +3,7 @@ using Grasshopper.Kernel.Data;
 using Grasshopper.Kernel.Types;
 using M2DPlus.Core;
 using M2DPlus.Rhino.Services;
+using M2DPlus.Rhino.Sections;
 using Rhino;
 using Rhino.Geometry;
 using Point = Rhino.Geometry.Point;
@@ -60,7 +61,8 @@ public sealed partial class DrawingComponent
         {
             DetachWatch(); _watch = new(document); _watch.Changed += DocumentChanged;
         }
-        _views = inputViews.Select(v => ViewRequest.Parse(Value(v), document)).ToArray();
+        _views = inputViews.Select(v => ViewRequest.Parse(v is IGH_GeometricGoo { IsReferencedGeometry: true } reference && reference.ReferenceID != Guid.Empty
+            ? reference.ReferenceID : Value(v), document)).ToArray();
         da.GetDataTree(0, out GH_Structure<IGH_Goo> geometry);
         _inputs = null;
         if (geometry is not null && geometry.DataCount > 0)
@@ -172,6 +174,7 @@ public sealed partial class DrawingComponent
     private void Emit(IGH_DataAccess da, DrawingBatch batch)
     {
         var visible = new GH_Structure<IGH_GeometricGoo>(); var hidden = new GH_Structure<GH_Curve>();
+        var farClip = new GH_Structure<GH_Curve>(); var cut = new GH_Structure<GH_Curve>(); var hatch = new GH_Structure<GH_Hatch>();
         var unresolved = new GH_Structure<GH_Curve>(); var frames = new GH_Structure<GH_Rectangle>(); var info = new GH_Structure<GH_String>();
         for (var index = 0; index < batch.Views.Count; index++)
         {
@@ -187,6 +190,7 @@ public sealed partial class DrawingComponent
                 {
                     if (item.Class == LineClass.Visible) visible.Append(new GH_Curve(curve), path);
                     else if (item.Class == LineClass.Hidden) hidden.Append(new(curve), path);
+                    else if (item.Class == LineClass.FarClip) farClip.Append(new(curve), path);
                     else unresolved.Append(new(curve), path);
                 }
                 else if (copy is Point point)
@@ -196,6 +200,22 @@ public sealed partial class DrawingComponent
                 }
                 else copy.Dispose();
             }
+            var regionOrdinals = new Dictionary<string, int>(StringComparer.Ordinal);
+            foreach (var entry in view.Regions)
+            {
+                var key = string.Join(",", entry.SourcePath);
+                var ordinal = regionOrdinals.GetValueOrDefault(key); regionOrdinals[key] = ordinal + 1;
+                var path = new GH_Path(new[] { index }.Concat(entry.SourcePath).Append(ordinal).ToArray());
+                foreach (var loop in entry.Region.Loops) cut.Append(new(loop.Curve.DuplicateCurve()), path);
+                if (entry.Region.Hatch is { } fill)
+                {
+                    using var pattern = SectionHatches.CreatePattern(entry.Region.Style.Pattern ?? new M2DPlus.Core.Sections.PatternDefinition("Solid", true, Array.Empty<M2DPlus.Core.Sections.PatternLine>()));
+                    var copy = (Hatch)fill.Duplicate();
+                    copy.SetUserString("M2D.SectionStyle", System.Text.Json.JsonSerializer.Serialize(entry.Region.Style));
+                    hatch.Append(new GH_Hatch(copy, new global::Grasshopper.Rhinoceros.Drafting.ModelHatchPattern(pattern)), path);
+                }
+                else hatch.Append(null!, path);
+            }
             if (view.Report.Quarantined || view.Report.UncertainCount != 0)
                 AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"{view.Name}: uncertain/quarantined view; inspect Unresolved and Info. Uncertain points are suppressed.");
             if (view.Report.UnsupportedByType.Count > 0)
@@ -204,7 +224,7 @@ public sealed partial class DrawingComponent
         foreach (var warning in _settingsWarnings) AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, warning);
         var good = batch.Views.Count(v => v.Error is null);
         Message = good == batch.Views.Count ? $"{good} drawings · {batch.Views.Sum(v => v.Seconds):F1} s" : $"Partial · {good}/{batch.Views.Count} drawings";
-        da.SetDataTree(0, visible); da.SetDataTree(1, hidden); da.SetDataTree(6, unresolved); da.SetDataTree(7, frames); da.SetDataTree(8, info);
+        da.SetDataTree(0, visible); da.SetDataTree(1, hidden); da.SetDataTree(3, farClip); da.SetDataTree(4, cut); da.SetDataTree(5, hatch); da.SetDataTree(6, unresolved); da.SetDataTree(7, frames); da.SetDataTree(8, info);
     }
     private void Refresh(bool preserve)
     {
