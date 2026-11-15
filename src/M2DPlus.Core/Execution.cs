@@ -44,7 +44,8 @@ public sealed class RequestGate : IDisposable
     public void Dispose() { lock (_sync) { CancelCore(); _disposed = true; } }
 }
 
-public enum LineClass { Visible, Hidden, Unresolved }
+// Append only: the M1 identities remain unchanged.
+public enum LineClass { Visible, Hidden, Unresolved, Beyond, FarClip, Cut, Hatch, Profile }
 public sealed record QualityReport(
     string Route, int UncertainCount, int InvalidExtractionCount,
     IReadOnlyDictionary<string, int> UnsupportedByType, IReadOnlyList<string> Normalisation,
