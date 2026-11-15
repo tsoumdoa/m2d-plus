@@ -291,6 +291,8 @@ public sealed partial class DrawingComponent
                 AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"{view.Name}: uncertain/quarantined view; inspect Unresolved and Info. Uncertain points are suppressed.");
             if (view.Report.UnsupportedByType.Count > 0)
                 AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"{view.Name}: unsupported sources: {string.Join(", ", view.Report.UnsupportedByType.Select(p => $"{p.Key}={p.Value}"))}. See Info.");
+            if (view.ToleranceWarning is { } toleranceWarning)
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"{view.Name}: {toleranceWarning}");
         }
         foreach (var (level, text) in _settingsWarnings) AddRuntimeMessage(level, text);
         var good = batch.Views.Count(v => v.Error is null);

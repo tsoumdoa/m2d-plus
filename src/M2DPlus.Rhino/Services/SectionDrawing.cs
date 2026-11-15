@@ -43,6 +43,7 @@ internal static class SectionDrawing
         {
             using var sections = SectionRegionEngine.Compute(bodies.Select(s => new SectionSource(s.Identity, s.Geometry, cut.Style(s))),
                 request, token, prepareVisibility: true, farPlane: far);
+            result.UncertainSectionComponents = sections.Components.Count(c => c.Status == SectionStatus.Uncertain);
             foreach (var diagnostic in sections.Diagnostics.Where(d => d.Status is SectionStatus.Uncertain or SectionStatus.Unsupported))
             {
                 var affected = sources.FirstOrDefault(s => s.Identity == diagnostic.SourceId);

@@ -341,12 +341,22 @@ make Beyond a fuzzy band. Keeping both costs one extra key and maps one-to-one t
 
 ### 3.4 Tolerance
 
-- The drawing tolerance is the document's absolute tolerance. Curves are approximated within it, and pieces shorter than
-  2 × tolerance are dropped (and counted in Info).
+- The drawing tolerance is the document's absolute tolerance. Curves are approximated within it. Native HLD may
+  lose detail near 2 × tolerance; remaining short pieces are preserved. The former claim that the adapter drops
+  every piece shorter than 2 × tolerance was not implemented and is withdrawn after the small-features measurement.
 - Tangent and seam edges are classified with the document's angle tolerance.
 - When the document's tolerance is unreasonably coarse or fine for the scene size (more than 1/1,000 or less than 1e-7 of the extents), Info adds a
   remark. The tolerance is never changed silently.
-- `tolerance = 0.1 mm` exists for diagnosis only.
+- Warn when the effective tolerance is coarser than the drawing scale needs: **1:1–1:5 → ≤ 0.01 mm;
+  above 1:5 and below 1:50 (including 1:10–1:20) → ≤ 0.1 mm; 1:50 and above → ≤ 1 mm**.
+  Compare in physical millimetres regardless of document units. These are advisory bands; scale still never changes geometry.
+- `tolerance = 0.1 mm` explicitly overrides drawing tolerance; it never edits the document tolerance.
+- A GH runtime warning reports detail at risk. Info separates **adapter tolerance drops** (currently zero), **source edges
+  at or below 2 × tolerance** (risk, not a measured loss), and **uncertain section components** at the selected tolerance.
+  Native HLD does not expose every internal omission, so these counts are observations, not a completeness certificate.
+  Source-edge risk includes bounded floating-point error at the threshold and edges hidden in the view.
+  Info also counts positive gaps ≤ 2 × tolerance between adjacent source bounds in view X/Y. This inexpensive
+  conservative check catches the abutting-plate fixture; it is not an exhaustive geometry-distance search.
 
 ### 3.5 (merged into §3.2)
 
