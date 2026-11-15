@@ -1,0 +1,84 @@
+{
+  "expected": {
+    "clearVisible": [
+      "column-behind-glass"
+    ],
+    "opaqueHidden": [
+      "column-behind-glass"
+    ],
+    "rawHldIgnoresMaterials": true
+  },
+  "flavor": null,
+  "generator": {
+    "rhino": "8.36.26296.17001",
+    "runtime": "8.0.34",
+    "script": "tools/models/generate.py",
+    "sha256": "2b530e7a39cb6b72b251f62a9d996702252b51cbd054c00988e0803e55109e18"
+  },
+  "hook": true,
+  "id": "glass",
+  "notes": [],
+  "schemaVersion": 1,
+  "seed": 20261114,
+  "sha256": "38731ecef25d23f4772722620bf72659aa5d00d947fcb665d56873613af930f5",
+  "sizeBytes": 273206,
+  "sourceFixtures": {},
+  "stats": {
+    "blockDefinitions": 0,
+    "blockInstances": 0,
+    "brepFaces": 93,
+    "definitionMembers": 0,
+    "expandedObjects": 16,
+    "expandedTypes": {
+      "Brep": 16
+    },
+    "meshTriangles": 0,
+    "objectTypes": {
+      "Brep": 16
+    },
+    "objects": 16
+  },
+  "tier": null,
+  "tolerance": 0.0001,
+  "units": "Meters",
+  "views": [
+    {
+      "name": "Front opaque",
+      "settings": {
+        "glass": "opaque",
+        "hidden": "on",
+        "seams": "off",
+        "tangents": "off"
+      },
+      "source": {
+        "kind": "direction keyword",
+        "value": "Front"
+      }
+    },
+    {
+      "name": "Front clear",
+      "settings": {
+        "glass": "clear",
+        "hidden": "on",
+        "seams": "off",
+        "tangents": "off"
+      },
+      "source": {
+        "kind": "direction keyword",
+        "value": "Front"
+      }
+    },
+    {
+      "name": "SW",
+      "settings": {
+        "hidden": "on",
+        "seams": "off",
+        "tangents": "off"
+      },
+      "source": {
+        "kind": "direction keyword",
+        "value": "SW"
+      }
+    }
+  ]
+}

@@ -1,0 +1,452 @@
+{
+  "expected": {
+    "boxFarFaceZ": 1.2,
+    "boxNearFaceZ": 4.2,
+    "perspectiveErrorViews": 1,
+    "scopeUncutLayers": [
+      "Envelope"
+    ]
+  },
+  "flavor": null,
+  "generator": {
+    "rhino": "8.36.26296.17001",
+    "runtime": "8.0.34",
+    "script": "tools/models/generate.py",
+    "sha256": "2b530e7a39cb6b72b251f62a9d996702252b51cbd054c00988e0803e55109e18"
+  },
+  "hook": false,
+  "id": "view-sources",
+  "notes": [],
+  "schemaVersion": 1,
+  "seed": 20261114,
+  "sha256": "880b534ad0fd590e36048b15693772d96d0981095ea9f101da3856abad53f764",
+  "sizeBytes": 351958,
+  "sourceFixtures": {},
+  "stats": {
+    "blockDefinitions": 0,
+    "blockInstances": 0,
+    "brepFaces": 114,
+    "definitionMembers": 0,
+    "expandedObjects": 19,
+    "expandedTypes": {
+      "Brep": 19
+    },
+    "meshTriangles": 0,
+    "objectTypes": {
+      "Brep": 19
+    },
+    "objects": 19
+  },
+  "tier": null,
+  "tolerance": 0.0001,
+  "units": "Meters",
+  "views": [
+    {
+      "expected": {},
+      "frame": [
+        -8,
+        8,
+        -6,
+        6
+      ],
+      "name": "Top",
+      "perspective": false,
+      "plane": {
+        "origin": [
+          4,
+          3,
+          10
+        ],
+        "x": [
+          1,
+          0,
+          0
+        ],
+        "y": [
+          0,
+          1,
+          0
+        ]
+      },
+      "settings": {
+        "hidden": "on",
+        "seams": "off",
+        "tangents": "off"
+      },
+      "source": {
+        "kind": "named view",
+        "value": "Top"
+      }
+    },
+    {
+      "expected": {},
+      "frame": [
+        -8,
+        8,
+        -6,
+        6
+      ],
+      "name": "Front",
+      "perspective": false,
+      "plane": {
+        "origin": [
+          4,
+          -2,
+          3
+        ],
+        "x": [
+          1,
+          0,
+          0
+        ],
+        "y": [
+          0,
+          0,
+          1
+        ]
+      },
+      "settings": {
+        "hidden": "on",
+        "seams": "off",
+        "tangents": "off"
+      },
+      "source": {
+        "kind": "named view",
+        "value": "Front"
+      }
+    },
+    {
+      "expected": {},
+      "frame": [
+        -8,
+        8,
+        -6,
+        6
+      ],
+      "name": "Rotated parallel",
+      "perspective": false,
+      "plane": {
+        "origin": [
+          4,
+          3,
+          10
+        ],
+        "x": [
+          0.8,
+          0.6,
+          0
+        ],
+        "y": [
+          -0.6,
+          0.8,
+          0
+        ]
+      },
+      "settings": {
+        "hidden": "on",
+        "seams": "off",
+        "tangents": "off"
+      },
+      "source": {
+        "kind": "named view",
+        "value": "Rotated parallel"
+      }
+    },
+    {
+      "expected": {
+        "error": "perspective_not_supported"
+      },
+      "frame": [
+        -8,
+        8,
+        -6,
+        6
+      ],
+      "name": "Perspective must error",
+      "perspective": true,
+      "plane": {
+        "origin": [
+          4,
+          3,
+          10
+        ],
+        "x": [
+          1,
+          0,
+          0
+        ],
+        "y": [
+          0,
+          1,
+          0
+        ]
+      },
+      "settings": {
+        "hidden": "on",
+        "seams": "off",
+        "tangents": "off"
+      },
+      "source": {
+        "kind": "named view",
+        "value": "Perspective must error"
+      }
+    },
+    {
+      "name": "Plain clip",
+      "plane": {
+        "origin": [
+          0,
+          0,
+          4.2
+        ],
+        "x": [
+          1,
+          0,
+          0
+        ],
+        "y": [
+          0,
+          1,
+          0
+        ]
+      },
+      "settings": {
+        "hidden": "on",
+        "seams": "off",
+        "tangents": "off"
+      },
+      "source": {
+        "kind": "clipping plane name",
+        "value": "Plain clip"
+      }
+    },
+    {
+      "name": "Depth clip",
+      "nativeDepth": 2.0,
+      "plane": {
+        "origin": [
+          0,
+          0,
+          4.2
+        ],
+        "x": [
+          1,
+          0,
+          0
+        ],
+        "y": [
+          0,
+          1,
+          0
+        ]
+      },
+      "settings": {
+        "hidden": "on",
+        "seams": "off",
+        "tangents": "off"
+      },
+      "source": {
+        "kind": "clipping plane name",
+        "value": "Depth clip"
+      }
+    },
+    {
+      "name": "Structure only",
+      "plane": {
+        "origin": [
+          0,
+          0,
+          4.2
+        ],
+        "x": [
+          1,
+          0,
+          0
+        ],
+        "y": [
+          0,
+          1,
+          0
+        ]
+      },
+      "scopeLayers": [
+        "Structure"
+      ],
+      "settings": {
+        "hidden": "on",
+        "seams": "off",
+        "tangents": "off"
+      },
+      "source": {
+        "kind": "clipping plane name",
+        "value": "Structure only"
+      }
+    },
+    {
+      "name": "Flipped clip",
+      "plane": {
+        "origin": [
+          0,
+          0,
+          4.2
+        ],
+        "x": [
+          1,
+          0,
+          0
+        ],
+        "y": [
+          0,
+          -1,
+          0
+        ]
+      },
+      "settings": {
+        "hidden": "on",
+        "seams": "off",
+        "tangents": "off"
+      },
+      "source": {
+        "kind": "clipping plane name",
+        "value": "Flipped clip"
+      }
+    },
+    {
+      "name": "Direction Front",
+      "settings": {
+        "hidden": "on",
+        "seams": "off",
+        "tangents": "off"
+      },
+      "source": {
+        "kind": "direction keyword",
+        "value": "Front"
+      }
+    },
+    {
+      "name": "Vector oblique",
+      "settings": {
+        "hidden": "on",
+        "seams": "off",
+        "tangents": "off"
+      },
+      "source": {
+        "kind": "vector",
+        "value": [
+          1,
+          2,
+          -1
+        ]
+      }
+    },
+    {
+      "name": "GH plane",
+      "plane": {
+        "origin": [
+          0,
+          0,
+          1.2
+        ],
+        "x": [
+          1,
+          0,
+          0
+        ],
+        "y": [
+          0,
+          1,
+          0
+        ]
+      },
+      "settings": {
+        "hidden": "on",
+        "seams": "off",
+        "tangents": "off"
+      },
+      "source": {
+        "kind": "GH-style plane",
+        "value": null
+      }
+    },
+    {
+      "crop": [
+        -2.5,
+        2.5,
+        -2,
+        2
+      ],
+      "name": "GH rectangle",
+      "plane": {
+        "origin": [
+          4,
+          3,
+          1.2
+        ],
+        "x": [
+          1,
+          0,
+          0
+        ],
+        "y": [
+          0,
+          1,
+          0
+        ]
+      },
+      "settings": {
+        "hidden": "on",
+        "seams": "off",
+        "tangents": "off"
+      },
+      "size": [
+        5,
+        4
+      ],
+      "source": {
+        "kind": "rectangle",
+        "value": null
+      }
+    },
+    {
+      "crop": [
+        -3,
+        3,
+        -2.5,
+        2.5
+      ],
+      "depth": 3,
+      "name": "GH box",
+      "plane": {
+        "origin": [
+          4,
+          3,
+          4.2
+        ],
+        "x": [
+          1,
+          0,
+          0
+        ],
+        "y": [
+          0,
+          1,
+          0
+        ]
+      },
+      "settings": {
+        "hidden": "on",
+        "seams": "off",
+        "tangents": "off"
+      },
+      "size": [
+        6,
+        5,
+        3
+      ],
+      "source": {
+        "kind": "box",
+        "value": null
+      }
+    }
+  ]
+}

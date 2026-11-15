@@ -826,6 +826,908 @@
         "verdict": "P/F/U per property in S2; M2 acceptance tests carry independent oracles"
       },
       "path": "sections/tapered_depth.3dm"
+    },
+    {
+      "id": "models/annotations.3dm",
+      "localModelSuite": true,
+      "external": false,
+      "sha256": "e2c82b8822d5920d05cd2b7eb1ad5cdb369990b0bac8157b903b4d939ecd9e98",
+      "sizeBytes": 13967,
+      "units": "Meters",
+      "hook": true,
+      "manualOnly": true,
+      "seed": 20261114,
+      "tier": null,
+      "flavor": null,
+      "generator": "tools/models/generate.py",
+      "stats": {
+        "blockDefinitions": 0,
+        "blockInstances": 0,
+        "brepFaces": 0,
+        "definitionMembers": 0,
+        "expandedObjects": 5,
+        "expandedTypes": {
+          "Hatch": 1,
+          "Leader": 1,
+          "LinearDimension": 1,
+          "TextDot": 1,
+          "TextEntity": 1
+        },
+        "meshTriangles": 0,
+        "objectTypes": {
+          "Hatch": 1,
+          "Leader": 1,
+          "LinearDimension": 1,
+          "TextDot": 1,
+          "TextEntity": 1
+        },
+        "objects": 5
+      },
+      "description": "Local deterministic model suite: annotations",
+      "sidecarSha256": "6e4fa92809d9e7fe7d68f3049b8d72fac4f9c1e18f24e2c71897e17af1be51ef",
+      "path": "features/annotations.3dm",
+      "sidecar": "features/annotations.json"
+    },
+    {
+      "id": "models/blocks.3dm",
+      "localModelSuite": true,
+      "external": false,
+      "sha256": "9d200af25a707e74b4bdab221c1e5f9000b5ffb717f78d47320b79e04d203aeb",
+      "sizeBytes": 241554,
+      "units": "Meters",
+      "hook": false,
+      "manualOnly": true,
+      "seed": 20261114,
+      "tier": null,
+      "flavor": null,
+      "generator": "tools/models/generate.py",
+      "stats": {
+        "blockDefinitions": 5,
+        "blockInstances": 203,
+        "brepFaces": 24,
+        "definitionMembers": 5,
+        "expandedObjects": 403,
+        "expandedTypes": {
+          "Brep": 3,
+          "Extrusion": 400
+        },
+        "meshTriangles": 0,
+        "objectTypes": {
+          "Extrusion": 200,
+          "InstanceReferenceGeometry": 203
+        },
+        "objects": 403
+      },
+      "description": "Local deterministic model suite: blocks",
+      "sidecarSha256": "cddef98aa92e79750159af54a5fddd16b99af8021465742b83230f16a16f7ffb",
+      "path": "features/blocks.3dm",
+      "sidecar": "features/blocks.json"
+    },
+    {
+      "id": "models/curves-points.3dm",
+      "localModelSuite": true,
+      "external": false,
+      "sha256": "2cd48b57e04ed79899ab29b30b6282cb956cac35034fbaf630443562583e8e0a",
+      "sizeBytes": 27605,
+      "units": "Meters",
+      "hook": true,
+      "manualOnly": true,
+      "seed": 20261114,
+      "tier": null,
+      "flavor": null,
+      "generator": "tools/models/generate.py",
+      "stats": {
+        "blockDefinitions": 0,
+        "blockInstances": 0,
+        "brepFaces": 6,
+        "definitionMembers": 0,
+        "expandedObjects": 10,
+        "expandedTypes": {
+          "Brep": 1,
+          "LineCurve": 6,
+          "Point": 3
+        },
+        "meshTriangles": 0,
+        "objectTypes": {
+          "Brep": 1,
+          "LineCurve": 6,
+          "Point": 3
+        },
+        "objects": 10
+      },
+      "description": "Local deterministic model suite: curves-points",
+      "sidecarSha256": "6bcca5a5eaad98c8b085864ee78e1dd76cd5ff34a94b13f19c51069e915e41ef",
+      "path": "features/curves-points.3dm",
+      "sidecar": "features/curves-points.json"
+    },
+    {
+      "id": "models/cut-topology.3dm",
+      "localModelSuite": true,
+      "external": false,
+      "sha256": "f781f51456914ad6ac721a32ac762fda922d3f3402f3330f3226daa05a356406",
+      "sizeBytes": 295239,
+      "units": "Meters",
+      "hook": true,
+      "manualOnly": true,
+      "seed": 20261114,
+      "tier": null,
+      "flavor": null,
+      "generator": "tools/models/generate.py",
+      "stats": {
+        "blockDefinitions": 0,
+        "blockInstances": 0,
+        "brepFaces": 100,
+        "definitionMembers": 0,
+        "expandedObjects": 17,
+        "expandedTypes": {
+          "Brep": 15,
+          "Extrusion": 1,
+          "PlaneSurface": 1
+        },
+        "meshTriangles": 0,
+        "objectTypes": {
+          "Brep": 15,
+          "Extrusion": 1,
+          "PlaneSurface": 1
+        },
+        "objects": 17
+      },
+      "description": "Local deterministic model suite: cut-topology",
+      "sidecarSha256": "bb056c3d67b8cfcbfe2783fc7c8e52316157235d85502ecb97f7ad61f12337b9",
+      "path": "features/cut-topology.3dm",
+      "sidecar": "features/cut-topology.json"
+    },
+    {
+      "id": "models/edges.3dm",
+      "localModelSuite": true,
+      "external": false,
+      "sha256": "2e34d1e0227734c7febfea1f848e6e65e1741a8bb972f85576d84136cd12b7fa",
+      "sizeBytes": 103986,
+      "units": "Meters",
+      "hook": false,
+      "manualOnly": true,
+      "seed": 20261114,
+      "tier": null,
+      "flavor": null,
+      "generator": "tools/models/generate.py",
+      "stats": {
+        "blockDefinitions": 0,
+        "blockInstances": 0,
+        "brepFaces": 35,
+        "definitionMembers": 0,
+        "expandedObjects": 6,
+        "expandedTypes": {
+          "Brep": 3,
+          "Extrusion": 1,
+          "RevSurface": 1,
+          "SubD": 1
+        },
+        "meshTriangles": 0,
+        "objectTypes": {
+          "Brep": 3,
+          "Extrusion": 1,
+          "RevSurface": 1,
+          "SubD": 1
+        },
+        "objects": 6
+      },
+      "description": "Local deterministic model suite: edges",
+      "sidecarSha256": "ef9f7e7ab66bd3a4fc4b9c1c07393cff197fdc72ce9a026bd8b4babddfa82f64",
+      "path": "features/edges.3dm",
+      "sidecar": "features/edges.json"
+    },
+    {
+      "id": "models/glass.3dm",
+      "localModelSuite": true,
+      "external": false,
+      "sha256": "38731ecef25d23f4772722620bf72659aa5d00d947fcb665d56873613af930f5",
+      "sizeBytes": 273206,
+      "units": "Meters",
+      "hook": true,
+      "manualOnly": true,
+      "seed": 20261114,
+      "tier": null,
+      "flavor": null,
+      "generator": "tools/models/generate.py",
+      "stats": {
+        "blockDefinitions": 0,
+        "blockInstances": 0,
+        "brepFaces": 93,
+        "definitionMembers": 0,
+        "expandedObjects": 16,
+        "expandedTypes": {
+          "Brep": 16
+        },
+        "meshTriangles": 0,
+        "objectTypes": {
+          "Brep": 16
+        },
+        "objects": 16
+      },
+      "description": "Local deterministic model suite: glass",
+      "sidecarSha256": "7830be077cc326439b92862e6f3eccf001dcf3430df2fa92da99b7eced01a172",
+      "path": "features/glass.3dm",
+      "sidecar": "features/glass.json"
+    },
+    {
+      "id": "models/perf-L-blocks.3dm",
+      "localModelSuite": true,
+      "external": true,
+      "sha256": "9a8a9a9666acfb12ba2900c44aee7a63e9818d8962431a382ca642832ad2815d",
+      "sizeBytes": 8374686,
+      "units": "Meters",
+      "hook": false,
+      "manualOnly": true,
+      "seed": 20261114,
+      "tier": "L",
+      "flavor": "blocks",
+      "generator": "tools/models/generate.py",
+      "stats": {
+        "blockDefinitions": 15,
+        "blockInstances": 20000,
+        "brepFaces": 118348,
+        "definitionMembers": 15,
+        "expandedObjects": 20000,
+        "expandedTypes": {
+          "Brep": 19587,
+          "Extrusion": 412,
+          "SubD": 1
+        },
+        "meshTriangles": 0,
+        "objectTypes": {
+          "InstanceReferenceGeometry": 20000
+        },
+        "objects": 20000
+      },
+      "description": "Local deterministic model suite: perf-L-blocks",
+      "sidecarSha256": "9de7b9aa32aae3b6c05267bdc4cf7c6a2a3fec359ad5340776afc55b98ee924d",
+      "generatedPath": "../../artifacts/models/perf-L-blocks.3dm",
+      "generatedSidecar": "../../artifacts/models/perf-L-blocks.json"
+    },
+    {
+      "id": "models/perf-L-exploded.3dm",
+      "localModelSuite": true,
+      "external": true,
+      "sha256": "3519ec08dfa947072ab8c5a5f38460486f3d31d8967890f8d1a1985938a1bf61",
+      "sizeBytes": 340515131,
+      "units": "Meters",
+      "hook": false,
+      "manualOnly": true,
+      "seed": 20261114,
+      "tier": "L",
+      "flavor": "exploded",
+      "generator": "tools/models/generate.py",
+      "stats": {
+        "blockDefinitions": 0,
+        "blockInstances": 0,
+        "brepFaces": 118348,
+        "definitionMembers": 0,
+        "expandedObjects": 20000,
+        "expandedTypes": {
+          "Brep": 19587,
+          "Extrusion": 412,
+          "SubD": 1
+        },
+        "meshTriangles": 0,
+        "objectTypes": {
+          "Brep": 19587,
+          "Extrusion": 412,
+          "SubD": 1
+        },
+        "objects": 20000
+      },
+      "description": "Local deterministic model suite: perf-L-exploded",
+      "sidecarSha256": "64b2dc100299ef0af05390edd1a02db74acc6700c063871e198e0d7463529999",
+      "generatedPath": "../../artifacts/models/perf-L-exploded.3dm",
+      "generatedSidecar": "../../artifacts/models/perf-L-exploded.json"
+    },
+    {
+      "id": "models/perf-M-blocks.3dm",
+      "localModelSuite": true,
+      "external": true,
+      "sha256": "366c3c5ecccf34e4f6fd9b0fbc3d666ef49028005184221fd3b67fc3c129eea8",
+      "sizeBytes": 2293271,
+      "units": "Meters",
+      "hook": false,
+      "manualOnly": true,
+      "seed": 20261114,
+      "tier": "M",
+      "flavor": "blocks",
+      "generator": "tools/models/generate.py",
+      "stats": {
+        "blockDefinitions": 15,
+        "blockInstances": 5000,
+        "brepFaces": 29580,
+        "definitionMembers": 15,
+        "expandedObjects": 5000,
+        "expandedTypes": {
+          "Brep": 4895,
+          "Extrusion": 104,
+          "SubD": 1
+        },
+        "meshTriangles": 0,
+        "objectTypes": {
+          "InstanceReferenceGeometry": 5000
+        },
+        "objects": 5000
+      },
+      "description": "Local deterministic model suite: perf-M-blocks",
+      "sidecarSha256": "5b2983c6f62a262fc6ceedbf1b951fd06f10e04d512c7d9480b14adffdb5d41d",
+      "generatedPath": "../../artifacts/models/perf-M-blocks.3dm",
+      "generatedSidecar": "../../artifacts/models/perf-M-blocks.json"
+    },
+    {
+      "id": "models/perf-M-exploded.3dm",
+      "localModelSuite": true,
+      "external": true,
+      "sha256": "5e3c13c85e2e73c6797d9e0387406c3cae39f3c83eb12ab0621597a192549f8e",
+      "sizeBytes": 85127496,
+      "units": "Meters",
+      "hook": false,
+      "manualOnly": true,
+      "seed": 20261114,
+      "tier": "M",
+      "flavor": "exploded",
+      "generator": "tools/models/generate.py",
+      "stats": {
+        "blockDefinitions": 0,
+        "blockInstances": 0,
+        "brepFaces": 29580,
+        "definitionMembers": 0,
+        "expandedObjects": 5000,
+        "expandedTypes": {
+          "Brep": 4895,
+          "Extrusion": 104,
+          "SubD": 1
+        },
+        "meshTriangles": 0,
+        "objectTypes": {
+          "Brep": 4895,
+          "Extrusion": 104,
+          "SubD": 1
+        },
+        "objects": 5000
+      },
+      "description": "Local deterministic model suite: perf-M-exploded",
+      "sidecarSha256": "8bbcfbf1763799ef8ee6a8d611bc23ea131f9877567b459c6aee5da05e7ef691",
+      "generatedPath": "../../artifacts/models/perf-M-exploded.3dm",
+      "generatedSidecar": "../../artifacts/models/perf-M-exploded.json"
+    },
+    {
+      "id": "models/perf-S-blocks.3dm",
+      "localModelSuite": true,
+      "external": true,
+      "sha256": "cf1cc777055080929607a7905db52419fa1e4ab7ebabfe7cd7f703588faf1412",
+      "sizeBytes": 466768,
+      "units": "Meters",
+      "hook": false,
+      "manualOnly": true,
+      "seed": 20261114,
+      "tier": "S",
+      "flavor": "blocks",
+      "generator": "tools/models/generate.py",
+      "stats": {
+        "blockDefinitions": 15,
+        "blockInstances": 500,
+        "brepFaces": 2956,
+        "definitionMembers": 15,
+        "expandedObjects": 500,
+        "expandedTypes": {
+          "Brep": 489,
+          "Extrusion": 10,
+          "SubD": 1
+        },
+        "meshTriangles": 0,
+        "objectTypes": {
+          "InstanceReferenceGeometry": 500
+        },
+        "objects": 500
+      },
+      "description": "Local deterministic model suite: perf-S-blocks",
+      "sidecarSha256": "47f3d2032a23d60e80f3dd5d4af2f3a305c417bc1e68b12a8e8836db032c1f95",
+      "generatedPath": "../../artifacts/models/perf-S-blocks.3dm",
+      "generatedSidecar": "../../artifacts/models/perf-S-blocks.json"
+    },
+    {
+      "id": "models/perf-S-exploded.3dm",
+      "localModelSuite": true,
+      "external": true,
+      "sha256": "dd5becc0db9d2abe7846432168a1de0a4e7413f35daa9c01f33daf749ea5e381",
+      "sizeBytes": 8532783,
+      "units": "Meters",
+      "hook": false,
+      "manualOnly": true,
+      "seed": 20261114,
+      "tier": "S",
+      "flavor": "exploded",
+      "generator": "tools/models/generate.py",
+      "stats": {
+        "blockDefinitions": 0,
+        "blockInstances": 0,
+        "brepFaces": 2956,
+        "definitionMembers": 0,
+        "expandedObjects": 500,
+        "expandedTypes": {
+          "Brep": 489,
+          "Extrusion": 10,
+          "SubD": 1
+        },
+        "meshTriangles": 0,
+        "objectTypes": {
+          "Brep": 489,
+          "Extrusion": 10,
+          "SubD": 1
+        },
+        "objects": 500
+      },
+      "description": "Local deterministic model suite: perf-S-exploded",
+      "sidecarSha256": "8b10a635368d5b07ef270f70f76cfcd889a92da3956e562e4cd2ffe35868ab8c",
+      "generatedPath": "../../artifacts/models/perf-S-exploded.3dm",
+      "generatedSidecar": "../../artifacts/models/perf-S-exploded.json"
+    },
+    {
+      "id": "models/perf-XL-blocks.3dm",
+      "localModelSuite": true,
+      "external": true,
+      "sha256": "47429c3b91c771dcb71ca662914e0a4524fbe05e4ffcc8981b7f32cf61c96c40",
+      "sizeBytes": 20623263,
+      "units": "Meters",
+      "hook": false,
+      "manualOnly": true,
+      "seed": 20261114,
+      "tier": "XL",
+      "flavor": "blocks",
+      "generator": "tools/models/generate.py",
+      "stats": {
+        "blockDefinitions": 15,
+        "blockInstances": 49999,
+        "brepFaces": 295802,
+        "definitionMembers": 15,
+        "expandedObjects": 50000,
+        "expandedTypes": {
+          "Brep": 48953,
+          "Extrusion": 1041,
+          "Mesh": 1,
+          "SubD": 5
+        },
+        "meshTriangles": 3200,
+        "objectTypes": {
+          "InstanceReferenceGeometry": 49999,
+          "Mesh": 1
+        },
+        "objects": 50000
+      },
+      "description": "Local deterministic model suite: perf-XL-blocks",
+      "sidecarSha256": "4d956dc69ef94f6cc26781cc4307c855575b0978ad60d7f02656d0bad0d50c9d",
+      "generatedPath": "../../artifacts/models/perf-XL-blocks.3dm",
+      "generatedSidecar": "../../artifacts/models/perf-XL-blocks.json"
+    },
+    {
+      "id": "models/perf-XL-exploded.3dm",
+      "localModelSuite": true,
+      "external": true,
+      "sha256": "490f47997a965e63cc92dafdd0bdbf63a1de7733263a0e904f426a35e7edfc4e",
+      "sizeBytes": 851120335,
+      "units": "Meters",
+      "hook": false,
+      "manualOnly": true,
+      "seed": 20261114,
+      "tier": "XL",
+      "flavor": "exploded",
+      "generator": "tools/models/generate.py",
+      "stats": {
+        "blockDefinitions": 0,
+        "blockInstances": 0,
+        "brepFaces": 295802,
+        "definitionMembers": 0,
+        "expandedObjects": 50000,
+        "expandedTypes": {
+          "Brep": 48953,
+          "Extrusion": 1041,
+          "Mesh": 1,
+          "SubD": 5
+        },
+        "meshTriangles": 3200,
+        "objectTypes": {
+          "Brep": 48953,
+          "Extrusion": 1041,
+          "Mesh": 1,
+          "SubD": 5
+        },
+        "objects": 50000
+      },
+      "description": "Local deterministic model suite: perf-XL-exploded",
+      "sidecarSha256": "0ac71f3cc9b02ed1ebba40151c8fd941fcb53e7c5c00fb19360933f8618cf9af",
+      "generatedPath": "../../artifacts/models/perf-XL-exploded.3dm",
+      "generatedSidecar": "../../artifacts/models/perf-XL-exploded.json"
+    },
+    {
+      "id": "models/perf-XS-blocks.3dm",
+      "localModelSuite": true,
+      "external": true,
+      "sha256": "6f12cb81f3494853db3c78b00337c5c9bfc786b1872167b985926f1f33c1dffe",
+      "sizeBytes": 284132,
+      "units": "Meters",
+      "hook": false,
+      "manualOnly": true,
+      "seed": 20261114,
+      "tier": "XS",
+      "flavor": "blocks",
+      "generator": "tools/models/generate.py",
+      "stats": {
+        "blockDefinitions": 15,
+        "blockInstances": 50,
+        "brepFaces": 290,
+        "definitionMembers": 15,
+        "expandedObjects": 50,
+        "expandedTypes": {
+          "Brep": 48,
+          "Extrusion": 1,
+          "SubD": 1
+        },
+        "meshTriangles": 0,
+        "objectTypes": {
+          "InstanceReferenceGeometry": 50
+        },
+        "objects": 50
+      },
+      "description": "Local deterministic model suite: perf-XS-blocks",
+      "sidecarSha256": "f280267103e2a834ad03993c7a61c16851dc98d0fb87865a1dd67c692c54dc0d",
+      "generatedPath": "../../artifacts/models/perf-XS-blocks.3dm",
+      "generatedSidecar": "../../artifacts/models/perf-XS-blocks.json"
+    },
+    {
+      "id": "models/perf-XS-exploded.3dm",
+      "localModelSuite": true,
+      "external": true,
+      "sha256": "7acfed22d2f78af6a820e58264c1b204f2eafb03707b4e503d38285a919207aa",
+      "sizeBytes": 865548,
+      "units": "Meters",
+      "hook": false,
+      "manualOnly": true,
+      "seed": 20261114,
+      "tier": "XS",
+      "flavor": "exploded",
+      "generator": "tools/models/generate.py",
+      "stats": {
+        "blockDefinitions": 0,
+        "blockInstances": 0,
+        "brepFaces": 290,
+        "definitionMembers": 0,
+        "expandedObjects": 50,
+        "expandedTypes": {
+          "Brep": 48,
+          "Extrusion": 1,
+          "SubD": 1
+        },
+        "meshTriangles": 0,
+        "objectTypes": {
+          "Brep": 48,
+          "Extrusion": 1,
+          "SubD": 1
+        },
+        "objects": 50
+      },
+      "description": "Local deterministic model suite: perf-XS-exploded",
+      "sidecarSha256": "719edfeff9f432d43a881beb51afbd883da7f87ed3c2327ddd7cfc93baefaeec",
+      "generatedPath": "../../artifacts/models/perf-XS-exploded.3dm",
+      "generatedSidecar": "../../artifacts/models/perf-XS-exploded.json"
+    },
+    {
+      "id": "models/perf-XXL-blocks.3dm",
+      "localModelSuite": true,
+      "external": true,
+      "sha256": "183ec50c440c1944a76ad9e08825f732d1cfd13e8073caaf3c348bf234e22c8b",
+      "sizeBytes": 61212136,
+      "units": "Meters",
+      "hook": false,
+      "manualOnly": true,
+      "seed": 20261114,
+      "tier": "XXL",
+      "flavor": "blocks",
+      "generator": "tools/models/generate.py",
+      "stats": {
+        "blockDefinitions": 15,
+        "blockInstances": 149999,
+        "brepFaces": 887410,
+        "definitionMembers": 15,
+        "expandedObjects": 150000,
+        "expandedTypes": {
+          "Brep": 146860,
+          "Extrusion": 3124,
+          "Mesh": 1,
+          "SubD": 15
+        },
+        "meshTriangles": 3200,
+        "objectTypes": {
+          "InstanceReferenceGeometry": 149999,
+          "Mesh": 1
+        },
+        "objects": 150000
+      },
+      "description": "Local deterministic model suite: perf-XXL-blocks",
+      "sidecarSha256": "a039d5fe6b2a885047520567e7667652ec2ee8cbde05c9bd45b38725c9e28831",
+      "generatedPath": "../../artifacts/models/perf-XXL-blocks.3dm",
+      "generatedSidecar": "../../artifacts/models/perf-XXL-blocks.json"
+    },
+    {
+      "id": "models/perf-XXL-exploded.3dm",
+      "localModelSuite": true,
+      "external": true,
+      "sha256": "00e199c19efe8daf258606786fb175801211e9b27c6c8977f8b3a34ca0656e43",
+      "sizeBytes": 2553195343,
+      "units": "Meters",
+      "hook": false,
+      "manualOnly": true,
+      "seed": 20261114,
+      "tier": "XXL",
+      "flavor": "exploded",
+      "generator": "tools/models/generate.py",
+      "stats": {
+        "blockDefinitions": 0,
+        "blockInstances": 0,
+        "brepFaces": 887410,
+        "definitionMembers": 0,
+        "expandedObjects": 150000,
+        "expandedTypes": {
+          "Brep": 146860,
+          "Extrusion": 3124,
+          "Mesh": 1,
+          "SubD": 15
+        },
+        "meshTriangles": 3200,
+        "objectTypes": {
+          "Brep": 146860,
+          "Extrusion": 3124,
+          "Mesh": 1,
+          "SubD": 15
+        },
+        "objects": 150000
+      },
+      "description": "Local deterministic model suite: perf-XXL-exploded",
+      "sidecarSha256": "14a030c3452dba95a4725902f58bfd26edf1285f9fd07d23149777946bad8d37",
+      "generatedPath": "../../artifacts/models/perf-XXL-exploded.3dm",
+      "generatedSidecar": "../../artifacts/models/perf-XXL-exploded.json"
+    },
+    {
+      "id": "models/section-styles.3dm",
+      "localModelSuite": true,
+      "external": false,
+      "sha256": "ea3578d97527d836de326c1503417ba1f200491ac8114d01e63850799558c8d2",
+      "sizeBytes": 152031,
+      "units": "Meters",
+      "hook": true,
+      "manualOnly": true,
+      "seed": 20261114,
+      "tier": null,
+      "flavor": null,
+      "generator": "tools/models/generate.py",
+      "stats": {
+        "blockDefinitions": 2,
+        "blockInstances": 1,
+        "brepFaces": 48,
+        "definitionMembers": 2,
+        "expandedObjects": 8,
+        "expandedTypes": {
+          "Brep": 8
+        },
+        "meshTriangles": 0,
+        "objectTypes": {
+          "Brep": 7,
+          "InstanceReferenceGeometry": 1
+        },
+        "objects": 8
+      },
+      "description": "Local deterministic model suite: section-styles",
+      "sidecarSha256": "08241e375ff9d2258d77a203687d3ed779f23de3e21ab0926e5b0c9ffa67007c",
+      "path": "features/section-styles.3dm",
+      "sidecar": "features/section-styles.json"
+    },
+    {
+      "id": "models/units-coords-ft.3dm",
+      "localModelSuite": true,
+      "external": false,
+      "sha256": "efad5b7827379ceb390da01fa32aacd8c4d10f68a4d25506a62ed300797297b2",
+      "sizeBytes": 336889,
+      "units": "Feet",
+      "hook": true,
+      "manualOnly": true,
+      "seed": 20261114,
+      "tier": null,
+      "flavor": null,
+      "generator": "tools/models/generate.py",
+      "stats": {
+        "blockDefinitions": 0,
+        "blockInstances": 0,
+        "brepFaces": 114,
+        "definitionMembers": 0,
+        "expandedObjects": 19,
+        "expandedTypes": {
+          "Brep": 19
+        },
+        "meshTriangles": 0,
+        "objectTypes": {
+          "Brep": 19
+        },
+        "objects": 19
+      },
+      "description": "Local deterministic model suite: units-coords-ft",
+      "sidecarSha256": "486f8c91563589fc9d1836736739b55e644364a322a12b3d1c07d2f598f8fceb",
+      "path": "features/units-coords-ft.3dm",
+      "sidecar": "features/units-coords-ft.json"
+    },
+    {
+      "id": "models/units-coords-m.3dm",
+      "localModelSuite": true,
+      "external": false,
+      "sha256": "422f5bd3418e8d665973de2d9f6433191ce410a70e093db46c4bc93538642b28",
+      "sizeBytes": 336889,
+      "units": "Meters",
+      "hook": true,
+      "manualOnly": true,
+      "seed": 20261114,
+      "tier": null,
+      "flavor": null,
+      "generator": "tools/models/generate.py",
+      "stats": {
+        "blockDefinitions": 0,
+        "blockInstances": 0,
+        "brepFaces": 114,
+        "definitionMembers": 0,
+        "expandedObjects": 19,
+        "expandedTypes": {
+          "Brep": 19
+        },
+        "meshTriangles": 0,
+        "objectTypes": {
+          "Brep": 19
+        },
+        "objects": 19
+      },
+      "description": "Local deterministic model suite: units-coords-m",
+      "sidecarSha256": "dda51e728798d3e8d83413619c32e46c5703efcd6c0850a294650ac8fbe48ebb",
+      "path": "features/units-coords-m.3dm",
+      "sidecar": "features/units-coords-m.json"
+    },
+    {
+      "id": "models/units-coords-mm.3dm",
+      "localModelSuite": true,
+      "external": false,
+      "sha256": "6443c4ed3684a8c2b7ca8e643add433ff621ab0869fab1aee3aada8322a12a5a",
+      "sizeBytes": 336889,
+      "units": "Millimeters",
+      "hook": true,
+      "manualOnly": true,
+      "seed": 20261114,
+      "tier": null,
+      "flavor": null,
+      "generator": "tools/models/generate.py",
+      "stats": {
+        "blockDefinitions": 0,
+        "blockInstances": 0,
+        "brepFaces": 114,
+        "definitionMembers": 0,
+        "expandedObjects": 19,
+        "expandedTypes": {
+          "Brep": 19
+        },
+        "meshTriangles": 0,
+        "objectTypes": {
+          "Brep": 19
+        },
+        "objects": 19
+      },
+      "description": "Local deterministic model suite: units-coords-mm",
+      "sidecarSha256": "f74c6aa6058bbc5b154be0ad3f37d4d38dda3c691aca2392c9566fa5e0c5503b",
+      "path": "features/units-coords-mm.3dm",
+      "sidecar": "features/units-coords-mm.json"
+    },
+    {
+      "id": "models/units-coords-offset.3dm",
+      "localModelSuite": true,
+      "external": false,
+      "sha256": "ef262f6234402d17edca964250f537c17d651dafb624a75b9989f7dfdc7e67aa",
+      "sizeBytes": 336889,
+      "units": "Meters",
+      "hook": true,
+      "manualOnly": true,
+      "seed": 20261114,
+      "tier": null,
+      "flavor": null,
+      "generator": "tools/models/generate.py",
+      "stats": {
+        "blockDefinitions": 0,
+        "blockInstances": 0,
+        "brepFaces": 114,
+        "definitionMembers": 0,
+        "expandedObjects": 19,
+        "expandedTypes": {
+          "Brep": 19
+        },
+        "meshTriangles": 0,
+        "objectTypes": {
+          "Brep": 19
+        },
+        "objects": 19
+      },
+      "description": "Local deterministic model suite: units-coords-offset",
+      "sidecarSha256": "489f8e31d319c3c4e8195f2c53055855b03d0c79a2c56c484eff0d4b4d527986",
+      "path": "features/units-coords-offset.3dm",
+      "sidecar": "features/units-coords-offset.json"
+    },
+    {
+      "id": "models/view-range.3dm",
+      "localModelSuite": true,
+      "external": false,
+      "sha256": "4863f32379c3e04bd0935fc0c52f2a041d6cab44a219ef4e82252f30a0646254",
+      "sizeBytes": 163887,
+      "units": "Meters",
+      "hook": true,
+      "manualOnly": true,
+      "seed": 20261114,
+      "tier": null,
+      "flavor": null,
+      "generator": "tools/models/generate.py",
+      "stats": {
+        "blockDefinitions": 0,
+        "blockInstances": 0,
+        "brepFaces": 54,
+        "definitionMembers": 0,
+        "expandedObjects": 9,
+        "expandedTypes": {
+          "Brep": 9
+        },
+        "meshTriangles": 0,
+        "objectTypes": {
+          "Brep": 9
+        },
+        "objects": 9
+      },
+      "description": "Local deterministic model suite: view-range",
+      "sidecarSha256": "85f8de8d796208e77fff304f4d919af41ede8b0cf67f5a47dd8819b4a5dc2a18",
+      "path": "features/view-range.3dm",
+      "sidecar": "features/view-range.json"
+    },
+    {
+      "id": "models/view-sources.3dm",
+      "localModelSuite": true,
+      "external": false,
+      "sha256": "880b534ad0fd590e36048b15693772d96d0981095ea9f101da3856abad53f764",
+      "sizeBytes": 351958,
+      "units": "Meters",
+      "hook": false,
+      "manualOnly": true,
+      "seed": 20261114,
+      "tier": null,
+      "flavor": null,
+      "generator": "tools/models/generate.py",
+      "stats": {
+        "blockDefinitions": 0,
+        "blockInstances": 0,
+        "brepFaces": 114,
+        "definitionMembers": 0,
+        "expandedObjects": 19,
+        "expandedTypes": {
+          "Brep": 19
+        },
+        "meshTriangles": 0,
+        "objectTypes": {
+          "Brep": 19
+        },
+        "objects": 19
+      },
+      "description": "Local deterministic model suite: view-sources",
+      "sidecarSha256": "f5d10391505cca2006b47a6c9ce671087e2c869637d82d2400a47366a96472b8",
+      "path": "features/view-sources.3dm",
+      "sidecar": "features/view-sources.json"
     }
-  ]
+  ],
+  "localModelSuite": {
+    "schemaVersion": 1,
+    "policy": "Local only; no CI. Hook flags are candidates, not enabled jobs.",
+    "generator": "../../tools/models/generate.py",
+    "seed": 20261114,
+    "generatedDirectory": "../../artifacts/models",
+    "report": "../../artifacts/baseline/index.html"
+  }
 }
