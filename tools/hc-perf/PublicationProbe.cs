@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.Loader;
 using M2DPlus.Rhino.Services;
+using M2DPlus.Core.Output;
 using Rhino;
 
 namespace M2DPlus.HcPerf;
@@ -30,11 +31,14 @@ public sealed class PublicationProbe
             ((OutputAccess)_access).Component = _component;
         }
     }
-    public void Publish(DrawingBatch batch)
+    public void Publish(DrawingBatch batch, IReadOnlyDictionary<string, SourceGroupInfo> groups)
     {
         double before = batch.Views.Sum(v => v.Phases.Seconds.GetValueOrDefault("GH publication"));
         var timer = Stopwatch.StartNew();
-        _emit.Invoke(_component,[_access,batch]);
+        var sources = Activator.CreateInstance(_emit.GetParameters()[2].ParameterType,
+            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null,
+            [GeometryInputKind.Document, groups], null)!;
+        _emit.Invoke(_component,[_access,batch,sources]);
         double measured = batch.Views.Sum(v => v.Phases.Seconds.GetValueOrDefault("GH publication")) - before;
         foreach (var view in batch.Views) view.Phases.Add("GH publication",(timer.Elapsed.TotalSeconds-measured)/batch.Views.Count);
     }

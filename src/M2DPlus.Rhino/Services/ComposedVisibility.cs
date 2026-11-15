@@ -45,6 +45,8 @@ internal static class ComposedVisibility
         var aliases = new Dictionary<int,(int Edge,bool Reverse)>();
         var nativeCurves = new List<(Curve Curve, Tag Tag, LineClass Class, bool Profile)>();
         var records = new List<NativeRecord>();
+        var localUnsetSources = new HashSet<string>(StringComparer.Ordinal);
+        var localUnsetRegions = new List<BoundingBox>();
         Vertex Project(Point3d p) { var d = p - plane.Origin; return new(d * plane.XAxis, d * plane.YAxis, d * plane.ZAxis); }
         Point3d World(Vertex p) => plane.PointAt(p.X, p.Y) + plane.ZAxis * p.Z;
         try
@@ -128,6 +130,16 @@ internal static class ComposedVisibility
                         var evidence = NativeUncertainty.Inspect(segment, t => (t as Tag)?.Input.Source, Transform.PlanarProjection(plane) * inverse);
                         if (evidence.Kind == UnsetKind.EmptySlot) { output.EmptyNativeSlots++; continue; }
                         if (evidence.Kind == UnsetKind.ZeroLength) { output.ZeroLengthNativeSegments++; continue; }
+                        if (segment.ParentCurve?.SourceObject?.Tag is Tag localTag && NativeUncertainty.TryDetach(segment, inverse, out var localWorld))
+                        {
+                            owned.Add(localWorld!);
+                            localUnsetSources.Add(localTag.Input.Source.Identity);
+                            localUnsetRegions.Add(localWorld!.GetBoundingBox(Transform.PlanarProjection(plane)));
+                            records.Add(new(localWorld!, localTag, LineClass.Unresolved, segment.IsSceneSilhouette, false));
+                            output.RoutingInvalid++;
+                            output._diagnostics.Add($"Local composition Unset retained: source={localTag.Input.Source.Identity}; interval remains Unresolved unless planar-hidden proof covers it.");
+                            continue;
+                        }
                         // A real Unset can be the only native candidate. Its source is quarantined below.
                         if (evidence.Source is { } source) output.UncertainRoutingSources.Add(source.Identity);
                         else output.RoutingQuarantine = true;
@@ -301,6 +313,9 @@ internal static class ComposedVisibility
             output._diagnostics.Add($"Composition coverage: missing={missingCoverage}; unresolved curved duplicate intervals={duplicateUnresolved}.");
             foreach (var piece in output.Pieces)
                 if (output.RoutingQuarantine || output.UncertainRoutingSources.Contains(piece.SourceIdentity)) piece.Class = LineClass.Unresolved;
+            if (localUnsetSources.Count != 0)
+                NativeUncertainty.ApplyFootprints(output, inputs.Select(i => i.Source).ToArray(), false, [], localUnsetRegions, tol, token,
+                    localSources: localUnsetSources);
             phase.Next("interval union");
             if (extraction.Edges.Count != 0 || extraction.Faces.Count != 0) Reconcile(output, inputs, token);
             return $"{(curved.Count == 0 ? "Planar kernel" : "Planar kernel + curved native HLD")}; kernel edges={output.KernelEdges}; native candidates={output.NativeEdges}; planar edges submitted={nativeEdges.Count}; curved candidate edges={output.CurvedCandidateEdges}; native fragments={output.NativeFragments}; native calls={output.NativeCalls}";
@@ -461,16 +476,18 @@ internal static class ComposedVisibility
             }
             if (a.Points.All(p => OnSupport(p,false)) && b.Points.All(p => OnSupport(p,true))) return true;
         }
-        if (a.Degree != b.Degree || a.Points.Count != b.Points.Count || a.Knots.Count != b.Knots.Count) return false;
+        if (a.Degree != b.Degree || a.Points.Count != b.Points.Count || a.Knots.Count != b.Knots.Count)
+            return RationalDepthCertificate.Front(a, b, tolerance, roundoff);
         a.Domain = new(0,1); b.Domain = new(0,1);
-        for (int i=0; i<a.Knots.Count; i++) if (a.Knots[i] != b.Knots[i]) return false;
+        for (int i=0; i<a.Knots.Count; i++) if (a.Knots[i] != b.Knots[i]) return RationalDepthCertificate.Front(a, b, tolerance, roundoff);
         double ratio = a.Points[0].Weight / b.Points[0].Weight;
         for (int i=0; i<a.Points.Count; i++)
         {
             var p = a.Points[i]; var q = b.Points[i];
             if (p.Weight <= 0 || q.Weight <= 0 || p.Weight != q.Weight * ratio ||
                 DistanceXY(p.Location,q.Location) > tolerance / 16 || q.Location.Z < p.Location.Z -
-                    Math.Min(tolerance / 64, 128 * 2.220446049250313e-16 * Math.Max(1,Math.Max(Math.Abs(p.Location.Z),Math.Abs(q.Location.Z))))) return false;
+                    Math.Min(tolerance / 64, 128 * 2.220446049250313e-16 * Math.Max(1,Math.Max(Math.Abs(p.Location.Z),Math.Abs(q.Location.Z)))))
+                return RationalDepthCertificate.Front(a, b, tolerance, roundoff);
         }
         // Matching rational basis with positive weights: the depth difference is
         // bounded by its control coefficients throughout the complete overlap.

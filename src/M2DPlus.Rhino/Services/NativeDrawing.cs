@@ -199,6 +199,7 @@ public static class NativeDrawing
         var invalid = 0;
         var quarantine = scene.HasPotentialOccluderUnsupported;
         var uncertainSources = new HashSet<string>(StringComparer.Ordinal);
+        var localSources = new HashSet<string>(StringComparer.Ordinal);
         var uncertainRegions = new List<BoundingBox>();
         string route = "Native HLD (in process)";
         try
@@ -270,7 +271,10 @@ public static class NativeDrawing
                     else
                     {
                         invalid++;
-                        if (evidence.Source is { } affected) uncertainSources.Add(affected.Identity);
+                        if (!settings.NativeOnly && NativeUncertainty.RetainLocal(segment, evidence, inverse, result, uncertainRegions,
+                            (id, world) => settings.ObserveCompositionRecord?.Invoke(id, -1, false, LineClass.Unresolved, world)))
+                            localSources.Add(evidence.Source!.Identity);
+                        else if (evidence.Source is { } affected) uncertainSources.Add(affected.Identity);
                         else if (evidence.Bounds is { } bounds) uncertainRegions.Add(bounds);
                         else quarantine = true;
                         result._diagnostics.Add($"Unset segment {segment.Index}: {evidence.Kind}; source={evidence.Source?.Identity}; bounds={evidence.Bounds}; {evidence.Detail}");
@@ -331,13 +335,8 @@ public static class NativeDrawing
         {
             if (quarantine || uncertainSources.Count != 0 || uncertainRegions.Count != 0)
             {
-                foreach (var piece in result.Pieces.ToArray())
-                {
-                    using var geometry = piece.CopyGeometry();
-                    if (!quarantine && !uncertainSources.Contains(piece.SourceIdentity) && !uncertainRegions.Any(b => NativeUncertainty.Affects(b, geometry.GetBoundingBox(true), tolerance))) continue;
-                    if (geometry is Point) { result.Pieces.Remove(piece); piece.Dispose(); result._diagnostics.Add($"Uncertain point suppressed: {piece.SourceIdentity}"); }
-                    else piece.Class = LineClass.Unresolved;
-                }
+                try { NativeUncertainty.ApplyFootprints(result, sources, quarantine, uncertainSources, uncertainRegions, tolerance, token, !settings.NativeOnly, localSources); }
+                catch { result.Dispose(); throw; }
             }
             if (result.EmptyNativeSlots + result.ZeroLengthNativeSegments != 0) result._diagnostics.Add($"Benign native records dropped: {result.EmptyNativeSlots} empty slots (index -1, no parent); {result.ZeroLengthNativeSegments} exactly zero-length point curves. No nonzero Unset was promoted.");
             result.Pieces.Sort(ComparePieces);

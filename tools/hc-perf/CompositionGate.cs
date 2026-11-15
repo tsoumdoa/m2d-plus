@@ -207,7 +207,7 @@ public static partial class CompositionGate
         {
             using var baseline = NativeDrawing.SolveBorrowedAsync(lease.Value, identity, [view], new NativeSettings(NativeOnly: true) { Scheduler = scheduler, ObserveNativeInputs = Observe(".native-order.json", false) }, default, null).GetAwaiter().GetResult();
             using var presented = DrawingPresentation.ApplySnapshot(baseline, identity, [view], [], lease.Value.SourceMetadata);
-            publication?.Publish(presented);
+            publication?.Publish(presented,capture.Groups);
             nativeSolveSeconds = nativeTimer.Elapsed.TotalSeconds;
             File.WriteAllText(prefix + ".native-raw-output.json", JsonSerializer.Serialize(Save(baseline.Views[0])));
             native = Save(presented.Views[0]); File.WriteAllText(nativeFile, JsonSerializer.Serialize(native)); File.WriteAllText(hashFile, cacheIdentity);
@@ -219,7 +219,7 @@ public static partial class CompositionGate
             ObservePlanarScene = (extraction, plane) => { observedScene = extraction; observedFrame = plane; },
             ObserveCompositionRecord = (source,edge,duplicate,kind,world) => nativeTrace.Add(source,edge,duplicate,kind,world) }, default, null).GetAwaiter().GetResult();
         using var placed = DrawingPresentation.ApplySnapshot(batch, identity, [view], [], lease.Value.SourceMetadata);
-        publication?.Publish(placed);
+        publication?.Publish(placed,capture.Groups);
         double solveSeconds = timer.Elapsed.TotalSeconds;
         var actual = Save(placed.Views[0]);
         if (traceNative) nativeTrace.Save(prefix+".foreign-records.json");
