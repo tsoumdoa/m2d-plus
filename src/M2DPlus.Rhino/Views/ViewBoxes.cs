@@ -29,8 +29,14 @@ public sealed record ViewObjectResult(Guid Id, string Label, bool Ok, bool Chang
 public static class ViewBoxes
 {
     public const string Marker = "m2d.view", MarkerVersion = "1", Prefix = "m2d.", Inherit = "default";
-    public const string LayerParent = "M2D+", LayerChild = "Views";
+    /// <summary>The single top-level layer view boxes live on (owner decision 2026-11-15). Older files may still have
+    /// an <c>M2D+::Views</c> layer; it is left alone.</summary>
+    public const string LayerName = "$M2D Views";
     public static readonly System.Drawing.Color Cobalt = System.Drawing.Color.FromArgb(0x1F, 0x6F, 0xD1);
+
+    /// <summary>The front-face fill colour key (<c>m2d.color</c>). Display only: not a drawing setting, so
+    /// <see cref="ReadRow"/> skips it.</summary>
+    public const string ColorKey = M2DPlus.Core.Views.ViewBoxFill.Key;
 
     /// <summary>Per-view settings written as user text, in Settings-key order (UX §6.3). Depth and crop come from the
     /// geometry; tree, gap and tolerance are rarely per-view, so they are not written (but m2d.tree, m2d.gap and
@@ -225,7 +231,8 @@ public static class ViewBoxes
         var values = new List<KeyValuePair<string, string>>();
         foreach (var key in strings.AllKeys)
         {
-            if (key is null || !key.StartsWith(Prefix, StringComparison.OrdinalIgnoreCase) || key.Equals(Marker, StringComparison.OrdinalIgnoreCase)) continue;
+            if (key is null || !key.StartsWith(Prefix, StringComparison.OrdinalIgnoreCase) || key.Equals(Marker, StringComparison.OrdinalIgnoreCase)
+                || key.Equals(ColorKey, StringComparison.OrdinalIgnoreCase)) continue;
             var value = strings[key]?.Trim() ?? "";
             if (value.Length == 0 || value.Equals(Inherit, StringComparison.OrdinalIgnoreCase)) continue;
             values.Add(KeyValuePair.Create(key[Prefix.Length..].ToLowerInvariant(), value));
@@ -233,20 +240,23 @@ public static class ViewBoxes
         return new(values);
     }
 
-    /// <summary>Adds the marker and <c>default</c> for every missing key; never overwrites a value. Returns how many.</summary>
+    /// <summary>Adds the marker and <c>default</c> for every missing key (the settings, then <c>m2d.color</c>); never
+    /// overwrites a value. Returns how many.</summary>
     public static int WriteDefaults(ObjectAttributes attributes)
     {
         var added = 0;
         if (attributes.GetUserString(Marker) is null) { attributes.SetUserString(Marker, MarkerVersion); added++; }
         foreach (var key in Keys)
             if (attributes.GetUserString(Prefix + key) is null) { attributes.SetUserString(Prefix + key, Inherit); added++; }
+        if (attributes.GetUserString(ColorKey) is null) { attributes.SetUserString(ColorKey, Inherit); added++; }
         return added;
     }
 
     // ---------------------------------------------------------------- document commands (one undo record each)
 
     /// <summary>Validate views: converts each referenced planar rectangle (surface or curve) in place into a view box,
-    /// keeping its id, and writes default user text to every view box. One undo record for the whole call.</summary>
+    /// keeping its id, writes default user text to every view box and moves every view box onto <see cref="LayerName"/>.
+    /// One undo record for the whole call.</summary>
     public static IReadOnlyList<ViewObjectResult> Validate(RhinoDoc document, IEnumerable<Guid> ids, BoundingBox? scene = null)
     {
         var results = new List<ViewObjectResult>();
@@ -276,8 +286,14 @@ public static class ViewBoxes
             if (!check.IsValid) return new(id, label, false, false, check.Reason!);
             var attributes = obj.Attributes.Duplicate();
             var added = WriteDefaults(attributes);
-            if (added > 0) document.Objects.ModifyAttributes(obj, attributes, true);
-            return new(id, label, true, added > 0, added > 0 ? $"view box; added {added} user-text keys." : $"view box, depth {Format(check.Depth!.Value)}.");
+            var layer = ViewsLayer(document);
+            var moved = layer >= 0 && attributes.LayerIndex != layer;
+            if (moved) attributes.LayerIndex = layer;
+            if (added > 0 || moved) document.Objects.ModifyAttributes(obj, attributes, true);
+            var notes = new List<string>();
+            if (added > 0) notes.Add($"added {added} user-text keys");
+            if (moved) notes.Add($"moved to layer {LayerName}");
+            return new(id, label, true, notes.Count > 0, notes.Count > 0 ? $"view box; {string.Join("; ", notes)}." : $"view box, depth {Format(check.Depth!.Value)}.");
         }
         if (obj.Geometry is Extrusion)
             return new(id, label, false, false, "it is an extrusion or box, not a planar surface or rectangle. Reference one planar surface or a closed rectangle curve.");
@@ -291,9 +307,10 @@ public static class ViewBoxes
         var next = replaced.Attributes.Duplicate();
         WriteDefaults(next);
         if (string.IsNullOrWhiteSpace(next.Name)) next.Name = NextName(document);
+        if (ViewsLayer(document) is var layerIndex and >= 0) next.LayerIndex = layerIndex;
         Wireframe(next);
         document.Objects.ModifyAttributes(replaced, next, true);
-        return new(id, next.Name!, true, true, $"converted to a view box, looking {Direction(-faced.Plane.ZAxis)}, depth {Format(depth)} (auto).");
+        return new(id, next.Name!, true, true, $"converted to a view box on layer {LayerName}, looking {Direction(-faced.Plane.ZAxis)}, depth {Format(depth)} (auto).");
     }
 
     /// <summary>Flip view direction: the front face stays, the box extends to the other side with the same depth.</summary>
@@ -347,7 +364,7 @@ public static class ViewBoxes
         return new(new Rectangle3d(plane, new Interval(0, right - left), new Interval(0, top - bottom)), depth, null);
     }
 
-    /// <summary>Create view from current viewport: bakes a named view box on the M2D+::Views layer (one undo record).</summary>
+    /// <summary>Create view from current viewport: bakes a named view box on the <see cref="LayerName"/> layer (one undo record).</summary>
     public static ViewObjectResult Create(RhinoDoc document, ViewportInfo viewport, BoundingBox? scene = null)
     {
         var frame = FrameFromViewport(viewport, scene ?? SceneBounds(document, []), document.ModelAbsoluteTolerance);
@@ -356,12 +373,13 @@ public static class ViewBoxes
         try
         {
             using var extrusion = Build(frame.Frame!.Value, frame.Depth!.Value);
-            var attributes = new ObjectAttributes { Name = NextName(document), LayerIndex = ViewsLayer(document) };
+            var attributes = new ObjectAttributes { Name = NextName(document) };
+            if (ViewsLayer(document) is var layerIndex and >= 0) attributes.LayerIndex = layerIndex;
             WriteDefaults(attributes);
             Wireframe(attributes);
             var id = document.Objects.AddExtrusion(extrusion, attributes);
             return id == Guid.Empty ? new(id, attributes.Name, false, false, "Rhino could not add the view box.")
-                : new(id, attributes.Name, true, true, $"created on {LayerParent}::{LayerChild}, depth {Format(frame.Depth!.Value)}.");
+                : new(id, attributes.Name, true, true, $"created on layer {LayerName}, depth {Format(frame.Depth!.Value)}.");
         }
         finally { if (record != 0) document.EndUndoRecord(record); }
     }
@@ -388,14 +406,13 @@ public static class ViewBoxes
         for (var i = 1; ; i++) if (!names.Contains($"M2D View {i:00}")) return $"M2D View {i:00}";
     }
 
-    /// <summary>Index of the M2D+::Views layer, created (cobalt) if missing.</summary>
+    /// <summary>Index of the top-level <see cref="LayerName"/> layer. Created only when missing, cobalt and No Print
+    /// (plot weight −1); an existing layer is used as it is, so the user's colour and print edits survive. −1 if Rhino
+    /// refuses to add it (the object then keeps its layer).</summary>
     public static int ViewsLayer(RhinoDoc document)
     {
-        var parent = document.Layers.FindByFullPath(LayerParent, -1);
-        if (parent < 0) parent = document.Layers.Add(new Layer { Name = LayerParent });
-        var path = LayerParent + "::" + LayerChild;
-        var index = document.Layers.FindByFullPath(path, -1);
-        return index >= 0 ? index : document.Layers.Add(new Layer { Name = LayerChild, ParentLayerId = document.Layers[parent].Id, Color = Cobalt });
+        var index = document.Layers.FindByFullPath(LayerName, -1);
+        return index >= 0 ? index : document.Layers.Add(new Layer { Name = LayerName, Color = Cobalt, PlotWeight = -1 });
     }
 
     // A view box encloses the model it draws: show it as wires so it never hides the model in shaded modes.

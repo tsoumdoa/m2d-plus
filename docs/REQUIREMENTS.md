@@ -78,7 +78,8 @@ See [UX revision 4](design/ux.md) §2.2 and §6.
    Attribute User Text `m2d.*` keys (`m2d.view = 1` marks the object); Validate writes `default` for missing keys
    and never overwrites a value. The component reacts to object and attribute changes.
 2. **Create view from current viewport** bakes a view box matching the active parallel viewport, named
-   `M2D View 01`…, on an `M2D+::Views` layer, and adds it to View. Perspective viewports are refused with a message.
+   `M2D View 01`…, on an `M2D+::Views` layer (now `$M2D Views`, see 2026-11-15 below), and adds it to View.
+   Perspective viewports are refused with a message.
 3. **New fifth input Depth (D)**, appended after Settings (never reorder inputs), list access matched to View, optional:
    the depth of Plane, Rectangle and clipping-plane views as a number or a unit string (`8 m`). Boxes and view boxes
    take their depth from their geometry; a given Depth is then ignored with a remark.
@@ -116,3 +117,20 @@ See [UX revision 4](design/ux.md) §2.2 and §6.
 - **Cut/Hatch** add a trailing region index, `{…group…; region}`, keeping loops and hatch aligned; merged cuts go to the lowest group that took part. Frame and Info stay at `{view}`. All line outputs share the group paths.
 - **Key**, a new 11th output (`K`, index 10; the ten earlier outputs never move): one label per group at `{view; group}` (layer full path; object id and name; or the GH input path and item).
 - **Cost:** presentation only. Layer and object values are captured on the UI thread; changing `tree` makes no HLD call. Bake keeps its layer scheme. See [UX](design/ux.md) §1.3.
+
+## View box layer and front-face colour (owner, 2026-11-15)
+
+- **Layer `$M2D Views`:** one top-level layer for view boxes, created only when missing (cobalt `#1F6FD1`, No Print).
+  An existing layer is never restyled. *Create view from current viewport* puts new boxes there, and *Validate views*
+  moves every converted object and every re-validated view box onto it in the same undo, keeping the object id,
+  name and user text. An old `M2D+::Views` layer is not deleted or renamed; drawing bake layers are unchanged.
+- **Front-face fill:** a see-through fill on each visible view box's front face, in every display mode: warm red
+  `#D9412B` (25 %) when the front face cuts the model (section, plan), cobalt `#1F6FD1` (22 %) when it doesn't
+  (elevation, axo). View boxes stay Wireframe-override `Extrusion`s, so the fill is a display conduit registered when
+  the GHA loads. It never hides the model's wires and does not change picking or the selection highlight.
+- **`m2d.color`** (`#RRGGBB` or `#RRGGBBAA`) overrides the fill per view; `default` or blank is by type. Validate
+  writes `default` when the key is missing. An invalid value falls back to by type with a remark on the component.
+- **Cut detection for colouring** is a cheap, conservative display hint: a visible scene object's bounding box
+  straddles the front-face plane and overlaps the frame. It uses an RTree, is cached per view box and is recomputed
+  only after document changes (debounced), never per frame. It may show red where the exact cut finds nothing,
+  never the reverse. See [UX](design/ux.md) §2.2.

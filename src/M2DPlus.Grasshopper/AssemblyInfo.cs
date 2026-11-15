@@ -21,6 +21,9 @@ public sealed class M2DPlusPriority : GH_AssemblyPriority
     {
         global::Grasshopper.Instances.ComponentServer.AddCategoryIcon("M2D+", M2DIcons.Logo(16));
         global::Grasshopper.Instances.ComponentServer.AddCategorySymbolName("M2D+", 'M');
+        // View box front-face fills (owner decision 2026-11-15). Never let the display stop the plug-in loading.
+        try { M2DPlus.Rhino.Views.ViewBoxFaceConduit.Install(); }
+        catch (Exception e) { global::Rhino.RhinoApp.WriteLine($"M2D+: view box face display is unavailable ({e.Message})."); }
         return GH_LoadingInstruction.Proceed;
     }
 }

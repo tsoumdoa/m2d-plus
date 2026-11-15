@@ -47,7 +47,7 @@ public static class ViewCommands
             : "Only view boxes can be flipped. Validate views first."));
         items.Add(new("Create view from current viewport", Create, Tooltip: state.Wired
             ? "Bakes a view box matching the active parallel viewport. V is wired, so wire the new box in yourself."
-            : "Bakes a view box matching the active parallel viewport (on M2D+::Views) and adds it to View."));
+            : "Bakes a view box matching the active parallel viewport (on the $M2D Views layer) and adds it to View."));
         if (withSelect)
             items.Add(new("Select view objects", Select, state.Objects > 0, Hint: "Double-click",
                 Tooltip: "Select the referenced view objects in Rhino. Their settings are in Properties ▸ Attribute User Text."));
