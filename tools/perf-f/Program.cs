@@ -56,6 +56,7 @@ internal static class Program
         var prepareSeconds = timer.Elapsed.TotalSeconds;
         var bounds = scene.Bounds;
         var curved = viewName.StartsWith("curved:", StringComparison.Ordinal); if (curved) viewName = viewName[7..];
+        var spike = viewName.StartsWith("spike:", StringComparison.Ordinal); if (spike) viewName = viewName[6..];
         ViewRequest view = viewName switch
         {
             "long" => ViewRequest.Parse(new Plane(new Point3d(0, bounds.Center.Y, 0), Vector3d.XAxis, Vector3d.ZAxis)) with { Name = "Long-section" },
@@ -69,6 +70,7 @@ internal static class Program
         var stem = Path.GetFileNameWithoutExtension(file) + "-" + viewName;
         Console.WriteLine($"{stem}: open {openSeconds:F2}s capture {captureSeconds:F2}s prepare {prepareSeconds:F2}s; {prepared.Count} leaves; bounds {bounds.Min} .. {bounds.Max}; tol {scene.Tolerance}");
         if (curved) { Curved.Run(scene, prepared, view, stem, output, variants, timeout); return 0; }
+        if (spike) { Spike.Run(scene, prepared, view, stem, output, variants, timeout); return 0; }
 #if !PERFF_BASELINE
         if (variants.Contains("audit-verdicts")) { Verdicts.Audit(scene, prepared, stem, output); return 0; }
         if (variants.Contains("stress-parallel")) { Verdicts.Stress(scene, prepared, stem, output); return 0; }

@@ -33,6 +33,21 @@ Curved experiments (`curved:SW census full defonly defout kinds norm:hemi selfch
 time raw native HLD on subsets and exact re-parameterisations. `selfcheck@` explains why the
 section validation rejects a definition.
 
+## Curved spike
+
+`spike:<view>` runs the curved spike ([findings](../../hillclimb/curved-spike/FINDINGS.md)); nothing in the
+product is changed. It first solves the view through the product with observers, then:
+
+- `census` counts curved sources that are provably hidden (behind planar faces; behind a nearer
+  instance of the same solid) and times raw native HLD with and without each set;
+- `cull` solves the view with each set removed, back to back with the full view, and writes 2D dumps
+  for `compare.py`;
+- `mesh:<k>` sends curved Breps through the exact kernel as meshes with chord tolerance k x model
+  tolerance; `meshparams:<k>` measures which Rhino meshing settings hold that tolerance.
+
+`spike_compare.py` prints locus and class agreement at several budgets. `PERFF_PROOF_SEGMENTS` and
+`PERFF_PROOF_QUERIES` raise the proof limits; `PERFF_NO_KINK=1` turns kink splitting off.
+
 ## Comparing against main
 
 The same sources build against a tree without the section-reuse internals:
