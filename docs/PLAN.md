@@ -39,7 +39,7 @@ M2DPlus.Rhino (net8.0-windows, RhinoCommon library; no GH dependency)
   Compute side (no document access): prepared-scene cache, NativeHld adapter (+ points), convex kernel,
                               culling, section regions/crop/merge/hatch
 M2DPlus.Worker (exe): headless Rhino host; versioned request/result protocol; reuses the compute side
-M2DPlus.Grasshopper: the one component, attributes (progress, Bake), menu, settings editor, preview, publication
+M2DPlus.Grasshopper: the one component, attributes (progress, Bake), menu, view objects (view boxes, m2d.* user text), preview, publication
 tests/  Core.Tests (xUnit) · Rhino.Tests (Rhino.Inside, frozen fixtures + independent oracles, serial)
 tools/  Pack-Yak.ps1 · Publish-Yak.ps1 · bench harness (process-tree RAM cap, benchmark manifest)
 ```
@@ -70,7 +70,7 @@ Each milestone is a set of small PRs. Sol implements, Claude reviews and commits
 | **M1b** | Baseline capability: full normalisation, all *uncut* view forms (named view, keyword, vector), deterministic native extraction diagnostics, 305-object six-view run, geometry matrix with property-level P/F/U gates. | Matrix gates; no known uncertainty promoted |
 | **S2** (during M1, blocks M2) | Native clipping vs physical trim on the counterexamples: points, Unset proxies, scoped clipping, zero depth, flipped plane, contact tolerance. Probes for style source modes and the region output shape. | Decision recorded in docs/design |
 | **M2** | Sections: Plane/Rectangle/Box/clipping-plane views, per-object material regions, open outlines, region crop, compatible-style merge, Rhino section-style resolution, per-source scope/depth. | Region/hatch/path/export gates, not area alone |
-| **M3** | Target placement, Settings + right-click menu + View Range editor, line classes/weights/depth cueing/far clip, glass, tangent/seam, preview, one-undo replace-bake. | Style/placement edits make zero HLD calls; baked hatches survive save/reopen |
+| **M3** | Target placement, Settings + right-click menu + view objects (UX rev. 4: the View Range editor was removed), line classes/weights/depth cueing/far clip, glass, tangent/seam, preview, one-undo replace-bake. | Style/placement edits make zero HLD calls; baked hatches survive save/reopen |
 | **M4** | Dependency-aware invalidation, definition/section reuse, bounded memory, durable disk cache. **S1b:** cold/warm/multi-view IPC benchmark and threshold calibration. Production single-worker isolation ships. | Heavy jobs go to the worker; reopen reuses the cache |
 | **S3** (after a stable M2) | HLD scaling with overlap, safe partitions, seam equivalence against the monolithic solve. | Gates partitioning only |
 | **S4** (after the oracles; an eligibility census can run early) | Convex-kernel routing: whole-scene eligibility first, then mixed routing only if certified. | Gates own-kernel routing only |

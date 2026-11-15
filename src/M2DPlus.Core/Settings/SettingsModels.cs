@@ -4,7 +4,10 @@ using M2DPlus.Core.Sections;
 namespace M2DPlus.Core;
 
 public enum DocumentUnits { Millimetres, Centimetres, Metres, Kilometres, Inches, Feet }
-public enum SettingSource { Input, EditorView, EditorAll, Default, Auto }
+/// <summary>Where a setting came from, strongest first: the Depth input (depth only), the Settings input, the view
+/// object's <c>m2d.*</c> user text (<see cref="EditorView"/>), the component menu (<see cref="EditorAll"/>), then
+/// the built-in default or Auto. The two Editor* names are kept from the removed editor (UX rev. 4 §6).</summary>
+public enum SettingSource { Input, EditorView, EditorAll, Default, Auto, DepthInput }
 public enum DiagnosticSeverity { Remark, Warning, Error }
 public enum FarClipMode { None, Line, NoLine }
 public enum CropMode { Auto, Off }
@@ -43,6 +46,8 @@ public sealed class SettingsRow
         .ToImmutableDictionary(p => p.Key.ToLowerInvariant(), p => p.Value, StringComparer.OrdinalIgnoreCase);
 }
 
+/// <summary>Values stored outside the Settings input: the component menu row (<see cref="AllViews"/>) and per-view
+/// rows keyed by view identity, read from each view object's <c>m2d.*</c> user text.</summary>
 public sealed class EditorSettings
 {
     public SettingsRow AllViews { get; }
@@ -59,9 +64,10 @@ public sealed class EditorSettings
 public sealed record SettingEntry(object? Value, object AuthoredValue, string Text,
     SettingSource Source, SettingSource AssignedBy)
 {
-    public bool IsSetByInput => AssignedBy == SettingSource.Input;
-    public string SourceDescription => IsSetByInput ? Source == SettingSource.Auto ? "auto (set by input)" : "set by input"
-        : Source switch { SettingSource.EditorView => "editor view row", SettingSource.EditorAll => "editor All views row",
+    public bool IsSetByInput => AssignedBy is SettingSource.Input or SettingSource.DepthInput;
+    public string SourceDescription => AssignedBy == SettingSource.DepthInput ? Source == SettingSource.Auto ? "auto (set by Depth input)" : "set by Depth input"
+        : IsSetByInput ? Source == SettingSource.Auto ? "auto (set by input)" : "set by input"
+        : Source switch { SettingSource.EditorView => "view object", SettingSource.EditorAll => "component menu",
             SettingSource.Default => "default", _ => "auto" };
 }
 

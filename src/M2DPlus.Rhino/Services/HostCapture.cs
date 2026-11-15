@@ -101,7 +101,10 @@ public sealed class SceneCapture : IDisposable
     public int CapturedCount => _leaves.Count;
     public double MaximumSliceMilliseconds { get; private set; }
     public double InitialEnumerationMilliseconds { get; }
-    public SceneCapture(RhinoDoc document, DocumentWatch watch, IEnumerable<CaptureInput>? input = null, SceneCache? cache = null)
+    /// <param name="excluded">Document mode only: objects never drawn, such as the view objects (view boxes and
+    /// not-yet-validated frame surfaces) that the View input references.</param>
+    public SceneCapture(RhinoDoc document, DocumentWatch watch, IEnumerable<CaptureInput>? input = null, SceneCache? cache = null,
+        IReadOnlySet<Guid>? excluded = null)
     {
         var timer = Stopwatch.StartNew();
         _document = document; _watch = watch; _generation = watch.Generation; _cache = cache ?? SceneCache.Shared;
@@ -111,19 +114,21 @@ public sealed class SceneCapture : IDisposable
             var settings = new ObjectEnumeratorSettings { NormalObjects = true, LockedObjects = true, HiddenObjects = false,
                 ReferenceObjects = true, IncludeLights = false, IncludeGrips = false };
             foreach (var obj in document.Objects.GetObjectList(settings))
-                if (Included(obj)) _pending.Enqueue(new(obj.Id, new[] { 0 }, obj.Id.ToString(), Array.Empty<Transform>(), Array.Empty<Guid>()));
+                if (IsDrawable(document, obj) && excluded?.Contains(obj.Id) != true) _pending.Enqueue(new(obj.Id, new[] { 0 }, obj.Id.ToString(), Array.Empty<Transform>(), Array.Empty<Guid>()));
         }
         else foreach (var item in input) _pending.Enqueue(new(item.Value, (int[])item.Path.Clone(), item.Identity, Array.Empty<Transform>(), Array.Empty<Guid>()));
         InitialEnumerationMilliseconds = timer.Elapsed.TotalMilliseconds;
     }
-    private bool Included(RhinoObject obj)
+    /// <summary>Document mode's scene rule (UX §3.1): visible, not a clipping plane or light, not on an M2D+ layer and
+    /// not tagged with m2d.* user text (bakes and view boxes).</summary>
+    internal static bool IsDrawable(RhinoDoc document, RhinoObject obj)
     {
         if (obj.IsHidden || obj.IsDeleted || obj.Geometry is ClippingPlaneSurface or Light) return false;
-        var layer = _document.Layers[obj.Attributes.LayerIndex];
+        var layer = document.Layers[obj.Attributes.LayerIndex];
         if (!layer.IsVisible || layer.FullPath.Split(new[] { "::" }, StringSplitOptions.None).Contains("M2D+")) return false;
         for (var parentId = layer.ParentLayerId; parentId != Guid.Empty;)
         {
-            var parent = _document.Layers.FindId(parentId);
+            var parent = document.Layers.FindId(parentId);
             if (parent is null || !parent.IsVisible) return false;
             parentId = parent.ParentLayerId;
         }
@@ -163,7 +168,7 @@ public sealed class SceneCapture : IDisposable
                  (!layerPattern.Contains("::") && System.Text.RegularExpressions.Regex.IsMatch(l.Name, expression, System.Text.RegularExpressions.RegexOptions.IgnoreCase))))
                 .Select(l => l.Index).ToHashSet();
             var matches = _document.Objects.GetObjectList(new ObjectEnumeratorSettings { NormalObjects = true, LockedObjects = true, ReferenceObjects = true })
-                .Where(o => layers.Contains(o.Attributes.LayerIndex) && Included(o)).OrderBy(o => o.Id).ToArray();
+                .Where(o => layers.Contains(o.Attributes.LayerIndex) && IsDrawable(_document, o)).OrderBy(o => o.Id).ToArray();
             if (layers.Count == 0) Unsupported(PreparedScene.NonOccludingPrefix + $"Layer not found '{layerPattern}'");
             foreach (var match in matches) _pending.Enqueue(item with { Value = match.Id, Identity = item.Identity + "/" + match.Id });
             return;
@@ -185,7 +190,7 @@ public sealed class SceneCapture : IDisposable
             if (members.Length == 0) { Unsupported("Empty/unavailable block definition " + definition.Name); return; }
             foreach (var leaf in members.OrderBy(o => o.Id))
             {
-                if (!Included(leaf)) continue;
+                if (!IsDrawable(_document, leaf)) continue;
                 _pending.Enqueue(new(leaf.Id, item.Path, item.Identity + "/" + definition.Id + "/" + leaf.Id,
                     item.Chain.Append(instance.Xform).ToArray(), item.Definitions.Append(definition.Id).ToArray(), item.Section));
             }

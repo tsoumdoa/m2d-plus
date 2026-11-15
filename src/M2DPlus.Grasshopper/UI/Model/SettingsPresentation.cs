@@ -3,31 +3,31 @@ using M2DPlus.Core;
 
 namespace M2DPlus.Grasshopper.UI.Model;
 
-/// <summary>What the UI knows about the current request: views in View-list order, the Settings input
-/// branches in GH path order (empty = not wired) and the document units. Plain values only.</summary>
+/// <summary>What the UI knows about the current request: views in View-list order, the Settings input branches in
+/// GH path order (empty = not wired), the document units, the view objects' m2d.* rows keyed by view identity, and
+/// the Depth input items (empty = not wired). Plain values only.</summary>
 public sealed record UiContext(IReadOnlyList<ViewSettingsContext> Views, IReadOnlyList<IReadOnlyList<string>> InputBranches, DocumentUnits Units)
 {
     public static UiContext Empty { get; } = new([], [], DocumentUnits.Metres);
+    public IReadOnlyDictionary<string, SettingsRow> ViewRows { get; init; } = ImmutableDictionary<string, SettingsRow>.Empty;
+    public IReadOnlyList<string?> Depth { get; init; } = [];
 }
 
-public enum RowKind { AllViews, View, Unused }
-public sealed record EditorRow(string Identity, string Name, string Source, RowKind Kind, int ViewIndex);
+public enum FieldOrigin { Menu, Default, Input, ViewObjects }
 
-public enum FieldOrigin { Row, AllViews, Default, Input }
-
-/// <summary>One key as one editor row shows it. Text is Settings syntax (the control's value); Display is its label.</summary>
-public sealed record FieldState(string Key, string Text, string Display, string? RowText, FieldOrigin Origin,
-    bool Locked, int InputViews, int ViewCount)
+/// <summary>One key as the component menu shows it. Text is Settings syntax; Display is its label.</summary>
+public sealed record FieldState(string Key, string Text, string Display, string? MenuText, FieldOrigin Origin,
+    bool Locked, int InputViews, int ObjectViews, int ViewCount)
 {
-    public bool IsInherited => RowText is null && !Locked;
-    /// <summary>The small tag beside a field (UX §6: "set by input"; blank means set in this row).</summary>
+    /// <summary>The menu label suffix (UX rev. 4 §7): input locks win; view-object overrides are only reported.</summary>
     public string Note => Locked ? "set by input"
         : InputViews > 0 ? $"set by input for {InputViews} of {ViewCount} views"
-        : Origin == FieldOrigin.AllViews ? "as All views" : "";
+        : ObjectViews == ViewCount && ViewCount > 0 ? "set on every view object"
+        : ObjectViews > 0 ? $"set on {ObjectViews} of {ViewCount} view objects" : "";
 }
 
-/// <summary>The UX §6 precedence (input → view row → All views row → default) presented per editor row.
-/// Core does the resolving; this only decides what each row and menu item shows and whether it is locked.</summary>
+/// <summary>The UX rev. 4 §6 precedence (Settings input → view object → menu → default/auto) as the component
+/// menu presents it. Core does the resolving; this only decides what each menu item shows and whether it is locked.</summary>
 public sealed class SettingsPresentation
 {
     private static readonly ViewSettingsContext Probe = new("probe", "probe", ViewSourceKind.Plane, true, 1, .001);
@@ -36,75 +36,37 @@ public sealed class SettingsPresentation
 
     public ComponentUiState State { get; }
     public UiContext Context { get; }
-    /// <summary>Input + editor, as the component will resolve it. Null if the host context is invalid.</summary>
+    /// <summary>Input + view objects + menu, as the component will resolve it. Null if the host context is invalid.</summary>
     public SettingsResolution? Resolution { get; }
-    /// <summary>Diagnostics of the editor values alone (bad text, contradictory fade), for the editor's status line.</summary>
-    public ImmutableArray<SettingsDiagnostic> EditorDiagnostics { get; }
-    public ImmutableArray<EditorRow> Rows { get; }
 
     public SettingsPresentation(ComponentUiState state, UiContext context)
     {
         State = state; Context = context;
-        var editor = state.ToEditorSettings();
-        try
-        {
-            Resolution = Settings.Resolve(context.Views, context.InputBranches, context.Units, editor);
-            var probes = context.Views.Count > 0 ? context.Views : [Probe];
-            EditorDiagnostics = Settings.Resolve(probes, [], context.Units, editor).Diagnostics;
-        }
-        catch (ArgumentException) { Resolution = null; EditorDiagnostics = []; }
-        var rows = ImmutableArray.CreateBuilder<EditorRow>();
-        rows.Add(new(ComponentUiState.AllViewsRow, "All views", "", RowKind.AllViews, -1));
-        var used = new HashSet<string>(StringComparer.Ordinal);
-        for (var i = 0; i < context.Views.Count; i++)
-            if (used.Add(context.Views[i].Identity))
-                rows.Add(new(context.Views[i].Identity, context.Views[i].Name, SettingsCatalog.SourceLabel(context.Views[i]), RowKind.View, i));
-        foreach (var identity in state.Views.Keys.Where(k => !used.Contains(k)))
-            rows.Add(new(identity, identity, "unused", RowKind.Unused, -1));
-        Rows = rows.ToImmutable();
+        try { Resolution = Settings.Resolve(context.Views, context.InputBranches, context.Units, state.ToEditorSettings(context.ViewRows), context.Depth); }
+        catch (ArgumentException) { Resolution = null; }
     }
 
     public static string DefaultText(string key) => Defaults[key];
-    public IEnumerable<EditorRow> UnusedRows => Rows.Where(r => r.Kind == RowKind.Unused);
 
-    public FieldState Field(string row, string key)
+    /// <summary>The menu's view of a key: the menu default (or built-in default), locked when the Settings input sets it
+    /// for every view, with counts of views whose input or view object overrides it.</summary>
+    public FieldState Field(string key)
     {
-        var all = State.AllViews.Values.TryGetValue(key, out var a) ? a : null;
+        var menu = State.Menu.Values.TryGetValue(key, out var m) ? m : null;
         var viewCount = Context.Views.Count;
-        EffectiveSettings[] byInput = Resolution is null ? [] : Resolution.Views.Where(v => v[key].IsSetByInput).ToArray();
-        if (row == ComponentUiState.AllViewsRow)
+        var views = Resolution?.Views ?? [];
+        var byInput = views.Where(v => v[key].IsSetByInput).ToArray();
+        var byObject = views.Count(v => !v[key].IsSetByInput && v[key].AssignedBy == SettingSource.EditorView);
+        if (viewCount > 0 && byInput.Length == viewCount)
         {
-            if (viewCount > 0 && byInput.Length == viewCount)
-            {
-                var texts = byInput.Select(v => InputText(key, v[key])).Distinct().ToArray();
-                var text = texts.Length == 1 ? texts[0] : "varies";
-                return new(key, text, texts.Length == 1 ? SettingsCatalog.Display(key, text) : "Varies by view", all, FieldOrigin.Input, true, byInput.Length, viewCount);
-            }
-            var value = all ?? DefaultText(key);
-            return new(key, value, SettingsCatalog.Display(key, value), all, all is null ? FieldOrigin.Default : FieldOrigin.Row, false, byInput.Length, viewCount);
+            var texts = byInput.Select(v => InputText(key, v[key])).Distinct().ToArray();
+            var text = texts.Length == 1 ? texts[0] : "varies";
+            return new(key, text, texts.Length == 1 ? SettingsCatalog.Display(key, text) : "Varies by view", menu, FieldOrigin.Input, true, byInput.Length, 0, viewCount);
         }
-        var index = Rows.FirstOrDefault(r => r.Identity == row)?.ViewIndex ?? -1;
-        var own = State.Row(row).Values.TryGetValue(key, out var o) ? o : null;
-        if (index >= 0 && Resolution is not null && Resolution.Views[index][key] is { IsSetByInput: true } entry)
-        {
-            var text = InputText(key, entry);
-            return new(key, text, SettingsCatalog.Display(key, text), own, FieldOrigin.Input, true, 1, 1);
-        }
-        var inherited = own ?? all ?? DefaultText(key);
-        var origin = own is not null ? FieldOrigin.Row : all is not null ? FieldOrigin.AllViews : FieldOrigin.Default;
-        return new(key, inherited, SettingsCatalog.Display(key, inherited), own, origin, false, 0, 1);
+        var value = menu ?? DefaultText(key);
+        var origin = byObject == viewCount && viewCount > 0 ? FieldOrigin.ViewObjects : menu is null ? FieldOrigin.Default : FieldOrigin.Menu;
+        return new(key, value, SettingsCatalog.Display(key, value), menu, origin, false, byInput.Length, byObject, viewCount);
     }
 
     private static string InputText(string key, SettingEntry entry) => key == "name" ? SettingsCatalog.UnquoteName(entry.Text) : entry.Text;
-
-    /// <summary>A cell in the editor's upper table. "·" means "as All views" (UX §6.1).</summary>
-    public string Cell(string row, string key)
-    {
-        var field = Field(row, key);
-        if (field.Locked) return field.Display + " (input)";
-        if (row != ComponentUiState.AllViewsRow && field.RowText is null) return "·";
-        return field.Display;
-    }
-
-    public static ImmutableArray<string> TableKeys { get; } = ["depth", "beyond", "farclip", "fade", "scale"];
 }

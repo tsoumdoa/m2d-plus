@@ -62,3 +62,27 @@ Based on [docs/research](research/) and the [UX spec](design/ux.md):
 - **Empty Geometry** draws the whole visible model. The **Settings** input takes `key = value` text. With no section style, a cut is a **solid fill in the object's display colour** (layer colour unless the object overrides it). Rhino 8 section styles (pattern, scale, colours) are honoured from v1 whenever the user has assigned one. M2D+ has no hatch system of its own; `hatch = styles | colour | black | none`.
 - **Reopen:** drawings are kept in a disk side-cache and reused if nothing changed. Results are never stored in the `.gh`.
 - **Scale works like Revit's view scale** (owner, 2026-11-14). Drawings always stay 1:1 in the model, and placement is 1-to-1 onto Target. `scale` only picks the line-weight preset (default 1:100). Scaling for sheets is done with GH transforms or Rhino Layout details.
+
+## Decisions on views and settings (owner, 2026-11-14)
+
+The View Range & Settings editor was rejected: too heavy, and rectangle views still had no proper depth input.
+See [UX revision 4](design/ux.md) §2.2 and §6.
+
+1. **Views are editable Rhino objects.** A referenced planar surface, closed rectangle or existing M2D+ view box
+   in View is checked by right-click **Validate views** (planar, a rectangular outer boundary with four straight
+   edges at right angles, trimmed rectangles allowed, not degenerate; a reason per refused object). Valid ones
+   are converted **in place** (same object id, one undo) into an **M2D+ view box**: an `Extrusion` whose profile
+   is the view frame (and the cut plane where it passes through the model) and whose path runs into the model
+   along the look direction (−Z of the frame); its length is the depth, edited by dragging the back face. Default
+   depth: to the back of the scene plus a margin. **Flip view direction** reverses it. Per-view settings are
+   Attribute User Text `m2d.*` keys (`m2d.view = 1` marks the object); Validate writes `default` for missing keys
+   and never overwrites a value. The component reacts to object and attribute changes.
+2. **Create view from current viewport** bakes a view box matching the active parallel viewport, named
+   `M2D View 01`…, on an `M2D+::Views` layer, and adds it to View. Perspective viewports are refused with a message.
+3. **New fifth input Depth (D)**, appended after Settings (never reorder inputs), list access matched to View, optional:
+   the depth of Plane, Rectangle and clipping-plane views as a number or a unit string (`8 m`). Boxes and view boxes
+   take their depth from their geometry; a given Depth is then ignored with a remark.
+4. **The editor is removed** with its persistence, double-click and S dot. Global defaults stay in the right-click
+   menu and the Settings text. Precedence, strongest first: Depth input (depth only) > Settings input > view-object
+   user text > menu defaults > built-in default / auto. Double-click selects the view objects in Rhino.
+   The preview draws each view's frame, look arrow and depth volume (cobalt `#1F6FD1` when selected).

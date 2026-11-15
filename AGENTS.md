@@ -51,8 +51,8 @@ contains only the in-process skeleton and its two libraries.
 - Stable M2D+ Drawing component GUID: `c8d0f9fe-5498-45dd-8caf-10201b80d211`.
   Generated once for M0, recorded in source comments and Yak keywords; never regenerate.
 - Append new GH inputs **after existing ones** to preserve saved definitions. Current
-  Geometry/G and Settings/S use tree access; View/V and Target/T use list access.
-  Only View is required. Keep the nine output indices fixed.
+  Geometry/G and Settings/S use tree access; View/V, Target/T and Depth/D (5th, appended
+  in UX rev. 4) use list access. Only View is required. Keep the nine output indices fixed.
 
 ## Runtime and ownership contracts
 

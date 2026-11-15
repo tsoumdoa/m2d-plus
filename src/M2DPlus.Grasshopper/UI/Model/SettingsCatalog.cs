@@ -10,8 +10,8 @@ public enum FieldKind { Distance, Choice, Toggle, Percent, Scale, Text }
 public sealed record FieldOption(string Value, string Label);
 public sealed record FieldSpec(string Key, string Label, string Section, FieldKind Kind, ImmutableArray<FieldOption> Options, string Tooltip);
 
-/// <summary>Editor/menu vocabulary for the UX §6.3 keys: labels, choices, canonical text and display text.
-/// Values are the Settings text syntax, so whatever the editor stores pastes into a Panel unchanged.</summary>
+/// <summary>Menu and view-object vocabulary for the UX §6.3 keys: labels, choices, canonical text and display text.
+/// Values are the Settings text syntax, so menu values and m2d.* user text paste into a Panel unchanged.</summary>
 public static class SettingsCatalog
 {
     public const string ViewRange = "View range", Lines = "Lines", Cuts = "Cuts", Placement = "Placement";
@@ -99,7 +99,7 @@ public static class SettingsCatalog
         try { return JsonSerializer.Deserialize<string>(text) ?? text; } catch (JsonException) { return text; }
     }
 
-    /// <summary>The preset strip under Scale (UX §6.1), from Core's LineWeightPreset. Two lines for narrow layouts.</summary>
+    /// <summary>The preset widths shown on the Scale menu (UX §3.6), from Core's LineWeightPreset.</summary>
     public static string WeightStrip(string scaleText, string weightsText, bool twoLines = false)
     {
         if (Canonical("weights", weightsText) == "layers") return "Line weights from source layers; scale has no effect.";

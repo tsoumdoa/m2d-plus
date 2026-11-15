@@ -16,16 +16,15 @@ public sealed class PersistenceTests
         var read = UiStateSerializer.Read(text, out var problem);
         Assert.Null(problem);
         Assert.True(read.AutoRun);
-        Assert.False(read.HasEditorValues);
+        Assert.False(read.HasMenuValues);
         Assert.True(read.Preview.SetEquals(PreviewLayers.Default));
+        Assert.Contains(PreviewLayers.Views, read.Preview);
     }
 
     [Fact]
     public void EverythingRoundTripsIncludingUnknownFutureData()
     {
         var state = new ComponentUiState(Row(("scale", "1:200"), ("hidden", "off"), ("future.key", "x")),
-            [KeyValuePair.Create("text:section a", Row(("depth", "40 m"), ("name", "Sección \"A\" #1"))),
-             KeyValuePair.Create("index:2", Row(("farclip", "line")))],
             autoRun: false, preview: ["hidden", "frame", "contours"],
             extras: [KeyValuePair.Create("layout", "{\"columns\":[1,2],\"on\":true}")]);
         var text = UiStateSerializer.Write(state);
@@ -33,23 +32,43 @@ public sealed class PersistenceTests
         Assert.Null(problem);
         Assert.Equal(text, UiStateSerializer.Write(read));
         Assert.False(read.AutoRun);
-        Assert.Equal("x", read.AllViews.Values["future.key"]);
+        Assert.Equal("x", read.Menu.Values["future.key"]);
         Assert.Contains("contours", read.Preview);
-        Assert.Equal("Sección \"A\" #1", read.Row("text:section a").Values["name"]);
         Assert.Contains("\"layout\":{\"columns\":[1,2],\"on\":true}", text);
+    }
+
+    [Fact]
+    public void RemovedEditorRowsFromPreReleaseFilesAreKeptVerbatimButUnused()
+    {
+        const string old = "{\"v\":1,\"all\":{\"hidden\":\"off\"},\"views\":{\"text:section a\":{\"depth\":\"40 m\"}}}";
+        var read = UiStateSerializer.Read(old, out var problem);
+        Assert.Null(problem);
+        Assert.Equal("off", read.Menu.Values["hidden"]);
+        Assert.Contains("\"views\":{\"text:section a\":{\"depth\":\"40 m\"}}", UiStateSerializer.Write(read));
+        var editor = read.ToEditorSettings();
+        Assert.Empty(editor.Views);
     }
 
     [Fact]
     public void UnknownKeysAreKeptButNeverResolved()
     {
-        var state = ComponentUiState.Default.With("*", "future.key", "x").With("*", "hidden", "off");
+        var state = ComponentUiState.Default.With("future.key", "x").With("hidden", "off");
         var editor = state.ToEditorSettings();
         Assert.False(editor.AllViews.Values.ContainsKey("future.key"));
         var view = new ViewSettingsContext("v", "V", ViewSourceKind.Plane, false, 10, .001);
         var resolution = Settings.Resolve([view], [], DocumentUnits.Metres, editor);
         Assert.Empty(resolution.Diagnostics);
         Assert.False(resolution.Views[0].Hidden);
-        Assert.Equal("x", state.AllViews.Values["future.key"]);
+        Assert.Equal("x", state.Menu.Values["future.key"]);
+    }
+
+    [Fact]
+    public void ViewObjectRowsJoinTheMenuRowForCore()
+    {
+        var rows = new Dictionary<string, SettingsRow> { ["object:1"] = Row(("hidden", "on")) };
+        var editor = ComponentUiState.Default.With("hidden", "off").ToEditorSettings(rows);
+        Assert.Equal("off", editor.AllViews.Values["hidden"]);
+        Assert.Equal("on", editor.Views["object:1"].Values["hidden"]);
     }
 
     [Fact]
@@ -57,7 +76,7 @@ public sealed class PersistenceTests
     {
         var read = UiStateSerializer.Read("{\"v\":7,\"all\":{\"hidden\":\"off\"},\"auto\":false,\"v7only\":[\"a\"]}", out var problem);
         Assert.Contains("newer M2D+", problem);
-        Assert.Equal("off", read.AllViews.Values["hidden"]);
+        Assert.Equal("off", read.Menu.Values["hidden"]);
         Assert.False(read.AutoRun);
         Assert.Contains("\"v7only\":[\"a\"]", UiStateSerializer.Write(read));
     }
@@ -75,11 +94,12 @@ public sealed class PersistenceTests
     }
 
     [Fact]
-    public void EmptyRowsAreDroppedAndClearRowRestoresDefaults()
+    public void ClearingAKeyAndResetMenuRestoreDefaults()
     {
-        var state = ComponentUiState.Default.With("text:a", "depth", "4 m").With("text:a", "depth", null);
-        Assert.Empty(state.Views);
-        state = state.With("*", "scale", "1:50").ClearRow("*");
-        Assert.False(state.HasEditorValues);
+        var state = ComponentUiState.Default.With("hidden", "off").With("hidden", null);
+        Assert.False(state.HasMenuValues);
+        state = state.With("scale", "1:50").WithAutoRun(false).ResetMenu();
+        Assert.False(state.HasMenuValues);
+        Assert.False(state.AutoRun);
     }
 }
