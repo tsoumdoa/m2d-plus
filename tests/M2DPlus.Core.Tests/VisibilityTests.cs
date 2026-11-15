@@ -5,6 +5,25 @@ namespace M2DPlus.Core.Tests;
 
 public sealed class VisibilityTests
 {
+    [Fact] public void TriangleAndCertifiedResidualPathsMatchExactOracle()
+    {
+        var faces=new[]{
+            new PlanarFace([[V(0,0),V(2,0),V(0,2)]]),
+            new PlanarFace([[V(0,0),V(1,0),V(2,0)]]),
+            new PlanarFace([[V(0,0),V(2,0,1.25),V(2,2,1.5),V(0,2,1.25)]]),
+            new PlanarFace([[V(0,0),V(2,0),V(2,2),V(0,2,1+1e-9)]])
+        };
+        CandidateEdge[] edges=[new(V(-1,.25,0),V(3,.25,0),"cross"),new(V(0,0),V(2,0),"contact")];
+        foreach(var face in faces) Compare([face],edges);
+        // Non-planarity at the exact validation threshold must still fall back;
+        // interval uncertainty cannot turn a failed face into an absent occluder.
+        foreach(var z in new[]{Math.BitDecrement(1.125),1.125,Math.BitIncrement(1.125)})
+        {
+            var face=new PlanarFace([[V(0,0),V(2,0),V(2,2),V(0,2,z)]]);
+            var result=EdgeFaceKernel.Solve([face],edges,new(.125));
+            Assert.Equal(z>1.125,result.Diagnostics.Count>0);
+        }
+    }
     private static Vertex V(double x, double y, double z = 1) => new(x, y, z);
     private static PlanarFace Square => new([[V(0, 0), V(2, 0), V(2, 2), V(0, 2)]]);
     [Fact] public void IndependentPointOracleVisitsAllPairsAndRecordsSanctionedContacts()

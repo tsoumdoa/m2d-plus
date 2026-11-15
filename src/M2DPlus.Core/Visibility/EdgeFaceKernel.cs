@@ -269,23 +269,45 @@ public static class EdgeFaceKernel
                 throw new ArithmeticException("Invalid polygon; whole view unresolved");
             Exact = new(() => new Polygon<Rational>(face));
             var all = face.Loops.SelectMany(l => l).ToArray(); Box = FilterBox.From(all); Z = all.Max(p => p.Z);
-            // Validate plane residual exactly; a failed input cannot silently cease to occlude.
-            var exact = Exact.Value; var n2 = P<Rational>.Dot(exact.Normal, exact.Normal);
-            var limit = Rational.From(tolerance) * Rational.From(tolerance) * n2;
-            foreach (var p in all)
-            {
-                var residual = P<Rational>.Dot(exact.Normal, P<Rational>.From(p)) - exact.D;
-                if (Rational.Compare(residual * residual, limit) > 0) throw new ArithmeticException("Nonplanar face; whole view unresolved");
-            }
             try { Filtered = new Polygon<Filter>(face); } catch (IndeterminateException) { }
+            // Three vertices are coplanar by construction, including a degenerate
+            // triangle (the existing zero-normal semantics still apply). For larger
+            // polygons certify the SAME residual inequality with outward intervals;
+            // only an inconclusive certificate needs the exact polygon eagerly.
+            if (!(face.Loops.Length == 1 && all.Length == 3) && !CertifiedPlanar(Filtered, all, tolerance))
+            {
+                var exact = Exact.Value; var n2 = P<Rational>.Dot(exact.Normal, exact.Normal);
+                var limit = Rational.From(tolerance) * Rational.From(tolerance) * n2;
+                foreach (var p in all)
+                {
+                    var residual = P<Rational>.Dot(exact.Normal, P<Rational>.From(p)) - exact.D;
+                    if (Rational.Compare(residual * residual, limit) > 0) throw new ArithmeticException("Nonplanar face; whole view unresolved");
+                }
+            }
             if (Filtered is null)
             {
                 try
                 {
+                    var exact = Exact.Value;
                     Filtered = new(face, new(Filter.FromExact(exact.Normal.X), Filter.FromExact(exact.Normal.Y), Filter.FromExact(exact.Normal.Z)), Filter.FromExact(exact.D));
                 }
                 catch (IndeterminateException) { }
             }
+        }
+        private static bool CertifiedPlanar(Polygon<Filter>? polygon, Vertex[] vertices, double tolerance)
+        {
+            if (polygon is null) return false;
+            try
+            {
+                var limit = Filter.From(tolerance) * Filter.From(tolerance) * P<Filter>.Dot(polygon.Normal, polygon.Normal);
+                foreach (var p in vertices)
+                {
+                    var residual = P<Filter>.Dot(polygon.Normal, P<Filter>.From(p)) - polygon.D;
+                    if (Filter.Compare(residual * residual, limit) > 0) return false;
+                }
+                return true;
+            }
+            catch (IndeterminateException) { return false; }
         }
     }
 

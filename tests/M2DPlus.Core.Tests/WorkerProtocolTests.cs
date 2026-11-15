@@ -38,5 +38,36 @@ public sealed class WorkerProtocolTests
         Assert.Throws<InvalidDataException>(()=>WorkerCompression.Decode<string>(packed,expandedLimit:4096));
         Assert.Throws<InvalidDataException>(()=>WorkerCompression.Decode<string>(new byte[]{1,2,3,4}));
     }
+    [Fact] public void RawPacketPreservesBytesAndRejectsExpansionBeforeAllocation()
+    {
+        var value=new byte[1024*1024];new Random(17).NextBytes(value);
+        var packed=WorkerPackets.Encode("scene",value);var restored=WorkerPackets.Decode(packed);
+        Assert.Equal("scene",restored.Kind);Assert.Equal(value,restored.Payload);
+        Assert.Empty(WorkerPackets.Decode(WorkerPackets.Encode("started",[])).Payload);
+        Assert.Throws<InvalidDataException>(()=>WorkerPackets.Decode(packed,4096));
+        Assert.Throws<InvalidDataException>(()=>WorkerPackets.Decode([1,2,3,4]));
+    }
+    [Theory] [InlineData("")] [InlineData("abcdefghijklmnopq")] [InlineData("SCENE")] [InlineData("sλ")]
+    public void RawPacketOperationHeaderIsBounded(string kind) => Assert.Throws<InvalidDataException>(()=>WorkerPackets.Encode(kind,[]));
+    [Theory] [InlineData(-1)] [InlineData(int.MaxValue)] [InlineData(100)]
+    public void RawPacketBadPayloadLengthIsRefusedBeforeAllocation(int count)
+    {
+        var raw=new byte[10];raw[0]=5;"scene"u8.CopyTo(raw.AsSpan(1));BinaryPrimitives.WriteInt32LittleEndian(raw.AsSpan(6),count);
+        Assert.Throws<InvalidDataException>(()=>WorkerPackets.Decode(Zip(raw),64));
+    }
+    [Fact] public void RawPacketRejectsTruncationAndTrailingExpandedBytes()
+    {
+        var raw=new byte[12];raw[0]=5;"scene"u8.CopyTo(raw.AsSpan(1));BinaryPrimitives.WriteInt32LittleEndian(raw.AsSpan(6),3);
+        Assert.Throws<EndOfStreamException>(()=>WorkerPackets.Decode(Zip(raw)));
+        BinaryPrimitives.WriteInt32LittleEndian(raw.AsSpan(6),1);
+        Assert.Throws<InvalidDataException>(()=>WorkerPackets.Decode(Zip(raw)));
+        raw[0]=17;Assert.Throws<InvalidDataException>(()=>WorkerPackets.Decode(Zip(raw)));
+    }
+    private static byte[] Zip(byte[] raw)
+    {
+        using var output=new MemoryStream();
+        using(var zip=new System.IO.Compression.GZipStream(output,System.IO.Compression.CompressionLevel.Fastest,true))zip.Write(raw);
+        return output.ToArray();
+    }
 
 }

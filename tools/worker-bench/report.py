@@ -7,12 +7,16 @@ root = Path(sys.argv[1])
 rows = []
 for tier in ("small", "M", "L"):
     folder = root / (tier + "-run")
+    if not folder.exists():
+        folder = root / tier
     baseline = json.loads((folder / "baseline.json").read_text())
     rows.append(dict(scene=tier, route="local", cold_seconds=sum(v["seconds"] for v in baseline["rows"]),
                      warm_seconds=None, peak_gib=baseline["peakPrivateBytes"] / 2**30,
                      memory_kind="sampled private", matches=len(baseline["rows"]), views=len(baseline["rows"])))
     for count in ((1,) if tier == "small" else (1, 2, 4)):
         path = folder / f"workers-{count}.json"
+        if not path.exists():
+            path = folder / f"workers-{len(baseline['rows'])}-{count}.json"
         if not path.exists():
             continue
         runs = json.loads(path.read_text())

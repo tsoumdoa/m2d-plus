@@ -1,4 +1,4 @@
-# Persistent drawing workers (schema 2)
+# Persistent drawing workers (schema 3)
 
 Implemented 2026-11-15. This replaces the M0 worker identity-only executable. It does not change the owner's Rhino runtime, install anything, or publish a package.
 
@@ -12,32 +12,73 @@ Results contain independent Rhino geometry archives, depth geometry, every sourc
 
 ## Protocol and containment
 
-A random, current-user-only duplex named pipe uses a little-endian 32-bit length prefix, an exact-read loop and a 256 MiB compressed frame bound. Protocol envelopes use streaming gzip with a separately enforced 1 GiB expanded-data limit; large view results do not require an unbounded frame. The handshake remains an uncompressed, bounded identity frame. Before any scene bytes, both peers compare schema, exact CLR version and major, process architecture, exact Rhino build and source revision, RhinoCommon SHA-256 and the combined Core/Rhino engine assembly SHA-256. A net8 apphost cannot roll forward to net10. A mismatched or absent executable is unavailable.
+A random, current-user-only duplex named pipe uses a little-endian 32-bit length prefix, an exact-read loop and a 1 GiB compressed frame bound. Schema 3 gzip envelopes contain a one-byte operation-name length (1–16 lowercase ASCII letters), the name, a little-endian 32-bit raw payload length, and those payload bytes. Declared expanded lengths are checked against 8 GiB and .NET's array limit before allocation; short payloads and trailing expanded data are rejected. This removes the previous giant base64 JSON token: the real 50,000-object scene exceeded System.Text.Json's streaming buffer growth range despite staying under its worker cap. Scene/drawing JSON and all stable output bytes are unchanged. The handshake remains an uncompressed, bounded identity frame. Before any scene bytes, both peers compare schema, exact CLR version and major, process architecture, exact Rhino build and source revision, RhinoCommon SHA-256 and the combined Core/Rhino engine assembly SHA-256. A net8 apphost cannot roll forward to net10. A mismatched or absent executable is unavailable.
 
-The child waits for its private stdin containment acknowledgement before resolving or initializing Rhino. Its parent first assigns it to an unnamed Windows Job Object with kill-on-close and a hard aggregate job commit cap (including descendants). Cancel and request deadlines terminate only this owned job. The parent confirms process death before releasing its slot. A crashed worker fails only its current view with a quarantined Info error; remaining views can start a fresh process after confirmed death. Memory failure uses the single isolated retry described below; other completed views survive.
+The child waits for its private stdin containment acknowledgement before resolving or initializing Rhino. Its parent first assigns it to an unnamed Windows Job Object with kill-on-close and a hard aggregate job commit cap (including descendants). Cancel and request deadlines terminate only this owned job. The parent confirms process death before releasing its slot. A request deadline is a per-view timeout failure; caller cancellation remains whole-batch cancellation. If one worker cannot start but matching siblings complete, only its view fails; if none can start, the existing unavailable/fallback policy applies. The two must not be conflated, or a timed-out view would discard successful siblings. A crashed worker fails only its current view with a quarantined Info error; remaining views can start a fresh process after confirmed death. Memory failure uses the single isolated retry described below; other completed views survive.
 
 Every solve request and reply carries the complete RequestIdentity (scene/view/settings revisions and generation) plus view index. The receiver checks all of them before reconstructing results. The existing GH RequestGate/document-generation check remains the final publication authority; the whole current generation publishes together. Cancellation immediately rejects publication, independently of process cleanup. Internal native-entry signalling supports deterministic crash/cancel/memory fault tests; it is not a GH setting.
 
 ## Pool and admission
 
-There is one shared pool across drawing components, with one batch reservation at a time. The CPU ceiling is `clamp(logical cores / 4, 1, 4)`; actual concurrency is chosen from memory and the scene estimate for every batch. One complete view per process, deterministic round-robin assignment, no tiling or native HLD multithreading. Workers expire after two idle minutes; busy workers never expire.
+There is one shared pool across components, with one batch reservation at a time. The CPU ceiling is `max(1, logical cores - 2)`. Expert count overrides cannot exceed it. Actual concurrency is the minimum of that ceiling, the view count and `floor(memory budget / per-view cap)`. One whole view runs per process; no native HLD multithreading or tiling.
 
-`WorkerMemoryPolicy` is pure Core code, unit-tested with fake RAM values. Windows supplies total physical RAM and the lesser of available physical RAM and available commit. The aggregate cap budget is the smaller of 60% of physical RAM and 80% of available memory. The initial per-worker cap is `ceilGiB(max(2 GiB, 3 * SceneCost.Estimate(1) + 1 GiB))`: the measured M scene gets 3 GiB, L gets 6 GiB. This includes headroom for the native solve and serialized outputs; it is a calibration heuristic, not a proof of peak allocation for arbitrary geometry.
+A shared work queue lets each free worker take another view. For another batch on the same scene, previously measured longest views start first; unmeasured views retain input order. Results remain in input order. History retains only the current batch and clears on scene-revision changes. Scene transport was already retained per process; changing only views still avoids scene encoding and transfer.
 
-Count is the minimum of the CPU ceiling, view count and `floor(budget / cap)`. **Reduce count first; never shrink the default cap below the scene requirement.** If even one cap cannot fit, refuse heavy worker admission with an actionable message; do not silently run it in-process. Retained workers whose cap changed, and excess workers, exit before replacements start. Owned idle resident memory is treated as reclaimable in the available-memory snapshot; other applications' memory is never counted as reclaimable. The shared batch reservation prevents different components' worker batches from oversubscribing the same budget.
+Each process advertises `max(1, floor((host logical cores - 2) / admitted workers))` processors through `DOTNET_PROCESSOR_COUNT`. Children also run at BelowNormal process priority. This bounds managed kernel parallelism across the reservation; it is not OS affinity or a native hard CPU cap. A changed processor allowance retires idle workers, as does a changed cap. An isolated memory retry gets the full managed allowance. Busy workers never expire; idle workers now expire after ten minutes.
 
-An allocation failure is detected through Windows Job Object memory-limit notifications and explicit memory errors, including errors returned from the native adapter. Finish the other views, close **all** original workers, take a fresh memory snapshot, and retry each failed view **once, alone**. The retry cap is the smaller of twice its original cap and the fresh aggregate budget rounded down to GiB; it must be strictly larger. No headroom means no identical-cap retry. A failed retry affects only that view and Info tells the user to close other applications or reduce scene/view complexity. Cancellation, runtime mismatch and stale replies do not enter this memory retry loop. The pool never falls back to a heavy in-process solve on a memory failure.
+Windows supplies physical RAM and the lesser of available physical RAM and available commit. Below the 32 GiB machine class the aggregate budget remains `min(60% physical, 80% available)`. At 32 GiB class and above (at least 30 GiB reported usable physical RAM, allowing hardware reservations) it is `min(75% physical, 85% available)`. Thus 32/64/128 GiB hosts leave at least 8/16/32 GiB outside worker caps for Rhino, results and the OS, with a further current-availability constraint. Owned idle resident memory is reclaimable for admission; other applications' memory is never counted as reclaimable.
 
-Environment configuration remains available for experts and is read when the shared pool is created:
+The default per-view cap remains `ceilGiB(max(2 GiB, 3 * SceneCost.Estimate(1) + 1 GiB))`. M/L select 3/6 GiB. This is calibration, not an allocation guarantee. **Reduce count first; never shrink the automatic cap below the scene requirement.** Automatic caps have no 16 GiB ceiling. If even one view cannot fit, give an actionable refusal, with no heavy in-process fallback. Retire excess/changed-cap workers before starting replacements.
+
+An allocation failure is detected through Job Object notifications and explicit native memory errors. Finish the other views, close all original workers, take a fresh memory snapshot, and retry each failed view **once, alone**. The retry cap is the smaller of twice the original and the fresh budget rounded down to GiB, and must be strictly larger. No headroom means no identical-cap retry. Cancellation, mismatches and stale replies do not enter this loop. Other completed views survive.
+
+### Sizing examples
+
+Fake-machine unit-tested policy outputs at **75% of physical RAM available** and at least 32 views. Cells are **M / L worker counts**, with **3 / 6 GiB** caps. Fewer views or less available memory reduce these counts. These are planning examples, not speed claims.
+
+| RAM | Budget GiB | 8 logical cores | 16 logical cores | 32 logical cores |
+|---|---:|---:|---:|---:|
+| 16 GiB | 9.6 | 3 / 1 | 3 / 1 | 3 / 1 |
+| 32 GiB | 20.4 | 6 / 3 | 6 / 3 | 6 / 3 |
+| 64 GiB | 40.8 | 6 / 6 | 13 / 6 | 13 / 6 |
+| 128 GiB | 81.6 | 6 / 6 | 14 / 13 | 27 / 13 |
+
+### Limits audit
+
+| Limit | Current policy and reason |
+|---|---|
+| Four-worker ceilings in sizing, options and pool | Removed; CPU ceiling, view count and sum of memory caps choose the count |
+| Host scheduler: 512 MiB estimate | Retained as interactive dispatch threshold, never a worker refusal |
+| 600,000 Brep faces times views; 4,000,000 triangles times views | Retained only for in-process dispatch. Division avoids product overflow. Workers use their separate estimate and Job Object cap |
+| 50,000 sources | New explicit heavy dispatch, even for an otherwise cheap single view; no worker source-count rejection |
+| Scene estimate | `4*geometry + 2048*faces + 96*triangles + 4096*sources + views*(65536 + geometry/8 + 512*faces + 24*triangles + 512*sources)`; unchanged empirical accounting, not an allocator prediction |
+| Automatic per-worker cap | 2 GiB minimum; formula above; no fixed maximum; reduce count before cap |
+| Expert cap override | Minimum raised 256 to 512 MiB; removed 16 GiB ceiling; actual ceiling is aggregate budget |
+| Compressed frame | Raised 256 MiB to 1 GiB; checked before receive allocation; 32-bit framing retained |
+| Expanded envelope | Raised 1 GiB to 8 GiB; declared raw length checked before allocation, with exact-read/trailing-data checks and corruption/bomb tests |
+| Envelope base64 / streaming JSON buffer | Removed in schema 3: raw payload bytes bypass the giant-token buffer-growth failure seen on the real 993 MB 50k scene |
+| Payload representation | .NET arrays and scene/result JSON still impose implementation limits per individual raw payload/token; the expanded ceiling does not promise unbounded scenes. Archive/envelope allocations also consume the worker cap |
+| Startup / request / idle | 45 to 120 s / 600 to 3600 s / 120 to 600 s, respectively; finite expert overrides below |
+| Child pipe connection | 30 s retained: the parent creates/listens before child bootstrap; separate from Rhino startup deadline |
+| Manual-bootstrap scheduler fallback | Server has a 4 GiB fallback only when its private budget variable is absent. Production always passes the resolved cap; this is not an additional production limit |
+| Preparation-cache retention | Existing host 128 MiB LRU retained; oversize/live scene leases stay usable, and this is not worker admission or the worker scene lifetime |
+| Confirm owned process death | 10 s retained; never replace a slot whose process death is unconfirmed |
+| Native scheduling | One serial native slot per process; one shared host batch reservation; native multithreading off |
+| Kernel managed threads | Existing maximum 8 per view retained to bound per-view temporary work, further limited by each worker's processor allowance. Aggregate concurrency grows through workers; this round measures face preparation rather than assuming more edge threads help |
+| Memory retry | Exactly once, alone, after original workers exit; larger cap only within fresh budget |
+
+Environment configuration is read when the shared pool is created:
 
 | Variable | Default | Bounds / meaning |
 |---|---|---|
-| M2DPLUS_WORKERS | CPU ceiling | 1–4, still constrained by memory |
-| M2DPLUS_WORKER_MEMORY_MIB | automatic | 256–16384 MiB initial cap override, still constrained by aggregate budget; a recovery retry may grow it |
-| M2DPLUS_WORKER_IDLE_SECONDS | 120 | 1–3600 seconds |
-| M2DPLUS_WORKER_DIRECTORY | adjacent workers/net8 or workers/net10 | Development override; must match the loaded assemblies |
+| M2DPLUS_WORKERS | CPU ceiling | 1 to `max(1, cores - 2)`; still constrained by views and memory |
+| M2DPLUS_WORKER_MEMORY_MIB | automatic | 512 to 2147483647 MiB parser range; aggregate budget is the effective maximum; recovery may grow it |
+| M2DPLUS_WORKER_IDLE_SECONDS | 600 | 1 to 86400 seconds |
+| M2DPLUS_WORKER_STARTUP_SECONDS | 120 | 15 to 3600 seconds |
+| M2DPLUS_WORKER_SOLVE_SECONDS | 3600 | 1 to 86400 seconds per scene transfer or view request |
+| M2DPLUS_WORKER_DIRECTORY | adjacent workers/net8 or workers/net10 | Must match loaded engine/runtime |
 
-Startup and per-request deadlines remain 45 seconds and 10 minutes. Only the owned worker job is killed, and its death is confirmed before reusing its slot.
+Only the owned job is killed on cancellation/deadline; its death is confirmed before slot reuse.
 
 ### Why 11.6 GiB on L does not authorize four workers on a 16 GiB laptop
 
@@ -54,7 +95,7 @@ For a hypothetical 16 GiB machine:
 
 These are tested sizing-policy examples, not performance claims on a laptop. Job commit caps do not reserve physical RAM; external applications can change available memory after admission. The OS cap remains the hard backstop, and completed outputs in the host also need memory.
 
-Single views admitted by the existing 512 MiB in-process estimate and face/triangle limits remain in-process. Sets of two or more views and jobs refused by that admission policy use workers. Missing/incompatible workers retain the existing refusal for heavy jobs; already-admissible jobs may use the existing local path with an unavailable-worker explanation. NativeScheduler never silently expands the interactive host's budget. Worker admission uses its own job budget, with the OS cap as the hard backstop. The threshold is deliberately a conservative dispatch policy, not a universal time predictor; startup calibration and the M/L measurements below are the evidence for its present choice.
+Single views below 50,000 sources and admitted by the existing 512 MiB estimate and face/triangle limits remain in-process. Sets of two or more views and jobs refused by that admission policy use workers. Missing/incompatible workers retain the existing refusal for heavy jobs; already-admissible jobs may use the existing local path with an unavailable-worker explanation. NativeScheduler never silently expands the interactive host's budget. Worker admission uses its own job budget, with the OS cap as the hard backstop. The threshold is deliberately a conservative dispatch policy, not a universal time predictor; startup calibration and the M/L measurements below are the evidence for its present choice.
 
 ## Packaging
 
@@ -64,7 +105,7 @@ The trial Yak contains the usual GHA/Core/Rhino payload plus `workers/net8` and 
 
 Licensed tests cover persistent one/two-worker equality (including mixed planar/curved geometry, points, mirrored blocks, resolved settings, physical sections and hatches), runtime mismatch before scene transfer, crash isolation and next-generation restart, hard cancellation of a deliberately non-cooperative solve, document close and publication rejection, stale replies, OS allocation refusal at the memory cap, idle expiry, set/heavy admission and unavailable-worker refusal. The full existing suite is also run under .NET 8 and .NET 10.
 
-Risks: the cost estimator is conservative and not an allocator prediction; a pathological single view can hit the hard cap or frame bound and fail. Four-way commercial/Cloud Zoo/offline licence recovery and installed-Yak interactive responsiveness remain manual deployment gates. A cancelled batch is rejected; a crashed view is failed without discarding other views; different per-view costs can leave slots idle near batch completion. Cold measurements refer to fresh processes, not purged OS caches. Durable disk caching, tiling and new visibility algorithms are outside this change.
+Risks: the cost estimator is conservative and not an allocator prediction; a pathological single view can hit the hard cap or frame bound and fail. Higher-concurrency commercial/Cloud Zoo/offline licence recovery and installed-Yak interactive responsiveness remain manual deployment gates. A cancelled batch is rejected; a crashed view is failed without discarding other views; one indivisible slow view can still leave slots idle near batch completion despite dynamic scheduling. Cold measurements refer to fresh processes, not purged OS caches. Durable disk caching, tiling and new visibility algorithms are outside this change.
 
 
 ## Original pre-review measurements (2026-11-15)
@@ -121,3 +162,8 @@ M: 16/16 new worker-vs-in-process hashes match, including the eight-view set's s
 L: the complete eight-view set succeeds with defaults on this machine. Available memory selected three 6 GiB workers (18 GiB of aggregate caps), not a fixed four-worker reservation. A separate earlier default run also succeeded (86.483 s; budget 23.17 GiB). After every worker exited, a separate single RhinoCore reconstructed all eight reply archives through WorkerCodec.RestoreDrawing and reserialized them to the same hashes: 8/8 native reconstruction matches, including 155,585 SW pieces and 418 plan regions. This checks host-side geometry reconstruction without a fifth simultaneous owned Rhino process. It is not a new L-vs-in-process oracle claim; the new in-process reference is M.
 
 Final verification: Debug and Release builds pass with zero warnings/errors. Test-WalkingSkeleton.ps1 passes 251 Core, 47 UI-model and 201 licensed Rhino tests on each of .NET 8 and .NET 10. The independently strengthened presentation case also passed again on both runtimes. Forced hook and the fresh 19-file trial Yak passed. Evidence: artifacts/worker-review; logs artifacts-review-full-tests.log, artifacts-review-presentation-tests.log, artifacts-review-hook.log and artifacts-review-yak.log. No commit, push, installation or publication was made.
+
+
+## PERF G follow-up
+
+See [PERF G findings](../../hillclimb/perf-g/FINDINGS.md) for current-source profiles, scaling measurements, byte/hash checks and runtime verification. Historical measurements above retain their original policy and source fingerprints.
