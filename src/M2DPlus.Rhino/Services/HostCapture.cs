@@ -103,6 +103,7 @@ public sealed class SceneCapture : IDisposable
     public int CapturedCount => _leaves.Count;
     public double MaximumSliceMilliseconds { get; private set; }
     public double InitialEnumerationMilliseconds { get; }
+    public double ActiveSeconds { get; private set; }
     /// <param name="excluded">Document mode only: objects never drawn, such as the view objects (view boxes and
     /// not-yet-validated frame surfaces) that the View input references.</param>
     public SceneCapture(RhinoDoc document, DocumentWatch watch, IEnumerable<CaptureInput>? input = null, SceneCache? cache = null,
@@ -121,6 +122,7 @@ public sealed class SceneCapture : IDisposable
         }
         else foreach (var item in input) _pending.Enqueue(new(item.Value, (int[])item.Path.Clone(), item.Identity, Array.Empty<Transform>(), Array.Empty<Guid>()) { SourceItem = item.SourceItem });
         InitialEnumerationMilliseconds = timer.Elapsed.TotalMilliseconds;
+        ActiveSeconds = timer.Elapsed.TotalSeconds;
     }
     /// <summary>Document mode's scene rule (UX §3.1): visible, not a clipping plane or light, not on an M2D+ layer and
     /// not tagged with m2d.* user text (bakes and view boxes).</summary>
@@ -156,6 +158,7 @@ public sealed class SceneCapture : IDisposable
             token.ThrowIfCancellationRequested(); Capture(item);
         } while (timer.Elapsed < budget);
         Verify(); MaximumSliceMilliseconds = Math.Max(MaximumSliceMilliseconds, timer.Elapsed.TotalMilliseconds);
+        ActiveSeconds += timer.Elapsed.TotalSeconds;
         return _pending.Count == 0;
     }
     private void Unsupported(string name) => _unsupported[name] = _unsupported.GetValueOrDefault(name) + 1;
@@ -252,6 +255,7 @@ public sealed class SceneCapture : IDisposable
     }
     public LeaseEntry<PreparedScene>.Lease Accept()
     {
+        var timer = Stopwatch.StartNew();
         Verify();
         if (_accepted || _pending.Count != 0) throw new InvalidOperationException("Capture is not ready for acceptance.");
         // Native coincident-edge attribution depends on insertion order. Stabilise sources as
@@ -270,6 +274,7 @@ public sealed class SceneCapture : IDisposable
         var signature = string.Join("|", _leaves.Select(l => l.SourceItem + ":" + l.Identity + ":" + l.Key + ":" + l.Section.Revision + ":" + string.Join(",", l.Path) + ":" + string.Join(";", l.Chain.Select(Matrix))));
         signature += string.Join("|", _unsupported.OrderBy(p => p.Key)) + _tolerance.ToString("R", CultureInfo.InvariantCulture);
         var lease = _cache.Scene(SceneCache.Hash(signature), _leaves, _unsupported, _tolerance);
+        ActiveSeconds += timer.Elapsed.TotalSeconds;
         _accepted = true; return lease;
     }
     public void Dispose() { if (!_accepted) foreach (var leaf in _leaves) leaf.Geometry.Dispose(); }

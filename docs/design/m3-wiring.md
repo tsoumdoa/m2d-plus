@@ -9,10 +9,13 @@ install a Yak, commit, publish, or change the owner's Rhino runtime.
 The component reports every value and its provenance. The default for hidden
 lines is the single `Settings.DefaultHidden` constant, currently `true`.
 
-HLD receives hidden/tangent/seam switches. Extraction also filters hidden records:
-Rhino 8.36 can return them even with `IncludeHiddenCurves=false`. Native
+The composed engine always sends `IncludeHiddenCurves=true`; hidden-off filters
+completed output. Tangent/seam switches still control native candidates. Native
 `segment.IsSceneSilhouette` is retained as profile metadata, giving profile print
 widths and two-pixel preview strokes without changing the plain Visible output.
+
+The kernel/native routing integration is specified in [engine-composition.md](engine-composition.md).
+Its whole-output gate is separate from the historical M3 results below.
 
 Sections use route C's existing physical near/far trim, independent far-plane
 intersections, per-source scope and Cut-over-FarClip precedence. `none` does not

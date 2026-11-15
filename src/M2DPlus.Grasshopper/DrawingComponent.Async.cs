@@ -37,6 +37,7 @@ public sealed partial class DrawingComponent
     private bool _started;
     private string? _error;
     private string _captureInfo = "";
+    private double _captureActiveSeconds;
     private JobProgress? _progress;
     private readonly object _progressSync = new();
     private readonly object _completionSync = new();
@@ -179,7 +180,8 @@ public sealed partial class DrawingComponent
             }
             if (!_capture.Step(TimeSpan.FromMilliseconds(12))) { Message = $"Reading {_capture.CapturedCount} objects"; OnDisplayExpired(true); return; }
             var scene = _capture.Accept();
-            _captureInfo = $"Capture: initial enumeration {_capture.InitialEnumerationMilliseconds:F2} ms; maximum slice {_capture.MaximumSliceMilliseconds:F2} ms (12 ms target; individual copies may overrun).";
+            _captureActiveSeconds = _capture.ActiveSeconds;
+            _captureInfo = $"Capture active {_captureActiveSeconds:F4} s; initial enumeration {_capture.InitialEnumerationMilliseconds:F2} ms; maximum slice {_capture.MaximumSliceMilliseconds:F2} ms (12 ms target; individual copies may overrun).";
             _capture.Dispose(); _capture = null; _inputs = null;
             ResolveSettings(scene.Value.Bounds);
             var request = _requests.Begin(scene.Value.Revision, string.Join("|", _views.Select(v => v.Revision)), _settings.ToString());
@@ -245,10 +247,12 @@ public sealed partial class DrawingComponent
         var unresolved = new GH_Structure<GH_Curve>(); var frames = new GH_Structure<GH_Rectangle>(); var info = new GH_Structure<GH_String>();
         for (var index = 0; index < batch.Views.Count; index++)
         {
-            var view = batch.Views[index]; var viewPath = new GH_Path(index);
+            var view = batch.Views[index];
+            using var publicationPhase = view.Phases.Start("GH publication");
+            var viewPath = new GH_Path(index);
             var effective = index < _effective.Length ? _effective[index] + "\n" : "";
-            info.Append(new(view.Info + "\n" + effective + _captureInfo + "\n" + string.Join("\n", _settingsWarnings.Select(w => w.Text))), viewPath);
-            if (view.Error is not null) { AddRuntimeMessage(GH_RuntimeMessageLevel.Error, view.Error); continue; }
+            string Info() => view.Info + "\n" + effective + _captureInfo + "\n" + string.Join("\n", _settingsWarnings.Select(w => w.Text));
+            if (view.Error is not null) { AddRuntimeMessage(GH_RuntimeMessageLevel.Error, view.Error); info.Append(new(Info()), viewPath); continue; }
             frames.Append(new(view.Frame), viewPath);
             foreach (var item in view.Items)
             {
@@ -287,6 +291,8 @@ public sealed partial class DrawingComponent
                 }
                 else hatch.Append(null!, path);
             }
+            publicationPhase.Pause();
+            info.Append(new(Info()), viewPath);
             if (view.Report.Quarantined || view.Report.UncertainCount != 0 || view.Diagnostics.Any(d => (d.Contains("Uncertain:", StringComparison.Ordinal) || d.Contains("Unsupported:", StringComparison.Ordinal))))
                 AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"{view.Name}: uncertain/quarantined view; inspect Unresolved and Info. Uncertain points are suppressed.");
             if (view.Report.UnsupportedByType.Count > 0)

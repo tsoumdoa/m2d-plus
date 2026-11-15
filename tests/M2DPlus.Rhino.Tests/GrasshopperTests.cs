@@ -52,7 +52,7 @@ public sealed class GrasshopperTests(RhinoHost host)
         RhinoDoc.ActiveDoc = rhinoDocument;
         GH_Document.EnableSolutions = true;
         using var document = new GH_Document { Enabled = true };
-        using var box = Brep.CreateFromBox(new BoundingBox(Point3d.Origin, new Point3d(2, 2, 2)));
+        using var box = new Sphere(new Point3d(1, 1, 1), 1).ToBrep();
         var component = Component(document, box);
         using var cleanup = new Cleanup(() => { component.RemovedFromDocument(document); SceneCache.Shared.Clear(); });
         using var entered = new ManualResetEventSlim(); using var release = new ManualResetEventSlim();

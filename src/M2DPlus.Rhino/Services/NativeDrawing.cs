@@ -6,11 +6,23 @@ using Rhino.Geometry;
 
 namespace M2DPlus.Rhino.Services;
 
-public sealed record NativeSettings(bool MultipleThreads = false);
+public sealed record NativeSettings(bool MultipleThreads = false, bool NativeOnly = false)
+{
+    // Correctness harnesses run in isolated, memory-capped processes. Product work
+    // always retains the process-global scheduler and its admission budget.
+    internal NativeScheduler Scheduler { get; init; } = NativeScheduler.Global;
+    internal bool ReverseNativeForAudit { get; init; }
+    internal Action<IReadOnlyList<VisibilityInput>>? ObserveNativeInputs { get; init; }
+    internal Action<IReadOnlyCollection<string>>? ObserveKernelSources { get; init; }
+    internal Action<PlanarExtraction, Plane>? ObservePlanarScene { get; init; }
+    internal Action<string,int,bool,LineClass,Curve>? ObserveCompositionRecord { get; init; }
+}
 public sealed class DrawingPiece : IDisposable
 {
     private readonly GeometryBase _geometry;
     internal GeometryBase? DepthGeometry { get; }
+    internal bool FarCandidate { get; init; }
+    internal bool KernelOwned { get; init; }
     internal SourceSection Source { get; }
     public bool Profile { get; internal set; }
     public double Intensity { get; internal set; } = 1;
@@ -66,6 +78,7 @@ public sealed class ViewDrawing : IDisposable
     public string? ToleranceWarning => ToleranceDroppedPieces + SubToleranceSourceEdges + SubToleranceBoundsGaps + UncertainSectionComponents == 0 ? null :
         $"Detail may be lost or uncertain at tolerance {Tolerance:G6} document units: {ToleranceDroppedPieces} adapter tolerance drops; {SubToleranceSourceEdges} source edges at or below 2 x tolerance; {SubToleranceBoundsGaps} close source-bound gaps; {UncertainSectionComponents} uncertain section components. See Info; use a finer document tolerance or tolerance = override when needed.";
     public double Seconds { get; internal set; }
+    public PhaseTimings Phases { get; } = new();
     public string Info => $"{Name}: {(Error ?? "finished")} · {Seconds:F3} s\n" +
         $"{Report.Route}; deterministic={!MultipleThreads}; tolerance={Tolerance:R}; validation: {Report.ValidationDomain}\n" +
         $"Visible={Pieces.Count(p => p.Class == LineClass.Visible)}, hidden={Pieces.Count(p => p.Class == LineClass.Hidden)}, unresolved={Report.UncertainCount}, hidden points={HiddenPoints}; " +
@@ -73,7 +86,16 @@ public sealed class ViewDrawing : IDisposable
         $"Tolerance counts: adapter tolerance drops={ToleranceDroppedPieces}; source edges at or below 2 x tolerance={SubToleranceSourceEdges}; close source-bound gaps={SubToleranceBoundsGaps}; uncertain section components={UncertainSectionComponents}. Native internal drops=unknown; risk counts are not measured native loss counts.\n" +
         $"Unsupported: {string.Join(", ", Report.UnsupportedByType.Select(p => $"{p.Key}={p.Value}"))}\n" +
         string.Join("; ", Report.Normalisation.Concat(Diagnostics)) +
-        $"\nCut regions={Regions.Count}, Hatch={Regions.Count(r => r.Region.Hatch is not null)}, Beyond={Pieces.Count(p => p.Class == LineClass.Beyond)}, Far clip={Pieces.Count(p => p.Class == LineClass.FarClip)}; weights={Weights.BandName}.";
+        $"\nRouting: kernel candidates={KernelEdges}; native candidates={NativeEdges}; native calls={NativeCalls}.\nPhases: {string.Join(", ", Phases.Seconds.Select(p => $"{p.Key}={p.Value:F4}s"))}\nCut regions={Regions.Count}, Hatch={Regions.Count(r => r.Region.Hatch is not null)}, Beyond={Pieces.Count(p => p.Class == LineClass.Beyond)}, Far clip={Pieces.Count(p => p.Class == LineClass.FarClip)}; weights={Weights.BandName}.";
+    public int KernelEdges { get; internal set; }
+    public int NativeEdges { get; internal set; }
+    public int NativeCalls { get; internal set; }
+    public int CurvedCandidateEdges { get; internal set; }
+    public int PlanarNativeEdges { get; internal set; }
+    public int NativeFragments { get; internal set; }
+    internal int RoutingInvalid;
+    internal bool RoutingQuarantine;
+    internal HashSet<string> UncertainRoutingSources { get; } = new(StringComparer.Ordinal);
     internal bool MultipleThreads;
     internal double Tolerance;
     public void Dispose() { foreach (var item in Pieces) item.Dispose(); Pieces.Clear(); foreach (var region in Regions) region.Region.Dispose(); Regions.Clear(); }
@@ -94,6 +116,8 @@ public static class NativeDrawing
     internal static IProgress<double>? NativeProgress { get; set; }
     internal static Action? BeforeCompletion { get; set; }
     private static long _hldCalls;
+    private static long _visibilitySolves;
+    internal static long VisibilitySolves => Interlocked.Read(ref _visibilitySolves);
     public static long HldCalls => Interlocked.Read(ref _hldCalls);
     internal static void CountHld() => Interlocked.Increment(ref _hldCalls);
     public static async Task<DrawingBatch> SolveAsync(LeaseEntry<PreparedScene>.Lease sceneLease, RequestIdentity identity,
@@ -108,21 +132,24 @@ public static class NativeDrawing
         IReadOnlyList<ViewRequest> views, NativeSettings settings, CancellationToken token, IProgress<JobProgress>? progress)
     {
             views = views.ToArray();
-            if (!scene.Cost.Admitted(views.Count, NativeScheduler.Global.BudgetBytes))
+            if (!scene.Cost.Admitted(views.Count, settings.Scheduler.BudgetBytes))
                 throw new InvalidOperationException($"{SceneCost.Refusal} (estimate {scene.Cost.Estimate(views.Count):N0} bytes; {scene.Cost.BrepFaces} Brep faces; {scene.Cost.MeshTriangles} triangles; {views.Count} views).");
             progress?.Report(new(JobPhase.Queued, 0, views.Count));
-            return await NativeScheduler.Global.RunAsync(scene.Cost.Estimate(views.Count), ct =>
+            return await settings.Scheduler.RunAsync(scene.Cost.Estimate(views.Count), ct =>
             {
                 var results = new List<ViewDrawing>();
                 try
                 {
                     progress?.Report(new(JobPhase.Preparing, 0, scene.SourceCount));
+                    var prepareTimer = Stopwatch.StartNew();
                     var prepared = scene.Prepare(ct);
+                    double preparationSeconds = prepareTimer.Elapsed.TotalSeconds;
                     var edgeCensus = new Dictionary<double, int>(); // per distinct drawing tolerance (overrides may differ per view)
                     for (var index = 0; index < views.Count; index++)
                     {
                         ct.ThrowIfCancellationRequested(); progress?.Report(new(JobPhase.Drawing, index, views.Count));
                         var drawing = SolveView(scene, prepared, views[index], settings, ct);
+                        drawing.Phases.Add("normalisation", preparationSeconds / views.Count);
                         results.Add(drawing);
                         if (!edgeCensus.TryGetValue(drawing.Tolerance, out var census))
                             edgeCensus[drawing.Tolerance] = census = ToleranceDiagnostics.SourceEdgeCensus(prepared, drawing.Tolerance, ct);
@@ -137,6 +164,7 @@ public static class NativeDrawing
     }
     private static ViewDrawing SolveView(PreparedScene scene, IReadOnlyList<PreparedLeaf> sources, ViewRequest view, NativeSettings settings, CancellationToken token)
     {
+        Interlocked.Increment(ref _visibilitySolves);
         var tolerance = view.Settings?.Tolerance ?? scene.Tolerance;
         if (view.Settings is { } effective)
         {
@@ -160,12 +188,40 @@ public static class NativeDrawing
         var quarantine = scene.HasPotentialOccluderUnsupported;
         var uncertainSources = new HashSet<string>(StringComparer.Ordinal);
         var uncertainRegions = new List<BoundingBox>();
+        string route = "Native HLD (in process)";
         try
         {
             if (view.Error is not null) { result.Error = view.Error; return result; }
             result.Frame = view.Resolve(scene.Bounds, tolerance);
             result._diagnostics.Add($"Admission: {scene.Cost.GeometryBytes} geometry bytes; {scene.Cost.BrepFaces} faces; {scene.Cost.MeshTriangles} triangles; {scene.SourceCount} sources. Native multipleThreads={settings.MultipleThreads} (serial global scheduler).");
             if (sources.Count == 0) return result;
+            if (!settings.NativeOnly && sources.Any(s => !ReferenceEquals(s.Geometry,s.KernelClassifiedGeometry) || s.KernelTolerance != tolerance || s.KernelEligible))
+            {
+                route = ComposedVisibility.Solve(sources.Select(s => new VisibilityInput(s.Geometry, s)).ToArray(), result, view, settings, token, scene.Bounds);
+                invalid += result.RoutingInvalid; quarantine |= result.RoutingQuarantine;
+                uncertainSources.UnionWith(result.UncertainRoutingSources);
+                foreach (var piece in result.Pieces.ToArray())
+                {
+                    if (piece.Class == LineClass.Hidden && view.Settings?.Hidden == false)
+                    { result.Pieces.Remove(piece); piece.Dispose(); continue; }
+                    if (view.Named is not { Crop: true }) continue;
+                    using var geometry = piece.CopyGeometry();
+                    result.Pieces.Remove(piece);
+                    try
+                    {
+                        var source = sources.First(s => s.Identity == piece.SourceIdentity);
+                        if (geometry is Curve curve)
+                            foreach (var cropped in Crop(curve, result.Frame, tolerance))
+                                result.Pieces.Add(new(cropped, source, piece.Class, (piece.DepthGeometry as Curve)?.Trim(cropped.Domain)) { Profile = piece.Profile, KernelOwned = piece.KernelOwned });
+                        else if (geometry is Point point && Inside(point.Location, result.Frame, tolerance))
+                            result.Pieces.Add(new(geometry.Duplicate(), source, piece.Class, piece.DepthGeometry?.Duplicate()));
+                    }
+                    finally { piece.Dispose(); }
+                }
+            }
+            else
+            {
+            using var phase = result.Phases.Start("native setup");
             using var viewport = new ViewportInfo();
             var frame = result.Frame; var radius = scene.Bounds.IsValid ? Math.Max(scene.Bounds.Diagonal.Length, 1) : 1;
             viewport.IsParallelProjection = true;
@@ -173,19 +229,22 @@ public static class NativeDrawing
             viewport.SetCameraDirection(view.Direction); viewport.SetCameraUp(frame.Plane.YAxis);
             viewport.SetFrustum(frame.X.Min, frame.X.Max, frame.Y.Min, frame.Y.Max, .001, radius * 10 + 100);
             var parameters = new HiddenLineDrawingParameters { AbsoluteTolerance = tolerance, Flatten = false,
-                IncludeHiddenCurves = view.Settings?.Hidden ?? Settings.DefaultHidden, IncludeTangentEdges = view.Settings?.Tangents ?? false, IncludeTangentSeams = view.Settings?.Seams ?? false };
+                IncludeHiddenCurves = true, IncludeTangentEdges = view.Settings?.Tangents ?? false, IncludeTangentSeams = view.Settings?.Seams ?? false };
             parameters.SetViewport(viewport);
-            foreach (var source in sources)
+            foreach (var source in VisibilityInputOrder.Native(sources, s => new VisibilityInput(s.Geometry,s), settings))
             {
                 token.ThrowIfCancellationRequested();
                 if (!parameters.AddGeometry(source.Geometry, source)) { invalid++; quarantine = true; result._diagnostics.Add($"Native rejected {source.Identity}"); }
             }
-            CountHld();
+            CountHld(); result.NativeCalls++;
+            phase.Next("native solve");
             using var drawing = HiddenLineDrawing.Compute(parameters, settings.MultipleThreads, NativeProgress, token);
+            phase.Next("output construction");
             token.ThrowIfCancellationRequested();
             if (drawing is null) throw new InvalidOperationException("Native HLD returned null without cancellation.");
             if (!drawing.WorldToHiddenLine.TryGetInverse(out var inverse)) throw new InvalidOperationException("Invalid native frame.");
             var toPlane = Transform.PlanarProjection(frame.Plane) * inverse;
+            var nativeParents = new HashSet<int>(); int nativeFragments = 0;
             foreach (var segment in drawing.Segments)
             {
                 token.ThrowIfCancellationRequested();
@@ -210,10 +269,12 @@ public static class NativeDrawing
                 var parent = segment.ParentCurve;
                 if (parent?.SourceObject?.Tag is not PreparedLeaf source)
                 { invalid++; quarantine = true; result._diagnostics.Add($"Parentless/source-less segment {segment.Index}"); continue; }
+                if (visibility != HiddenLineDrawingSegment.Visibility.Projecting) nativeParents.Add(parent.Index);
                 if (visibility == HiddenLineDrawingSegment.Visibility.Duplicate) { result.DuplicateSegments++; continue; }
                 if (visibility == HiddenLineDrawingSegment.Visibility.Projecting) { result.ProjectingSegments++; continue; }
                 var proxy = segment.CurveGeometry;
                 if (proxy is null) { invalid++; uncertainSources.Add(source.Identity); result._diagnostics.Add($"Null geometry {segment.Index}: {source.Identity}"); continue; }
+                nativeFragments++;
                 var owned = proxy.DuplicateCurve();
                 try
                 {
@@ -234,6 +295,7 @@ public static class NativeDrawing
                 }
                 catch { owned.Dispose(); throw; }
             }
+            result.NativeEdges = result.CurvedCandidateEdges = nativeParents.Count; result.NativeFragments = nativeFragments;
             foreach (var point in drawing.Points)
             {
                 token.ThrowIfCancellationRequested();
@@ -246,6 +308,7 @@ public static class NativeDrawing
                 var location = point.Location; location.Transform(toPlane);
                 if (view.Named is { Crop: true } && !Inside(location, frame, tolerance)) continue;
                 result.Pieces.Add(new(new Point(location), source, LineClass.Visible, new Point(world)));
+            }
             }
         }
         catch (OperationCanceledException) { result.Dispose(); throw; }
@@ -264,8 +327,8 @@ public static class NativeDrawing
             }
             if (result.EmptyNativeSlots + result.ZeroLengthNativeSegments != 0) result._diagnostics.Add($"Benign native records dropped: {result.EmptyNativeSlots} empty slots (index -1, no parent); {result.ZeroLengthNativeSegments} exactly zero-length point curves. No nonzero Unset was promoted.");
             result.Pieces.Sort(ComparePieces);
-            result.Report = new("Native HLD (in process)", result.Pieces.Count(p => p.Class == LineClass.Unresolved), invalid,
-                scene.Unsupported, scene.Conversions, quarantine);
+            result.Report = new(route, result.Pieces.Count(p => p.Class == LineClass.Unresolved), invalid,
+                scene.Unsupported, scene.Conversions, quarantine) { ValidationDomain = settings.NativeOnly ? "native parallel baseline; analytic properties" : "exact planar kernel; mixed composition gate pending; general freeform visibility unknown; sections not evaluated (M2)" };
             result.Seconds = timer.Elapsed.TotalSeconds;
         }
         return result;
@@ -303,7 +366,8 @@ public static class NativeDrawing
         {
             var interval = new Interval(sorted[i - 1], sorted[i]);
             if (!Inside(curve.PointAt(interval.Mid), frame, tolerance)) continue;
-            var trimmed = curve.Trim(interval);
+            var trimmed = CurveIntervals.Trim(curve, interval);
+            if (trimmed is null && curve is LineCurve && curve.PointAt(interval.Min) == curve.PointAt(interval.Max)) continue;
             if (trimmed is null) throw new InvalidOperationException("Named-view crop failed; output suppressed.");
             yield return trimmed;
         }
