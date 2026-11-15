@@ -47,7 +47,9 @@ public sealed class GrasshopperUiTests(RhinoHost host)
         Assert.Equal("DrawingAttributes", component.Attributes.GetType().Name);
         Assert.Equal("ViewParam", component.Params.Input[1].GetType().Name);
         Assert.IsAssignableFrom<Param_GenericObject>(component.Params.Input[1]);
-        Assert.Equal((5, 9), (component.Params.Input.Count, component.Params.Output.Count));
+        Assert.Equal((5, 10), (component.Params.Input.Count, component.Params.Output.Count));
+        Assert.Equal(new Guid("c8d0f9fe-5498-45dd-8caf-10201b80d211"), component.ComponentGuid);
+        Assert.Equal(["V", "H", "B", "Fc", "C", "Ha", "?", "F", "i", "Ig"], component.Params.Output.Select(p => p.NickName));
         Assert.Equal(["G", "V", "T", "S", "D"], component.Params.Input.Select(p => p.NickName));
         Assert.Equal(GH_ParamAccess.list, component.Params.Input[4].Access);
         Assert.True(component.Params.Input[4].Optional);
@@ -146,6 +148,31 @@ public sealed class GrasshopperUiTests(RhinoHost host)
             Assert.Equal(["Front"], ViewTexts(five));
             Assert.Equal("Depth", five.Params.Input[4].Name);
             Assert.Equal(0, five.Params.Input[4].SourceCount);
+
+            // A definition saved before the Ignored output existed (9 outputs) still reads: the nine keep their
+            // indices and instance ids (so downstream wires still find them), and Ignored is added empty at index 9.
+            var nineOutputs = new GH_Archive();
+            Guid[] oldOutputIds;
+            using (var old = new GH_Document())
+            {
+                var nine = NewComponent(old, 0, 0);
+                nine.Params.UnregisterOutputParameter(nine.Params.Output[9]);
+                Assert.Equal(9, nine.Params.Output.Count);
+                ((dynamic)nine.Params.Input[1]).SetTexts(new[] { "Front" }, "test");
+                oldOutputIds = nine.Params.Output.Select(p => p.InstanceGuid).ToArray();
+                Assert.True(nineOutputs.AppendObject(old, "Definition"));
+            }
+            var nineObjects = nineOutputs.GetRootNode.FindChunk("Definition").FindChunk("DefinitionObjects");
+            var nineSaved = Enumerable.Range(0, nineObjects.GetInt32("ObjectCount")).Select(i => nineObjects.FindChunk("Object", i))
+                .Single(o => o.GetGuid("GUID") == component.ComponentGuid);
+            using var upgradedOutputs = new GH_Document();
+            var ten = NewComponent(upgradedOutputs, 0, 0);
+            Assert.True(ten.Read(nineSaved.FindChunk("Container")));
+            Assert.Equal((5, 10), (ten.Params.Input.Count, ten.Params.Output.Count));
+            Assert.Equal(oldOutputIds, ten.Params.Output.Take(9).Select(p => p.InstanceGuid));
+            Assert.Equal(["Visible", "Hidden", "Beyond", "Far clip", "Cut", "Hatch", "Unresolved", "Frame", "Info", "Ignored"], ten.Params.Output.Select(p => p.Name));
+            Assert.Empty(ten.Params.Output[9].Recipients);
+            Assert.Equal(["Front"], ViewTexts(ten));
         }
         finally { File.Delete(path); }
     });

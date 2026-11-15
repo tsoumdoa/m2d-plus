@@ -6,9 +6,12 @@ namespace M2DPlus.Grasshopper.UI.Model;
 /// <summary>Preview layers toggled from the component menu (UX §7 Preview ▸). Unknown names round-trip.</summary>
 public static class PreviewLayers
 {
-    public const string Hidden = "hidden", Beyond = "beyond", FarClip = "farclip", Hatch = "hatch", Frame = "frame", Views = "views";
+    public const string Hidden = "hidden", Beyond = "beyond", FarClip = "farclip", Hatch = "hatch", Frame = "frame", Views = "views",
+        Ignored = "ignored";
+    /// <summary>Ignored (min visible) is off by default: those lines are left out of the drawing, so the preview hides
+    /// them unless asked, and then draws them very faint.</summary>
     public static ImmutableArray<(string Name, string Label)> All { get; } =
-        [(Views, "View frames"), (Hidden, "Hidden"), (Beyond, "Beyond"), (FarClip, "Far clip"), (Hatch, "Hatch"), (Frame, "Frame")];
+        [(Views, "View frames"), (Hidden, "Hidden"), (Beyond, "Beyond"), (FarClip, "Far clip"), (Hatch, "Hatch"), (Frame, "Frame"), (Ignored, "Ignored")];
     public static ImmutableSortedSet<string> Default { get; } = ImmutableSortedSet.Create(StringComparer.Ordinal, Views, Hidden, Beyond, FarClip, Hatch);
 }
 

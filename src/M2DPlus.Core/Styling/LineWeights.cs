@@ -27,7 +27,9 @@ public sealed class LineWeightPreset
             [LineClass.Cut] = new(widths[0], 3, false, 1), [LineClass.Profile] = new(widths[1], 2, false, 1),
             [LineClass.Visible] = new(widths[2], 1, false, 1), [LineClass.Hidden] = new(widths[3], 1, true, 1),
             [LineClass.Beyond] = new(widths[4], 1, false, .55), [LineClass.FarClip] = new(widths[2], 1, false, 1),
-            [LineClass.Hatch] = new(widths[4], 0, false, 1), [LineClass.Unresolved] = new(widths[1], 2, false, 1)
+            [LineClass.Hatch] = new(widths[4], 0, false, 1), [LineClass.Unresolved] = new(widths[1], 2, false, 1),
+            // Ignored lines (min visible) are kept for checking, not for the drawing: the thinnest width, very faint.
+            [LineClass.Ignored] = new(widths[4], 1, false, .25)
         }.ToImmutableDictionary();
     }
 

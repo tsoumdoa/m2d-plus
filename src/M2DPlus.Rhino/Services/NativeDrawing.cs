@@ -36,10 +36,13 @@ public sealed class DrawingPiece : IDisposable
     public int[] SourcePath => (int[])_path.Clone();
     internal ReadOnlySpan<int> Path => _path;
     public LineClass Class { get; internal set; }
+    /// <summary>The class the solve gave this piece, before any later quarantine to Unresolved. Presentation drops
+    /// solved-hidden pieces when <c>hidden = off</c>, exactly as the solve used to.</summary>
+    internal LineClass SolvedClass { get; }
     internal string GeometricKey { get; }
     internal DrawingPiece(GeometryBase geometry, PreparedLeaf source, LineClass classification, GeometryBase? depthGeometry = null)
     {
-        DepthGeometry = depthGeometry; Source = source.Section; SourceItem = source.SourceItem;
+        DepthGeometry = depthGeometry; Source = source.Section; SourceItem = source.SourceItem; SolvedClass = classification;
         _geometry = geometry; SourceIdentity = source.Identity; _path = (int[])source.Path.Clone(); Class = classification;
         var bounds = geometry.GetBoundingBox(true);
         GeometricKey = FormattableString.Invariant($"{bounds.Min.X:R},{bounds.Min.Y:R},{bounds.Min.Z:R},{bounds.Max.X:R},{bounds.Max.Y:R},{bounds.Max.Z:R}/") +
@@ -78,6 +81,12 @@ public sealed class ViewDrawing : IDisposable
     public string? ToleranceWarning => ToleranceDroppedPieces + SubToleranceSourceEdges + SubToleranceBoundsGaps + UncertainSectionComponents == 0 ? null :
         $"Detail may be lost or uncertain at tolerance {Tolerance:G6} document units: {ToleranceDroppedPieces} adapter tolerance drops; {SubToleranceSourceEdges} source edges at or below 2 x tolerance; {SubToleranceBoundsGaps} close source-bound gaps; {UncertainSectionComponents} uncertain section components. See Info; use a finer document tolerance or tolerance = override when needed.";
     public double Seconds { get; internal set; }
+    /// <summary>The min visible threshold applied (document units; 0 = off), and what it ignored.</summary>
+    public double MinVisible { get; internal set; }
+    public int IgnoredObjects { get; internal set; }
+    public int IgnoredPieces { get; internal set; }
+    public string IgnoredSummary => MinVisible <= 0 ? "Ignored: off (min visible = off)." :
+        FormattableString.Invariant($"Ignored (min visible {MinVisible:G6}): {IgnoredObjects} objects, {IgnoredPieces} pieces. Their lines are in the Ignored output; nothing is deleted.");
     public PhaseTimings Phases { get; } = new();
     public string Info => $"{Name}: {(Error ?? "finished")} · {Seconds:F3} s\n" +
         $"{Report.Route}; deterministic={!MultipleThreads}; tolerance={Tolerance:R}; validation: {Report.ValidationDomain}\n" +
@@ -86,7 +95,7 @@ public sealed class ViewDrawing : IDisposable
         $"Tolerance counts: adapter tolerance drops={ToleranceDroppedPieces}; source edges at or below 2 x tolerance={SubToleranceSourceEdges}; close source-bound gaps={SubToleranceBoundsGaps}; uncertain section components={UncertainSectionComponents}. Native internal drops=unknown; risk counts are not measured native loss counts.\n" +
         $"Unsupported: {string.Join(", ", Report.UnsupportedByType.Select(p => $"{p.Key}={p.Value}"))}\n" +
         string.Join("; ", Report.Normalisation.Concat(Diagnostics)) +
-        $"\nRouting: kernel candidates={KernelEdges}; native candidates={NativeEdges}; native calls={NativeCalls}.\nPhases: {string.Join(", ", Phases.Seconds.Select(p => $"{p.Key}={p.Value:F4}s"))}\nCut regions={Regions.Count}, Hatch={Regions.Count(r => r.Region.Hatch is not null)}, Beyond={Pieces.Count(p => p.Class == LineClass.Beyond)}, Far clip={Pieces.Count(p => p.Class == LineClass.FarClip)}; weights={Weights.BandName}.";
+        $"\nRouting: kernel candidates={KernelEdges}; native candidates={NativeEdges}; native calls={NativeCalls}.\nPhases: {string.Join(", ", Phases.Seconds.Select(p => $"{p.Key}={p.Value:F4}s"))}\nCut regions={Regions.Count}, Hatch={Regions.Count(r => r.Region.Hatch is not null)}, Beyond={Pieces.Count(p => p.Class == LineClass.Beyond)}, Far clip={Pieces.Count(p => p.Class == LineClass.FarClip)}; weights={Weights.BandName}.\n{IgnoredSummary}";
     public int KernelEdges { get; internal set; }
     public int NativeEdges { get; internal set; }
     public int NativeCalls { get; internal set; }

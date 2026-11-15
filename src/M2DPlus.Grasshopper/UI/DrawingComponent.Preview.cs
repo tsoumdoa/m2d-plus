@@ -66,10 +66,10 @@ public sealed partial class DrawingComponent
         foreach (var view in _drawing.Views)
         {
             if (view.Error is not null) continue;
-            foreach (var piece in view.Items.OrderBy(p => p.Class == LineClass.Hidden ? 0 : 1))
+            foreach (var piece in view.Items.OrderBy(p => p.Class is LineClass.Hidden or LineClass.Ignored ? 0 : 1))
             {
                 var toggle = piece.Class switch { LineClass.Hidden => PreviewLayers.Hidden, LineClass.Beyond => PreviewLayers.Beyond,
-                    LineClass.FarClip => PreviewLayers.FarClip, _ => null };
+                    LineClass.FarClip => PreviewLayers.FarClip, LineClass.Ignored => PreviewLayers.Ignored, _ => null };
                 if (toggle is not null && !Ui.State.Preview.Contains(toggle)) continue;
                 var kind = piece.Profile && piece.Class == LineClass.Visible ? LineClass.Profile : piece.Class;
                 var style = view.Weights[kind];

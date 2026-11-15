@@ -31,6 +31,7 @@ public static class SettingsCatalog
         new("hidden", "Hidden lines", Lines, FieldKind.Toggle, OnOff, "hidden = on | off"),
         new("tangents", "Tangent edges", Lines, FieldKind.Toggle, OnOff, "tangents = on | off"),
         new("seams", "Seams", Lines, FieldKind.Toggle, OnOff, "seams = on | off"),
+        new("min_visible", "Min visible", Lines, FieldKind.Distance, [O("off", "Off"), O("1 mm", "1 mm"), O("2 mm", "2 mm"), O("5 mm", "5 mm"), O("10 mm", "10 mm")], "min visible = off | <length>: objects seen only through small gaps. A partly hidden object whose longest continuous visible piece (2D, in the drawing) is shorter than this moves to the Ignored output. Fully visible objects are never ignored."),
         new("glass", "Glass", Lines, FieldKind.Choice, [O("opaque", "Opaque"), O("clear", "Clear")], "glass = opaque | clear"),
         new("weights", "Weights", Lines, FieldKind.Choice, [O("auto", "From scale"), O("layers", "From source layers")], "weights = auto | layers"),
         new("hatch", "Hatch", Cuts, FieldKind.Choice, [O("styles", "From section styles"), O("colour", "Object colour"), O("black", "Black"), O("none", "None")], "hatch = styles | colour | black | none. Styles: the Rhino 8 section style, else a solid fill in the object's colour."),

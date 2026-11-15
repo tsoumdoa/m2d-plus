@@ -99,6 +99,13 @@ public sealed class EffectiveSettings
     public string Name => Get<string>("name");
     public OutputTreeMode Tree => Get<OutputTreeMode>("tree");
     public double Tolerance => Get<double>("tolerance");
+    /// <summary>The <c>min visible</c> threshold in document units; 0 = off (REQUIREMENTS, "small gaps").</summary>
+    public double MinVisible => Get<double>("min_visible");
+    /// <summary>The settings the visibility solve receives: the same, except that hidden lines are always kept.
+    /// Hidden and min visible are presentation choices over one cached solve, and the min visible rule needs the
+    /// hidden pieces to tell a partly hidden object from a fully visible one.</summary>
+    public EffectiveSettings ForVisibilitySolve() => Hidden ? this
+        : new(View, Values.SetItem("hidden", Values["hidden"] with { Value = true }));
     public string Describe() => string.Join(Environment.NewLine, Settings.Keys.Select(k =>
         $"{k} = {Settings.FormatEffective(k, Values[k].Value)} ({Values[k].SourceDescription})"));
 }

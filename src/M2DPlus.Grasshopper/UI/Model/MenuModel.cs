@@ -83,6 +83,7 @@ public static class ComponentMenu
         items.Add(Toggle(settings, "Hidden lines", "hidden"));
         items.Add(Toggle(settings, "Tangent edges", "tangents"));
         items.Add(Toggle(settings, "Seams", "seams"));
+        items.Add(Choice(settings, "Min visible", "min_visible") with { Tooltip = SettingsCatalog.Spec("min_visible").Tooltip });
         items.Add(Choice(settings, "Beyond", "beyond"));
         items.Add(Choice(settings, "Far clip", "farclip"));
         items.Add(Toggle(settings, "Depth cueing", "fade"));

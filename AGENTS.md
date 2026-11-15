@@ -52,7 +52,8 @@ contains only the in-process skeleton and its two libraries.
   Generated once for M0, recorded in source comments and Yak keywords; never regenerate.
 - Append new GH inputs **after existing ones** to preserve saved definitions. Current
   Geometry/G and Settings/S use tree access; View/V, Target/T and Depth/D (5th, appended
-  in UX rev. 4) use list access. Only View is required. Keep the nine output indices fixed.
+  in UX rev. 4) use list access. Only View is required. Append outputs the same way and keep
+  their indices fixed: ten outputs, Ignored/Ig (index 9, for `min visible`) appended after Info/i.
 
 ## Runtime and ownership contracts
 

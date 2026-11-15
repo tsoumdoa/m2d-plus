@@ -245,6 +245,7 @@ public sealed partial class DrawingComponent
         var visible = new GH_Structure<IGH_GeometricGoo>(); var hidden = new GH_Structure<GH_Curve>();
         var beyond = new GH_Structure<GH_Curve>(); var farClip = new GH_Structure<GH_Curve>(); var cut = new GH_Structure<GH_Curve>(); var hatch = new GH_Structure<GH_Hatch>();
         var unresolved = new GH_Structure<GH_Curve>(); var frames = new GH_Structure<GH_Rectangle>(); var info = new GH_Structure<GH_String>();
+        var ignored = new GH_Structure<GH_Curve>();
         for (var index = 0; index < batch.Views.Count; index++)
         {
             var view = batch.Views[index];
@@ -265,6 +266,7 @@ public sealed partial class DrawingComponent
                     else if (item.Class == LineClass.Beyond) beyond.Append(new(curve), path);
                     else if (item.Class == LineClass.Hidden) hidden.Append(new(curve), path);
                     else if (item.Class == LineClass.FarClip) farClip.Append(new(curve), path);
+                    else if (item.Class == LineClass.Ignored) ignored.Append(new(curve), path);
                     else unresolved.Append(new(curve), path);
                 }
                 else if (copy is Point point)
@@ -304,6 +306,7 @@ public sealed partial class DrawingComponent
         var good = batch.Views.Count(v => v.Error is null);
         Message = good == batch.Views.Count ? $"{good} drawings · {batch.Views.Sum(v => v.Seconds):F1} s" : $"Partial · {good}/{batch.Views.Count} drawings";
         da.SetDataTree(0, visible); da.SetDataTree(1, hidden); da.SetDataTree(2, beyond); da.SetDataTree(3, farClip); da.SetDataTree(4, cut); da.SetDataTree(5, hatch); da.SetDataTree(6, unresolved); da.SetDataTree(7, frames); da.SetDataTree(8, info);
+        if (Params.Output.Count > 9) da.SetDataTree(9, ignored);
     }
 
     private void Refresh(bool preserve)

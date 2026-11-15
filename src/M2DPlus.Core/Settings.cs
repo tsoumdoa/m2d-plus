@@ -40,7 +40,7 @@ public static partial class Settings
             var value = line[(separator + 1)..].Trim();
             if (!KeyPattern().IsMatch(key) || value.Length == 0)
                 throw new FormatException($"Line {lineNumber}: expected key = value.");
-            result.Add(new(view, key.ToLowerInvariant(), value, lineNumber));
+            result.Add(new(view, NormalizeKey(key), value, lineNumber));
         }
         return result.AsReadOnly();
     }
@@ -68,7 +68,7 @@ public static partial class Settings
         return distance;
     }
 
-    [GeneratedRegex(@"^[A-Za-z][A-Za-z0-9.]*$")]
+    [GeneratedRegex(@"^[A-Za-z][A-Za-z0-9._]*(?: +[A-Za-z0-9._]+)*$")]
     private static partial Regex KeyPattern();
 
     [GeneratedRegex("^([+-]?(?:[0-9]+(?:\\.[0-9]*)?|\\.[0-9]+)(?:[eE][+-]?[0-9]+)?)\\s*([A-Za-z]+|['\"])?$")]

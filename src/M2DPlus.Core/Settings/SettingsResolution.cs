@@ -62,7 +62,7 @@ public static partial class Settings
                         diagnostics.Add(new(DiagnosticSeverity.Warning, "Expected key = value.", Branch: branch, Line: lineIndex + 1));
                         continue;
                     }
-                    var key = line[..equals].Trim().ToLowerInvariant();
+                    var key = NormalizeKey(line[..equals]);
                     if (TryValue(key, line[(equals + 1)..].Trim(), units, diagnostics, null, branch, lineIndex + 1, out var value))
                         foreach (var index in addressed) candidates[index][key].Add(new(value!, SettingSource.Input));
                 }
@@ -124,9 +124,12 @@ public static partial class Settings
 
         void ApplyRow(SettingsRow row, SettingSource source, int index)
         {
-            foreach (var (key, text) in row.Values)
+            foreach (var (raw, text) in row.Values)
+            {
+                var key = NormalizeKey(raw);
                 if (TryValue(key, text, units, diagnostics, index, null, null, out var value))
                     candidates[index][key].Add(new(value!, source));
+            }
         }
     }
 
@@ -143,6 +146,7 @@ public static partial class Settings
         catch (Exception e) when (e is FormatException or JsonException)
         {
             var hint = key is "depth" or "beyond" or "gap" ? " Use auto or a nonnegative distance (for example 3 m)."
+                : key == "min_visible" ? " Use off or a nonnegative distance (for example 2 mm)."
                 : key.StartsWith("fade.", StringComparison.Ordinal) ? " Use 0–100 %." : "";
             diagnostics.Add(new(DiagnosticSeverity.Warning, $"Invalid {key} = {text}: {e.Message}{hint}", view, branch, line, key));
             value = null;

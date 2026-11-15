@@ -4,6 +4,8 @@ Status: design sub-agent, 2026-11-14, revision 4 (owner decisions on view object
 Revision 3 decided cut fill and scale; revision 2 covered settings, view range, rectangle views, placement and
 section styles. It follows [REQUIREMENTS.md](../REQUIREMENTS.md).
 Visual mockup: [ux-mockup.html](ux-mockup.html).
+Addendum, 2026-11-15: `min visible` and the tenth output **Ignored** (owner decision in REQUIREMENTS, "Ignoring
+objects seen only through small gaps"; §3.9).
 
 **The idea:** one component and five inputs, of which only **View** must be set. Plug in a view and you
 get a correct drawing. M2D+ works out everything else from the view source and the document: what
@@ -90,7 +92,7 @@ Near/Far/Cut, Crop (§2, §3.2); Scale (now the line-weight preset key `scale`, 
 Dock to/side/gap (§4); Fade on/start/end/min
 (now the Revit-style `fade.*` keys, §3.2); Show hidden (§3.8).
 
-### 1.2 Outputs (9)
+### 1.2 Outputs (10)
 
 | # | Name | Nick | Type | Contents |
 |---|---|---|---|---|
@@ -103,6 +105,10 @@ Dock to/side/gap (§4); Fade on/start/end/min
 | 6 | Unresolved | ? | Curve | Pieces whose visibility the engine could not decide. They never appear in Visible or Hidden. Usually empty. |
 | 7 | Frame | F | Rectangle | One placed drawing frame per view, at 1:1. It does not depend on the output's bounds (§3.3). For a Rectangle view it is that rectangle, placed (§4). |
 | 8 | Info | i | Text | One report per view: source, effective settings and where each came from, counts, styles, unresolved and unsupported objects, timing (§5.4). |
+| 9 | Ignored | Ig | Curve | **Appended 2026-11-15.** Lines of objects seen only through small gaps: partly hidden objects whose longest continuous visible piece is shorter than `min visible` (§3.9). They are moved out of Visible, Beyond and Far clip, never deleted. Empty while `min visible` is off (the default). |
+
+Outputs are only ever appended, so saved definitions keep their wires: a definition saved with the nine outputs before
+Ignored loads with the nine unchanged (same indices and ids) and an empty Ignored added at index 9.
 
 Line weights, fill colours and depth-cue fading are not outputs. The preview and Bake apply them (§3.6, §3.7). The
 curve outputs are plain, so they work with every downstream component. All geometry outputs are at 1:1 in model units.
@@ -243,6 +249,7 @@ A **view box** is the view as a Rhino object. It is an `Extrusion`:
 | `m2d.weights` | `auto` · `layers` | `default` |
 | `m2d.hatch` | `styles` · `colour` · `black` · `none` | `default` |
 | `m2d.cuts` | `separate` · `merge` | `default` |
+| `m2d.min_visible` | `off` · length (§3.9) | `default` |
 
 The values are the Settings syntax of §6.3, so any `m2d.<key>` of §6.3 is read (including `m2d.gap` or `m2d.tree`
 if a user adds them); `depth` and `crop` come from the box itself. A bad value is a warning naming the view, with
@@ -380,6 +387,7 @@ never changes the Frame, the gap or hatch pattern scale (§4, §3.7). Default **
 | Far clip (= Visible) | 0.25 | **0.18** | 0.13 | Continuous | ink × fade (at 100 % depth, so the fade limit when fading) | 1 |
 | Hatch pattern lines (= Beyond) | 0.13 | **0.09** | 0.05 | from the pattern | section style pattern colour, else the object's display colour | fill |
 | Unresolved (= Profile) | 0.50 | **0.35** | 0.25 | Continuous | orange `#E07A00`, never faded | 2 |
+| Ignored (§3.9, width = Beyond) | 0.13 | **0.09** | 0.05 | Continuous | 25 % ink × fade | 1 (preview off by default) |
 
 - The Cut width is multiplied by the section style's *BoundaryWidthScale* when a style applies (§3.7). A solid fill has
   no lines, so the hatch width only matters for patterns.
@@ -485,9 +493,46 @@ style; the API suggests they don't).
 
 - **Tangent edges:** off by default. **Seams:** off by default. Both are menu toggles, as in Make2D.
 - **Hidden lines:** on by default. It is cheap, because the engine finds visibility for every edge anyway.
-  Turning it off empties the Hidden output and saves a little memory.
+  Turning it off empties the Hidden output. It is a presentation choice: the solve always keeps hidden lines (they also
+  tell `min visible` which objects are partly hidden), so toggling it never re-runs visibility.
 - **Glass:** opaque by default (as in Make2D); `glass = clear` makes objects with a transparent material or on a layer
   named `*Glass*`/`*Glazing*` non-occluding.
+
+### 3.9 Objects seen only through small gaps: `min visible`
+
+Owner decision (REQUIREMENTS, 2026-11-15). Modelling gaps (a 2 mm joint between wall panels) let slivers of the objects
+behind them through into the drawing. `min visible = <length>` moves those objects' lines to the **Ignored** output.
+Default `off` (`0`). Normal precedence (§6): Settings input > view object (`m2d.min_visible`) > menu > built-in. Units as
+for any length (`2 mm`, `0.002`; a bare number is in document units). The key may be written `min visible` or
+`min_visible`; Info and *Copy settings as text* use `min_visible`.
+
+**The rule.** An object is ignored when it is *partly hidden* and its *longest continuous visible piece* is shorter than
+the threshold, both measured in 2D in the drawing (1:1):
+
+- **Object** = one source: a Rhino object, a GH item, or one block instance (its instance path). Pieces of one instance
+  never count for another instance of the same definition.
+- **Visible pieces** are its Visible (including profiles), Beyond and Far clip lines. Beyond and Far clip count because
+  they are visible linework split only by depth; a Beyond piece joined to a Visible piece is one continuous piece.
+- **Continuous** = pieces of the object that touch, end to end or an end on another piece, within the drawing tolerance,
+  joined into one run; its length is the sum of the joined pieces' 2D lengths. So one edge cut by the solve into
+  adjacent fragments counts whole, and so does an outline of several edges. Pieces with a gap between them are separate
+  glimpses and are never joined, even when collinear.
+- **Partly hidden** = some of the object's hidden linework lies outside the 2D bounding box of its visible linework.
+  An object's outline is never hidden by the object itself, so self-hidden back edges (a small box in an axonometric)
+  do not make it partly hidden: a small object that nothing covers is never ignored, however small. An object covered
+  only in its middle, with both extremes still drawn, is treated as fully visible too; the rule errs towards keeping.
+- **Never ignored:** objects with no visible piece, objects with any Unresolved piece (their visibility is not known),
+  objects that are cut in the view (their Cut and Hatch are never ignored, so their lines stay with them), points,
+  and annotations.
+
+**What moves.** Every Visible, Beyond and Far clip line of an ignored object moves to **Ignored**; its Hidden lines stay
+in Hidden; nothing is deleted. Info reports `Ignored (min visible 5): 2 objects, 4 pieces` per view (threshold in document units). Bake puts the lines
+on an `Ignored` category layer (`m2d.class = ignored`, §8). **Preview:** like Hidden, it is a *Preview ▸* toggle, but
+**off by default**, because these lines are left out of the drawing; when on, they draw very faint (25 % ink).
+
+**Cost.** A presentation filter over the per-source classification, like beyond, fade and placement. Changing only the
+threshold (or `hidden`) never re-runs visibility and makes no HLD call. It does not speed up the solve; culling before
+the solve is a possible later experiment behind its own correctness gate.
 
 ---
 
@@ -584,6 +629,7 @@ View range: depth 40 m (view box) · far clip with line (view object) · beyond 
 Depth cueing: on, 10 %–90 %, limit 25 % (view object) · line weights 1:100 preset (scale 1:100, component menu)
 Scene 50,210 objects · 31,004 block instances of 212 definitions (reused)
 18,422 visible · 6,108 hidden · 2,340 beyond · 96 far clip · 1,206 cut regions · 1,206 hatches
+Ignored (min visible 0.002): 14 objects, 31 pieces. Their lines are in the Ignored output; nothing is deleted.
 Styles: "Concrete" (layer Structure::Core) 212 · "Brick" (object) 18 · object colour 976 (hatch = styles)
 Unresolved: 12 pieces on 3 objects (orange) · Not drawn: 3 Text, 1 Point cloud
 Tolerance 0.001 m (document) · 41 short pieces dropped
@@ -661,6 +707,7 @@ fade.limit = 25 %
 | `tangents` | `on` · `off` | `off` | — | — (Make2D option) | view object, menu |
 | `seams` | `on` · `off` | `off` | — | — (Make2D option) | view object, menu |
 | `glass` | `opaque` · `clear` | `opaque` | — | — | view object |
+| `min visible` (`min_visible`) | `off` · length | `off` | 2D length in the drawing | — | view object (`m2d.min_visible`), menu |
 | `scale` | `1:n` · `n` | `1:100` | — (picks the nearest preset band, §3.6) | View Scale (line weights only; the drawing stays 1:1) | view object, menu |
 | `weights` | `auto` · `layers` | `auto` (the `scale` preset, §3.6) | — | Object Styles | view object, menu |
 | **Cuts** | | | | | |
@@ -697,6 +744,7 @@ Cancel                            (only while running)
 Hidden lines                 ✓        hidden   = on | off
 Tangent edges                         tangents = off | on
 Seams                                 seams    = off | on
+Min visible ▸ Off ✓ · 1 mm · 2 mm · 5 mm · 10 mm      min_visible = off | <length>   (§3.9)
 Beyond ▸     Auto ✓ · Off · 1 m · 3 m · 10 m          beyond  = auto | off | <distance>
 Far clip ▸   No clip · Clip with line · Clip without line ✓   farclip = none | line | noline
 Depth cueing                          fade     = off | on   (start/end/limit: m2d.fade.* or text)
@@ -706,7 +754,7 @@ Scale ▸      1:20 · 1:50 · 1:100 ✓ · 1:200 · 1:500                    sc
 Line weights ▸ From scale ✓ · From source layers                    weights = auto | layers
 Reset menu defaults
 ────────────────
-Preview ▸    View frames ✓ · Hidden ✓ · Beyond ✓ · Far clip ✓ · Hatch ✓ · Frame
+Preview ▸    View frames ✓ · Hidden ✓ · Beyond ✓ · Far clip ✓ · Hatch ✓ · Frame · Ignored
 Output tree ▸ Per source branch ✓ · Branch per object               tree = branch | object
 ────────────────
 Copy info
@@ -732,7 +780,8 @@ M2D+
    ├─ Far clip  ── …               (only when farclip = line)
    ├─ Cut       ── …
    ├─ Hatch     ── …
-   └─ Unresolved                   (only when there is something unresolved; orange)
+   ├─ Unresolved                   (only when there is something unresolved; orange)
+   └─ Ignored   ── …               (only when min visible ignores something, §3.9)
 ```
 
 - Category first, then source layer, as Make2D does. One click hides every hidden line, and the source
@@ -753,7 +802,7 @@ M2D+
 ### 8.2 Replace, not pile up
 
 - Each baked object carries user strings: `m2d.bake = <component id>/<drawing name>`, `m2d.source =
-  <object id>`, `m2d.class = visible|hidden|beyond|farclip|cut|hatch|unresolved`, `m2d.hash = <geometry hash>`.
+  <object id>`, `m2d.class = visible|hidden|beyond|farclip|cut|hatch|unresolved|ignored`, `m2d.hash = <geometry hash>`.
 - **Re-bake replaces** the objects from the earlier bake of the same component and drawing. Objects the user has since
   **edited** (hash changed) or **moved to another layer** are kept, and the result says how many:
   `Baked Section A: 3,412 objects (replaced 3,390 · kept 2 you edited)`. Empty sublayers that M2D+ created are
@@ -942,4 +991,6 @@ new in revision 3** and follow from the two decisions.
     output order, so trees don't shuffle between runs.
 13. **Unit-aware defaults:** the document tolerance and angle tolerance, and metre defaults (3 m beyond) converted to document units.
 14. **Settings-independent caching:** depth cueing, line weights (`scale`, `weights`), fill colours and the `hatch` override are
-    styling only and must not invalidate the drawing cache; `depth`, `farclip`, `beyond`, `crop`, `hidden`, `tangents`, `seams`, `glass` and `cuts` do.
+    styling only and must not invalidate the drawing cache. Neither do `hidden` (the solve always keeps hidden lines) or
+    `min visible` (§3.9). As built, the visibility solve is keyed on `depth`, `farclip`, `crop`, `tangents`, `seams`,
+    `glass` and `tolerance` only (`Settings.VisibilityKeys`); `beyond` and `cuts` are applied over the cached solve too.

@@ -1,5 +1,6 @@
 using M2DPlus.Core;
 using M2DPlus.Core.Placement;
+using M2DPlus.Core.Styling;
 using M2DPlus.Rhino.Sections;
 using Rhino.Geometry;
 using Rhino.Geometry.Intersect;
@@ -36,16 +37,18 @@ public sealed class DrawingCache : IDisposable
             await _solve.WaitAsync(token).ConfigureAwait(false);
             try
             {
+                // Only visibility keys reach the solve's cache key; hidden, min visible and styling are presentation.
                 var key = scene.Value.VisibilityRevision + "/" + settings + "/" + string.Join("|", views.Select(v => (v with { Cut = v.Cut is { } cut ? cut with { SectionerStyle = null } : null }).Revision + "/" +
-                    string.Join(";", new[] { "depth", "farclip", "crop", "hidden", "tangents", "seams", "glass", "tolerance" }
-                        .Select(k => v.Settings?[k].Value?.ToString()))));
+                    string.Join(";", Settings.VisibilityKeys.Select(k => v.Settings?[k].Value?.ToString()))));
                 LeaseEntry<DrawingBatch>.Lease? lease;
                 long generation;
                 lock (_sync) { generation = _generation; lease = key == _key ? _entry?.Acquire() : null; }
                 if (lease is null)
                 {
                     // The supplied scene lease stays alive throughout native work.
-                    var raw = await NativeDrawing.SolveBorrowedAsync(scene.Value, identity, views, settings, token, progress).ConfigureAwait(false);
+                    // The solve always keeps hidden pieces; presentation drops them for hidden = off.
+                    var solveViews = views.Select(v => v.Settings is { } s ? v with { Settings = s.ForVisibilitySolve() } : v).ToArray();
+                    var raw = await NativeDrawing.SolveBorrowedAsync(scene.Value, identity, solveViews, settings, token, progress).ConfigureAwait(false);
                     var owner = new LeaseEntry<DrawingBatch>(raw); lease = owner.Acquire();
                     lock (_sync)
                     {
@@ -106,9 +109,20 @@ public static class DrawingPresentation
                 var frame = original.Frame; frame.Transform(transform); result.Frame = frame;
                 if (settings is not null) result._diagnostics.Add(settings.Describe());
                 var range = settings is null ? null : new ViewRange(settings);
+                var minVisible = settings?.MinVisible ?? 0;
+                var plane2d = original.Frame.Plane; var toPlane2d = Transform.PlaneToPlane(plane2d, Plane.WorldXY);
+                var rule = new List<(int Piece, MinVisiblePiece Line)>();
+                var droppedUnresolved = 0;
                 foreach (var item in original.Items)
                 {
                     phase.Next("Beyond/fade splitting");
+                    // hidden = off is presentation only (the solve keeps hidden pieces), so min visible still sees them.
+                    if (item.SolvedClass == LineClass.Hidden && settings?.Hidden == false)
+                    {
+                        if (item.Class == LineClass.Unresolved) droppedUnresolved++;
+                        if (minVisible > 0) { using var dropped = item.CopyGeometry(); Note(-1, dropped, item.Class, item.SourceIdentity); }
+                        continue;
+                    }
                     using var geometry = item.CopyGeometry();
                     var depthGeometry = item.DepthGeometry ?? geometry;
                     var parameters = new SortedSet<double>();
@@ -153,12 +167,30 @@ public static class DrawingPresentation
                             var kind = item.Class;
                             var representative = depths is Curve c ? -original.Frame.Plane.DistanceTo(c.PointAt(c.Domain.Mid)) : span.Representative;
                             if (part is Curve && kind == LineClass.Visible && range?.Classify(representative, false) == RangeClassification.Beyond) kind = LineClass.Beyond;
+                            if (minVisible > 0) Note(result.Pieces.Count, part, kind, item.SourceIdentity);
                             if (!part.Transform(transform)) throw new InvalidOperationException("Placement failed.");
                             result.Pieces.Add(new(part, new PreparedLeaf(item.SourceIdentity, item.SourcePath, part) { Section = metadata?.GetValueOrDefault(item.SourceIdentity) ?? item.Source, SourceItem = item.SourceItem }, kind, depths.Duplicate())
                             { Profile = item.Profile, KernelOwned = item.KernelOwned, Depths = span, Intensity = range?.Intensity(span, kind) ?? 1 });
                         }
                         catch { part.Dispose(); throw; }
                     }
+                }
+                if (droppedUnresolved != 0) result.Report = original.Report with { UncertainCount = original.Report.UncertainCount - droppedUnresolved };
+                if (minVisible > 0)
+                {
+                    phase.Next("min visible");
+                    result.MinVisible = minVisible;
+                    // A cut object is never ignored: its cut is never ignored, so neither are its lines.
+                    var cut = original.Regions.SelectMany(r => r.Region.SourceIds).ToHashSet(StringComparer.Ordinal);
+                    var ignored = MinVisibleRule.Evaluate(rule.Select(r => r.Line), minVisible, settings!.Tolerance, cut).Ignored;
+                    foreach (var (index, _) in rule)
+                    {
+                        if (index < 0) continue;
+                        var piece = result.Pieces[index];
+                        if (piece.Class is not (LineClass.Visible or LineClass.Beyond or LineClass.FarClip) || !ignored.Contains(piece.SourceIdentity)) continue;
+                        piece.Class = LineClass.Ignored; result.IgnoredPieces++;
+                    }
+                    result.IgnoredObjects = ignored.Count;
                 }
                 phase.Next("section restyle and output");
                 var freshRegions = original.Regions.Select(r =>
@@ -183,6 +215,32 @@ public static class DrawingPresentation
                     var hatch = (Hatch?)region.Hatch?.Duplicate(); hatch?.Transform(transform);
                     result.Regions.Add(new(region with { Loops = loops, Hatch = hatch }, (int[])entry.SourcePath.Clone()) { Source = metadata?.GetValueOrDefault(entry.Region.SourceIds[0]) ?? entry.Source, SourceItem = entry.SourceItem });
                 }
+                // One rule line per curve piece, in drawing-plane coordinates. Drawn pieces at least as long as the
+                // threshold keep their object and need no outline; hidden ones only need their 2D extent.
+                void Note(int index, GeometryBase part, LineClass kind, string source)
+                {
+                    if (part is not Curve c) return;
+                    var role = kind switch { LineClass.Visible or LineClass.Profile or LineClass.Beyond or LineClass.FarClip => MinVisibleRole.Drawn,
+                        LineClass.Hidden => MinVisibleRole.Hidden, _ => MinVisibleRole.Unresolved };
+                    if (role != MinVisibleRole.Drawn)
+                    {
+                        var box = c.GetBoundingBox(toPlane2d); // drawing-plane coordinates, as for depths above
+                        rule.Add((index, new(source, role, [new(box.Min.X, box.Min.Y), new(box.Max.X, box.Max.Y)], 0)));
+                        return;
+                    }
+                    var length = c.GetLength();
+                    IReadOnlyList<Point2> points;
+                    if (length >= minVisible || c is LineCurve) points = [At(c.PointAtStart), At(c.PointAtEnd)];
+                    else if (c.TryGetPolyline(out var polyline)) points = polyline.Select(At).ToArray();
+                    else
+                    {
+                        using var approximation = c.ToPolyline(Math.Max(settings!.Tolerance, 1e-9), .1, 0, 0);
+                        points = approximation is not null && approximation.TryGetPolyline(out var sampled) && sampled.Count >= 2
+                            ? sampled.Select(At).ToArray() : [At(c.PointAtStart), At(c.PointAtEnd)];
+                    }
+                    rule.Add((index, new(source, role, points, length)));
+                }
+                Point2 At(Point3d p) { plane2d.ClosestParameter(p, out var u, out var v); return new(u, v); }
                 Curve Move(Curve c) { var copy = c.DuplicateCurve(); if (!copy.Transform(transform)) { copy.Dispose(); throw new InvalidOperationException("Region placement failed."); } return copy; }
             }
             return new DrawingBatch(identity, results);
