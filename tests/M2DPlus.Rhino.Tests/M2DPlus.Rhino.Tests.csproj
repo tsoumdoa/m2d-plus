@@ -18,6 +18,7 @@
     <PackageReference Include="xunit.runner.visualstudio" Version="3.0.2" PrivateAssets="all" />
     <None Include="../fixtures/**/*.3dm;../fixtures/manifest.json" Link="fixtures/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <None Include="../fixtures/small/manifest.json" Link="fixtures/small/manifest.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../fixtures/view-cases/*.json" Link="fixtures/view-cases/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   <Target Name="CopyGhaForLoadTest" AfterTargets="Build">
     <Copy SourceFiles="../../src/M2DPlus.Grasshopper/bin/$(Configuration)/net8.0-windows/M2DPlus.Grasshopper.gha" DestinationFolder="$(OutDir)" />

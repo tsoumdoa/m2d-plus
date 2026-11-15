@@ -137,6 +137,7 @@ public static class PhysicalSectionClipper
             return faces;
         }
         var pieces = source.Trim(request.Plane, request.Tolerance) ?? Array.Empty<Brep>();
+        if (pieces.Length == 0) pieces = SplitHalfspace(source, request);
         var result = new List<Brep>();
         try
         {
@@ -172,6 +173,34 @@ public static class PhysicalSectionClipper
         }
         catch { foreach (var piece in result) piece.Dispose(); throw; }
         finally { foreach (var piece in pieces) piece.Dispose(); }
+    }
+
+    // Rhino 8.36's infinite-plane Trim returns no pieces for valid curved RHS sweeps.
+    // Split with a finite plane covering the complete source, then retain only pieces
+    // whose entire bounds are on the retained side. No centroid or membership guess.
+    // The usual cap, solidity, volume, side and provenance checks remain mandatory.
+    private static Brep[] SplitHalfspace(Brep source, SectionRequest request)
+    {
+        var bounds = source.GetBoundingBox(Transform.PlaneToPlane(request.Plane, Plane.WorldXY));
+        var margin = Math.Max(1, bounds.Diagonal.Length) + 16 * request.Tolerance;
+        using var surface = new PlaneSurface(request.Plane,
+            new(bounds.Min.X - margin, bounds.Max.X + margin), new(bounds.Min.Y - margin, bounds.Max.Y + margin));
+        using var cutter = surface.ToBrep();
+        var split = source.Split(cutter, request.Tolerance) ?? Array.Empty<Brep>();
+        var kept = new List<Brep>();
+        try
+        {
+            foreach (var piece in split)
+            {
+                var box = piece.GetBoundingBox(Transform.PlaneToPlane(request.Plane, Plane.WorldXY));
+                if (box.Max.Z <= request.Tolerance && box.Min.Z < -request.Tolerance) kept.Add(piece);
+                else if (!(box.Min.Z >= -request.Tolerance && box.Max.Z > request.Tolerance))
+                    throw new SectionFailure("Split halfspace has an ambiguous or straddling piece.");
+            }
+            return kept.ToArray();
+        }
+        catch { kept.Clear(); throw; }
+        finally { foreach (var piece in split) if (!kept.Contains(piece)) piece.Dispose(); }
     }
 
     private static double Roundoff(Brep source) => 64 * 2.2204460492503131e-16 *

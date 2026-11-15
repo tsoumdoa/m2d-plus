@@ -42,7 +42,7 @@ internal static class StableSectionCertificate
                 {
                     if (!Intersection.BrepPlane(source, planes[i], request.Tolerance, out var segments, out var points))
                         throw new SectionFailure("D: intersection failed in perturbation slab.");
-                    try { sets[i] = Curve.JoinCurves(segments, request.Tolerance); }
+                    try { sets[i] = SectionGeometry.JoinIntersectionLoops(segments, planes[i], request.Tolerance); }
                     finally { foreach (var segment in segments) segment.Dispose(); }
                     if (points.Length != 0 || sets[i].Length == 0) throw new SectionFailure("D: isolated contact or empty perturbation intersection.");
                 }
