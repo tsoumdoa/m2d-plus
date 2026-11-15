@@ -81,9 +81,11 @@ from a slider or a number (§6).
 Description text shown in GH (keep these short, as Conduit+ does):
 
 - **Geometry**: "Scene to draw, shared by every view. Leave empty to draw the visible Rhino model. Also accepts layer names such as `Walls` or `Structure::*`, and block instances (repeats are drawn once and reused)."
-  A layer name selects the **visible** objects on matching layers (as before), so showing, hiding or turning those
-  layers on and off changes that input and re-runs it (§5.1). Referenced objects and Grasshopper geometry are drawn
-  whatever their visibility.
+  A layer name selects **every** object on matching layers, like referencing them (owner decision 2026-11-15): hidden
+  objects, and objects on layers that are off or under a parent that is off, are drawn too. Hiding or showing those
+  objects, or switching those layers on or off, never re-runs the drawing; adding, deleting or editing objects on them,
+  or moving an object onto or off them, does (§5.1a). Referenced objects and Grasshopper geometry are likewise drawn
+  whatever their visibility. Parts inside a drawn block are still drawn as Rhino shows them.
 - **View**: "What to draw. A referenced planar surface, rectangle or M2D+ view box (right-click Validate views to make one), a named view, clipping plane name or direction (Top, Front, SW…), a referenced clipping plane, a Plane, a Rectangle (its plane is the view plane and it crops; if it cuts the model you get a section), a Box (cut, crop and depth) or a Vector (look along it). A list gives one drawing per view."
 - **Target**: "Optional plane per view. The view's own plane is moved onto it 1:1 (View[i] → Target[i]). One plane for several views lays them out in a row. Leave empty to show each drawing in place."
 - **Settings**: "Optional `key = value` lines, for example `hidden = off` or `farclip = line`. They override view-object user text (`m2d.*`) and the right-click menu. One branch applies to all views; one branch per view, or `[View name]` headers, set views separately."
@@ -733,26 +735,28 @@ their layers, block definitions, the view objects and layer-name items) by one p
 the scene on the UI thread; visibility is solved again only when its content changed, so colour, name, section-style,
 `hidden` and `tree` changes reuse the cached solve and make no HLD call.
 
-| Change in Rhino | Geometry given (GH geometry, referenced objects, ids) | Document mode (Geometry empty) |
+| Change in Rhino | Geometry given (GH geometry, referenced objects, ids, layer names) | Document mode (Geometry empty) |
 |---|---|---|
 | Drawn object's geometry modified, moved, deleted, undeleted | **re-run** (re-solve) | **re-run** (re-solve) |
-| Object hidden or shown (Hide / Show) | no | **re-run** (the visible document changed) |
-| Layer on / off | no, except a layer holding parts of a drawn block, or one a layer-name item matches | **re-run** when the layer or a sublayer holds drawable objects |
+| Object hidden or shown (Hide / Show) | no¹ | **re-run** (the visible document changed) |
+| Layer on / off (also a parent layer) | no¹, also for layers a layer-name item matches | **re-run** when the layer or a sublayer holds drawable objects |
 | Object or layer on / off **in one viewport or detail** | no | no |
 | Viewport camera, zoom, display mode, view changes | no (they raise no document change) | no |
 | Object locked / unlocked, selected, other user text, display-mode override | no | no |
-| Object moved to another layer | **re-run** | **re-run** |
+| Object moved to another layer (onto or off a layer-name layer included) | **re-run** | **re-run** |
 | Drawn object's or its layer's colour, print colour / width | **re-run**, no HLD call (preview colours, hatch fill, bake) | **re-run**, no HLD call |
 | Section style (object or layer), render material (glass) | **re-run** (restyle / glass) | **re-run** |
 | Drawn object's name (Key labels) | **re-run**, no HLD call | **re-run**, no HLD call |
 | An object that is not drawn (another object, an M2D+ bake, a view box's colour or visibility) | no | no, unless it is now visible and drawable: **re-run** |
-| Object added | no (unless a layer-name item selects it) | **re-run** if visible and drawable; hidden objects, bakes and view boxes: no |
+| Object added | no, unless it is on a layer a layer-name item matches (hidden or not): **re-run** | **re-run** if visible and drawable; hidden objects, bakes and view boxes: no |
 | View object: geometry, name or `m2d.*` user text | **re-run** | **re-run** |
 | Block definition of a drawn instance edited | **re-run** | **re-run** |
 | Hatch pattern table (when a drawn style uses one), tolerance or units | **re-run** | **re-run** |
 | Named views, clipping planes | **re-run** only when a View item is text (a named view, clipping plane name or direction) | same |
 
-- Block parts are drawn as Rhino shows them, so a part's own visibility and its layer's on/off matter in both modes.
+¹ Except **parts inside a drawn block instance**: they are drawn as Rhino shows them, so a part's own visibility and its
+layer's on/off (with its parents) re-run the drawing in both modes. Everything selected directly (ids, referenced objects,
+layer names, Grasshopper geometry) is drawn whatever its visibility.
 - The `$M2D Views` front-face fill (§2.2) is a display conduit that only reads the document: its index refresh and redraws
   raise no document change and never re-run the component (`RerunTests`).
 - Rhino 8 *Model Object* parameters upstream (Query Model Objects…) are expired by Grasshopper itself on attribute

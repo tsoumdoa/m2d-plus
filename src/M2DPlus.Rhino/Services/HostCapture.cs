@@ -98,7 +98,9 @@ public sealed class SceneCapture : IDisposable
     }
 
     /// <summary>Whatever its visibility, an object M2D+ may draw: not deleted, not a clipping plane or light, not on an
-    /// M2D+ bake layer and not tagged with m2d.* user text (bakes and view boxes).</summary>
+    /// M2D+ bake layer and not tagged with m2d.* user text (bakes and view boxes). Layer-name Geometry items select these
+    /// (owner decision 2026-11-15): hidden objects and objects on layers that are off, or under a parent that is off,
+    /// are drawn too, exactly like referenced objects.</summary>
     internal static bool IsSelectable(RhinoDoc document, RhinoObject obj, ObjectAttributes attributes)
     {
         if (obj.IsDeleted || obj.Geometry is ClippingPlaneSurface or Light) return false;
@@ -147,11 +149,11 @@ public sealed class SceneCapture : IDisposable
         var value = item.Value;
         if (value is string layerPattern)
         {
-            // A layer name selects the visible objects on matching layers (UX §1.1), so their visibility is watched.
+            // A layer name selects every object on matching layers whatever its visibility, like referencing them
+            // (owner decision 2026-11-15, UX §1.1): hiding objects or switching those layers never changes the input.
             var layers = _document.Layers.Where(l => LayerMatches(l, layerPattern)).Select(l => l.Index).ToHashSet();
-            var matches = _document.Objects.GetObjectList(new ObjectEnumeratorSettings { NormalObjects = true, LockedObjects = true, ReferenceObjects = true })
-                .Where(o => layers.Contains(o.Attributes.LayerIndex) && IsDrawable(_document, o)).OrderBy(o => o.Id).ToArray();
-            _scope.GateLayers.UnionWith(layers);
+            var matches = _document.Objects.GetObjectList(new ObjectEnumeratorSettings { NormalObjects = true, LockedObjects = true, HiddenObjects = true, ReferenceObjects = true })
+                .Where(o => layers.Contains(o.Attributes.LayerIndex) && IsSelectable(_document, o, o.Attributes)).OrderBy(o => o.Id).ToArray();
             if (layers.Count == 0) Unsupported(PreparedScene.NonOccludingPrefix + $"Layer not found '{layerPattern}'");
             foreach (var match in matches) _pending.Enqueue(item with { Value = match.Id, Identity = item.Identity + "/" + match.Id, LayerPattern = item.LayerPattern ?? layerPattern });
             return;
@@ -166,7 +168,9 @@ public sealed class SceneCapture : IDisposable
         if (value is RhinoObject source)
         {
             sourceSerial = source.RuntimeSerialNumber;
-            _scope.Read(_document, source, gated: item.Definitions.Length > 0 || item.LayerPattern is not null);
+            // Only block parts are drawn as Rhino shows them; a top-level object (an id, a reference or a layer-name
+            // match) is drawn whatever its visibility.
+            _scope.Read(_document, source, gated: item.Definitions.Length > 0);
             // A nested object keeps its own layer (Rhino has no layer By Parent).
             var layer = _document.Layers[source.Attributes.LayerIndex];
             item = item with { Section = SectionCapture.Capture(_document, source, item.Section), LayerIndex = layer.Index, LayerPath = layer.FullPath,

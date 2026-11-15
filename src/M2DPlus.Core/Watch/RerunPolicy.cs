@@ -17,11 +17,11 @@ public enum ObjectRole
     Unrelated,
     /// <summary>A drawn source: a Rhino object of the scene (a block instance counts as one).</summary>
     Scene,
-    /// <summary>A drawn source whose own visibility decides whether it is drawn: a part inside a drawn block instance (as
-    /// Rhino shows it), or an object a layer-name Geometry item selects (layer names select visible objects).</summary>
+    /// <summary>A part inside a drawn block instance: its own visibility decides whether it is drawn, as Rhino shows it.
+    /// (Objects a layer-name Geometry item selects are <see cref="Scene"/>: they are drawn whatever their visibility.)</summary>
     Gated,
     /// <summary>Not in the drawing now but would be after this change: document mode, a visible drawable object; referenced
-    /// mode, a visible object on a layer that a layer-name Geometry item selects.</summary>
+    /// mode, any object on a layer a layer-name Geometry item matches (added there or moved there), hidden or not.</summary>
     Candidate,
     /// <summary>A view object the View input uses: a view box, a referenced frame surface or a clipping plane.</summary>
     View,
@@ -65,7 +65,7 @@ public enum LayerRole
     /// <summary>The layer, or one of its sublayers, holds drawn sources (its colour, name, style and widths are read).</summary>
     Used = 1 << 0,
     /// <summary>Its visibility decides what is drawn: in document mode a layer whose subtree holds drawable objects; in
-    /// referenced mode a layer holding parts of drawn block instances, or one a layer-name Geometry item matches.</summary>
+    /// referenced mode only a layer holding parts of drawn block instances (layer-name items ignore visibility).</summary>
     Gate = 1 << 1,
     /// <summary>A layer-name Geometry item exists, so layer names and new layers can change what is selected.</summary>
     Pattern = 1 << 2,
@@ -140,7 +140,7 @@ public static class RerunPolicy
         Of("m2d.* user text", ObjectChange.M2DText, "bake tags exclude objects"),
         Of("Other user text, display-mode override, selection", ObjectChange.Other, ""),
         Of("Per-viewport / per-detail visibility", ObjectChange.ViewportVisibility, "a drawing belongs to no viewport"),
-        OfLayer("Layer on / off", LayerChange.Visibility, "document mode; with Geometry only layers holding parts of drawn blocks or named by a layer-name item"),
+        OfLayer("Layer on / off", LayerChange.Visibility, "document mode; with Geometry only layers holding parts of drawn blocks"),
         OfLayer("Layer on / off in one viewport or detail", LayerChange.ViewportVisibility, ""),
         OfLayer("Layer colour, name, section style, print width / colour, material", LayerChange.Colour, "only layers that hold drawn objects"),
         OfLayer("Layer locked, expanded, made current", LayerChange.Other, ""),

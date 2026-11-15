@@ -46,9 +46,26 @@ public sealed class RerunPolicyTests
         Assert.True(RerunPolicy.Object(Doc, ObjectRole.Candidate, ObjectChange.Visibility));
         Assert.True(RerunPolicy.Object(Ref, ObjectRole.Candidate, ObjectChange.Added));
         Assert.False(RerunPolicy.Object(Doc, ObjectRole.Candidate, ObjectChange.None));
-        // A block part, or an object a layer name selects, is drawn only while visible: in both modes.
+        // A block part is drawn only while visible (as Rhino shows it): in both modes.
         Assert.True(RerunPolicy.Object(Ref, ObjectRole.Gated, ObjectChange.Visibility));
         Assert.False(RerunPolicy.Object(Ref, ObjectRole.Gated, ObjectChange.ViewportVisibility));
+    }
+
+    /// <summary>Owner decision 2026-11-15: objects a layer name selects are ordinary drawn sources (Scene), so their
+    /// visibility never re-runs; joining or leaving the selection (added, moved onto or off the layer) does.</summary>
+    [Fact]
+    public void LayerNameSelectionsIgnoreVisibility()
+    {
+        Assert.False(RerunPolicy.Object(Ref, ObjectRole.Scene, ObjectChange.Visibility));
+        Assert.True(RerunPolicy.Object(Ref, ObjectRole.Scene, ObjectChange.Layer));
+        Assert.True(RerunPolicy.Object(Ref, ObjectRole.Scene, ObjectChange.Deleted));
+        Assert.True(RerunPolicy.Object(Ref, ObjectRole.Scene, ObjectChange.Geometry));
+        // A hidden object added on, or moved onto, a matching layer is a candidate.
+        Assert.True(RerunPolicy.Object(Ref, ObjectRole.Candidate, ObjectChange.Added));
+        Assert.True(RerunPolicy.Object(Ref, ObjectRole.Candidate, ObjectChange.Layer));
+        // A matching layer switched on or off is used and a pattern layer, never a gate.
+        Assert.False(RerunPolicy.Layer(LayerRole.Used | LayerRole.Pattern, LayerChange.Visibility));
+        Assert.True(RerunPolicy.Layer(LayerRole.Used | LayerRole.Pattern, LayerChange.Name));
     }
 
     [Fact]

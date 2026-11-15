@@ -21,7 +21,8 @@ public sealed class WatchScope
         Views = (views ?? []).Where(id => id != Guid.Empty).ToHashSet(); TextViews = textViews;
     }
     public WatchMode Mode { get; }
-    /// <summary>Layer-name Geometry items (<c>Walls</c>, <c>Structure::*</c>).</summary>
+    /// <summary>Layer-name Geometry items (<c>Walls</c>, <c>Structure::*</c>). They select every object on matching layers,
+    /// whatever its or the layers' visibility, so only layer names and membership matter.</summary>
     public IReadOnlyList<string> LayerPatterns { get; }
     /// <summary>View objects the View input references (view boxes, frame surfaces, clipping planes).</summary>
     public IReadOnlySet<Guid> Views { get; }
@@ -113,7 +114,9 @@ public sealed class DocumentWatch : IDisposable
         if (scope.Objects.Contains(obj.Id)) return ObjectRole.Scene;
         if (obj.IsDeleted || obj.IsInstanceDefinitionGeometry) return ObjectRole.Unrelated;
         if (scope.Mode == WatchMode.Document) return SceneCapture.IsDrawable(document, obj, attributes) ? ObjectRole.Candidate : ObjectRole.Unrelated;
-        return SceneCapture.IsDrawable(document, obj, attributes) && scope.MatchesPattern(document, attributes.LayerIndex)
+        // A layer name selects every selectable object on its layers, hidden or not: a new object there, or one moved
+        // onto such a layer, is missing from the drawing.
+        return SceneCapture.IsSelectable(document, obj, attributes) && scope.MatchesPattern(document, attributes.LayerIndex)
             ? ObjectRole.Candidate : ObjectRole.Unrelated;
     }
 

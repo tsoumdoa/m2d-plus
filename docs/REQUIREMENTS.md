@@ -151,5 +151,8 @@ See [UX revision 4](design/ux.md) §2.2 and §6.
   Ink*, default object colours. Colours are host-captured plain values; a colour change makes no HLD call. See §3.6.
 - **Re-runs:** with Geometry given, showing, hiding, layer on/off and per-viewport visibility never re-run the drawing;
   only changes to what it draws (geometry, layer, colour, style, material, name, view objects) do. Document mode follows
-  model visibility. Viewport-only changes never re-run. Layer-name items keep selecting visible objects only, so their
-  layers' visibility still counts. See [UX](design/ux.md) §5.1a.
+  model visibility. Viewport-only changes never re-run. See [UX](design/ux.md) §5.1a.
+- **Layer-name inputs ignore visibility** (owner, answering the open question): `Walls` or `Structure::*` selects every
+  object on the matching layers, including hidden objects and objects on layers that are off (or under a parent that is
+  off), like referenced objects. Hiding, showing or switching those layers never re-runs; adding, deleting or editing
+  objects there, or moving an object onto or off those layers, does. Block parts are still drawn as Rhino shows them.

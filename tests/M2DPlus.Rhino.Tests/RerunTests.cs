@@ -33,7 +33,7 @@ public sealed class RerunTests(RhinoHost host, ITestOutputHelper output)
         public required GH_Document Gh;
         public required GH_Component Component;
         public required Guid Drawn, Other, ViewBox;
-        public required int Walls, OtherLayer, Empty;
+        public required int Walls, OtherLayer, Empty, Building;
         public DocumentWatch Watch => (DocumentWatch)Field("_watch")!;
         public int Solves => (int)Field("_solveCount")!;
         private object? Field(string name) => Component.GetType().GetField(name, BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(Component);
@@ -44,11 +44,13 @@ public sealed class RerunTests(RhinoHost host, ITestOutputHelper output)
         }
     }
 
-    private static Rig Build(bool documentMode)
+    /// <param name="layerName">Geometry is this layer-name text instead of a referenced object.</param>
+    private static Rig Build(bool documentMode, string? layerName = null)
     {
         var rhino = RhinoDoc.CreateHeadless(null); RhinoDoc.ActiveDoc = rhino;
         GH_Document.EnableSolutions = true;
-        var walls = rhino.Layers.Add("Walls", Color.Black);
+        var building = rhino.Layers.Add("Building", Color.Black);
+        var walls = rhino.Layers.Add(new Layer { Name = "Walls", ParentLayerId = rhino.Layers[building].Id, Color = Color.Black });
         var other = rhino.Layers.Add("Other", Color.Black);
         var empty = rhino.Layers.Add("Empty", Color.Black);
         Guid Sphere(Point3d centre, int layer)
@@ -61,7 +63,9 @@ public sealed class RerunTests(RhinoHost host, ITestOutputHelper output)
         var gh = new GH_Document { Enabled = true };
         var component = (GH_Component)Activator.CreateInstance(Gha.GetType("M2DPlus.Grasshopper.DrawingComponent", true)!)!;
         gh.AddObject(component, false);
-        if (!documentMode)
+        if (layerName is not null)
+            ((Param_GenericObject)component.Params.Input[0]).PersistentData.Append(new GH_String(layerName));
+        else if (!documentMode)
         {
             var reference = new GH_Brep(); reference.ReferenceID = drawn;
             ((Param_GenericObject)component.Params.Input[0]).PersistentData.Append(reference);
@@ -69,7 +73,7 @@ public sealed class RerunTests(RhinoHost host, ITestOutputHelper output)
         var view = new GH_Brep(); view.ReferenceID = frame;
         ((Param_GenericObject)component.Params.Input[1]).PersistentData.Append(view);
         gh.NewSolution(true, GH_SolutionMode.Silent);
-        var rig = new Rig { Rhino = rhino, Gh = gh, Component = component, Drawn = drawn, Other = otherId, ViewBox = frame, Walls = walls, OtherLayer = other, Empty = empty };
+        var rig = new Rig { Rhino = rhino, Gh = gh, Component = component, Drawn = drawn, Other = otherId, ViewBox = frame, Walls = walls, OtherLayer = other, Empty = empty, Building = building };
         Pump(rig, () => rig.Infos == 1);
         Assert.True(component.Params.Output[0].VolatileDataCount > 0, component.Message);
         return rig;
@@ -153,6 +157,37 @@ public sealed class RerunTests(RhinoHost host, ITestOutputHelper output)
         Expect(rig, "rename the drawn object (Key labels)", () => Attributes(doc, rig.Drawn, a => a.Name = "Column A"), rerun: true, solved: false);
         Expect(rig, "view box setting m2d.hidden", () => Attributes(doc, rig.ViewBox, a => a.SetUserString("m2d.hidden", "off")), rerun: true, solved: false);
         Expect(rig, "move the drawn object", () => doc.Objects.Transform(rig.Drawn, Transform.Translation(0, 1, 0), true), rerun: true, solved: true);
+    });
+
+    /// <summary>Owner decision 2026-11-15: a layer name selects every object on matching layers whatever its visibility,
+    /// so hiding, showing and switching those layers (or a parent) never re-run; joining or leaving the selection does.</summary>
+    [RhinoFact] public void LayerNameGeometryIgnoresVisibilityButFollowsMembership() => host.Run(() =>
+    {
+        Assert.True(global::Rhino.PlugIns.PlugIn.LoadPlugIn(GrasshopperId));
+        using var rig = Build(documentMode: false, layerName: "Walls");
+        var doc = rig.Rhino;
+        Expect(rig, "hide an object on the layer", () => Assert.True(doc.Objects.Hide(rig.Drawn, true)), rerun: false);
+        Expect(rig, "show it", () => Assert.True(doc.Objects.Show(rig.Drawn, true)), rerun: false);
+        Expect(rig, "turn the layer off", () => LayerVisible(doc, rig.Walls, false), rerun: false);
+        Expect(rig, "turn the layer on", () => LayerVisible(doc, rig.Walls, true), rerun: false);
+        Expect(rig, "turn the parent layer off", () => LayerVisible(doc, rig.Building, false), rerun: false);
+        Expect(rig, "turn the parent layer on", () => LayerVisible(doc, rig.Building, true), rerun: false);
+        Expect(rig, "per-viewport layer visibility", () =>
+        { var layer = doc.Layers[rig.Walls]; layer.SetPerViewportVisible(Guid.NewGuid(), false); doc.Layers.Modify(layer, rig.Walls, true); }, rerun: false);
+        Expect(rig, "hide in one detail", () => Attributes(doc, rig.Drawn, a => a.AddHideInDetailOverride(Guid.NewGuid())), rerun: false);
+        Expect(rig, "add an object on another layer", () => AddSphere(doc, new Point3d(8, 4, 1), new ObjectAttributes { LayerIndex = rig.OtherLayer }), rerun: false);
+        Expect(rig, "hide an object on another layer", () => Assert.True(doc.Objects.Hide(rig.Other, true)), rerun: false);
+        Expect(rig, "show it", () => Assert.True(doc.Objects.Show(rig.Other, true)), rerun: false);
+        // Membership and content changes re-run, hidden objects included.
+        Guid added = Guid.Empty;
+        Expect(rig, "add a hidden object on the layer", () =>
+        { added = AddSphere(doc, new Point3d(8, 0, 1), new ObjectAttributes { LayerIndex = rig.Walls }); Assert.True(doc.Objects.Hide(added, true)); }, rerun: true, solved: true);
+        Assert.Contains(rig.Component.Params.Output[10].VolatileData.AllData(true).Cast<GH_String>(), k => k.Value.Contains("Walls"));
+        Expect(rig, "move an object onto the layer", () => Attributes(doc, rig.Other, a => a.LayerIndex = rig.Walls), rerun: true, solved: true);
+        Expect(rig, "move it off again", () => Attributes(doc, rig.Other, a => a.LayerIndex = rig.OtherLayer), rerun: true, solved: true);
+        Expect(rig, "edit an object on the layer", () => doc.Objects.Transform(rig.Drawn, Transform.Translation(0, 1, 0), true), rerun: true, solved: true);
+        Expect(rig, "colour of an object on the layer", () => Attributes(doc, rig.Drawn, a => { a.ColorSource = ObjectColorSource.ColorFromObject; a.ObjectColor = Color.Red; }), rerun: true, solved: false);
+        Expect(rig, "delete the hidden object on the layer", () => Assert.True(doc.Objects.Delete(doc.Objects.FindId(added), true, ignoreModes: true)), rerun: true, solved: true);
     });
 
     [RhinoFact] public void DocumentModeFollowsModelVisibilityButNeverViewportChanges() => host.Run(() =>
