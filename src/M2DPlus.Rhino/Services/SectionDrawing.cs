@@ -43,8 +43,8 @@ internal static class SectionDrawing
         try
         {
             using var phase = result.Phases.Start("sections");
-            using var sections = SectionRegionEngine.Compute(bodies.Select(s => new SectionSource(s.Identity, s.Geometry, cut.Style(s))),
-                request, token, prepareVisibility: true, farPlane: far, phases: result.Phases);
+            using var sections = SectionRegionEngine.Compute(bodies.Select(s => new SectionSource(s.Identity, s.Geometry, cut.Style(s)) { Canonical = s.Canonical }),
+                request, scene.SectionVerdicts, token, prepareVisibility: true, farPlane: far, phases: result.Phases);
             result.Phases.Add("sections", -result.Phases.Seconds.GetValueOrDefault("route C trim"));
             result.UncertainSectionComponents = sections.Components.Count(c => c.Status == SectionStatus.Uncertain);
             foreach (var diagnostic in sections.Diagnostics.Where(d => d.Status is SectionStatus.Uncertain or SectionStatus.Unsupported))
@@ -201,6 +201,9 @@ internal static class SectionDrawing
                 if (drawing is null || !drawing.WorldToHiddenLine.TryGetInverse(out var inverse)) throw new InvalidOperationException("Route C HLD failed.");
                 var project = Transform.PlanarProjection(cut.Plane) * inverse;
                 var nativeParents = new HashSet<int>(); int nativeFragments = 0;
+                // Only cut loops near a segment can overlap it. Split still applies its own exact bounds test.
+                using var cutIndex = new RTree();
+                for (var i = 0; i < cutLoci.Count; i++) cutIndex.Insert(cutLoci[i].GetBoundingBox(true), i);
                 foreach (var segment in drawing.Segments)
                 {
                     token.ThrowIfCancellationRequested(); var visibility = segment.SegmentVisibility;
@@ -241,7 +244,10 @@ internal static class SectionDrawing
                             if (candidate.Far && !isFar) continue;
                             if (isFar && (!range.GenerateFarClipLines || visibility != HiddenLineDrawingSegment.Visibility.Visible)) continue;
                             var kind = isFar ? LineClass.FarClip : classification;
-                            IEnumerable<Curve> references = isFar ? cutLoci : cutLoci.Concat(sourceTrim.GetValueOrDefault(candidate.Source.Identity) ?? Enumerable.Empty<Curve>());
+                            var search = farPart.Curve.GetBoundingBox(true); search.Inflate(2 * tol); var hits = new List<int>();
+                            cutIndex.Search(search, (_, e) => hits.Add(e.Id)); hits.Sort(); // Original cut-loop order.
+                            var nearby = hits.Select(i => cutLoci[i]).ToArray();
+                            IEnumerable<Curve> references = isFar ? nearby : nearby.Concat(sourceTrim.GetValueOrDefault(candidate.Source.Identity) ?? Enumerable.Empty<Curve>());
                             foreach (var part in Subtract(farPart.Curve, references, tol))
                             {
                                 using (part)

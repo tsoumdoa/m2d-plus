@@ -43,6 +43,8 @@ internal sealed record PreparedLeaf(string Identity, int[] Path, GeometryBase Ge
     internal bool KernelEligible { get; init; }
     internal int SourceItem { get; init; }
     internal SourceSection Section { get; init; } = SourceSection.Plain;
+    /// <summary>Definition-local shape for work shared between congruent instances; null under a non-similar transform.</summary>
+    internal Sections.SectionCanonical? Canonical { get; init; }
 }
 
 /// <summary>Owns definition-local leases and lazily prepared world copies. Access serialized by the global scheduler.</summary>
@@ -55,6 +57,8 @@ public sealed class PreparedScene : IDisposable
     public static long TotalPreparations => Interlocked.Read(ref _totalPreparations);
     private readonly List<SceneLeaf> _leaves;
     private List<PreparedLeaf>? _prepared;
+    /// <summary>Section validation verdicts, reused by every view of this scene and cleared with it.</summary>
+    internal Sections.SectionVerdictCache SectionVerdicts { get; } = new();
     internal IReadOnlyDictionary<string, int> Unsupported { get; }
     internal IReadOnlyList<string> Conversions { get; }
     public string Revision { get; }
@@ -122,7 +126,7 @@ public sealed class PreparedScene : IDisposable
                     // Transform reverses closed-solid orientation for odd reflections. Normalize after the whole chain.
                     if (geometry is Brep { SolidOrientation: BrepSolidOrientation.Inward } brep) brep.Flip();
                     if (geometry is Mesh { IsClosed: true } mesh && mesh.SolidOrientation() < 0) mesh.Flip(true, true, true);
-                    prepared.Add(new(leaf.Identity, leaf.Path, geometry) { Section = leaf.Section, SourceItem = leaf.SourceItem, KernelClassifiedGeometry = geometry, KernelTolerance = Tolerance, KernelEligible = PlanarExtraction.MayProduceKernelCandidates(geometry,Tolerance) });
+                    prepared.Add(new(leaf.Identity, leaf.Path, geometry) { Section = leaf.Section, SourceItem = leaf.SourceItem, KernelClassifiedGeometry = geometry, KernelTolerance = Tolerance, KernelEligible = PlanarExtraction.MayProduceKernelCandidates(geometry,Tolerance), Canonical = Canonical(leaf, transform) });
                 }
                 catch { geometry.Dispose(); throw; }
             }
@@ -131,8 +135,24 @@ public sealed class PreparedScene : IDisposable
         }
         catch { foreach (var leaf in prepared) leaf.Geometry.Dispose(); throw; }
     }
+    /// <summary>
+    /// Rigid transforms (mirrors included) share the definition's key; a similarity adds its scale; anything else
+    /// shares nothing. The scale is rounded to 12 significant digits, so the key and the canonical shape depend only
+    /// on the definition and that number, never on a particular instance's rotation round-off.
+    /// </summary>
+    internal static Sections.SectionCanonical? Canonical(SceneLeaf leaf, Transform transform)
+    {
+        if (transform.SimilarityType == TransformSimilarityType.NotSimilarity) return null;
+        var invariant = System.Globalization.CultureInfo.InvariantCulture;
+        var scale = double.Parse(Math.Cbrt(Math.Abs(transform.Determinant)).ToString("G12", invariant), invariant);
+        if (!double.IsFinite(scale) || scale <= 0) return null;
+        var definition = leaf.Geometry.Value;
+        return scale == 1 ? new(leaf.Key, 1, definition.Copy)
+            : new(leaf.Key + "|scale=" + scale.ToString("R", invariant), scale, definition.Copy);
+    }
     public void Dispose()
     {
+        SectionVerdicts.Dispose();
         if (_prepared is not null) foreach (var leaf in _prepared) leaf.Geometry.Dispose();
         foreach (var leaf in _leaves) leaf.Geometry.Dispose();
     }

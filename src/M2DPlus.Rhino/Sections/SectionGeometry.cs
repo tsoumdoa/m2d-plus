@@ -6,6 +6,13 @@ namespace M2DPlus.Rhino.Sections;
 
 internal static class SectionGeometry
 {
+    /// <summary>
+    /// Rhino's curve-curve intersection is not repeatable when two threads run it at the same time: on Rhino 8.36
+    /// a closed edge tested against itself lost part of its overlap in 15 % of concurrent calls and in none of the
+    /// serial ones. Every curve-curve, self-intersection and loop-relationship call in the section code holds this gate.
+    /// </summary>
+    internal static readonly object CurveIntersectionGate = new();
+
     public static void Validate(SectionRequest request)
     {
         if (!request.Plane.IsValid || !double.IsFinite(request.Tolerance) || request.Tolerance <= 0 ||
@@ -18,7 +25,7 @@ internal static class SectionGeometry
             throw new ArgumentException("Crop must be a nondegenerate rectangle on the cut plane.");
     }
 
-    public static Brep Convert(GeometryBase source, double tolerance)
+    public static Brep Convert(GeometryBase source, double tolerance, bool validate = true)
     {
         Brep? copy;
         switch (source)
@@ -40,12 +47,40 @@ internal static class SectionGeometry
         if (copy is null) throw new SectionFailure("Geometry conversion failed.");
         if (!copy.IsValid || !copy.IsManifold) { copy.Dispose(); throw new SectionFailure("Invalid or non-manifold Brep."); }
         if (copy.IsSolid && copy.SolidOrientation == BrepSolidOrientation.Inward) copy.Flip();
+        if (!validate) return copy;
         try { ValidateFaceIntersections(copy, tolerance); }
         catch { copy.Dispose(); throw; }
         return copy;
     }
 
-    private static void ValidateFaceIntersections(Brep brep, double tolerance)
+    /// <summary>
+    /// A source's self-intersection verdict: "" means valid, anything else is the failure message. A source with a
+    /// canonical shape takes the scene's verdict for that shape; any other source is checked on its own geometry.
+    /// Call from one thread at a time: Rhino's curve overlap search is not repeatable under concurrent calls.
+    /// </summary>
+    internal static string Verdict(SectionSource source, double tolerance, SectionVerdictCache verdicts)
+    {
+        if (source.Canonical is { } canonical) return verdicts.Verdict(canonical, tolerance);
+        try { using var copy = Convert(source.Geometry, tolerance); return ""; }
+        catch (SectionFailure ex) { return ex.Message; }
+    }
+
+    /// <summary>The self-intersection verdict of a definition-local shape, at its instance scale. "" means valid.</summary>
+    internal static string CanonicalVerdict(SectionCanonical canonical, double tolerance)
+    {
+        try
+        {
+            using var local = canonical.CopyLocal();
+            if (canonical.Scale != 1 && !local.Transform(Transform.Scale(Point3d.Origin, canonical.Scale)))
+                throw new SectionFailure("Definition geometry could not be scaled for validation.");
+            using var brep = Convert(local, tolerance, validate: false);
+            ValidateFaceIntersections(brep, tolerance);
+            return "";
+        }
+        catch (SectionFailure ex) { return ex.Message; }
+    }
+
+    internal static void ValidateFaceIntersections(Brep brep, double tolerance)
     {
         for (var i = 0; i < brep.Faces.Count; i++)
         for (var j = i + 1; j < brep.Faces.Count; j++)
@@ -217,9 +252,10 @@ internal static class SectionGeometry
         {
             if (!loop.IsValid || !loop.IsClosed || !loop.IsInPlane(request.Plane, request.Tolerance))
                 throw new SectionFailure("Intersection is not a valid closed planar loop.");
-            using var self = Intersection.CurveSelf(loop, request.Tolerance);
+            int selfIntersections;
+            lock (CurveIntersectionGate) { using var self = Intersection.CurveSelf(loop, request.Tolerance); selfIntersections = self.Count; }
             using var mass = AreaMassProperties.Compute(loop);
-            if (self.Count != 0 || mass is null || mass.Area <= request.Tolerance * request.Tolerance)
+            if (selfIntersections != 0 || mass is null || mass.Area <= request.Tolerance * request.Tolerance)
                 throw new SectionFailure("Self-intersecting or degenerate section loop.");
             areas.Add(mass.Area);
         }
@@ -227,7 +263,8 @@ internal static class SectionGeometry
         for (var i = 0; i < loops.Count; i++)
         for (var j = i + 1; j < loops.Count; j++)
         {
-            var relation = Curve.PlanarClosedCurveRelationship(loops[i], loops[j], request.Plane, request.Tolerance);
+            RegionContainment relation;
+            lock (CurveIntersectionGate) relation = Curve.PlanarClosedCurveRelationship(loops[i], loops[j], request.Plane, request.Tolerance);
             if (relation == RegionContainment.MutualIntersection) throw new SectionFailure("Section loops intersect or touch ambiguously.");
             contains[i, j] = relation == RegionContainment.BInsideA;
             contains[j, i] = relation == RegionContainment.AInsideB;
