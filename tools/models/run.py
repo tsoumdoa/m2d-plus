@@ -16,8 +16,6 @@ from common import ROOT, SerialRhino, digest, initialize, write_json
 
 
 def worker(args):
-    if sys.stdin.readline().strip() != 'go':
-        raise RuntimeError('Worker must be started by the owned-job supervisor')
     out = Path(args.result)
     base = {'model': args.model.stem, 'view': args.view, 'multipleThreads': args.threads == 'on',
             'engine': args.engine, 'status': 'starting', 'workerCount': 1, 'route': 'owned Rhino.Inside process',
@@ -25,6 +23,9 @@ def worker(args):
             'fixtureSha256': digest(args.model), 'sidecarSha256': digest(args.model.with_suffix('.json')),
             'harnessHashes': {p.name: digest(p) for p in Path(__file__).parent.glob('*.py')},
             'utc': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())}
+    base['coordination'] = {'session': args.coordination_note, 'admissionWaitSeconds': args.admission_wait,
+                            'mutexScope': 'one view; released before the next worker',
+                            'timingQualification': 'Indicative shared-session timing; other headless work was not monitored.'}
     write_json(out, base)
     def phase(name, extra=None):
         base.update(phase=name, **(extra or {})); write_json(out, base)
@@ -85,14 +86,36 @@ def main():
     parser.add_argument('--view', help=argparse.SUPPRESS)
     parser.add_argument('--threads', choices=['on', 'off'], help='Override standard threading matrix')
     parser.add_argument('--result', help=argparse.SUPPRESS)
+    parser.add_argument('--yield-seconds', type=float, default=30, help='Mutex-free handoff between views; outside measured worker wall time')
+    parser.add_argument('--admission-timeout', type=float, default=3600, help='Maximum queued mutex wait, excluded from the execution cap')
+    parser.add_argument('--coordination-note', default='shared local research session')
+    parser.add_argument('--admission', type=Path, help=argparse.SUPPRESS)
     args = parser.parse_args()
     if args.worker:
-        with SerialRhino():
+        if sys.stdin.readline().strip() != 'go':
+            raise RuntimeError('Worker must be started by the owned-job supervisor')
+        # A live controller can request a stop at a model boundary. This gate
+        # runs before Rhino initialization or mutex acquisition, never mid-solve.
+        control = Path(args.result).parent / 'coordination-control.json'
+        admission = args.admission or Path(args.result).with_suffix('.admission.json')
+        queued = time.perf_counter()
+        write_json(admission, {'status': 'waiting', 'modelId': args.model.stem})
+        while control.exists() and args.model.stem in json.loads(control.read_text()).get('pauseBeforeModels', []):
+            write_json(admission, {'status': 'handoff_paused', 'modelId': args.model.stem})
+            time.sleep(1)
+        with SerialRhino(wait_seconds=None):
+            admitted = time.perf_counter()
+            args.admission_wait = admitted - queued
+            write_json(admission, {'status': 'admitted', 'modelId': args.model.stem,
+                                  'admittedPerfCounter': admitted, 'mutexWaitSeconds': args.admission_wait,
+                                  'utc': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())})
             worker(args)
         return
     from owned_job import run
     args.out.mkdir(parents=True, exist_ok=True)
     rows = []
+    if args.yield_seconds < 0 or args.admission_timeout <= 0:
+        parser.error('Yield must be nonnegative and admission timeout positive')
     for side_path in sorted(args.models.glob('*.json')):
         meta = json.loads(side_path.read_text(encoding='utf-8'))
         if 'views' not in meta:
@@ -112,6 +135,7 @@ def main():
                 name = f"{meta['id']}__{slug}__{threads}__{args.engine.replace('.', '-')}"
                 target = args.out / (name + '.json')
                 watch_path = args.out / (name + '.watch.json')
+                admission_path = args.out / (name + '.admission.json')
                 wall = min(args.wall, 600) if meta['tier'] == 'XL' else args.wall
                 if args.resume and target.exists() and watch_path.exists():
                     existing = json.loads(target.read_text())
@@ -123,12 +147,14 @@ def main():
                     if code_matches and caps_match and existing.get('fixtureSha256') == meta['sha256'] and existing.get('sidecarSha256') == digest(side_path) and (existing.get('phase') == 'complete' or watch['status'] in ('wall_timeout', 'private_memory_limit')):
                         print('resume', name, flush=True); continue
                 command = [sys.executable, '-B', '-u', str(Path(__file__).resolve()), '--worker', '--model', str(side_path.with_suffix('.3dm')),
-                           '--view', v['name'], '--threads', threads, '--result', str(target), '--engine', args.engine]
+                           '--view', v['name'], '--threads', threads, '--result', str(target), '--engine', args.engine,
+                           '--admission', str(admission_path), '--coordination-note', args.coordination_note]
                 # A failed fresh attempt cannot reuse an older drawing or status.
-                for old in (target, target.with_suffix('.svg'), watch_path):
+                for old in (target, target.with_suffix('.svg'), watch_path, admission_path):
                     old.unlink(missing_ok=True)
                 print('start', name, flush=True)
-                watch = run(command, target.with_suffix('.log'), wall, args.memory)
+                watch = run(command, target.with_suffix('.log'), wall, args.memory,
+                            admission_path=admission_path, admission_timeout=args.admission_timeout)
                 write_json(watch_path, watch)
                 result = json.loads(target.read_text()) if target.exists() else {'model': meta['id'], 'view': v['name'], 'status': 'no_result'}
                 # Keep failed startup attempts in their tier's denominator too.
@@ -140,9 +166,13 @@ def main():
                     result['fixtureSha256'] = digest(side_path.with_suffix('.3dm'))
                 if watch['status'] != 'exited':
                     result.update(status=watch['status'], lastWorkerStatus=result.get('status'))
-                result.update(wallSeconds=watch['wallSeconds'], peakPrivateBytes=watch['peakPrivateBytes'], jobPeakMemoryBytes=watch['jobPeakMemoryBytes'])
+                result.update(wallSeconds=watch['wallSeconds'], elapsedSeconds=watch['elapsedSeconds'],
+                              admissionSeconds=watch['admissionSeconds'], peakPrivateBytes=watch['peakPrivateBytes'], jobPeakMemoryBytes=watch['jobPeakMemoryBytes'])
                 write_json(target, result); rows.append(result)
                 print('done', name, result['status'], round(watch['wallSeconds'], 3), round(watch['peakPrivateBytes'] / 1024**3, 3), flush=True)
+                if args.yield_seconds:
+                    print('handoff: mutex free for', args.yield_seconds, 'seconds', flush=True)
+                    time.sleep(args.yield_seconds)
     print('completed attempts', len(rows), flush=True)
 
 

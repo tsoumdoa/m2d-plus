@@ -1729,6 +1729,474 @@
       "units": "Meters",
       "description": "Three expanded S-tier sources reduced from perf-S-blocks long section; four native null slots (Unset index -1); not missing stroke geometry. Reproduction values in adjacent JSON.",
       "path": "sections/unset-native-slot.3dm"
+    },
+    {
+      "id": "models/curved-perf-L-blocks.3dm",
+      "localModelSuite": true,
+      "external": true,
+      "sha256": "7e51e99477482cb05e4711c47f383019e5c113685e40bf33a1b344141a8519cc",
+      "sizeBytes": 8214246,
+      "units": "Meters",
+      "hook": false,
+      "manualOnly": true,
+      "seed": 20261114,
+      "tier": "L",
+      "flavor": "blocks",
+      "generator": "tools/models/curved.py",
+      "stats": {
+        "blockDefinitions": 8,
+        "blockInstances": 20000,
+        "brepFaces": 53330,
+        "definitionMembers": 8,
+        "expandedObjects": 20000,
+        "expandedTypes": {
+          "Brep": 20000
+        },
+        "meshTriangles": 0,
+        "objectTypes": {
+          "InstanceReferenceGeometry": 20000
+        },
+        "objects": 20000
+      },
+      "description": "Local deterministic model suite: curved-perf-L-blocks",
+      "sidecarSha256": "134fed9bc24c03f849800416e774919d8017b901a142d633b76466d480da281f",
+      "generatedPath": "../../artifacts/models/curved-perf-L-blocks.3dm",
+      "generatedSidecar": "../../artifacts/models/curved-perf-L-blocks.json"
+    },
+    {
+      "id": "models/curved-perf-L-exploded.3dm",
+      "localModelSuite": true,
+      "external": true,
+      "sha256": "1ec4a837ffe4a563b5d3be772a0558e42e617a1738e25a56a70c6010c1d124fa",
+      "sizeBytes": 233287801,
+      "units": "Meters",
+      "hook": false,
+      "manualOnly": true,
+      "seed": 20261114,
+      "tier": "L",
+      "flavor": "exploded",
+      "generator": "tools/models/curved.py",
+      "stats": {
+        "blockDefinitions": 0,
+        "blockInstances": 0,
+        "brepFaces": 53330,
+        "definitionMembers": 0,
+        "expandedObjects": 20000,
+        "expandedTypes": {
+          "Brep": 20000
+        },
+        "meshTriangles": 0,
+        "objectTypes": {
+          "Brep": 20000
+        },
+        "objects": 20000
+      },
+      "description": "Local deterministic model suite: curved-perf-L-exploded",
+      "sidecarSha256": "fc73ec3d7833697f5a39943f162db137da402d30ef81e947d5263cf4f1daa96a",
+      "generatedPath": "../../artifacts/models/curved-perf-L-exploded.3dm",
+      "generatedSidecar": "../../artifacts/models/curved-perf-L-exploded.json"
+    },
+    {
+      "id": "models/curved-perf-M-blocks.3dm",
+      "localModelSuite": true,
+      "external": true,
+      "sha256": "b0c49c4f5982335d990c8a4dad5ec022ab91b0cf650df26bec2b243aa4a4de26",
+      "sizeBytes": 2144290,
+      "units": "Meters",
+      "hook": false,
+      "manualOnly": true,
+      "seed": 20261114,
+      "tier": "M",
+      "flavor": "blocks",
+      "generator": "tools/models/curved.py",
+      "stats": {
+        "blockDefinitions": 8,
+        "blockInstances": 5000,
+        "brepFaces": 13337,
+        "definitionMembers": 8,
+        "expandedObjects": 5000,
+        "expandedTypes": {
+          "Brep": 5000
+        },
+        "meshTriangles": 0,
+        "objectTypes": {
+          "InstanceReferenceGeometry": 5000
+        },
+        "objects": 5000
+      },
+      "description": "Local deterministic model suite: curved-perf-M-blocks",
+      "sidecarSha256": "c8efe2da87f0f830980cefebdb5da1203a11e967880fd7762f1590962c7e951e",
+      "generatedPath": "../../artifacts/models/curved-perf-M-blocks.3dm",
+      "generatedSidecar": "../../artifacts/models/curved-perf-M-blocks.json"
+    },
+    {
+      "id": "models/curved-perf-M-exploded.3dm",
+      "localModelSuite": true,
+      "external": true,
+      "sha256": "90b00d3a480eaef3d0fa1a42907af773f260054f962273a5ff730572a18db33d",
+      "sizeBytes": 58365845,
+      "units": "Meters",
+      "hook": false,
+      "manualOnly": true,
+      "seed": 20261114,
+      "tier": "M",
+      "flavor": "exploded",
+      "generator": "tools/models/curved.py",
+      "stats": {
+        "blockDefinitions": 0,
+        "blockInstances": 0,
+        "brepFaces": 13337,
+        "definitionMembers": 0,
+        "expandedObjects": 5000,
+        "expandedTypes": {
+          "Brep": 5000
+        },
+        "meshTriangles": 0,
+        "objectTypes": {
+          "Brep": 5000
+        },
+        "objects": 5000
+      },
+      "description": "Local deterministic model suite: curved-perf-M-exploded",
+      "sidecarSha256": "865eb37abcd2d72a0e602cc77313aa5a232fd4d058d766e2311070c4ab80f7bd",
+      "generatedPath": "../../artifacts/models/curved-perf-M-exploded.3dm",
+      "generatedSidecar": "../../artifacts/models/curved-perf-M-exploded.json"
+    },
+    {
+      "id": "models/curved-perf-XL-blocks.3dm",
+      "localModelSuite": true,
+      "external": true,
+      "sha256": "877545fab2a71b5cc035ee745cbdf99818248396251ee85a6719713f9f40ab38",
+      "sizeBytes": 20354288,
+      "units": "Meters",
+      "hook": false,
+      "manualOnly": true,
+      "seed": 20261114,
+      "tier": "XL",
+      "flavor": "blocks",
+      "generator": "tools/models/curved.py",
+      "stats": {
+        "blockDefinitions": 8,
+        "blockInstances": 50000,
+        "brepFaces": 133334,
+        "definitionMembers": 8,
+        "expandedObjects": 50000,
+        "expandedTypes": {
+          "Brep": 50000
+        },
+        "meshTriangles": 0,
+        "objectTypes": {
+          "InstanceReferenceGeometry": 50000
+        },
+        "objects": 50000
+      },
+      "description": "Local deterministic model suite: curved-perf-XL-blocks",
+      "sidecarSha256": "b7561a4cb54add2ddac13d3b0501798b7e3ac9c45234a3e90917d60cf72067ae",
+      "generatedPath": "../../artifacts/models/curved-perf-XL-blocks.3dm",
+      "generatedSidecar": "../../artifacts/models/curved-perf-XL-blocks.json"
+    },
+    {
+      "id": "models/curved-perf-XL-exploded.3dm",
+      "localModelSuite": true,
+      "external": true,
+      "sha256": "b33d30ce0b78092ff9e7eb39c105b28c84b089d81178c4bac9f69d6728428c84",
+      "sizeBytes": 583258424,
+      "units": "Meters",
+      "hook": false,
+      "manualOnly": true,
+      "seed": 20261114,
+      "tier": "XL",
+      "flavor": "exploded",
+      "generator": "tools/models/curved.py",
+      "stats": {
+        "blockDefinitions": 0,
+        "blockInstances": 0,
+        "brepFaces": 133334,
+        "definitionMembers": 0,
+        "expandedObjects": 50000,
+        "expandedTypes": {
+          "Brep": 50000
+        },
+        "meshTriangles": 0,
+        "objectTypes": {
+          "Brep": 50000
+        },
+        "objects": 50000
+      },
+      "description": "Local deterministic model suite: curved-perf-XL-exploded",
+      "sidecarSha256": "e2e4e6db04dc50d7b753d8b58bbd382cba509814400180ca367a8551f7507d33",
+      "generatedPath": "../../artifacts/models/curved-perf-XL-exploded.3dm",
+      "generatedSidecar": "../../artifacts/models/curved-perf-XL-exploded.json"
+    },
+    {
+      "id": "models/curved-perf-S-blocks.3dm",
+      "localModelSuite": true,
+      "external": true,
+      "sha256": "4d48286cb5634bfa8a6b5bf9af1f680ec678b3d4b6bf925f2fab96990a977a10",
+      "sizeBytes": 323272,
+      "units": "Meters",
+      "hook": false,
+      "manualOnly": true,
+      "seed": 20261114,
+      "tier": "S",
+      "flavor": "blocks",
+      "generator": "tools/models/curved.py",
+      "stats": {
+        "blockDefinitions": 8,
+        "blockInstances": 500,
+        "brepFaces": 1334,
+        "definitionMembers": 8,
+        "expandedObjects": 500,
+        "expandedTypes": {
+          "Brep": 500
+        },
+        "meshTriangles": 0,
+        "objectTypes": {
+          "InstanceReferenceGeometry": 500
+        },
+        "objects": 500
+      },
+      "description": "Local deterministic model suite: curved-perf-S-blocks",
+      "sidecarSha256": "b8f02862056c3d5444e48409bd68275832c04b4a187a4fdc175ca4ee38d0353e",
+      "generatedPath": "../../artifacts/models/curved-perf-S-blocks.3dm",
+      "generatedSidecar": "../../artifacts/models/curved-perf-S-blocks.json"
+    },
+    {
+      "id": "models/curved-perf-S-exploded.3dm",
+      "localModelSuite": true,
+      "external": true,
+      "sha256": "969d416ac27c8ef2af5b519ffed1d935255b38ede2548926b4ed836b536ba276",
+      "sizeBytes": 5855637,
+      "units": "Meters",
+      "hook": false,
+      "manualOnly": true,
+      "seed": 20261114,
+      "tier": "S",
+      "flavor": "exploded",
+      "generator": "tools/models/curved.py",
+      "stats": {
+        "blockDefinitions": 0,
+        "blockInstances": 0,
+        "brepFaces": 1334,
+        "definitionMembers": 0,
+        "expandedObjects": 500,
+        "expandedTypes": {
+          "Brep": 500
+        },
+        "meshTriangles": 0,
+        "objectTypes": {
+          "Brep": 500
+        },
+        "objects": 500
+      },
+      "description": "Local deterministic model suite: curved-perf-S-exploded",
+      "sidecarSha256": "63b1eed749d286a0290f39b9caf0a9aafecf56da9843b8a982431e7b2121c97c",
+      "generatedPath": "../../artifacts/models/curved-perf-S-exploded.3dm",
+      "generatedSidecar": "../../artifacts/models/curved-perf-S-exploded.json"
+    },
+    {
+      "id": "models/curved-facade.3dm",
+      "localModelSuite": true,
+      "external": false,
+      "sha256": "0e4c788aba9dc95cd6520cd6dff4e4ef9e84984f86c939ca297da14688a2aa6b",
+      "sizeBytes": 399340,
+      "units": "Meters",
+      "hook": false,
+      "manualOnly": true,
+      "seed": 20261114,
+      "tier": null,
+      "flavor": null,
+      "generator": "tools/models/curved.py",
+      "stats": {
+        "blockDefinitions": 0,
+        "blockInstances": 0,
+        "brepFaces": 77,
+        "definitionMembers": 0,
+        "expandedObjects": 33,
+        "expandedTypes": {
+          "Brep": 28,
+          "Mesh": 5
+        },
+        "meshTriangles": 2560,
+        "objectTypes": {
+          "Brep": 28,
+          "Mesh": 5
+        },
+        "objects": 33
+      },
+      "description": "Local deterministic model suite: curved-facade",
+      "sidecarSha256": "3df0178153ed07a5e963142fb49492a2b216554a01d92e1c91e07ec50ae95710",
+      "path": "features/curved-facade.3dm",
+      "sidecar": "features/curved-facade.json"
+    },
+    {
+      "id": "models/curved-steel.3dm",
+      "localModelSuite": true,
+      "external": false,
+      "sha256": "4e01947b69fc703c5a0c54471429e2b4cd98a13e42ecad85433fad1f38da5d5f",
+      "sizeBytes": 307037,
+      "units": "Meters",
+      "hook": false,
+      "manualOnly": true,
+      "seed": 20261114,
+      "tier": null,
+      "flavor": null,
+      "generator": "tools/models/curved.py",
+      "stats": {
+        "blockDefinitions": 0,
+        "blockInstances": 0,
+        "brepFaces": 54,
+        "definitionMembers": 0,
+        "expandedObjects": 8,
+        "expandedTypes": {
+          "Brep": 8
+        },
+        "meshTriangles": 0,
+        "objectTypes": {
+          "Brep": 8
+        },
+        "objects": 8
+      },
+      "description": "Local deterministic model suite: curved-steel",
+      "sidecarSha256": "cb2a04a0be108bd6628080de64ec375cec59705504f62bbc606934bd2772fc7a",
+      "path": "features/curved-steel.3dm",
+      "sidecar": "features/curved-steel.json"
+    },
+    {
+      "id": "models/diagrid-shell.3dm",
+      "localModelSuite": true,
+      "external": false,
+      "sha256": "a98041a1ca45a12288ba6f87d16068879bfb93282b73aea4df04471d3f9c763d",
+      "sizeBytes": 259100,
+      "units": "Meters",
+      "hook": false,
+      "manualOnly": true,
+      "seed": 20261114,
+      "tier": null,
+      "flavor": null,
+      "generator": "tools/models/curved.py",
+      "stats": {
+        "blockDefinitions": 0,
+        "blockInstances": 0,
+        "brepFaces": 49,
+        "definitionMembers": 0,
+        "expandedObjects": 25,
+        "expandedTypes": {
+          "Brep": 25
+        },
+        "meshTriangles": 0,
+        "objectTypes": {
+          "Brep": 25
+        },
+        "objects": 25
+      },
+      "description": "Local deterministic model suite: diagrid-shell",
+      "sidecarSha256": "b7d3c980343b6f7b09495a92081588082edf21ebfeb0a749f1a7cc78a96e3e2e",
+      "path": "features/diagrid-shell.3dm",
+      "sidecar": "features/diagrid-shell.json"
+    },
+    {
+      "id": "models/space-frame.3dm",
+      "localModelSuite": true,
+      "external": false,
+      "sha256": "fb0c6525f01bb330f06af8e40a642b0bf4faef16b23bee5263fe314c7a36c0c6",
+      "sizeBytes": 270201,
+      "units": "Meters",
+      "hook": false,
+      "manualOnly": true,
+      "seed": 20261114,
+      "tier": null,
+      "flavor": null,
+      "generator": "tools/models/curved.py",
+      "stats": {
+        "blockDefinitions": 2,
+        "blockInstances": 669,
+        "brepFaces": 2130,
+        "definitionMembers": 2,
+        "expandedObjects": 669,
+        "expandedTypes": {
+          "Brep": 669
+        },
+        "meshTriangles": 0,
+        "objectTypes": {
+          "InstanceReferenceGeometry": 669
+        },
+        "objects": 669
+      },
+      "description": "Local deterministic model suite: space-frame",
+      "sidecarSha256": "28bd9952e3ca05f50d36d7cdbc882cb4cd8b31c8ac04c7b9ac439e16e4febd33",
+      "path": "features/space-frame.3dm",
+      "sidecar": "features/space-frame.json"
+    },
+    {
+      "id": "models/subd-vs-nurbs.3dm",
+      "localModelSuite": true,
+      "external": false,
+      "sha256": "6a26158f6626ac1273e124901b0bccde6d431d80c88d41d9a8ef852fd814e8f6",
+      "sizeBytes": 83528,
+      "units": "Meters",
+      "hook": false,
+      "manualOnly": true,
+      "seed": 20261114,
+      "tier": null,
+      "flavor": null,
+      "generator": "tools/models/curved.py",
+      "stats": {
+        "blockDefinitions": 0,
+        "blockInstances": 0,
+        "brepFaces": 12,
+        "definitionMembers": 0,
+        "expandedObjects": 3,
+        "expandedTypes": {
+          "Brep": 1,
+          "Mesh": 1,
+          "SubD": 1
+        },
+        "meshTriangles": 1536,
+        "objectTypes": {
+          "Brep": 1,
+          "Mesh": 1,
+          "SubD": 1
+        },
+        "objects": 3
+      },
+      "description": "Local deterministic model suite: subd-vs-nurbs",
+      "sidecarSha256": "6910645b74f4bbedb44dcf27ed9be65bf1d435a8020b7ff9259b633cdc8bf365",
+      "path": "features/subd-vs-nurbs.3dm",
+      "sidecar": "features/subd-vs-nurbs.json"
+    },
+    {
+      "id": "models/tangent-continuity.3dm",
+      "localModelSuite": true,
+      "external": false,
+      "sha256": "f5fd9b3feaf05522fd6fd6b3db4c455d94743c76552e3f011db017166f967461",
+      "sizeBytes": 104995,
+      "units": "Meters",
+      "hook": false,
+      "manualOnly": true,
+      "seed": 20261114,
+      "tier": null,
+      "flavor": null,
+      "generator": "tools/models/curved.py",
+      "stats": {
+        "blockDefinitions": 0,
+        "blockInstances": 0,
+        "brepFaces": 35,
+        "definitionMembers": 0,
+        "expandedObjects": 8,
+        "expandedTypes": {
+          "Brep": 8
+        },
+        "meshTriangles": 0,
+        "objectTypes": {
+          "Brep": 8
+        },
+        "objects": 8
+      },
+      "description": "Local deterministic model suite: tangent-continuity",
+      "sidecarSha256": "b6efda83791d0ab10c46d7633ccf9765610b340a5992b3c733bd7669148f9845",
+      "path": "features/tangent-continuity.3dm",
+      "sidecar": "features/tangent-continuity.json"
     }
   ],
   "localModelSuite": {

@@ -40,7 +40,11 @@ def initialize():
 
 
 class SerialRhino:
-    """Cross-worktree session mutex: fail fast instead of overlapping licensed jobs."""
+    """Cross-worktree mutex. Construction tools fail fast; queued runners may wait."""
+    def __init__(self, wait_seconds=0, name='Local\\M2DPlusLocalModelSuiteRhino'):
+        self.wait_seconds = wait_seconds
+        self.name = name
+
     def __enter__(self):
         import ctypes as C
         from ctypes import wintypes as W
@@ -50,10 +54,11 @@ class SerialRhino:
         self.kernel.WaitForSingleObject.argtypes = [W.HANDLE, W.DWORD]
         self.kernel.ReleaseMutex.argtypes = [W.HANDLE]
         self.kernel.CloseHandle.argtypes = [W.HANDLE]
-        self.handle = self.kernel.CreateMutexW(None, False, 'Local\\M2DPlusLocalModelSuiteRhino')
+        self.handle = self.kernel.CreateMutexW(None, False, self.name)
         if not self.handle:
             raise C.WinError(C.get_last_error())
-        state = self.kernel.WaitForSingleObject(self.handle, 0)
+        timeout = 0xffffffff if self.wait_seconds is None else int(self.wait_seconds * 1000)
+        state = self.kernel.WaitForSingleObject(self.handle, timeout)
         if state not in (0, 0x80):
             self.kernel.CloseHandle(self.handle)
             raise RuntimeError('Another local model-suite Rhino job is active. Run serially.')

@@ -15,7 +15,11 @@ def main():
     target = ROOT / 'tests/fixtures/features'; target.mkdir(parents=True, exist_ok=True)
     manifest_path = ROOT / 'tests/fixtures/manifest.json'
     manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
-    manifest['fixtures'] = [f for f in manifest['fixtures'] if not f.get('localModelSuite')]
+    # A fresh worktree may generate only one extension of the suite. Preserve
+    # existing entries whose models are not part of this invocation.
+    generated_ids = {'models/' + p.with_suffix('.3dm').name for p in args.models.glob('*.json')
+                     if p.with_suffix('.3dm').exists()}
+    manifest['fixtures'] = [f for f in manifest['fixtures'] if f['id'] not in generated_ids]
     for side in sorted(args.models.glob('*.json')):
         meta = json.loads(side.read_text(encoding='utf-8'))
         if 'views' not in meta:
@@ -27,7 +31,7 @@ def main():
         entry = {'id': 'models/' + model.name, 'localModelSuite': True, 'external': not bundled,
                  'sha256': meta['sha256'], 'sizeBytes': model.stat().st_size, 'units': meta['units'],
                  'hook': meta['hook'], 'manualOnly': True, 'seed': meta['seed'], 'tier': meta['tier'], 'flavor': meta['flavor'],
-                 'generator': 'tools/models/generate.py', 'stats': meta['stats'],
+                 'generator': meta['generator']['script'], 'stats': meta['stats'],
                  'description': 'Local deterministic model suite: ' + meta['id'], 'sidecarSha256': digest(side)}
         if bundled:
             if model.stat().st_size > manifest['maximumBundledSizeBytes']:
