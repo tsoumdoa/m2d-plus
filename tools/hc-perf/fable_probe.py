@@ -9,8 +9,9 @@ import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[2]
 FABLE = Path('C:/Users/tomosandego/.t3/scratch/m2d-plus-fable/proto/x')
-MODELS = Path('C:/Users/tomosandego/.t3/worktrees/m2d-plus/t3-3a78edd1-1cd89a1b1b9b38a1/artifacts/models')
-BASELINE = MODELS.parent / 'baseline'
+MODELS_ROOT = Path(os.environ.get('M2D_MODELS') or Path.home() / '.t3' / 'm2d-plus-models')
+MODELS = MODELS_ROOT / 'buildings'
+BASELINE = MODELS_ROOT / 'evidence' / 'test-models' / 'baseline'
 
 
 def main():

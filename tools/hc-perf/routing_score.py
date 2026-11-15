@@ -1,11 +1,11 @@
 """Summarise a routing candidate without accepting unexplained samples."""
-import argparse,json,math,hashlib
+import argparse, os,json,math,hashlib
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[2]
 PRIMARY=('perf-M-blocks__North','perf-M-blocks__SW','perf-L-blocks__North','curved-perf-S-blocks__SW')
 def gm(xs):return math.exp(sum(math.log(x) for x in xs)/len(xs)) if xs and all(x>0 for x in xs) else None
 def main():
- p=argparse.ArgumentParser(description=__doc__);p.add_argument('directory',type=Path);p.add_argument('--baseline',type=Path,default=Path('C:/Users/tomosandego/.t3/worktrees/m2d-plus/t3-cb3ea1b1-387e150576fde9fd/artifacts/hc-perf/composition'));a=p.parse_args()
+ p=argparse.ArgumentParser(description=__doc__);p.add_argument('directory',type=Path);p.add_argument('--baseline',type=Path,default=Path(os.environ.get('M2D_MODELS') or Path.home()/'.t3'/'m2d-plus-models')/'evidence'/'kernel-routing-1'/'hc-perf'/'composition');a=p.parse_args()
  manifest=json.loads((a.directory/'manifest.json').read_text());rows={};regress=[]
  final_verified=a.directory/'verified-gate.json'
  verified_result=json.loads(final_verified.read_text()) if final_verified.exists() else None
