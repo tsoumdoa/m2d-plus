@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><TargetFramework>net8.0-windows</TargetFramework></PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../M2DPlus.Core/M2DPlus.Core.csproj" />
+    <PackageReference Include="RhinoCommon" Version="$(RhinoApiVersion)" ExcludeAssets="runtime" />
+    <Reference Update="RhinoCommon"><Private>false</Private></Reference>
+  </ItemGroup>
+</Project>

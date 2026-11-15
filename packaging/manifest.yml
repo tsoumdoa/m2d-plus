@@ -1,0 +1,18 @@
+name: m2d-plus
+version: "@VERSION@"
+authors:
+  - Tomo S
+license: MIT
+description: >
+  Make2D-style plans, sections, elevations and axonometric drawings for Rhino 8
+  and Grasshopper on Windows. Pre-alpha M0 skeleton; drawing engine not implemented.
+url: https://github.com/tsoumdoa/m2d-plus
+icon: icon.png
+keywords:
+  - grasshopper
+  - make2d
+  - drawing
+  - architecture
+  - section
+  - guid:acfcd722-881a-453e-a2f1-36a297b54c8d
+  - guid:c8d0f9fe-5498-45dd-8caf-10201b80d211

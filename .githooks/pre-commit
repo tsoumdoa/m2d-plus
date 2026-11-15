@@ -1,0 +1,25 @@
+#!/bin/sh
+# M2D+ local CI. Enable per clone: git config core.hooksPath .githooks
+# Builds the working tree, including unstaged changes. Force manually with M2DPLUS_HOOK_FORCE=1.
+staged=$(git diff --cached --name-only --diff-filter=ACMRD)
+if [ -z "$M2DPLUS_HOOK_FORCE" ] && ! printf '%s\n' "$staged" | grep -qE '\.(cs|csproj|props|targets|sln|resx)$'; then
+  echo "pre-commit: no code changes, skipping build + Core tests."
+  exit 0
+fi
+if ! command -v dotnet >/dev/null 2>&1; then
+  echo "pre-commit: dotnet not found on PATH." >&2
+  exit 1
+fi
+root=$(git rev-parse --show-toplevel) || exit 1
+start=$(date +%s)
+echo "pre-commit: dotnet build ..."
+if ! dotnet build "$root/M2DPlus.sln" -c Debug -v q -nologo; then
+  echo "pre-commit: build failed (warnings are errors). Commit aborted." >&2
+  exit 1
+fi
+echo "pre-commit: dotnet test (Core only; no Rhino licence) ..."
+if ! dotnet test "$root/tests/M2DPlus.Core.Tests/M2DPlus.Core.Tests.csproj" -c Debug --no-build -v q -nologo; then
+  echo "pre-commit: Core tests failed. Commit aborted." >&2
+  exit 1
+fi
+echo "pre-commit: build + Core tests passed in $(( $(date +%s) - start ))s."

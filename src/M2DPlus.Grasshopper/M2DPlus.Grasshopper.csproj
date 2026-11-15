@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <TargetExt>.gha</TargetExt>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../M2DPlus.Core/M2DPlus.Core.csproj" />
+    <ProjectReference Include="../M2DPlus.Rhino/M2DPlus.Rhino.csproj" />
+    <PackageReference Include="Grasshopper" Version="$(RhinoApiVersion)" ExcludeAssets="runtime" />
+    <PackageReference Include="RhinoCommon" Version="$(RhinoApiVersion)" ExcludeAssets="runtime" />
+    <Reference Update="Grasshopper;GH_IO;RhinoCommon"><Private>false</Private></Reference>
+  </ItemGroup>
+</Project>
