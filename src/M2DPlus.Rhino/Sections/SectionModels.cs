@@ -4,7 +4,11 @@ using Rhino.Geometry;
 namespace M2DPlus.Rhino.Sections;
 
 /// <summary>Borrowed for the duration of Compute; caller owns and must keep geometry alive and unchanged.</summary>
-public sealed record SectionSource(string Id, GeometryBase Geometry, SectionStyleSnapshot Style);
+public sealed record SectionSource(string Id, GeometryBase Geometry, SectionStyleSnapshot Style)
+{
+    /// <summary>Definition-local shape shared with congruent sources; null validates this source's own geometry.</summary>
+    internal SectionCanonical? Canonical { get; init; }
+}
 public sealed record SectionRequest(Plane Plane, double Tolerance, double AngleTolerance,
     Rectangle3d? Crop = null, CutMode Cuts = CutMode.Separate, HatchMode Hatch = HatchMode.Styles);
 public sealed record SectionDiagnostic(string SourceId, SectionStatus Status, string Message);

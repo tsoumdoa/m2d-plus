@@ -31,6 +31,8 @@ internal static class EdgeProvenance
             if (bounds.Min.X > other.Max.X + tolerance || bounds.Max.X < other.Min.X - tolerance ||
                 bounds.Min.Y > other.Max.Y + tolerance || bounds.Max.Y < other.Min.Y - tolerance ||
                 bounds.Min.Z > other.Max.Z + tolerance || bounds.Max.Z < other.Min.Z - tolerance) continue;
+            lock (SectionGeometry.CurveIntersectionGate)
+            {
             using var events = Intersection.CurveCurve(curve, reference.Curve, tolerance, tolerance);
             foreach (var item in events)
             {
@@ -39,6 +41,7 @@ internal static class EdgeProvenance
                 overlaps.Add((interval, reference.Origin));
                 parameters.Add(Math.Clamp(interval.Min, curve.Domain.Min, curve.Domain.Max));
                 parameters.Add(Math.Clamp(interval.Max, curve.Domain.Min, curve.Domain.Max));
+            }
             }
         }
         var result = new List<SectionEdge>();

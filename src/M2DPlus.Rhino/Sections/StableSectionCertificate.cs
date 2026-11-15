@@ -75,7 +75,7 @@ internal static class StableSectionCertificate
             if (mass is null) throw new SectionFailure("D: loop moments failed.");
             areas[i] = mass.Area; centres[i] = mass.Centroid;
         }
-        var nesting = RegionTopology.Nest(areas, (i, j) => Curve.PlanarClosedCurveRelationship(curves[i], curves[j], plane, tolerance) == RegionContainment.BInsideA);
+        var nesting = RegionTopology.Nest(areas, (i, j) => { lock (SectionGeometry.CurveIntersectionGate) return Curve.PlanarClosedCurveRelationship(curves[i], curves[j], plane, tolerance) == RegionContainment.BInsideA; });
         return nesting.Select(n => new Loop(areas[n.Index], curves[n.Index].GetLength(), centres[n.Index], n.Parent, n.IsHole)).ToArray();
     }
 

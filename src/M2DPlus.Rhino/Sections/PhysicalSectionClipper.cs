@@ -8,6 +8,13 @@ public static class PhysicalSectionClipper
 {
     public static PhysicalClipResult Clip(SectionSource source, SectionRequest request, Plane? farPlane = null)
     {
+        using var shared = new SharedSource(source, request, null);
+        return Clip(shared, request, farPlane);
+    }
+
+    internal static PhysicalClipResult Clip(SharedSource shared, SectionRequest request, Plane? farPlane)
+    {
+        var source = shared.Source;
         SectionGeometry.Validate(request);
         var result = new PhysicalClipResult();
         if (farPlane is { } far)
@@ -22,23 +29,26 @@ public static class PhysicalSectionClipper
         try
         {
             if (source.Geometry is Mesh { IsClosed: false }) throw new SectionFailure("Open mesh visibility trim/cap is unsupported; do not use it as a closed occluder.");
-            using var copy = SectionGeometry.Convert(source.Geometry, request.Tolerance);
-            var components = SectionGeometry.MaterialComponents(copy, request.Tolerance);
-            try
+            var components = shared.Components(); // Borrowed: shared with the region pass.
             {
-                foreach (var component in components)
+                for (var index = 0; index < components.Count; index++)
                 {
+                    var component = components[index];
                     var original = component.Edges.Select(e => e.DuplicateCurve()).ToArray();
                     try
                     {
-                        var current = Halfspace(source.Id, component, request, result.Diagnostics, result.ContactFeatures);
+                        var current = Halfspace(source.Id, component, request, result.Diagnostics, out var status, result.ContactFeatures, shared, index);
+                        var whole = status == SectionStatus.Behind;
                         if (farPlane is { } farCut)
                         {
                             var next = new List<Brep>();
                             try
                             {
                                 foreach (var piece in current)
-                                    next.AddRange(Halfspace(source.Id, piece, request with { Plane = farCut }, result.Diagnostics, result.ContactFeatures));
+                                {
+                                    next.AddRange(Halfspace(source.Id, piece, request with { Plane = farCut }, result.Diagnostics, out status, result.ContactFeatures));
+                                    whole &= status == SectionStatus.Behind;
+                                }
                             }
                             catch { foreach (var piece in next) piece.Dispose(); throw; }
                             finally { foreach (var piece in current) piece.Dispose(); }
@@ -51,7 +61,9 @@ public static class PhysicalSectionClipper
                                 var edges = new List<SectionEdge>();
                                 try
                                 {
-                                    foreach (var edge in piece.Edges)
+                                    // A piece wholly behind every plane is an untouched duplicate: all its edges are original.
+                                    if (whole) edges.AddRange(piece.Edges.Select(e => new SectionEdge(e.DuplicateCurve(), EdgeOrigin.Original)));
+                                    else foreach (var edge in piece.Edges)
                                     {
                                         var kind = edge.IsInPlane(request.Plane, request.Tolerance) ? EdgeOrigin.NearTrim :
                                             farPlane is { } fp && edge.IsInPlane(fp, request.Tolerance) ? EdgeOrigin.FarTrim : EdgeOrigin.None;
@@ -69,7 +81,6 @@ public static class PhysicalSectionClipper
                     finally { foreach (var edge in original) edge.Dispose(); }
                 }
             }
-            finally { foreach (var component in components) component.Dispose(); }
         }
         catch (Exception ex) when (ex is SectionFailure or ArgumentException or InvalidOperationException)
         { result.Diagnostics.Add(new(source.Id, SectionStatus.Unsupported, ex.Message)); }
@@ -83,9 +94,16 @@ public static class PhysicalSectionClipper
     }
 
     internal static List<Brep> Halfspace(string id, Brep source, SectionRequest request, List<SectionDiagnostic> diagnostics,
-        List<SectionContactFeature>? contactFeatures = null)
+        List<SectionContactFeature>? contactFeatures = null) => Halfspace(id, source, request, diagnostics, out _, contactFeatures);
+
+    /// <param name="shared">When given, <paramref name="source"/> is its component <paramref name="index"/> and the near-plane classification is shared.</param>
+    internal static List<Brep> Halfspace(string id, Brep source, SectionRequest request, List<SectionDiagnostic> diagnostics,
+        out SectionStatus status, List<SectionContactFeature>? contactFeatures = null, SharedSource? shared = null, int index = 0)
     {
-        var classification = SectionGeometry.Classify(id, 0, source, request, out var evidence);
+        StableSectionCertificate.Evidence? evidence;
+        var classification = shared is not null ? shared.ClassifyNear(id, index, source, out evidence)
+            : SectionGeometry.Classify(id, 0, source, request, out evidence);
+        status = classification.Status;
         using var certificate = evidence;
         if (classification.Status == SectionStatus.Behind) return new() { source.DuplicateBrep() };
         if (classification.Status == SectionStatus.InFront) return new();

@@ -39,8 +39,21 @@ public static class SectionRegionEngine
         public void Dispose() { Face.Dispose(); foreach (var curve in Physical) curve.Dispose(); }
     }
 
+    /// <summary>Worker threads for per-source cutting. Never used for native visibility or for validation. Tests set 1 for a serial run.</summary>
+    // Serial by default: RhinoCommon Intersection.CurveCurve is not repeatable under concurrency (perf-f FINDINGS §5).
+    // The gate covers the known calls, but the parallel gain is small (L 5.7 s, M plan 1.9 s). Determinism first.
+    internal static int Parallelism { get; set; } = 1;
+    private static int _liveOutcomes;
+    /// <summary>Per-source results not yet merged or disposed; zero whenever no Compute is running.</summary>
+    internal static int LiveOutcomes => Volatile.Read(ref _liveOutcomes);
+
     public static SectionResult Compute(IEnumerable<SectionSource> sources, SectionRequest request,
-        CancellationToken cancellationToken = default, bool prepareVisibility = false, Plane? farPlane = null, M2DPlus.Rhino.Services.PhaseTimings? phases = null)
+        CancellationToken cancellationToken = default, bool prepareVisibility = false, Plane? farPlane = null, M2DPlus.Rhino.Services.PhaseTimings? phases = null) =>
+        Compute(sources, request, null, cancellationToken, prepareVisibility, farPlane, phases);
+
+    /// <param name="verdicts">The scene's validation verdicts; null shares verdicts within this call only.</param>
+    internal static SectionResult Compute(IEnumerable<SectionSource> sources, SectionRequest request, SectionVerdictCache? verdicts,
+        CancellationToken cancellationToken, bool prepareVisibility = false, Plane? farPlane = null, M2DPlus.Rhino.Services.PhaseTimings? phases = null)
     {
         SectionGeometry.Validate(request);
         var ordered = sources.OrderBy(s => s.Id, StringComparer.Ordinal).ToArray();
@@ -48,43 +61,52 @@ public static class SectionRegionEngine
             throw new ArgumentException("Source ids must be nonempty and unique.");
         var result = new SectionResult();
         var candidates = new List<Candidate>();
-        var outlineOrdinals = new Dictionary<string, int>(StringComparer.Ordinal);
+        using var transient = verdicts is null ? new SectionVerdictCache() : null;
         try
         {
-            foreach (var source in ordered)
+            // Validation verdicts are settled first, one at a time on this thread, so no verdict can depend on
+            // which worker asked first or on what other workers were doing at the time.
+            var verdict = new string[ordered.Length];
+            for (var i = 0; i < ordered.Length; i++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                var first = candidates.Count;
-                var firstOutline = result.Regions.Count;
+                verdict[i] = SectionGeometry.Verdict(ordered[i], request.Tolerance, verdicts ?? transient!);
+            }
+            // Pure geometry on separately owned copies: no document, live object, scheduler or native visibility call.
+            SourceOutcome Process(int index)
+            {
+                var source = ordered[index];
+                cancellationToken.ThrowIfCancellationRequested();
+                var outcome = new SourceOutcome(source.Id);
+                var outlineOrdinals = new Dictionary<string, int>(StringComparer.Ordinal);
+                using var shared = new SharedSource(source, request, verdict[index]);
                 try
                 {
                     var style = SectionPolicy.EffectiveStyle(source.Style, request.Hatch);
                     ValidateStyle(style);
                     if (request.Hatch == HatchMode.Styles && source.Style.Background == BackgroundMode.Viewport)
-                        result.Diagnostics.Add(new(source.Id, SectionStatus.Crossing, "Viewport background resolved to object display colour."));
+                        outcome.Diagnostics.Add(new(source.Id, SectionStatus.Crossing, "Viewport background resolved to object display colour."));
                     if (prepareVisibility)
                     {
                         var trimTimer = System.Diagnostics.Stopwatch.StartNew();
-                        var visibility = PhysicalSectionClipper.Clip(source, request, farPlane);
-                        phases?.Add("route C trim", trimTimer.Elapsed.TotalSeconds);
-                        result.Visibility.Add(source.Id, visibility);
-                        result.Diagnostics.AddRange(visibility.Diagnostics);
+                        var visibility = PhysicalSectionClipper.Clip(shared, request, farPlane);
+                        if (phases is not null) lock (phases) phases.Add("route C trim", trimTimer.Elapsed.TotalSeconds); // Summed CPU when parallel.
+                        outcome.Visibility = visibility;
+                        outcome.Diagnostics.AddRange(visibility.Diagnostics);
                     }
-                    using var copy = SectionGeometry.Convert(source.Geometry, request.Tolerance);
-                    var components = SectionGeometry.MaterialComponents(copy, request.Tolerance);
-                    try
+                    var components = shared.Components(); // Borrowed: shared with the visibility clip.
                     {
                         for (var i = 0; i < components.Count; i++)
                         {
                             cancellationToken.ThrowIfCancellationRequested();
                             var component = components[i];
-                            var classification = SectionGeometry.Classify(source.Id, i, component, request, out var evidence);
+                            var classification = shared.ClassifyNear(source.Id, i, component, out var evidence);
                             using var certificate = evidence;
-                            result.Components.Add(classification);
+                            outcome.Components.Add(classification);
                             var stable = classification.Certificate.StartsWith(StableSectionCertificate.Route, StringComparison.Ordinal);
-                            if (stable) result.Diagnostics.Add(new(source.Id, SectionStatus.Crossing, classification.Certificate));
+                            if (stable) outcome.Diagnostics.Add(new(source.Id, SectionStatus.Crossing, classification.Certificate));
                             if (classification.Status == SectionStatus.Uncertain)
-                                result.Diagnostics.Add(new(source.Id, SectionStatus.Uncertain, classification.Certificate));
+                                outcome.Diagnostics.Add(new(source.Id, SectionStatus.Uncertain, classification.Certificate));
                             if (classification.Status != SectionStatus.Crossing) continue;
                             var loops = certificate?.Loops.Select(c => c.DuplicateCurve()).ToArray() ?? SectionGeometry.Intersections(component, request.Plane, request.Tolerance);
                             try
@@ -92,8 +114,8 @@ public static class SectionRegionEngine
                                 if (loops.Length == 0) throw new SectionFailure("Crossing certificate has no transverse intersection.");
                                 if (!component.IsSolid)
                                 {
-                                    AddOutlines(source.Id, loops, style, request, result, outlineOrdinals);
-                                    result.Diagnostics.Add(new(source.Id, SectionStatus.OutlineOnly, "Open source: section outline only, Hatch null."));
+                                    AddOutlines(source.Id, loops, style, request, outcome.Outlines, outlineOrdinals);
+                                    outcome.Diagnostics.Add(new(source.Id, SectionStatus.OutlineOnly, "Open source: section outline only, Hatch null."));
                                     continue;
                                 }
                                 if (stable)
@@ -103,7 +125,7 @@ public static class SectionRegionEngine
                                 }
                                 else if (prepareVisibility)
                                 {
-                                    if (!result.Visibility[source.Id].Succeeded && !(farPlane is { } fp && -request.Plane.DistanceTo(fp.Origin) <= request.Tolerance))
+                                    if (!outcome.Visibility!.Succeeded && !(farPlane is { } fp && -request.Plane.DistanceTo(fp.Origin) <= request.Tolerance))
                                         throw new SectionFailure("Crossing trim/cap could not be certified.");
                                 }
                                 else
@@ -118,21 +140,47 @@ public static class SectionRegionEngine
                                 {
                                     foreach (var region in regions)
                                     foreach (var cropped in Crop(region, request))
-                                        candidates.Add(new(cropped, new[] { source.Id }, style, loops.Select(l => l.DuplicateCurve()).ToArray()));
+                                        outcome.Candidates.Add(new(cropped, new[] { source.Id }, style, loops.Select(l => l.DuplicateCurve()).ToArray()));
                                 }
                                 finally { foreach (var region in regions) region.Dispose(); }
                             }
                             finally { foreach (var loop in loops) loop.Dispose(); }
                         }
                     }
-                    finally { foreach (var component in components) component.Dispose(); }
                 }
                 catch (Exception ex) when (ex is SectionFailure or ArgumentException or InvalidOperationException)
                 {
-                    for (var i = candidates.Count - 1; i >= first; i--) { candidates[i].Dispose(); candidates.RemoveAt(i); }
-                    for (var i = result.Regions.Count - 1; i >= firstOutline; i--) { result.Regions[i].Dispose(); result.Regions.RemoveAt(i); }
-                    result.Diagnostics.Add(new(source.Id, SectionStatus.Unsupported, ex.Message));
+                    outcome.DropRegions();
+                    outcome.Diagnostics.Add(new(source.Id, SectionStatus.Unsupported, ex.Message));
                 }
+                catch { outcome.Dispose(); throw; }
+                return outcome;
+            }
+            var outcomes = new SourceOutcome?[ordered.Length];
+            try
+            {
+                var threads = Math.Min(Parallelism, ordered.Length);
+                if (threads > 1)
+                    Parallel.For(0, ordered.Length, new ParallelOptions { MaxDegreeOfParallelism = threads, CancellationToken = cancellationToken },
+                        i => outcomes[i] = Process(i));
+                else for (var i = 0; i < ordered.Length; i++) outcomes[i] = Process(i);
+            }
+            catch (Exception ex)
+            {
+                // Parallel.For has joined every worker by now, so no outcome can appear after this sweep.
+                foreach (var outcome in outcomes) outcome?.Dispose();
+                cancellationToken.ThrowIfCancellationRequested();
+                if (ex is AggregateException aggregate)
+                    System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(aggregate.Flatten().InnerExceptions[0]).Throw();
+                throw;
+            }
+            // Merge in source order, so serial and parallel runs build identical lists.
+            foreach (var outcome in outcomes)
+            {
+                if (outcome!.Visibility is { } visibility) result.Visibility.Add(outcome.Id, visibility);
+                result.Diagnostics.AddRange(outcome.Diagnostics); result.Components.AddRange(outcome.Components);
+                result.Regions.AddRange(outcome.Outlines); candidates.AddRange(outcome.Candidates);
+                outcome.Transfer();
             }
             cancellationToken.ThrowIfCancellationRequested();
             ReportOverlaps(candidates, request, result);
@@ -163,6 +211,30 @@ public static class SectionRegionEngine
         }
         catch { result.Dispose(); throw; }
         finally { foreach (var candidate in candidates) candidate.Dispose(); }
+    }
+
+    /// <summary>One source's share of the result. Owns its geometry until merged (Transfer) or abandoned (Dispose).</summary>
+    private sealed class SourceOutcome
+    {
+        private int _live = 1;
+        public string Id { get; }
+        public PhysicalClipResult? Visibility;
+        public readonly List<SectionDiagnostic> Diagnostics = new();
+        public readonly List<ComponentClassification> Components = new();
+        public readonly List<Candidate> Candidates = new();
+        public readonly List<SectionRegion> Outlines = new();
+        public SourceOutcome(string id) { Id = id; Interlocked.Increment(ref _liveOutcomes); }
+        public void DropRegions()
+        {
+            foreach (var candidate in Candidates) candidate.Dispose(); Candidates.Clear();
+            foreach (var outline in Outlines) outline.Dispose(); Outlines.Clear();
+        }
+        public void Transfer() { if (Interlocked.Exchange(ref _live, 0) == 1) Interlocked.Decrement(ref _liveOutcomes); }
+        public void Dispose()
+        {
+            if (Interlocked.Exchange(ref _live, 0) != 1) return;
+            Visibility?.Dispose(); DropRegions(); Interlocked.Decrement(ref _liveOutcomes);
+        }
     }
 
     private static void ValidateStyle(SectionStyleSnapshot style)
@@ -234,7 +306,7 @@ public static class SectionRegionEngine
     }
 
     private static void AddOutlines(string id, IEnumerable<Curve> curves, SectionStyleSnapshot style,
-        SectionRequest request, SectionResult result, Dictionary<string, int> ordinals)
+        SectionRequest request, List<SectionRegion> target, Dictionary<string, int> ordinals)
     {
         using var crop = request.Crop?.ToNurbsCurve();
         foreach (var curve in curves)
@@ -242,8 +314,12 @@ public static class SectionRegionEngine
             var parts = new[] { curve.DuplicateCurve() };
             if (crop is not null)
             {
-                using var events = Intersection.CurveCurve(curve, crop, request.Tolerance, request.Tolerance);
-                var parameters = events.SelectMany(e => e.IsOverlap ? new[] { e.OverlapA.T0, e.OverlapA.T1 } : new[] { e.ParameterA });
+                double[] parameters;
+                lock (SectionGeometry.CurveIntersectionGate)
+                {
+                    using var events = Intersection.CurveCurve(curve, crop, request.Tolerance, request.Tolerance);
+                    parameters = events.SelectMany(e => e.IsOverlap ? new[] { e.OverlapA.T0, e.OverlapA.T1 } : new[] { e.ParameterA }).ToArray();
+                }
                 foreach (var p in parts) p.Dispose();
                 parts = curve.Split(parameters) ?? new[] { curve.DuplicateCurve() };
             }
@@ -253,7 +329,7 @@ public static class SectionRegionEngine
                 { part.Dispose(); continue; }
                 var ordinal = ordinals.GetValueOrDefault(id);
                 ordinals[id] = ordinal + 1;
-                result.Regions.Add(new($"{SectionPolicy.MembershipKey(new[] { id })}/outline/{ordinal}",
+                target.Add(new($"{SectionPolicy.MembershipKey(new[] { id })}/outline/{ordinal}",
                     new[] { new SectionLoop(part, false, new[] { new SectionEdge(part.DuplicateCurve(), EdgeOrigin.PhysicalCut) }) },
                     null, new[] { id }, style, SectionStatus.OutlineOnly, 0, "Open geometry has no material fill."));
             }
@@ -334,10 +410,15 @@ public static class SectionRegionEngine
 
     private static void ReportOverlaps(List<Candidate> candidates, SectionRequest request, SectionResult result)
     {
+        // Regions whose bounds on the cut plane are more than tolerance apart cannot overlap.
+        var toPlane = Transform.PlaneToPlane(request.Plane, Plane.WorldXY);
+        var bounds = candidates.Select(c => c.Face.GetBoundingBox(toPlane)).ToArray();
         for (var i = 0; i < candidates.Count; i++)
         for (var j = i + 1; j < candidates.Count; j++)
         {
             var a = candidates[i]; var b = candidates[j];
+            if (bounds[i].Min.X > bounds[j].Max.X + request.Tolerance || bounds[j].Min.X > bounds[i].Max.X + request.Tolerance ||
+                bounds[i].Min.Y > bounds[j].Max.Y + request.Tolerance || bounds[j].Min.Y > bounds[i].Max.Y + request.Tolerance) continue;
             if (SectionPolicy.Compatible(a.Style, b.Style)) continue;
             var aLoops = a.Face.Loops.Select(l => l.To3dCurve()).ToArray();
             var bLoops = b.Face.Loops.Select(l => l.To3dCurve()).ToArray();
