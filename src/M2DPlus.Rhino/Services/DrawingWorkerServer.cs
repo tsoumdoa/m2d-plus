@@ -19,8 +19,8 @@ public static class DrawingWorkerServer
         {
             while(true)
             {
-                WorkerCodec.Message request;
-                try{request=WorkerCompression.Decode<WorkerCodec.Message>(WorkerFrames.ReadAsync(pipe,default).GetAwaiter().GetResult());}
+                WorkerPacket request;
+                try{request=WorkerPackets.Decode(WorkerFrames.ReadAsync(pipe,default).GetAwaiter().GetResult());}
                 catch(EndOfStreamException){return;}
                 byte[] payload;
                 try
@@ -36,7 +36,7 @@ public static class DrawingWorkerServer
                             NativeDrawing.NativeStarting=()=>
                             {
                                 if(signalled)return;signalled=true;
-                                WorkerFrames.WriteAsync(pipe,WorkerCompression.Encode(new WorkerCodec.Message("started",[])),default).GetAwaiter().GetResult();
+                                WorkerFrames.WriteAsync(pipe,WorkerPackets.Encode("started",[]),default).GetAwaiter().GetResult();
                                 // Internal licensed fault injection, never exposed in GH or settings.
                                 switch(Environment.GetEnvironmentVariable("M2DPLUS_WORKER_TEST_FAULT"))
                                 {
@@ -54,11 +54,11 @@ public static class DrawingWorkerServer
                             break;
                         default:throw new InvalidDataException("Unknown worker operation.");
                     }
-                    WorkerFrames.WriteAsync(pipe,WorkerCompression.Encode(new WorkerCodec.Message(request.Kind,payload)),default).GetAwaiter().GetResult();
+                    WorkerFrames.WriteAsync(pipe,WorkerPackets.Encode(request.Kind,payload),default).GetAwaiter().GetResult();
                 }
                 catch(Exception ex)
                 {
-                    WorkerFrames.WriteAsync(pipe,WorkerCompression.Encode(new WorkerCodec.Message(ex is OutOfMemoryException ? "memory" : "error",Encoding.UTF8.GetBytes(ex.Message))),default).GetAwaiter().GetResult();
+                    WorkerFrames.WriteAsync(pipe,WorkerPackets.Encode(ex is OutOfMemoryException ? "memory" : "error",Encoding.UTF8.GetBytes(ex.Message)),default).GetAwaiter().GetResult();
                 }
             }
         }

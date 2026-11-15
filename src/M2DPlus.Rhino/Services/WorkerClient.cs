@@ -6,24 +6,27 @@ namespace M2DPlus.Rhino.Services;
 
 public sealed record WorkerOptions
 {
-    public int Count { get; init; } = Math.Clamp(Environment.ProcessorCount / 4, 1, 4);
+    public int Count { get; init; } = WorkerMemoryPolicy.CpuLimit(Environment.ProcessorCount);
     /// <summary>Zero selects the scene/machine policy; positive values override its initial per-worker cap.</summary>
     public long MemoryBytes { get; init; }
-    public TimeSpan IdleTimeout { get; init; } = TimeSpan.FromMinutes(2);
-    public TimeSpan StartupTimeout { get; init; } = TimeSpan.FromSeconds(45);
-    public TimeSpan SolveTimeout { get; init; } = TimeSpan.FromMinutes(10);
+    public TimeSpan IdleTimeout { get; init; } = TimeSpan.FromMinutes(10);
+    public TimeSpan StartupTimeout { get; init; } = TimeSpan.FromMinutes(2);
+    public TimeSpan SolveTimeout { get; init; } = TimeSpan.FromHours(1);
     public string Directory { get; init; } = Path.Combine(Path.GetDirectoryName(typeof(WorkerOptions).Assembly.Location)!, "workers", "net" + Environment.Version.Major);
     public string RhinoSystem { get; init; } = Path.GetDirectoryName(typeof(global::Rhino.RhinoApp).Assembly.Location)!;
     // Resolver is optional: packaged workers resolve the installed Rhino system directly.
     public string? Resolver { get; init; }
     internal string? TestFault { get; init; }
+    internal int ProcessorLimit { get; init; } = WorkerMemoryPolicy.CpuLimit(Environment.ProcessorCount);
     internal Func<MachineMemory> ReadMemory { get; init; } = WorkerMachineMemory.Read;
     public static WorkerOptions FromEnvironment() => new()
     {
-        Count = Number("M2DPLUS_WORKERS",Math.Clamp(Environment.ProcessorCount/4,1,4),1,4),
-        MemoryBytes = Environment.GetEnvironmentVariable("M2DPLUS_WORKER_MEMORY_MIB") is null ? 0 : (long)Number("M2DPLUS_WORKER_MEMORY_MIB",0,256,16384)*1024*1024,
+        Count = Number("M2DPLUS_WORKERS",WorkerMemoryPolicy.CpuLimit(Environment.ProcessorCount),1,WorkerMemoryPolicy.CpuLimit(Environment.ProcessorCount)),
+        MemoryBytes = Environment.GetEnvironmentVariable("M2DPLUS_WORKER_MEMORY_MIB") is null ? 0 : (long)Number("M2DPLUS_WORKER_MEMORY_MIB",0,512,int.MaxValue)*1024*1024,
         Directory = Environment.GetEnvironmentVariable("M2DPLUS_WORKER_DIRECTORY") ?? new WorkerOptions().Directory,
-        IdleTimeout = TimeSpan.FromSeconds(Number("M2DPLUS_WORKER_IDLE_SECONDS",120,1,3600))
+        IdleTimeout = TimeSpan.FromSeconds(Number("M2DPLUS_WORKER_IDLE_SECONDS",600,1,86400)),
+        StartupTimeout = TimeSpan.FromSeconds(Number("M2DPLUS_WORKER_STARTUP_SECONDS",120,15,3600)),
+        SolveTimeout = TimeSpan.FromSeconds(Number("M2DPLUS_WORKER_SOLVE_SECONDS",3600,1,86400))
     };
     private static int Number(string name,int fallback,int min,int max) => int.TryParse(Environment.GetEnvironmentVariable(name),out var n)?Math.Clamp(n,min,max):fallback;
 }
@@ -44,6 +47,7 @@ internal sealed class WorkerClient : IDisposable
     internal int ProcessId { get; }
     internal long PeakBytes => _job.PeakBytes;
     internal long MemoryCapBytes { get; private init; }
+    internal int ProcessorLimit { get; private init; }
     internal bool MemoryLimitHit => _job.MemoryLimitHit;
     internal long ResidentBytes { get { lock(_sync){if(_disposed)return 0;_process.Refresh();return _process.WorkingSet64;} } }
     private WorkerClient(NamedPipeServerStream pipe,WorkerJob job,Process process) { _pipe=pipe;_job=job;_process=process;ProcessId=process.Id; }
@@ -64,11 +68,15 @@ internal sealed class WorkerClient : IDisposable
             if(options.TestFault is {} fault)start.Environment["M2DPLUS_WORKER_TEST_FAULT"]=fault;
             else start.Environment.Remove("M2DPLUS_WORKER_TEST_FAULT");
             start.Environment["DOTNET_ROLL_FORWARD"]="LatestPatch";
+            // Bound managed kernel parallelism across the whole reservation instead
+            // of advertising all host cores independently to every worker.
+            start.Environment["DOTNET_PROCESSOR_COUNT"]=options.ProcessorLimit.ToString(System.Globalization.CultureInfo.InvariantCulture);
             start.Environment.Remove("M2DPLUS_WORKER_DIRECTORY");
             start.Environment["M2DPLUS_WORKER_BUDGET"]=options.MemoryBytes.ToString(System.Globalization.CultureInfo.InvariantCulture);
             process=Process.Start(start)??throw new IOException("Worker process did not start.");
-            client=new(pipe,job,process){MemoryCapBytes=options.MemoryBytes};
+            client=new(pipe,job,process){MemoryCapBytes=options.MemoryBytes,ProcessorLimit=options.ProcessorLimit};
             job.Assign(process);
+            process.PriorityClass=ProcessPriorityClass.BelowNormal;
             // Bootstrap waits on this line before loading any Rhino assembly/native code.
             await process.StandardInput.WriteLineAsync("contained").ConfigureAwait(false);process.StandardInput.Close();
             using var timeout=CancellationTokenSource.CreateLinkedTokenSource(token);timeout.CancelAfter(options.StartupTimeout);
@@ -93,15 +101,22 @@ internal sealed class WorkerClient : IDisposable
         using var kill=deadline.Token.Register(Kill);
         try
         {
-            await WorkerFrames.WriteAsync(_pipe,WorkerCompression.Encode(new WorkerCodec.Message(kind,payload)),deadline.Token).ConfigureAwait(false);
-            var reply=WorkerCompression.Decode<WorkerCodec.Message>(await WorkerFrames.ReadAsync(_pipe,deadline.Token).ConfigureAwait(false));
-            while(reply.Kind=="started") {NativeStarted?.Invoke();reply=WorkerCompression.Decode<WorkerCodec.Message>(await WorkerFrames.ReadAsync(_pipe,deadline.Token).ConfigureAwait(false));}
+            await WorkerFrames.WriteAsync(_pipe,WorkerPackets.Encode(kind,payload),deadline.Token).ConfigureAwait(false);
+            var reply=WorkerPackets.Decode(await WorkerFrames.ReadAsync(_pipe,deadline.Token).ConfigureAwait(false));
+            while(reply.Kind=="started") {NativeStarted?.Invoke();reply=WorkerPackets.Decode(await WorkerFrames.ReadAsync(_pipe,deadline.Token).ConfigureAwait(false));}
             if(reply.Kind=="memory")throw new WorkerMemoryException(System.Text.Encoding.UTF8.GetString(reply.Payload));
             if(reply.Kind=="error")throw new IOException(System.Text.Encoding.UTF8.GetString(reply.Payload));
             if(reply.Kind!=kind)throw new InvalidDataException("Unexpected worker response.");
             return reply.Payload;
         }
-        catch {Kill();token.ThrowIfCancellationRequested();throw;}
+        catch(Exception ex)
+        {
+            Kill();token.ThrowIfCancellationRequested();
+            // A worker's own deadline is a per-view failure. Preserve caller
+            // cancellation separately so a timeout cannot discard sibling views.
+            if(deadline.IsCancellationRequested)throw new TimeoutException($"Worker {kind} exceeded its {timeout.TotalSeconds:g} second deadline.",ex);
+            throw;
+        }
     }
     internal void Kill() { lock(_sync){if(!_disposed)_job.Kill();} }
     public void Dispose()

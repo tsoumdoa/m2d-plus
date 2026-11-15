@@ -6,6 +6,38 @@ public sealed class WorkerMemoryPolicyTests
 {
     private const long G=WorkerMemoryPolicy.GiB;
     private static SceneCost Large=>new(326053368,118772,0,20000);
+    [Theory]
+    [InlineData(1,1)] [InlineData(2,1)] [InlineData(8,6)] [InlineData(16,14)] [InlineData(32,30)]
+    public void CpuCeilingLeavesTwoLogicalCores(int cores,int expected) => Assert.Equal(expected,WorkerMemoryPolicy.CpuLimit(cores));
+    [Fact] public void Installed32GiBClassUsesLargerBudgetDespiteReservedHardwareRam()
+    {
+        Assert.Equal(31*G/100*75,WorkerMemoryPolicy.Budget(new(31*G,31*G)));
+        Assert.Equal(24*G/100*60,WorkerMemoryPolicy.Budget(new(24*G,24*G)));
+    }
+
+    [Theory]
+    [InlineData(16,8,3,1)] [InlineData(16,16,3,1)] [InlineData(16,32,3,1)]
+    [InlineData(32,8,6,3)] [InlineData(32,16,6,3)] [InlineData(32,32,6,3)]
+    [InlineData(64,8,6,6)] [InlineData(64,16,13,6)] [InlineData(64,32,13,6)]
+    [InlineData(128,8,6,6)] [InlineData(128,16,14,13)] [InlineData(128,32,27,13)]
+    public void PolicyTableAtThreeQuartersAvailable(int ram,int cores,int mediumCount,int largeCount)
+    {
+        var memory=new MachineMemory(ram*G,ram*G/4*3);
+        var medium=WorkerMemoryPolicy.Size(new(81535672,29696,0,5000),32,WorkerMemoryPolicy.CpuLimit(cores),memory);
+        var large=WorkerMemoryPolicy.Size(Large,32,WorkerMemoryPolicy.CpuLimit(cores),memory);
+        Assert.Equal(mediumCount,medium.Count);Assert.Equal(largeCount,large.Count);
+        Assert.True(medium.Count*medium.CapBytes<=medium.BudgetBytes);
+        Assert.True(large.Count*large.CapBytes<=large.BudgetBytes);
+    }
+    [Fact] public void VeryLargeSceneHasNoSixteenGiBCapOrFourWorkerCeiling()
+    {
+        var campus=new SceneCost(2*G,600_001,4_000_001,60_000);
+        Assert.False(campus.Admitted(1,long.MaxValue));
+        var p=WorkerMemoryPolicy.Size(campus,16,30,new(128*G,100*G));
+        Assert.True(p.CapBytes>16*G);Assert.True(p.Count>0);Assert.Null(p.Refusal);
+        var small=WorkerMemoryPolicy.Size(default,16,30,new(128*G,100*G));
+        Assert.Equal(16,small.Count);
+    }
     [Fact] public void LargeSceneOn64GiBSelectsFour6GiBWorkers()
     {
         var p=WorkerMemoryPolicy.Size(Large,8,4,new(64*G,40*G));

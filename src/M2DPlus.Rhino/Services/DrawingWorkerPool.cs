@@ -12,10 +12,12 @@ public sealed class DrawingWorkerPool : IDisposable
     private readonly Timer _idle;
     private volatile bool _disposed;
     private readonly CancellationTokenSource _shutdown=new();
+    private string? _historyScene;
+    private Dictionary<string,double> _viewSeconds=new(StringComparer.Ordinal);
     public static DrawingWorkerPool Shared { get; } = new(WorkerOptions.FromEnvironment());
     public DrawingWorkerPool(WorkerOptions options)
     {
-        if(options.Count is <1 or >4 || options.MemoryBytes<0 || options.IdleTimeout<=TimeSpan.Zero)throw new ArgumentOutOfRangeException(nameof(options));
+        if(options.Count<1 || options.Count>WorkerMemoryPolicy.CpuLimit(Environment.ProcessorCount) || options.MemoryBytes<0 || options.IdleTimeout<=TimeSpan.Zero || options.StartupTimeout<=TimeSpan.Zero || options.SolveTimeout<=TimeSpan.Zero)throw new ArgumentOutOfRangeException(nameof(options));
         _options=options;_slots=Enumerable.Range(0,options.Count).Select(_=>new Slot()).ToArray();
         _idle=new Timer(_=>ExpireIdle(),null,options.IdleTimeout,options.IdleTimeout);
         AppDomain.CurrentDomain.ProcessExit+=OnExit;
@@ -58,16 +60,31 @@ public sealed class DrawingWorkerPool : IDisposable
             memory=memory with{AvailableBytes=Math.Min(memory.PhysicalBytes,checked(memory.AvailableBytes+resident))};
             var plan=WorkerMemoryPolicy.Size(cost,views.Count,_options.Count,memory,_options.MemoryBytes);LastSizing=plan;
             if(plan.Count==0)throw new WorkerUnavailableException(plan.Refusal!);
+            var processors=Math.Max(1,WorkerMemoryPolicy.CpuLimit(Environment.ProcessorCount)/plan.Count);
             // Retire excess/changed-cap clients before starting any new process. Thus retained idle clients
             // never sit outside the current aggregate reservation.
             for(var i=0;i<_slots.Length;i++)
             {
                 var slot=_slots[i];await slot.Gate.WaitAsync(token).ConfigureAwait(false);
-                try{if(i>=plan.Count || slot.Client?.MemoryCapBytes!=plan.CapBytes){slot.Client?.Dispose();slot.Client=null;}}
+                try{if(i>=plan.Count || slot.Client?.MemoryCapBytes!=plan.CapBytes || slot.Client?.ProcessorLimit!=processors){slot.Client?.Dispose();slot.Client=null;}}
                 finally{slot.Gate.Release();}
             }
-            var retry=new bool[views.Count];var done=0;
-            await Task.WhenAll(_slots.Take(plan.Count).Select((slot,shard)=>RunShard(slot,shard))).ConfigureAwait(false);
+            if(_historyScene!=identity.SceneRevision){_viewSeconds.Clear();_historyScene=identity.SceneRevision;}
+            var keys=views.Select(v=>WorkerCodec.Hash(WorkerCodec.Encode(new WorkerCodec.Request(default,0,v,settings.NativeOnly)))).ToArray();
+            var order=Enumerable.Range(0,views.Count).OrderByDescending(i=>_viewSeconds.GetValueOrDefault(keys[i])).ThenBy(i=>i).ToArray();
+            var cursor=-1;var seconds=new double[views.Count];
+            var retry=new bool[views.Count];var unavailable=new bool[views.Count];var done=0;
+            WorkerUnavailableException? startupFailure=null;
+            await Task.WhenAll(_slots.Take(plan.Count).Select(RunShard)).ConfigureAwait(false);
+            token.ThrowIfCancellationRequested();
+            // One failed handshake must not discard views completed by matching
+            // siblings. If nobody could start, retain the unavailable/fallback contract.
+            if(startupFailure is not null)
+            {
+                if(!results.Where((r,i)=>r is not null && !unavailable[i]).Any())throw startupFailure;
+                for(var i=0;i<results.Length;i++)if(results[i] is null)
+                    Failure(i,"Worker startup unavailable for this view: "+startupFailure.Message);
+            }
             if(retry.Any(r=>r))
             {
                 // All original native work is over. Release every retained worker before measuring retry headroom.
@@ -94,16 +111,22 @@ public sealed class DrawingWorkerPool : IDisposable
                 }
             }
             token.ThrowIfCancellationRequested();
+            // Keep only this batch's history, bounded by the current view set. Failures
+            // don't train the predictor. Scheduling never changes publication order.
+            _viewSeconds=Enumerable.Range(0,views.Count).Where(i=>results[i]?.Error is null && seconds[i]>0)
+                .GroupBy(i=>keys[i],StringComparer.Ordinal).ToDictionary(g=>g.Key,g=>g.Max(i=>seconds[i]),StringComparer.Ordinal);
             progress?.Report(new(JobPhase.Complete,views.Count,views.Count));
             return new DrawingBatch(identity,results.Select(r=>r??throw new InvalidDataException("Incomplete worker generation.")).ToList());
 
-            async Task RunShard(Slot slot,int shard)
+            async Task RunShard(Slot slot)
             {
                 await slot.Gate.WaitAsync(token).ConfigureAwait(false);
                 try
                 {
-                    for(var i=shard;i<views.Count;i+=plan.Count)
+                    while(true)
                     {
+                        var next=Interlocked.Increment(ref cursor);if(next>=order.Length)break;
+                        var i=order[next];
                         token.ThrowIfCancellationRequested();
                         try
                         {
@@ -112,7 +135,13 @@ public sealed class DrawingWorkerPool : IDisposable
                             {drawing.Dispose();retry[i]=true;Failure(i,MemoryFailure(plan.CapBytes,"Queued for an isolated retry."));slot.Client?.Dispose();slot.Client=null;}
                             else results[i]=drawing;
                         }
-                        catch(WorkerUnavailableException){throw;}
+                        catch(WorkerUnavailableException ex)
+                        {
+                            unavailable[i]=true;Interlocked.CompareExchange(ref startupFailure,ex,null);
+                            Failure(i,"Worker startup unavailable for this view: "+ex.Message);
+                            progress?.Report(new(JobPhase.Drawing,Interlocked.Increment(ref done),views.Count));
+                            break;
+                        }
                         catch(Exception ex) when(ex is not OperationCanceledException)
                         {
                             retry[i]=ex is WorkerMemoryException || IsMemoryFailure(ex.Message) || slot.Client?.MemoryLimitHit==true;
@@ -130,7 +159,7 @@ public sealed class DrawingWorkerPool : IDisposable
             }
             async Task<ViewDrawing> SolveView(Slot slot,int index,long cap,bool isolatedRetry)
             {
-                slot.Client??=await WorkerClient.StartAsync(_options with{MemoryBytes=cap},fingerprint,token).ConfigureAwait(false);
+                slot.Client??=await WorkerClient.StartAsync(_options with{MemoryBytes=cap,ProcessorLimit=isolatedRetry?WorkerMemoryPolicy.CpuLimit(Environment.ProcessorCount):processors},fingerprint,token).ConfigureAwait(false);
                 if(slot.Client.SceneRevision!=identity.SceneRevision)
                 {
                     await slot.Client.CallAsync("scene",payload.Value,_options.SolveTimeout,token).ConfigureAwait(false);
@@ -138,6 +167,7 @@ public sealed class DrawingWorkerPool : IDisposable
                 }
                 AttemptingView?.Invoke(index,cap,isolatedRetry);
                 slot.Client.NativeStarted=()=>SolvingView?.Invoke(slot.Client.ProcessId,index);
+                var clock=System.Diagnostics.Stopwatch.StartNew();
                 var reply=WorkerCodec.Decode<WorkerCodec.Reply>(await slot.Client.CallAsync("solve",EncodedRequest?.Invoke(index)??WorkerCodec.Encode(new WorkerCodec.Request(identity,index,views[index],settings.NativeOnly)),_options.SolveTimeout,token).ConfigureAwait(false));
                 reply=ObserveReply?.Invoke(reply)??reply;
                 if(reply.Identity!=identity || reply.ViewIndex!=index)throw new InvalidDataException("Stale worker reply rejected (generation/revisions/view).");
@@ -149,6 +179,7 @@ public sealed class DrawingWorkerPool : IDisposable
                     drawing=new ViewDrawing{Name=values.GetProperty("Name").GetString()!,Error=values.GetProperty("Error").GetString()};
                 }
                 else drawing=WorkerCodec.RestoreDrawing(reply.Drawing);
+                seconds[index]=clock.Elapsed.TotalSeconds;
                 drawing._diagnostics.Add($"Worker: isolated whole-view solve; matching runtime and engine; scene retained per process. Reservation={plan.Count} x {plan.CapBytes/(double)WorkerMemoryPolicy.GiB:F1} GiB; budget={plan.BudgetBytes/(double)WorkerMemoryPolicy.GiB:F1} GiB.");
                 return drawing;
             }

@@ -38,5 +38,6 @@ public sealed class RetentionAdmissionTests
         Assert.False(new SceneCost(1, 0, 700_000, 1).Admitted(6, budget));
         var cost = new SceneCost(1000, 6, 0, 1); Assert.True(cost.Estimate(6) > cost.Estimate(1));
         Assert.False(cost.Admitted(0, budget));
+        Assert.False(new SceneCost(0,0,0,50_000).Admitted(1,long.MaxValue));
     }
 }

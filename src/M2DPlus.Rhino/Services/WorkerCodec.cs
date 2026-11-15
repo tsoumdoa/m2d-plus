@@ -9,10 +9,10 @@ using Rhino.Geometry;
 
 namespace M2DPlus.Rhino.Services;
 
-/// <summary>Schema 2: detached definition archives, transforms, values and detached output archives.</summary>
+/// <summary>Schema 3: raw binary transport envelopes; detached scene/drawing JSON is unchanged.</summary>
 internal static class WorkerCodec
 {
-    internal const int Schema = 2;
+    internal const int Schema = 3;
     internal static JsonSerializerOptions Json { get; } = Options();
     private static JsonSerializerOptions Options()
     {
@@ -76,7 +76,6 @@ internal static class WorkerCodec
     }
     internal sealed record Request(RequestIdentity Identity, int ViewIndex, ViewRequest View, bool NativeOnly);
     internal sealed record Reply(RequestIdentity Identity, int ViewIndex, byte[] Drawing);
-    internal sealed record Message(string Kind, byte[] Payload);
     internal sealed record Piece(string Geometry, string? Depth, string SourceIdentity, int[] SourcePath, int SourceItem, SourceSection Source,
         LineClass Class, LineClass SolvedClass, bool Profile, bool KernelOwned, bool FarCandidate, DepthInterval Depths, double Intensity);
     internal sealed record Edge(string Geometry, M2DPlus.Core.Sections.EdgeOrigin Origin);
