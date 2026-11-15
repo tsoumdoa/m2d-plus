@@ -135,8 +135,10 @@ internal static class SectionGeometry
         return outward.IsPointInside(point, tolerance, true);
     }
 
-    public static ComponentClassification Classify(string id, int index, Brep brep, SectionRequest request)
+    public static ComponentClassification Classify(string id, int index, Brep brep, SectionRequest request,
+        out StableSectionCertificate.Evidence? evidence)
     {
+        evidence = null;
         var plane = request.Plane;
         var transform = Transform.PlaneToPlane(plane, Plane.WorldXY);
         var bounds = brep.GetBoundingBox(transform);
@@ -150,12 +152,23 @@ internal static class SectionGeometry
         var min = polyhedral && distances.Length > 0 ? distances.Min() : bounds.Min.Z;
         var max = polyhedral && distances.Length > 0 ? distances.Max() : bounds.Max.Z;
         var status = SectionPolicy.Classify(min, max, request.Tolerance, polyhedral, roundoff);
-        if (status == SectionStatus.Crossing && !polyhedral &&
-            !(distances.Any(d => d < -request.Tolerance) && distances.Any(d => d > request.Tolerance)))
-            status = SectionStatus.Uncertain;
-        // Analytic extruded sections are the initial certified domain. Freeform remains an explicit gate.
-        if (status == SectionStatus.Crossing && !brep.Faces.All(f => f.IsPlanar(request.Tolerance) || f.IsCylinder(request.Tolerance)))
-            status = SectionStatus.Uncertain;
+        if (status == SectionStatus.Crossing && !polyhedral)
+        {
+            var analytic = distances.Any(d => d < -request.Tolerance) && distances.Any(d => d > request.Tolerance) &&
+                brep.Faces.All(f => f.IsPlanar(request.Tolerance) || f.IsCylinder(request.Tolerance));
+            if (!analytic && brep.IsSolid)
+            {
+                var certified = StableSectionCertificate.Try(brep, request, out var reason, out evidence);
+                return new(id, index, certified ? SectionStatus.Crossing : SectionStatus.Uncertain, min, max, reason);
+            }
+            if (!analytic && !brep.IsSolid)
+            {
+                // Open geometry may expose an outline, never a material region or fill.
+                var outlines = Intersections(brep, plane, request.Tolerance);
+                try { status = outlines.Any(c => c.GetLength() > request.Tolerance) ? SectionStatus.Crossing : SectionStatus.Uncertain; }
+                finally { foreach (var outline in outlines) outline.Dispose(); }
+            }
+        }
         return new(id, index, status, min, max, polyhedral ? "Linear-face extrema; validate transverse loops and trim/cap before fill."
             : "Conservative bounds and actual vertex witnesses; analytic-face and trim/cap validation required.");
     }

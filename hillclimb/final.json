@@ -1,0 +1,73 @@
+{
+  "branch": "hc/sec-d-stability",
+  "baseline": {
+    "iteration": 0,
+    "summary": "Final paired original baseline against frozen audited expectations",
+    "gate": {
+      "passed": true,
+      "failures": []
+    },
+    "primary": 0.24015748031496062,
+    "secondary": {
+      "certified": 61,
+      "crossing": 254,
+      "total": 1517,
+      "medianMs": 61.3872,
+      "uncertain": {
+        "Tolerance band or unverified freeform crossing; no confident fill.": 245,
+        "Self-intersecting Brep faces away from their shared topology.": 4
+      }
+    },
+    "loadNote": "Serial own Rhino.Inside host; shared machine load uncontrolled; warm-up + three consecutive samples per object; no native parallel HLD.",
+    "rhino": "8.36.26296.17001",
+    "runtime": "8.0.34"
+  },
+  "best": {
+    "iteration": 4,
+    "summary": "Final paired retained theory-D certificate after original baseline",
+    "gate": {
+      "passed": true,
+      "failures": []
+    },
+    "primary": 0.8464566929133859,
+    "secondary": {
+      "certified": 215,
+      "crossing": 254,
+      "total": 1517,
+      "medianMs": 83.3439,
+      "uncertain": {
+        "Conservative bounds and actual vertex witnesses; analytic-face and trim/cap validation required.": 40,
+        "Self-intersecting or degenerate section loop.": 2,
+        "Self-intersecting Brep faces away from their shared topology.": 4,
+        "D: transversality cannot be bounded away from tangency.": 32
+      }
+    },
+    "loadNote": "Serial own Rhino.Inside host; shared machine load uncontrolled; warm-up + three consecutive samples per object; no native parallel HLD.",
+    "rhino": "8.36.26296.17001",
+    "runtime": "8.0.34",
+    "engineSha256": "abf9e7d031257c71071ed709bc0a3d88711d9742e343ff26950c448f80799d51",
+    "scorerSha256": "fc43f083f786825a59cacde16a6f735efc6896405a081f9059a5e9daf21c3a89",
+    "oracleSha256": "58739049425522b474cd91c7f16e5d76df90f85a6a38e20acb85631edcb8e077"
+  },
+  "plateauNonImproving": 3,
+  "retainedIteration": 4,
+  "verification": {
+    "debugWarnings": 0,
+    "releaseWarnings": 0,
+    "corePerRuntime": 186,
+    "uiPerRuntime": 40,
+    "licensedPerRuntime": 141,
+    "runtimes": [
+      8,
+      10
+    ],
+    "forcedHookPassed": true,
+    "unlicensedPassed": true
+  },
+  "renderBefore": "artifacts/render/sec-d-before/index.html",
+  "renderAfter": "artifacts/render/sec-d-after/index.html",
+  "remainingCrossings": 39,
+  "remainingVisibility": "Diagrid face-intersection and trim-edge attribution failures still quarantine much linework.",
+  "committed": false,
+  "pushed": false
+}

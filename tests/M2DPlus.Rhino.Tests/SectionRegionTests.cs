@@ -338,14 +338,21 @@ public sealed class SectionRegionTests(RhinoHost host)
     });
 
     [RhinoFact, Trait("Category", "RhinoIntegration")]
-    public void SelfIntersectingMeshAndUnverifiedFreeformNeverGetFill() => host.Run(() => {
+    public void SelfIntersectingMeshIsRejectedAndCertifiedConvertedSubdHasCorrectRegion() => host.Run(() => {
         using var a = Mesh.CreateFromBox(new BoundingBox(new Point3d(-1,-1,-1), new Point3d(1,1,1)), 1, 1, 1);
         using var b = Mesh.CreateFromBox(new BoundingBox(new Point3d(0,0,0), new Point3d(2,2,2)), 1, 1, 1); a.Append(b);
         using var result = SectionRegionEngine.Compute(new[] { Source(a) }, Request);
         Assert.True(result.RequiresQuarantine); Assert.Empty(result.Regions);
         using var file = File3dm.Read(Path.Combine(AppContext.BaseDirectory, "fixtures", "subd_converted_brep.3dm"));
         using var freeform = SectionRegionEngine.Compute(new[] { Source(file.Objects.First(o => o.Geometry is Brep).Geometry) }, Request);
-        Assert.True(freeform.RequiresQuarantine); Assert.Empty(freeform.Regions);
+        // Frozen exact limit-surface geometry: independent surface tessellation /
+        // triangle-plane polygon integration (not BrepPlane or product region code)
+        // gives 2.2702951327607623, perimeter * tolerance budget 0.00053448.
+        Healthy(freeform);
+        var region = Assert.Single(freeform.Regions);
+        Assert.InRange(Math.Abs(region.Area - 2.2702951327607623), 0, .00053448);
+        Assert.Single(region.Loops); Assert.False(region.Loops[0].IsHole); Assert.NotNull(region.Hatch);
+        Assert.Contains(freeform.Diagnostics, d => d.Message.StartsWith("D: perturbation stability", StringComparison.Ordinal));
     });
 
     [RhinoFact, Trait("Category", "RhinoIntegration")]

@@ -85,11 +85,14 @@ public static class PhysicalSectionClipper
     internal static List<Brep> Halfspace(string id, Brep source, SectionRequest request, List<SectionDiagnostic> diagnostics,
         List<SectionContactFeature>? contactFeatures = null)
     {
-        var classification = SectionGeometry.Classify(id, 0, source, request);
+        var classification = SectionGeometry.Classify(id, 0, source, request, out var evidence);
+        using var certificate = evidence;
         if (classification.Status == SectionStatus.Behind) return new() { source.DuplicateBrep() };
         if (classification.Status == SectionStatus.InFront) return new();
         if (classification.Status == SectionStatus.Uncertain)
-        { diagnostics.Add(new(id, SectionStatus.Uncertain, "No trustworthy halfspace certificate; source quarantined.")); return new(); }
+        { diagnostics.Add(new(id, SectionStatus.Uncertain, "No trustworthy halfspace certificate; source quarantined. " + classification.Certificate)); return new(); }
+        if (classification.Certificate.StartsWith(StableSectionCertificate.Route, StringComparison.Ordinal))
+            diagnostics.Add(new(id, SectionStatus.Crossing, classification.Certificate));
         if (classification.Status == SectionStatus.Contact)
         {
             // Keep retained contact volumes whole. A volume on the removed side retains its exact planar face(s).
@@ -125,7 +128,7 @@ public static class PhysicalSectionClipper
             {
                 // Cap all shells together using material regions. Capping each disconnected shell
                 // independently would turn an enclosed cavity into an occluding filled solid.
-                var loops = SectionGeometry.Intersections(source, request.Plane, request.Tolerance);
+                var loops = certificate?.Loops.Select(c => c.DuplicateCurve()).ToArray() ?? SectionGeometry.Intersections(source, request.Plane, request.Tolerance);
                 try
                 {
                     var caps = SectionGeometry.PlanarRegions(loops, request);

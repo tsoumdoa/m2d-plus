@@ -1,0 +1,342 @@
+{
+  "expected": {
+    "continuity": {
+      "G1-plane-polynomial-blend": "z=0 joins z=0.6*x^2; C1/G1, not G2",
+      "G2-plane-polynomial-blend": "z=0 joins z=0.6*x^3; C2/G2"
+    },
+    "edgeClassification": "Archived Brep edge indices; IsSmoothManifoldEdge at 0.001 radians; seam trims recorded separately",
+    "edgeInventory": {
+      "G1-filleted-box": {
+        "crease": [],
+        "naked": [],
+        "seam": [],
+        "tangent": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22,
+          23,
+          24,
+          25,
+          26,
+          27,
+          28,
+          29,
+          30,
+          31,
+          32,
+          33,
+          34,
+          35,
+          36,
+          37,
+          38,
+          39,
+          40,
+          41,
+          42,
+          43,
+          44,
+          45,
+          46,
+          47
+        ]
+      },
+      "G1-plane-polynomial-blend": {
+        "crease": [],
+        "naked": [
+          0,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "seam": [],
+        "tangent": [
+          1
+        ]
+      },
+      "G2-plane-polynomial-blend": {
+        "crease": [],
+        "naked": [
+          0,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "seam": [],
+        "tangent": [
+          1
+        ]
+      },
+      "exact-edge-on-sheet": {
+        "crease": [],
+        "naked": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "seam": [],
+        "tangent": []
+      },
+      "sphere-seam-0": {
+        "crease": [],
+        "naked": [],
+        "seam": [
+          0
+        ],
+        "tangent": []
+      },
+      "sphere-seam-1": {
+        "crease": [],
+        "naked": [],
+        "seam": [
+          0
+        ],
+        "tangent": []
+      },
+      "torus-seam-0": {
+        "crease": [],
+        "naked": [],
+        "seam": [
+          0,
+          1
+        ],
+        "tangent": []
+      },
+      "torus-seam-1": {
+        "crease": [],
+        "naked": [],
+        "seam": [
+          0,
+          1
+        ],
+        "tangent": []
+      }
+    }
+  },
+  "family": "curved",
+  "flavor": null,
+  "generator": {
+    "dependencies": {
+      "archive.py": "c0f8f13f7f873a6f2163ae89455bc01d12bb44ee03d0b18ca10c6cb4f6f6bd67",
+      "common.py": "7842b495ce25479e4dd06bcd44732b3e34a3a7fefa4896f38199eb813c7ae04a",
+      "generate.py": "8ab7c0e78bd5ecb2e2cf28c4d739187383031319110a0fe135700f24af034a74"
+    },
+    "rhino": "8.36.26296.17001",
+    "runtime": "8.0.34",
+    "script": "tools/models/curved.py",
+    "sha256": "526e97097e24b395c7d8ab4ce618e18ec8d4fb71580aa9e80b0d462607399459"
+  },
+  "hook": false,
+  "id": "tangent-continuity",
+  "notes": [],
+  "schemaVersion": 1,
+  "seed": 20261114,
+  "sha256": "f5fd9b3feaf05522fd6fd6b3db4c455d94743c76552e3f011db017166f967461",
+  "sizeBytes": 104995,
+  "sourceFixtures": {},
+  "stats": {
+    "blockDefinitions": 0,
+    "blockInstances": 0,
+    "brepFaces": 35,
+    "definitionMembers": 0,
+    "expandedObjects": 8,
+    "expandedTypes": {
+      "Brep": 8
+    },
+    "meshTriangles": 0,
+    "objectTypes": {
+      "Brep": 8
+    },
+    "objects": 8
+  },
+  "tier": null,
+  "tolerance": 0.0001,
+  "units": "Meters",
+  "views": [
+    {
+      "name": "Front tangents off seams off",
+      "settings": {
+        "hidden": "on",
+        "seams": "off",
+        "tangents": "off"
+      },
+      "source": {
+        "kind": "direction keyword",
+        "value": "Front"
+      }
+    },
+    {
+      "name": "Front tangents on seams off",
+      "settings": {
+        "hidden": "on",
+        "seams": "off",
+        "tangents": "on"
+      },
+      "source": {
+        "kind": "direction keyword",
+        "value": "Front"
+      }
+    },
+    {
+      "name": "Front tangents on seams on",
+      "settings": {
+        "hidden": "on",
+        "seams": "on",
+        "tangents": "on"
+      },
+      "source": {
+        "kind": "direction keyword",
+        "value": "Front"
+      }
+    },
+    {
+      "name": "Front tangents off seams on",
+      "settings": {
+        "hidden": "on",
+        "seams": "on",
+        "tangents": "off"
+      },
+      "source": {
+        "kind": "direction keyword",
+        "value": "Front"
+      }
+    },
+    {
+      "name": "SW tangents off seams off",
+      "settings": {
+        "hidden": "on",
+        "seams": "off",
+        "tangents": "off"
+      },
+      "source": {
+        "kind": "direction keyword",
+        "value": "SW"
+      }
+    },
+    {
+      "name": "SW tangents on seams off",
+      "settings": {
+        "hidden": "on",
+        "seams": "off",
+        "tangents": "on"
+      },
+      "source": {
+        "kind": "direction keyword",
+        "value": "SW"
+      }
+    },
+    {
+      "name": "SW tangents on seams on",
+      "settings": {
+        "hidden": "on",
+        "seams": "on",
+        "tangents": "on"
+      },
+      "source": {
+        "kind": "direction keyword",
+        "value": "SW"
+      }
+    },
+    {
+      "name": "SW tangents off seams on",
+      "settings": {
+        "hidden": "on",
+        "seams": "on",
+        "tangents": "off"
+      },
+      "source": {
+        "kind": "direction keyword",
+        "value": "SW"
+      }
+    },
+    {
+      "name": "Top tangents off seams off",
+      "settings": {
+        "hidden": "on",
+        "seams": "off",
+        "tangents": "off"
+      },
+      "source": {
+        "kind": "direction keyword",
+        "value": "Top"
+      }
+    },
+    {
+      "name": "Top tangents on seams off",
+      "settings": {
+        "hidden": "on",
+        "seams": "off",
+        "tangents": "on"
+      },
+      "source": {
+        "kind": "direction keyword",
+        "value": "Top"
+      }
+    },
+    {
+      "name": "Top tangents on seams on",
+      "settings": {
+        "hidden": "on",
+        "seams": "on",
+        "tangents": "on"
+      },
+      "source": {
+        "kind": "direction keyword",
+        "value": "Top"
+      }
+    },
+    {
+      "name": "Top tangents off seams on",
+      "settings": {
+        "hidden": "on",
+        "seams": "on",
+        "tangents": "off"
+      },
+      "source": {
+        "kind": "direction keyword",
+        "value": "Top"
+      }
+    },
+    {
+      "name": "Grazing",
+      "settings": {
+        "hidden": "on",
+        "seams": "off",
+        "tangents": "off"
+      },
+      "source": {
+        "kind": "vector",
+        "value": [
+          1,
+          1e-05,
+          1e-05
+        ]
+      }
+    }
+  ]
+}
