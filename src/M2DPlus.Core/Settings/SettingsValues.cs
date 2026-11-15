@@ -79,7 +79,9 @@ public static partial class Settings
             case "weights": return Choice(value, ("auto", WeightMode.Auto), ("layers", WeightMode.Layers));
             case "hatch": return Choice(value, ("styles", HatchMode.Styles), ("colour", HatchMode.Colour), ("black", HatchMode.Black), ("none", HatchMode.None));
             case "cuts": return Choice(value, ("separate", CutMode.Separate), ("merge", CutMode.Merge));
-            case "tree": return Choice(value, ("branch", OutputTreeMode.Branch), ("object", OutputTreeMode.Object));
+            // "branch" (the pre-2026-11-15 default, one branch per Geometry input branch) reads as auto, the new default.
+            case "tree": return value == "branch" ? OutputTreeMode.Auto
+                : Choice(value, ("auto", OutputTreeMode.Auto), ("layer", OutputTreeMode.Layer), ("object", OutputTreeMode.Object));
             case "name":
                 var name = text.StartsWith('"') ? JsonSerializer.Deserialize<string>(text) ?? "" : text.Trim();
                 if (string.IsNullOrWhiteSpace(name) || name.Any(char.IsControl) || name.Contains("::", StringComparison.Ordinal))
@@ -134,7 +136,7 @@ public static partial class Settings
         "farclip" => FarClipMode.NoLine, "fade" or "tangents" or "seams" => false, "hidden" => DefaultHidden,
         "fade.start" => 0d, "fade.end" => 100d, "fade.limit" => 30d, "crop" => CropMode.Auto,
         "glass" => GlassMode.Opaque, "scale" => 100d, "weights" => WeightMode.Auto, "hatch" => HatchMode.Styles,
-        "cuts" => CutMode.Separate, "name" => "auto", "tree" => OutputTreeMode.Branch, "tolerance" => view.DocumentTolerance,
+        "cuts" => CutMode.Separate, "name" => "auto", "tree" => OutputTreeMode.Auto, "tolerance" => view.DocumentTolerance,
         "min_visible" => 0d,
         _ => throw new ArgumentException("Unknown key.", nameof(key))
     };

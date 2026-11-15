@@ -106,3 +106,13 @@ See [UX revision 4](design/ux.md) §2.2 and §6.
 - **Output:** all visible lines of an ignored object move to a new, separate **Ignored** output (appended as output 10; the nine existing indices stay fixed), plus an `Ignored` bake layer. Nothing is deleted, and Info reports the count.
 - **Cost:** a presentation filter over the per-source classification. Changing the threshold never re-runs visibility. It does not speed up the solve; culling before the solve is a possible later experiment, behind its own correctness gate.
 - **Timing:** implement after the kernel-routing branch lands, since both touch the presentation code.
+
+## Output trees (owner, 2026-11-15)
+
+- **Setting:** `tree = auto | layer | object`, default `auto`, in Settings, as `m2d.tree` on a view object, and in the menu (*Output tree ▸ Auto · By layer · By object*). Normal precedence applies. It replaces *Per source branch / Branch per object*; saved `branch` reads as `auto`.
+- **Auto:** by layer when Geometry is empty or every item is a referenced Rhino object; by object as soon as one item is Grasshopper geometry (mixed input is by object).
+- **By layer:** `{view; layerIndex}` (the layer-table index, stable when layers are added; sparse paths are fine). Block parts go to their own effective layer, as in Make2D.
+- **By object:** `{view; <Geometry input path…>; item}`, 1:1 with the input items. In document or referenced mode an object is a top-level Rhino object (a block instance is one object), in object-id order.
+- **Cut/Hatch** add a trailing region index, `{…group…; region}`, keeping loops and hatch aligned; merged cuts go to the lowest group that took part. Frame and Info stay at `{view}`. All line outputs share the group paths.
+- **Key**, a new 11th output (`K`, index 10; the ten earlier outputs never move): one label per group at `{view; group}` (layer full path; object id and name; or the GH input path and item).
+- **Cost:** presentation only. Layer and object values are captured on the UI thread; changing `tree` makes no HLD call. Bake keeps its layer scheme. See [UX](design/ux.md) §1.3.

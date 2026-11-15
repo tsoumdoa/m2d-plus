@@ -9,12 +9,11 @@ namespace M2DPlus.Grasshopper.Tests;
 public sealed class MinVisibleUiTests
 {
     [Fact]
-    public void TenOutputsAndTheFirstNineNeverMove()
+    public void IgnoredIsTheTenthOutputAndTheFirstNineNeverMove()
     {
-        Assert.Equal(10, ComponentOutputs.All.Length);
         Assert.Equal(["Visible", "Hidden", "Beyond", "Far clip", "Cut", "Hatch", "Unresolved", "Frame", "Info", "Ignored"],
-            ComponentOutputs.All.Select(o => o.Name));
-        Assert.Equal(["V", "H", "B", "Fc", "C", "Ha", "?", "F", "i", "Ig"], ComponentOutputs.All.Select(o => o.NickName));
+            ComponentOutputs.All.Take(10).Select(o => o.Name));
+        Assert.Equal(["V", "H", "B", "Fc", "C", "Ha", "?", "F", "i", "Ig"], ComponentOutputs.All.Take(10).Select(o => o.NickName));
         Assert.All(ComponentOutputs.All, o => Assert.Equal(o.Index, ComponentOutputs.All.IndexOf(o)));
         Assert.Equal(9, ComponentOutputs.Ignored);
         Assert.Equal(ComponentOutputs.All.Length, ComponentOutputs.All.Select(o => o.NickName).Distinct().Count());

@@ -2,6 +2,7 @@ using Grasshopper.Kernel;
 using Grasshopper.Kernel.Data;
 using Grasshopper.Kernel.Types;
 using M2DPlus.Core;
+using M2DPlus.Core.Output;
 using M2DPlus.Rhino.Services;
 using M2DPlus.Rhino.Sections;
 using M2DPlus.Rhino.Views;
@@ -20,6 +21,10 @@ public sealed partial class DrawingComponent
     private DocumentWatch? _watch;
     private SceneCapture? _capture;
     private DrawingBatch? _drawing;
+    /// <summary>Output-tree values captured on the host with the scene that <see cref="_drawing"/> was drawn from.</summary>
+    private TreeSources? _drawingSources;
+    private GeometryInputKind _inputKind = GeometryInputKind.Document;
+    private sealed record TreeSources(GeometryInputKind Kind, IReadOnlyDictionary<string, SourceGroupInfo> Groups);
     private readonly DrawingCache _drawingCache = new();
     private Plane[] _targets = Array.Empty<Plane>();
     private List<CaptureInput>? _inputs;
@@ -41,7 +46,7 @@ public sealed partial class DrawingComponent
     private JobProgress? _progress;
     private readonly object _progressSync = new();
     private readonly object _completionSync = new();
-    private sealed record Completion(RequestIdentity Identity, long Epoch, long DocumentGeneration, DrawingBatch? Batch, string? Error);
+    private sealed record Completion(RequestIdentity Identity, long Epoch, long DocumentGeneration, DrawingBatch? Batch, string? Error, TreeSources Sources);
     private Completion? _completion;
 
     // Model Object/View values are host-only GH adapters; compute never sees a GH wrapper.
@@ -60,7 +65,7 @@ public sealed partial class DrawingComponent
     private void SolveDrawing(IGH_DataAccess da)
     {
         foreach (var (level, text) in Ui.Notes) AddRuntimeMessage(level, text);
-        if (_drawing is not null) { Emit(da, _drawing); return; }
+        if (_drawing is not null) { Emit(da, _drawing, _drawingSources!); return; }
         if (_error is not null) { Message = "Error"; AddRuntimeMessage(GH_RuntimeMessageLevel.Error, _error); return; }
         var inputViews = new List<IGH_Goo>();
         if (!da.GetDataList(1, inputViews) || inputViews.Count == 0) { Message = "Pick a view"; return; }
@@ -96,6 +101,8 @@ public sealed partial class DrawingComponent
                         $"input/{geometry.Paths[branch]}/{index}/{(value is Guid objectId ? objectId.ToString() : "local")}") { SourceItem = index });
                 }
         }
+        // tree = auto (UX §1.3): ids and layer names select Rhino objects; anything else is Grasshopper geometry.
+        _inputKind = OutputTree.Classify(_inputs is null, (_inputs ?? []).Select(i => i.Value is Guid or string));
         var targets = new List<Plane>(); da.GetDataList(2, targets); _targets = targets.ToArray();
         if (_targets.Length != 0 && _targets.Length != 1 && _targets.Length != _views.Length)
         { _error = "Give 1 target, or one per view"; AddRuntimeMessage(GH_RuntimeMessageLevel.Error, _error); return; }
@@ -153,7 +160,7 @@ public sealed partial class DrawingComponent
                 _watch.VerifyHostState();
                 if (completed.Epoch != _epoch || _watch.IsClosed || _watch.Generation != completed.DocumentGeneration)
                 { completed.Batch?.Dispose(); return; }
-                if (completed.Batch is { } batch && _requests.TryPublish(completed.Identity, batch.Complete, () => _drawing = batch))
+                if (completed.Batch is { } batch && _requests.TryPublish(completed.Identity, batch.Complete, () => { _drawing = batch; _drawingSources = completed.Sources; }))
                 { _timer?.Stop(); Refresh(true); return; }
                 completed.Batch?.Dispose();
                 if (_requests.IsCurrent(completed.Identity)) { _timer?.Stop(); _error = completed.Error ?? "Cancelled"; Refresh(true); }
@@ -180,6 +187,7 @@ public sealed partial class DrawingComponent
             }
             if (!_capture.Step(TimeSpan.FromMilliseconds(12))) { Message = $"Reading {_capture.CapturedCount} objects"; OnDisplayExpired(true); return; }
             var scene = _capture.Accept();
+            var sources = new TreeSources(_inputKind, new Dictionary<string, SourceGroupInfo>(_capture.Groups, StringComparer.Ordinal));
             _captureActiveSeconds = _capture.ActiveSeconds;
             _captureInfo = $"Capture active {_captureActiveSeconds:F4} s; initial enumeration {_capture.InitialEnumerationMilliseconds:F2} ms; maximum slice {_capture.MaximumSliceMilliseconds:F2} ms (12 ms target; individual copies may overrun).";
             _capture.Dispose(); _capture = null; _inputs = null;
@@ -188,7 +196,7 @@ public sealed partial class DrawingComponent
             var epoch = _epoch; var documentGeneration = _watch.Generation;
             lock (_progressSync) _progress = new(JobPhase.Queued, 0, _views.Length);
             _timer!.Interval = 100;
-            _ = RunDrawing(scene, request.Identity, request.Token, epoch, documentGeneration, _views, _settings);
+            _ = RunDrawing(scene, request.Identity, request.Token, epoch, documentGeneration, _views, _settings, sources);
         }
         catch (OperationCanceledException) { Invalidate(); Refresh(false); }
         catch (Exception ex) { _timer?.Stop(); _capture?.Dispose(); _capture = null; _error = ex.Message; Refresh(true); }
@@ -221,7 +229,7 @@ public sealed partial class DrawingComponent
     private sealed class ProgressSink(Action<JobProgress> report) : IProgress<JobProgress>
     { public void Report(JobProgress value) => report(value); }
     private async Task RunDrawing(LeaseEntry<PreparedScene>.Lease scene, RequestIdentity identity, CancellationToken token,
-        long epoch, long documentGeneration, ViewRequest[] views, NativeSettings settings)
+        long epoch, long documentGeneration, ViewRequest[] views, NativeSettings settings, TreeSources sources)
     {
         DrawingBatch? batch = null;
         string? error = null;
@@ -237,31 +245,35 @@ public sealed partial class DrawingComponent
         {
             if (epoch != Interlocked.Read(ref _epoch)) { batch?.Dispose(); return; }
             _completion?.Batch?.Dispose();
-            _completion = new(identity, epoch, documentGeneration, batch, error);
+            _completion = new(identity, epoch, documentGeneration, batch, error, sources);
         }
     }
-    private void Emit(IGH_DataAccess da, DrawingBatch batch)
+    private void Emit(IGH_DataAccess da, DrawingBatch batch, TreeSources sources)
     {
         var visible = new GH_Structure<IGH_GeometricGoo>(); var hidden = new GH_Structure<GH_Curve>();
         var beyond = new GH_Structure<GH_Curve>(); var farClip = new GH_Structure<GH_Curve>(); var cut = new GH_Structure<GH_Curve>(); var hatch = new GH_Structure<GH_Hatch>();
         var unresolved = new GH_Structure<GH_Curve>(); var frames = new GH_Structure<GH_Rectangle>(); var info = new GH_Structure<GH_String>();
-        var ignored = new GH_Structure<GH_Curve>();
+        var ignored = new GH_Structure<GH_Curve>(); var keys = new GH_Structure<GH_String>();
         for (var index = 0; index < batch.Views.Count; index++)
         {
             var view = batch.Views[index];
             using var publicationPhase = view.Phases.Start("GH publication");
             var viewPath = new GH_Path(index);
             var effective = index < _effective.Length ? _effective[index] + "\n" : "";
-            string Info() => view.Info + "\n" + effective + _captureInfo + "\n" + string.Join("\n", _settingsWarnings.Select(w => w.Text));
+            // Grouping is presentation over host-captured values: changing tree never re-runs visibility (UX §1.3).
+            var treeSetting = view.Settings?.Tree ?? OutputTreeMode.Auto;
+            var layout = new OutputTreeLayout(OutputTree.Effective(treeSetting, sources.Kind), sources.Groups);
+            var tree = "Output tree: " + OutputTree.Describe(treeSetting, sources.Kind) + "\n";
+            string Info() => view.Info + "\n" + tree + effective + _captureInfo + "\n" + string.Join("\n", _settingsWarnings.Select(w => w.Text));
+            GH_Path Group(IEnumerable<int> group) => new(new[] { index }.Concat(group).ToArray());
             if (view.Error is not null) { AddRuntimeMessage(GH_RuntimeMessageLevel.Error, view.Error); info.Append(new(Info()), viewPath); continue; }
             frames.Append(new(view.Frame), viewPath);
             foreach (var item in view.Items)
             {
-                var sourcePath = view.Settings?.Tree == OutputTreeMode.Object ? item.SourcePath.Append(item.SourceItem).ToArray() : item.SourcePath;
-                var path = new GH_Path(new[] { index }.Concat(sourcePath).ToArray());
                 var copy = item.CopyGeometry();
                 if (copy is Curve curve)
                 {
+                    var path = Group(layout.Line(item.SourceIdentity));
                     if (item.Class is LineClass.Visible or LineClass.Profile) visible.Append(new GH_Curve(curve), path);
                     else if (item.Class == LineClass.Beyond) beyond.Append(new(curve), path);
                     else if (item.Class == LineClass.Hidden) hidden.Append(new(curve), path);
@@ -271,18 +283,15 @@ public sealed partial class DrawingComponent
                 }
                 else if (copy is Point point)
                 {
-                    if (item.Class is LineClass.Visible or LineClass.Profile) visible.Append(new GH_Point(point.Location), path);
+                    if (item.Class is LineClass.Visible or LineClass.Profile) visible.Append(new GH_Point(point.Location), Group(layout.Line(item.SourceIdentity)));
                     point.Dispose();
                 }
                 else copy.Dispose();
             }
-            var regionOrdinals = new Dictionary<string, int>(StringComparer.Ordinal);
             foreach (var entry in view.Regions)
             {
-                var key = string.Join(",", entry.SourcePath);
-                var ordinal = regionOrdinals.GetValueOrDefault(key); regionOrdinals[key] = ordinal + 1;
-                var regionPath = view.Settings?.Tree == OutputTreeMode.Object ? entry.SourcePath.Append(entry.SourceItem) : entry.SourcePath;
-                var path = new GH_Path(new[] { index }.Concat(regionPath).Append(ordinal).ToArray());
+                // {view; group; region}: a merged region takes the lowest group that took part (UX §1.3).
+                var path = Group(layout.Region(entry.Region.SourceIds));
                 foreach (var loop in entry.Region.Loops) cut.Append(new(loop.Curve.DuplicateCurve()), path);
                 if (entry.Region.Hatch is { } fill)
                 {
@@ -293,6 +302,7 @@ public sealed partial class DrawingComponent
                 }
                 else hatch.Append(null!, path);
             }
+            foreach (var group in layout.Keys) keys.Append(new(group.Key), Group(group.Path));
             publicationPhase.Pause();
             info.Append(new(Info()), viewPath);
             if (view.Report.Quarantined || view.Report.UncertainCount != 0 || view.Diagnostics.Any(d => (d.Contains("Uncertain:", StringComparison.Ordinal) || d.Contains("Unsupported:", StringComparison.Ordinal))))
@@ -307,6 +317,7 @@ public sealed partial class DrawingComponent
         Message = good == batch.Views.Count ? $"{good} drawings · {batch.Views.Sum(v => v.Seconds):F1} s" : $"Partial · {good}/{batch.Views.Count} drawings";
         da.SetDataTree(0, visible); da.SetDataTree(1, hidden); da.SetDataTree(2, beyond); da.SetDataTree(3, farClip); da.SetDataTree(4, cut); da.SetDataTree(5, hatch); da.SetDataTree(6, unresolved); da.SetDataTree(7, frames); da.SetDataTree(8, info);
         if (Params.Output.Count > 9) da.SetDataTree(9, ignored);
+        if (Params.Output.Count > 10) da.SetDataTree(10, keys);
     }
 
     private void Refresh(bool preserve)
@@ -324,7 +335,7 @@ public sealed partial class DrawingComponent
     {
         Interlocked.Increment(ref _epoch); _requests.Cancel(); _timer?.Stop(); _capture?.Dispose(); _capture = null;
         lock (_completionSync) { _completion?.Batch?.Dispose(); _completion = null; }
-        _drawing?.Dispose(); _drawing = null; _inputs = null; _started = false; _error = null;
+        _drawing?.Dispose(); _drawing = null; _drawingSources = null; _inputs = null; _started = false; _error = null;
         lock (_progressSync) _progress = null;
         Message = "Cancelled";
     }

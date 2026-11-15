@@ -35,8 +35,15 @@ public sealed class M3ComponentTests(RhinoHost host)
             var curve = ((GH_Curve)Assert.Single(component.Params.Output[0].VolatileData.AllData(true))).Value;
             Assert.Equal(new Point3d(30, 40, 50), curve.PointAtStart); Assert.Equal(new Point3d(30, 44, 50), curve.PointAtEnd);
             ui.Execute("set:scale=1:50", false); Solve(); Assert.Equal(calls, NativeDrawing.VisibilitySolves);
+            // The output tree is presentation: every tree choice regroups the cached solve with zero HLD calls.
+            var layer = doc.Layers.CurrentLayerIndex;
+            Assert.All(component.Params.Output[0].VolatileData.Paths, path => Assert.Equal(new[] { 0, layer }, path.Indices)); // auto: by layer
             ui.Execute("set:tree=object", false); Solve(); Assert.Equal(calls, NativeDrawing.VisibilitySolves);
-            Assert.All(component.Params.Output[0].VolatileData.Paths, path => { Assert.Equal(3, path.Length); Assert.Equal(0, path.Indices[2]); });
+            Assert.All(component.Params.Output[0].VolatileData.Paths, path => Assert.Equal(new[] { 0, 0, 0 }, path.Indices));
+            ui.Execute("set:tree=layer", false); Solve(); Assert.Equal(calls, NativeDrawing.VisibilitySolves);
+            Assert.All(component.Params.Output[0].VolatileData.Paths, path => Assert.Equal(new[] { 0, layer }, path.Indices));
+            ui.Execute("set:tree=auto", false); Solve(); Assert.Equal(calls, NativeDrawing.VisibilitySolves);
+            Assert.Equal(doc.Layers[layer].FullPath, ((GH_String)Assert.Single(component.Params.Output[10].VolatileData.AllData(true))).Value);
             ui.Execute("preview:hidden", false); Assert.Equal(calls, NativeDrawing.VisibilitySolves);
             ui.Execute("bake", false);
             Assert.Single(Owned("Test drawing"));

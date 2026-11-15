@@ -88,7 +88,21 @@ public sealed record CaptureInput(object Value, int[] Path, string Identity)
 public sealed class SceneCapture : IDisposable
 {
     private sealed record Pending(object Value, int[] Path, string Identity, Transform[] Chain, Guid[] Definitions, SourceSection? Section = null)
-    { public int SourceItem { get; init; } }
+    {
+        public int SourceItem { get; init; }
+        /// <summary>The top-level Rhino object (a block instance counts as one); null for Grasshopper geometry.</summary>
+        public TopObject? Top { get; init; }
+        /// <summary>The input text when the top-level item was a layer name.</summary>
+        public string? LayerPattern { get; init; }
+        /// <summary>The layer of the nearest Rhino object on the instance path: a leaf's own effective layer.</summary>
+        public int LayerIndex { get; init; } = -1;
+        public string LayerPath { get; init; } = "";
+    }
+    private sealed record TopObject(Guid Id, string? Name);
+    private readonly Dictionary<string, M2DPlus.Core.Output.SourceGroupInfo> _groups = new(StringComparer.Ordinal);
+    /// <summary>Output-tree values per captured leaf identity (UX §1.3): plain values read on this host thread, so
+    /// presentation can group by layer or object without the document. Rebuilt by every capture, never cached.</summary>
+    public IReadOnlyDictionary<string, M2DPlus.Core.Output.SourceGroupInfo> Groups => _groups;
     private readonly int _thread = Environment.CurrentManagedThreadId;
     private readonly RhinoDoc _document;
     private readonly DocumentWatch _watch;
@@ -176,7 +190,7 @@ public sealed class SceneCapture : IDisposable
             var matches = _document.Objects.GetObjectList(new ObjectEnumeratorSettings { NormalObjects = true, LockedObjects = true, ReferenceObjects = true })
                 .Where(o => layers.Contains(o.Attributes.LayerIndex) && IsDrawable(_document, o)).OrderBy(o => o.Id).ToArray();
             if (layers.Count == 0) Unsupported(PreparedScene.NonOccludingPrefix + $"Layer not found '{layerPattern}'");
-            foreach (var match in matches) _pending.Enqueue(item with { Value = match.Id, Identity = item.Identity + "/" + match.Id });
+            foreach (var match in matches) _pending.Enqueue(item with { Value = match.Id, Identity = item.Identity + "/" + match.Id, LayerPattern = item.LayerPattern ?? layerPattern });
             return;
         }
         if (value is Guid id)
@@ -186,7 +200,16 @@ public sealed class SceneCapture : IDisposable
             value = obj;
         }
         uint? sourceSerial = null;
-        if (value is RhinoObject source) { sourceSerial = source.RuntimeSerialNumber; item = item with { Section = SectionCapture.Capture(_document, source, item.Section) }; value = source.Geometry; }
+        if (value is RhinoObject source)
+        {
+            sourceSerial = source.RuntimeSerialNumber;
+            // A nested object keeps its own layer (Rhino has no layer By Parent).
+            var layer = _document.Layers[source.Attributes.LayerIndex];
+            item = item with { Section = SectionCapture.Capture(_document, source, item.Section), LayerIndex = layer.Index, LayerPath = layer.FullPath,
+                // Only a top-level item is "the object"; parts of a Grasshopper-made instance stay Grasshopper sources.
+                Top = item.Top ?? (item.Definitions.Length == 0 ? new(source.Id, string.IsNullOrWhiteSpace(source.Attributes.Name) ? null : source.Attributes.Name) : null) };
+            value = source.Geometry;
+        }
         if (value is InstanceReferenceGeometry instance)
         {
             var definition = _document.InstanceDefinitions.FindId(instance.ParentIdefId);
@@ -198,7 +221,8 @@ public sealed class SceneCapture : IDisposable
             {
                 if (!IsDrawable(_document, leaf)) continue;
                 _pending.Enqueue(new(leaf.Id, item.Path, item.Identity + "/" + definition.Id + "/" + leaf.Id,
-                    item.Chain.Append(instance.Xform).ToArray(), item.Definitions.Append(definition.Id).ToArray(), item.Section) { SourceItem = item.SourceItem });
+                    item.Chain.Append(instance.Xform).ToArray(), item.Definitions.Append(definition.Id).ToArray(), item.Section)
+                    { SourceItem = item.SourceItem, Top = item.Top, LayerPattern = item.LayerPattern, LayerIndex = item.LayerIndex, LayerPath = item.LayerPath });
             }
             return;
         }
@@ -227,6 +251,9 @@ public sealed class SceneCapture : IDisposable
             var key = $"{_watch.DocumentSerial}/{localId}/{fingerprint}/normalise-v2/{normalisationType}";
             var lease = _cache.Geometry(key, () => Normalise(geometry, temporary ? value.GetType().Name : null));
             _leaves.Add(new(item.Identity, key, item.Path, item.Chain, lease, item.Section ?? SourceSection.Plain) { SourceItem = item.SourceItem });
+            _groups[item.Identity] = item.Top is { } top
+                ? new((int[])item.Path.Clone(), item.SourceItem, true, item.LayerIndex, item.LayerPath, top.Id, top.Name, item.LayerPattern)
+                : new((int[])item.Path.Clone(), item.SourceItem, false, item.LayerIndex, item.LayerPath, Guid.Empty, null);
         }
         finally { if (temporary) geometry?.Dispose(); }
     }
