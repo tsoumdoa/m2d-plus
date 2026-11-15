@@ -4,7 +4,7 @@ import argparse
 import json
 import sys
 import os
-from run import DEFAULT_MODELS
+from run import DEFAULT_MODELS, MODELS_ROOT
 ROOT=Path(__file__).resolve().parents[2]
 sys.path.insert(0,str(ROOT/'tools/models'))
 from common import write_json, digest
@@ -41,7 +41,7 @@ def main():
         for form in ('blocks','exploded'):
             for view in ('North','SW','Top','Long-section'):cases.append((DEFAULT_MODELS/f'perf-{tier}-{form}.3dm',view))
     for form in ('blocks','exploded'):
-        for view in ('North','SW','Top','Long-section'):cases.append((Path('C:/Users/tomosandego/.t3/worktrees/m2d-plus/t3-d6bdd8e8-f1e6b3c68a0e104e/artifacts/models')/f'curved-perf-S-{form}.3dm',view))
+        for view in ('North','SW','Top','Long-section'):cases.append(((MODELS_ROOT/'curved')/f'curved-perf-S-{form}.3dm',view))
     for model in sorted((ROOT/'tests/fixtures/sections').glob('*.3dm')):
         for view in ('Plan-section','Long-section'):cases.append((model,view))
     selected=[]

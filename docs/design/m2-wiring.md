@@ -127,7 +127,7 @@ plane, tolerance, serial HLD and SubD conversion on Rhino 8.36.26296.17001 / .NE
 
 ```powershell
 $py = 'C:/Users/tomosandego/.t3/scratch/2026-11-13-i-noticed-that-make2d-in-2f66c87c/.venv/Scripts/python.exe'
-$suite = 'C:/Users/tomosandego/.t3/worktrees/m2d-plus/t3-3a78edd1-1cd89a1b1b9b38a1'
+$suite = "$env:M2D_MODELS/evidence/test-models"  # archived suite run; models are in $env:M2D_MODELS/buildings
 & $py -B -u tools/research/Inspect-Unset.py $suite artifacts/research/unset
 & $py -B -u tools/research/Inspect-Unset.py $suite artifacts/research/unset --extract
 ```

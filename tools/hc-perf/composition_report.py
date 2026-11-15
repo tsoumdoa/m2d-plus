@@ -18,9 +18,11 @@ ROOT=Path(__file__).resolve().parents[2]
 
 OUT=ROOT/'artifacts/hc-perf/composition'
 
-ARCHIVES=[Path('C:/Users/tomosandego/.t3/worktrees/m2d-plus/t3-3a78edd1-1cd89a1b1b9b38a1/artifacts/baseline'),
+import os
+MODELS_ROOT=Path(os.environ.get('M2D_MODELS') or Path.home()/'.t3'/'m2d-plus-models')
+ARCHIVES=[MODELS_ROOT/'evidence/test-models/baseline',
 
-          Path('C:/Users/tomosandego/.t3/worktrees/m2d-plus/t3-d6bdd8e8-f1e6b3c68a0e104e/artifacts/baseline')]
+          MODELS_ROOT/'evidence/curved-models/baseline']
 
 NAMES={'North':'North elevation','SW':'SW axo','Long-section':'Section long overlap'}
 

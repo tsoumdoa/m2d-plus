@@ -22,6 +22,10 @@ Licensed, serial integration tests require explicit `M2D_RHINO_TESTS=1` and an
 existing compatible Rhino.Inside resolver. See [test instructions](tests/M2DPlus.Rhino.Tests/README.md).
 Never attach to, terminate or alter another person's Rhino processes.
 
+Generated test models (building, curved and view suites, campus) and archived run evidence live
+outside git in `~/.t3/m2d-plus-models` (override with `M2D_MODELS`). The tools read them from there; never
+commit them or point tools at temporary worktrees.
+
 ## Installation and release
 
 Yak is the only installation path, including development. Never copy binaries to

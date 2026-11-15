@@ -68,6 +68,6 @@ not interactive Rhino viewport screenshots.
 ```powershell
 ./tools/render/Render.ps1 -Engine m3 -Output artifacts/render/m3 -Models @(
   'C:/Users/tomosandego/.t3/scratch/m2d-plus-research-20261114/fixtures/repeated_building_305.3dm',
-  'C:/Users/tomosandego/.t3/worktrees/m2d-plus/t3-d6bdd8e8-f1e6b3c68a0e104e/artifacts/models/curved-steel.3dm'
+  "$env:M2D_MODELS/curved/curved-steel.3dm"
 )
 ```

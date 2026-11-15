@@ -21,9 +21,9 @@ def main():
     p.add_argument('--output', type=Path, default=ROOT / 'artifacts/native-verifier/measurements')
     p.add_argument('--select', default='', help='Optional exact model__view key')
     a = p.parse_args()
-    source = Path('C:/Users/tomosandego/.t3/worktrees/m2d-plus/t3-d6bdd8e8-f1e6b3c68a0e104e/artifacts')
-    cases = [(source / 'models/curved-perf-S-blocks.3dm', v) for v in ('SW', 'North')]
-    cases += [(source / 'curved-features-final' / (name + '.3dm'), 'SW') for name in ('curved-facade', 'curved-steel', 'diagrid-shell')]
+    source = Path(os.environ.get('M2D_MODELS') or Path.home() / '.t3' / 'm2d-plus-models') / 'curved'
+    cases = [(source / 'curved-perf-S-blocks.3dm', v) for v in ('SW', 'North')]
+    cases += [(source / (name + '.3dm'), 'SW') for name in ('curved-facade', 'curved-steel', 'diagrid-shell')]
     assembly = ROOT / 'tools/perf-f/bin/Release/net8.0-windows/M2DPlus.PerfF.dll'
     a.output.mkdir(parents=True, exist_ok=True)
     rows = []

@@ -4,6 +4,7 @@ import argparse
 import hashlib
 import json
 import math
+import os
 import shutil
 import subprocess
 import sys
@@ -14,7 +15,9 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'tools/models'))
 from common import initialize, digest, write_json
 
-DEFAULT_MODELS = Path('C:/Users/tomosandego/.t3/worktrees/m2d-plus/t3-3a78edd1-1cd89a1b1b9b38a1/artifacts/models')
+# Local-only generated models (never committed); see ~/.t3/m2d-plus-models/README.md.
+MODELS_ROOT = Path(os.environ.get('M2D_MODELS') or Path.home() / '.t3' / 'm2d-plus-models')
+DEFAULT_MODELS = MODELS_ROOT / 'buildings'
 
 
 def main():
@@ -207,7 +210,7 @@ def score(args, manifest, rows, output, complete):
     times = [r['seconds'] for r in rows if r['case']['primary'] and r.get('edges', 0) > 0]
     primary = math.exp(sum(math.log(t) for t in times) / len(times)) if times else None
     perf_times=[r['seconds'] for r in rows if r['case']['primary'] and Path(r['case']['path']).stem.startswith('perf-') and 'seconds' in r]
-    baseline=DEFAULT_MODELS.parent/'baseline'
+    baseline=MODELS_ROOT/'evidence'/'test-models'/'baseline'
     native_ratios={}
     for r in rows:
         if 'seconds' not in r:continue
