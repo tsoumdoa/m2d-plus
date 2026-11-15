@@ -12,6 +12,7 @@ still decides everything.
 |---|---|---|
 | [gh-ui/canvas.png](gh-ui/canvas.png) | The component with **five inputs** (G V T S **D**) in six states on GH's default skin: Done · **Bake**, Drawing 72 % · **Cancel** (determinate progress line), Reading · Cancel (indeterminate sweep), Paused · **Run**, Cancelled · Run, and No view (GH's required-input warning). Panels wired into S (`hidden = off`) and D (`8 m`). No S dot. | `GrasshopperUiTests.CanvasRender` (real GH canvas, `GenerateHiResImageTile`, 2×) |
 | [gh-ui/canvas-dark.png](gh-ui/canvas-dark.png) | The same on a dark GH skin. | same test |
+| `artifacts/ui/after/component-{idle,running,remark,warning}-{100,200}.png` (local, not committed) | The compact look (UX §1, 2026-11-15): icon instead of the nickname capsule, inputs centred on the output rows, the message tab at 100 % and 200 % canvas zoom; a normal run with unresolved pieces stays grey (remark), only a must-act warning is orange. `artifacts/ui/before/` holds the same renders of the previous look. | `ComponentLookTests` (real GH canvas) |
 | [gh-ui/menu.png](gh-ui/menu.png) | The component's right-click items after `hidden = off` and `farclip = line` from the menu; the view-object group on top (greyed: V references no Rhino objects in that test). | `GrasshopperUiTests.AttributesMenusUndoAndSavedGhRoundTrip` |
 | [gh-ui/view-menu.png](gh-ui/view-menu.png) | The View input's right-click items. | same test |
 | [gh-ui/view-box-preview.png](gh-ui/view-box-preview.png) | A validated view box's preview (frame, look arrow, dotted depth volume, name) over two boxes, unselected (subtle) and selected (cobalt). An **offscreen GDI axonometric** of the exact `ViewPreview` lines the component draws, not a Rhino viewport capture (headless Rhino has no viewports). | `ViewObjectTests.SettingsPrecedence…` |
@@ -21,6 +22,8 @@ Regenerate (licensed, own Rhino.Inside process only):
 ```powershell
 $env:M2D_UI_SCREENSHOTS = "$PWD/docs/design/gh-ui"   # plus the usual M2D_RHINO_* variables
 dotnet test tests/M2DPlus.Rhino.Tests -c Debug --filter "FullyQualifiedName~GrasshopperUiTests|FullyQualifiedName~ViewObjectTests"
+$env:M2D_UI_SCREENSHOTS = "$PWD/artifacts/ui/after"
+dotnet test tests/M2DPlus.Rhino.Tests -c Debug --filter "FullyQualifiedName~ComponentLookTests"
 ```
 
 ## Structure

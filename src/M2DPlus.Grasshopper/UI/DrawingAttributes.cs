@@ -9,13 +9,16 @@ using M2DPlus.Grasshopper.UI.Model;
 
 namespace M2DPlus.Grasshopper.UI;
 
-/// <summary>Standard GH body plus the UX rev. 4 §1 additions: a 2 px cobalt progress line along the bottom of the
-/// body while a job runs, a Bake / Cancel / Run button at the right end of the message tab, and double-click to
-/// select the referenced view objects in Rhino. Colours come from GH's palette except cobalt.</summary>
+/// <summary>Standard GH body (in icon display, the shared dark tile) plus the UX §1 additions: the five inputs centred as
+/// a group on the output rows, a 2 px cobalt progress line along the bottom of the body while a job runs, a Bake /
+/// Cancel / Run button at the right end of the message tab, and double-click to select the referenced view objects in
+/// Rhino. Text is measured with GH's zoom-independent font metrics, so paddings and sizes match at every canvas zoom.
+/// Colours come from GH's palette except cobalt.</summary>
 public sealed class DrawingAttributes : GH_ComponentAttributes
 {
     public static readonly Color Cobalt = Color.FromArgb(0x1F, 0x6F, 0xD1);
-    private const float TabHeight = 17, ButtonHeight = 13, RepaintMilliseconds = 100; // ≤ 10 Hz
+    // Canvas units (the canvas zoom scales them). The tab is GH's message tab height plus room for the button.
+    private const float TabHeight = 16, ButtonHeight = 12, TabPadding = 4, ButtonPadding = 5, RepaintMilliseconds = 100; // ≤ 10 Hz
     private readonly Func<DrawingUi> _ui;
     private RectangleF _tab, _button;
     private FooterButton _shown;
@@ -37,6 +40,7 @@ public sealed class DrawingAttributes : GH_ComponentAttributes
     protected override void Layout()
     {
         base.Layout();
+        CentreInputs();
         var extra = MinimumWidth - Bounds.Width;
         if (extra <= 0) return;
         var half = (float)Math.Ceiling(extra / 2);
@@ -53,6 +57,21 @@ public sealed class DrawingAttributes : GH_ComponentAttributes
             output.Attributes.Pivot = new PointF(output.Attributes.Pivot.X + half / 2, output.Attributes.Pivot.Y);
         }
         Bounds = LayoutBounds(Owner, m_innerBounds);
+    }
+
+    /// <summary>GH spreads few inputs over the height of many outputs (5 inputs beside 11 outputs land 44 px apart). Put
+    /// them on the output rows instead, centred as a group, so G…D read as one block at the same pitch as V…K.</summary>
+    private void CentreInputs()
+    {
+        var inputs = Owner.Params.Input; var outputs = Owner.Params.Output;
+        if (inputs.Count == 0 || outputs.Count <= inputs.Count) return;
+        var offset = (outputs.Count - inputs.Count) / 2;
+        for (var i = 0; i < inputs.Count; i++)
+        {
+            var row = outputs[i + offset].Attributes.Bounds; var input = inputs[i].Attributes;
+            input.Bounds = new RectangleF(input.Bounds.X, row.Y, input.Bounds.Width, row.Height);
+            input.Pivot = new PointF(input.Pivot.X, row.Y + row.Height / 2);
+        }
     }
 
     protected override void Render(GH_Canvas canvas, Graphics graphics, GH_CanvasChannel channel)
@@ -122,22 +141,24 @@ public sealed class DrawingAttributes : GH_ComponentAttributes
             graphics.DrawPath(edge, path);
         }
         _tab = tab;
-        var textArea = tab;
+        // The tab's top pixel sits under the body edge; centre content in what shows below it.
+        var inner = RectangleF.FromLTRB(tab.Left + TabPadding, tab.Top + 1, tab.Right - TabPadding, tab.Bottom);
+        var textArea = inner;
         var foreground = GH_GraphicsUtil.ForegroundColour(style.Edge, 200);
         var standard = GH_FontServer.StandardAdjusted;
         graphics.TextRenderingHint = graphics.Transform.Elements[0] == 1 ? GH_TextRenderingConstants.GH_CrispText : GH_TextRenderingConstants.GH_SmoothText;
         if (button != FooterButton.None)
         {
             var label = RuntimeModel.Label(button);
-            using var font = new Font(standard.FontFamily, standard.Size * .82f, FontStyle.Bold, standard.Unit);
-            var width = Math.Max(28, graphics.MeasureString(label, font).Width + 6);
-            if (width < tab.Width * .45f)
+            using var font = new Font(standard.FontFamily, standard.Size * .8f, FontStyle.Bold, standard.Unit);
+            var width = Math.Max(30, GH_FontServer.MeasureString(label, font).Width + 2 * ButtonPadding);
+            if (width < inner.Width * .45f)
             {
-                _button = new RectangleF(tab.Right - width - 2, tab.Top + (TabHeight - ButtonHeight) / 2, width, ButtonHeight);
+                _button = new RectangleF(inner.Right - width, inner.Top + (inner.Height - ButtonHeight) / 2, width, ButtonHeight);
                 _shown = button;
                 // Bake and Run are the primary action (cobalt). Cancel is a quiet outline in the tab's own ink.
                 var primary = button != FooterButton.Cancel;
-                using (var path = Rounded(_button, 3))
+                using (var path = Rounded(_button, 2.5f))
                 {
                     if (primary)
                     {
@@ -146,24 +167,26 @@ public sealed class DrawingAttributes : GH_ComponentAttributes
                     }
                     else
                     {
-                        using var brush = new SolidBrush(Fade(Color.FromArgb(_pressed ? 90 : 40, foreground), alpha));
-                        using var pen = new Pen(Fade(Color.FromArgb(150, foreground), alpha), 1);
+                        using var brush = new SolidBrush(Fade(Color.FromArgb(_pressed ? 80 : 28, foreground), alpha));
+                        using var pen = new Pen(Fade(Color.FromArgb(170, foreground), alpha), 1);
                         graphics.FillPath(brush, path);
                         graphics.DrawPath(pen, path);
                     }
                 }
                 using var text = new SolidBrush(Fade(primary ? Color.White : foreground, alpha));
                 graphics.DrawString(label, font, text, _button, GH_TextRenderingConstants.CenterCenter);
-                textArea = RectangleF.FromLTRB(tab.Left + 2, tab.Top, _button.Left - 2, tab.Bottom);
+                textArea = RectangleF.FromLTRB(inner.Left, inner.Top, _button.Left - TabPadding, inner.Bottom);
             }
         }
-        if (string.IsNullOrWhiteSpace(message)) return;
-        // Shrink long messages to fit, as GH does, rather than letting them run under the button.
-        var measured = graphics.MeasureString(message, standard);
-        var ratio = (textArea.Width - 4) / measured.Width;
-        using var shrunk = ratio < 1 ? new Font(standard.FontFamily, Math.Max(standard.Size * .6f, standard.Size * ratio), standard.Style, standard.Unit) : null;
+        if (string.IsNullOrWhiteSpace(message) || textArea.Width <= 4) return;
+        // Measured as GH measures its own message, so the result does not depend on the zoom. Too long: shrink to 80 %,
+        // then end with an ellipsis rather than run under the button.
+        var measured = GH_FontServer.MeasureString(message, standard).Width;
+        var ratio = textArea.Width / Math.Max(1, measured);
+        using var shrunk = ratio < 1 ? new Font(standard.FontFamily, standard.Size * Math.Max(.8f, ratio), standard.Style, standard.Unit) : null;
+        using var format = new StringFormat(GH_TextRenderingConstants.CenterCenter) { Trimming = StringTrimming.EllipsisCharacter, FormatFlags = StringFormatFlags.NoWrap };
         using var ink = new SolidBrush(Fade(foreground, alpha));
-        graphics.DrawString(message, shrunk ?? standard, ink, textArea, GH_TextRenderingConstants.CenterCenter);
+        graphics.DrawString(message, shrunk ?? standard, ink, textArea, format);
     }
 
     private static Color Fade(Color colour, int alpha) => Color.FromArgb(colour.A * alpha / 255, colour);

@@ -8,79 +8,6 @@ using Environment = System.Environment;
 
 namespace M2DPlus.Rhino.Services;
 
-/// <summary>All members except Generation/IsClosed run on the constructing host thread.</summary>
-public sealed class DocumentWatch : IDisposable
-{
-    private long _generation;
-    private int _closed;
-    private string _hostStamp;
-    private readonly int _hostThread = Environment.CurrentManagedThreadId;
-    public uint DocumentSerial { get; }
-    public long Generation => Interlocked.Read(ref _generation);
-    public bool IsClosed => Volatile.Read(ref _closed) != 0;
-    public event Action? Changed;
-    public DocumentWatch(RhinoDoc document)
-    {
-        DocumentSerial = document.RuntimeSerialNumber;
-        _hostStamp = Stamp(document);
-        RhinoDoc.AddRhinoObject += ObjectChanged; RhinoDoc.DeleteRhinoObject += ObjectChanged;
-        RhinoDoc.UndeleteRhinoObject += ObjectChanged;
-        RhinoDoc.ModifyObjectAttributes += AttributesChanged;
-        RhinoDoc.LayerTableEvent += LayerChanged; RhinoDoc.HatchPatternTableEvent += HatchChanged;
-        RhinoDoc.InstanceDefinitionTableEvent += DefinitionChanged;
-        RhinoDoc.CloseDocument += Closed;
-    }
-    // Headless documents can omit table notifications. Verify serial/membership witnesses as well as events.
-    // This is host-only; content hashes on captured geometry remain the cache identity.
-    private static string Stamp(RhinoDoc document)
-    {
-        var objects = document.Objects.GetObjectList(new ObjectEnumeratorSettings
-            { NormalObjects = true, LockedObjects = true, HiddenObjects = true, IdefObjects = true, ReferenceObjects = true });
-        return string.Join("|", objects.Select(o => $"{o.Id}:{o.RuntimeSerialNumber}:{o.Attributes.ToJSON(new global::Rhino.FileIO.SerializationOptions())}")) +
-            string.Join("|", document.InstanceDefinitions.Where(d => !d.IsDeleted).Select(d => $"{d.Id}:{string.Join(',', d.GetObjects().Select(o => o.RuntimeSerialNumber))}")) +
-            string.Join("|", document.Layers.Where(l => !l.IsDeleted).Select(l => $"{l.Id}:{l.IsVisible}:{l.FullPath}:{l.ToJSON(new global::Rhino.FileIO.SerializationOptions())}")) +
-            document.ModelAbsoluteTolerance.ToString("R", CultureInfo.InvariantCulture) + document.ModelUnitSystem +
-            string.Join("|", document.NamedViews.Select(v => ViewRequest.Parse(v).Revision)) +
-            string.Join("|", document.HatchPatterns.Where(p => !p.IsDeleted).Select(p => p.ToJSON(new global::Rhino.FileIO.SerializationOptions())));
-    }
-    public void VerifyHostState()
-    {
-        if (_hostThread != Environment.CurrentManagedThreadId) throw new InvalidOperationException("Document verification must run on the host thread.");
-        var document = RhinoDoc.FromRuntimeSerialNumber(DocumentSerial);
-        if (document is null || !document.IsAvailable)
-        {
-            if (Interlocked.Exchange(ref _closed, 1) == 0) Touch(DocumentSerial);
-            return;
-        }
-        var stamp = Stamp(document);
-        if (_hostStamp == stamp) return;
-        _hostStamp = stamp; Touch(DocumentSerial);
-    }
-    private void Touch(uint serial) { if (serial == DocumentSerial) { Interlocked.Increment(ref _generation); Changed?.Invoke(); } }
-    private void ObjectChanged(object? sender, RhinoObjectEventArgs e)
-    {
-        // A deleted object's document wrapper may already be unavailable. Conservatively
-        // invalidate this watcher in that case; final host witnesses still verify coherence.
-        Touch(e.TheObject.Document?.RuntimeSerialNumber ?? DocumentSerial);
-    }
-    private void AttributesChanged(object? sender, RhinoModifyObjectAttributesEventArgs e) => Touch(e.Document.RuntimeSerialNumber);
-    private void LayerChanged(object? sender, global::Rhino.DocObjects.Tables.LayerTableEventArgs e) => Touch(e.Document.RuntimeSerialNumber);
-    private void HatchChanged(object? sender, global::Rhino.DocObjects.Tables.HatchPatternTableEventArgs e) => Touch(e.Document.RuntimeSerialNumber);
-    private void DefinitionChanged(object? sender, global::Rhino.DocObjects.Tables.InstanceDefinitionTableEventArgs e) => Touch(e.Document.RuntimeSerialNumber);
-    private void Closed(object? sender, DocumentEventArgs e)
-    {
-        if (e.Document.RuntimeSerialNumber != DocumentSerial) return;
-        Interlocked.Exchange(ref _closed, 1); Touch(DocumentSerial);
-    }
-    public void Dispose()
-    {
-        RhinoDoc.AddRhinoObject -= ObjectChanged; RhinoDoc.DeleteRhinoObject -= ObjectChanged;
-        RhinoDoc.UndeleteRhinoObject -= ObjectChanged;
-        RhinoDoc.ModifyObjectAttributes -= AttributesChanged; RhinoDoc.LayerTableEvent -= LayerChanged; RhinoDoc.HatchPatternTableEvent -= HatchChanged;
-        RhinoDoc.InstanceDefinitionTableEvent -= DefinitionChanged; RhinoDoc.CloseDocument -= Closed;
-    }
-}
-
 public sealed record CaptureInput(object Value, int[] Path, string Identity)
 { public int SourceItem { get; init; } }
 
@@ -103,6 +30,14 @@ public sealed class SceneCapture : IDisposable
     /// <summary>Output-tree values per captured leaf identity (UX §1.3): plain values read on this host thread, so
     /// presentation can group by layer or object without the document. Rebuilt by every capture, never cached.</summary>
     public IReadOnlyDictionary<string, M2DPlus.Core.Output.SourceGroupInfo> Groups => _groups;
+    private readonly Dictionary<string, uint> _colours = new(StringComparer.Ordinal);
+    /// <summary>Display colour (ARGB) per captured leaf identity of a Rhino object: <c>DrawColor(doc)</c>, with By Parent
+    /// resolved through the block instance path (UX §3.7). Grasshopper geometry has none (preview ink). Plain values read
+    /// on this host thread, like <see cref="Groups"/>; never part of the solve.</summary>
+    public IReadOnlyDictionary<string, uint> Colours => _colours;
+    private readonly WatchScope _scope;
+    /// <summary>What this capture read, for <see cref="DocumentWatch"/> (set as the watch's scope on construction).</summary>
+    public WatchScope Scope => _scope;
     private readonly int _thread = Environment.CurrentManagedThreadId;
     private readonly RhinoDoc _document;
     private readonly DocumentWatch _watch;
@@ -120,13 +55,19 @@ public sealed class SceneCapture : IDisposable
     public double ActiveSeconds { get; private set; }
     /// <param name="excluded">Document mode only: objects never drawn, such as the view objects (view boxes and
     /// not-yet-validated frame surfaces) that the View input references.</param>
+    /// <param name="scope">What the drawing will read; the capture fills it and sets it on the watch. Default: document
+    /// mode without input, else referenced mode with the input's layer names.</param>
     public SceneCapture(RhinoDoc document, DocumentWatch watch, IEnumerable<CaptureInput>? input = null, SceneCache? cache = null,
-        IReadOnlySet<Guid>? excluded = null)
+        IReadOnlySet<Guid>? excluded = null, WatchScope? scope = null)
     {
         var timer = Stopwatch.StartNew();
+        var items = input?.ToArray();
+        _scope = scope ?? new WatchScope(items is null ? M2DPlus.Core.Watch.WatchMode.Document : M2DPlus.Core.Watch.WatchMode.Referenced,
+            items?.Select(i => i.Value).OfType<string>(), excluded);
+        watch.Scope = _scope;
         _document = document; _watch = watch; _generation = watch.Generation; _cache = cache ?? SceneCache.Shared;
         _tolerance = document.ModelAbsoluteTolerance;
-        if (input is null)
+        if (items is null)
         {
             var settings = new ObjectEnumeratorSettings { NormalObjects = true, LockedObjects = true, HiddenObjects = false,
                 ReferenceObjects = true, IncludeLights = false, IncludeGrips = false };
@@ -134,31 +75,56 @@ public sealed class SceneCapture : IDisposable
             foreach (var obj in document.Objects.GetObjectList(settings).OrderBy(o => o.Id))
                 if (IsDrawable(document, obj) && excluded?.Contains(obj.Id) != true) _pending.Enqueue(new(obj.Id, new[] { 0 }, obj.Id.ToString(), Array.Empty<Transform>(), Array.Empty<Guid>()) { SourceItem = ordinal++ });
         }
-        else foreach (var item in input) _pending.Enqueue(new(item.Value, (int[])item.Path.Clone(), item.Identity, Array.Empty<Transform>(), Array.Empty<Guid>()) { SourceItem = item.SourceItem });
+        else foreach (var item in items) _pending.Enqueue(new(item.Value, (int[])item.Path.Clone(), item.Identity, Array.Empty<Transform>(), Array.Empty<Guid>()) { SourceItem = item.SourceItem });
         InitialEnumerationMilliseconds = timer.Elapsed.TotalMilliseconds;
         ActiveSeconds = timer.Elapsed.TotalSeconds;
     }
-    /// <summary>Document mode's scene rule (UX §3.1): visible, not a clipping plane or light, not on an M2D+ layer and
-    /// not tagged with m2d.* user text (bakes and view boxes).</summary>
-    internal static bool IsDrawable(RhinoDoc document, RhinoObject obj)
+    /// <summary>Document mode's scene rule (UX §3.1): visible (not hidden, layer and parents on) and selectable.</summary>
+    internal static bool IsDrawable(RhinoDoc document, RhinoObject obj) => IsDrawable(document, obj, obj.Attributes);
+
+    /// <inheritdoc cref="IsDrawable(RhinoDoc, RhinoObject)"/>
+    /// <param name="attributes">The attributes to judge (a ModifyObjectAttributes event's new attributes).</param>
+    internal static bool IsDrawable(RhinoDoc document, RhinoObject obj, ObjectAttributes attributes)
     {
-        if (obj.IsHidden || obj.IsDeleted || obj.Geometry is ClippingPlaneSurface or Light) return false;
-        var layer = document.Layers[obj.Attributes.LayerIndex];
-        if (!layer.IsVisible || layer.FullPath.Split(new[] { "::" }, StringSplitOptions.None).Contains("M2D+")) return false;
-        for (var parentId = layer.ParentLayerId; parentId != Guid.Empty;)
+        if (!attributes.Visible || attributes.Mode == ObjectMode.Hidden || !IsSelectable(document, obj, attributes)) return false;
+        for (var layer = document.Layers[attributes.LayerIndex]; layer is not null;)
         {
-            var parent = document.Layers.FindId(parentId);
-            if (parent is null || !parent.IsVisible) return false;
-            parentId = parent.ParentLayerId;
+            if (!layer.IsVisible) return false;
+            if (layer.ParentLayerId == Guid.Empty) break;
+            layer = document.Layers.FindId(layer.ParentLayerId);
+            if (layer is null) return false;
         }
-        var strings = obj.Attributes.GetUserStrings();
+        return true;
+    }
+
+    /// <summary>Whatever its visibility, an object M2D+ may draw: not deleted, not a clipping plane or light, not on an
+    /// M2D+ bake layer and not tagged with m2d.* user text (bakes and view boxes).</summary>
+    internal static bool IsSelectable(RhinoDoc document, RhinoObject obj, ObjectAttributes attributes)
+    {
+        if (obj.IsDeleted || obj.Geometry is ClippingPlaneSurface or Light) return false;
+        if (attributes.LayerIndex < 0 || attributes.LayerIndex >= document.Layers.Count) return false;
+        var layer = document.Layers[attributes.LayerIndex];
+        if (layer.FullPath.Split(new[] { "::" }, StringSplitOptions.None).Contains("M2D+")) return false;
+        var strings = attributes.GetUserStrings();
         return strings.AllKeys.Concat(obj.Geometry.GetUserStrings().AllKeys)
             .All(key => key is null || !key.StartsWith("m2d.", StringComparison.OrdinalIgnoreCase));
     }
-    private void Verify()
+
+    /// <summary>A bare leaf name matches that layer's name; a full path or wildcard matches FullPath.</summary>
+    internal static bool LayerMatches(Layer layer, string pattern)
+    {
+        if (layer.IsDeleted) return false;
+        var expression = "^" + System.Text.RegularExpressions.Regex.Escape(pattern).Replace("\\*", ".*").Replace("\\?", ".") + "$";
+        const System.Text.RegularExpressions.RegexOptions ignore = System.Text.RegularExpressions.RegexOptions.IgnoreCase;
+        return System.Text.RegularExpressions.Regex.IsMatch(layer.FullPath, expression, ignore) ||
+            !pattern.Contains("::") && System.Text.RegularExpressions.Regex.IsMatch(layer.Name, expression, ignore);
+    }
+    private void Verify(bool final = false)
     {
         if (_thread != Environment.CurrentManagedThreadId) throw new InvalidOperationException("Capture must run on its host thread.");
-        _watch.VerifyHostState();
+        // The document can't change inside a slice (this is the UI thread): interactive Rhino reports changes between
+        // slices as events, and the snapshot comparison (for headless documents) runs at most every 200 ms, plus at the end.
+        _watch.VerifyHostState(throttle: !final);
         if (_watch.IsClosed || _watch.Generation != _generation) throw new OperationCanceledException("Document/definition changed during capture; retry.");
     }
     public bool Step(TimeSpan budget, CancellationToken token = default)
@@ -181,14 +147,11 @@ public sealed class SceneCapture : IDisposable
         var value = item.Value;
         if (value is string layerPattern)
         {
-            // A bare leaf name matches that layer; a full path or wildcard matches FullPath.
-            var expression = "^" + System.Text.RegularExpressions.Regex.Escape(layerPattern).Replace("\\*", ".*").Replace("\\?", ".") + "$";
-            var layers = _document.Layers.Where(l => !l.IsDeleted &&
-                (System.Text.RegularExpressions.Regex.IsMatch(l.FullPath, expression, System.Text.RegularExpressions.RegexOptions.IgnoreCase) ||
-                 (!layerPattern.Contains("::") && System.Text.RegularExpressions.Regex.IsMatch(l.Name, expression, System.Text.RegularExpressions.RegexOptions.IgnoreCase))))
-                .Select(l => l.Index).ToHashSet();
+            // A layer name selects the visible objects on matching layers (UX §1.1), so their visibility is watched.
+            var layers = _document.Layers.Where(l => LayerMatches(l, layerPattern)).Select(l => l.Index).ToHashSet();
             var matches = _document.Objects.GetObjectList(new ObjectEnumeratorSettings { NormalObjects = true, LockedObjects = true, ReferenceObjects = true })
                 .Where(o => layers.Contains(o.Attributes.LayerIndex) && IsDrawable(_document, o)).OrderBy(o => o.Id).ToArray();
+            _scope.GateLayers.UnionWith(layers);
             if (layers.Count == 0) Unsupported(PreparedScene.NonOccludingPrefix + $"Layer not found '{layerPattern}'");
             foreach (var match in matches) _pending.Enqueue(item with { Value = match.Id, Identity = item.Identity + "/" + match.Id, LayerPattern = item.LayerPattern ?? layerPattern });
             return;
@@ -203,6 +166,7 @@ public sealed class SceneCapture : IDisposable
         if (value is RhinoObject source)
         {
             sourceSerial = source.RuntimeSerialNumber;
+            _scope.Read(_document, source, gated: item.Definitions.Length > 0 || item.LayerPattern is not null);
             // A nested object keeps its own layer (Rhino has no layer By Parent).
             var layer = _document.Layers[source.Attributes.LayerIndex];
             item = item with { Section = SectionCapture.Capture(_document, source, item.Section), LayerIndex = layer.Index, LayerPath = layer.FullPath,
@@ -215,10 +179,13 @@ public sealed class SceneCapture : IDisposable
             var definition = _document.InstanceDefinitions.FindId(instance.ParentIdefId);
             if (definition is null || item.Definitions.Contains(instance.ParentIdefId) || item.Definitions.Length >= 256)
             { Unsupported("Invalid/cyclic block"); return; }
+            _scope.Definitions.Add(definition.Id);
             var members = definition.GetObjects();
             if (members.Length == 0) { Unsupported("Empty/unavailable block definition " + definition.Name); return; }
             foreach (var leaf in members.OrderBy(o => o.Id))
             {
+                // Parts are drawn as Rhino shows them: their own and their layers' visibility decide, so both are watched.
+                _scope.Gated.Add(leaf.Id); _scope.GateLayers.Add(leaf.Attributes.LayerIndex);
                 if (!IsDrawable(_document, leaf)) continue;
                 _pending.Enqueue(new(leaf.Id, item.Path, item.Identity + "/" + definition.Id + "/" + leaf.Id,
                     item.Chain.Append(instance.Xform).ToArray(), item.Definitions.Append(definition.Id).ToArray(), item.Section)
@@ -251,6 +218,11 @@ public sealed class SceneCapture : IDisposable
             var key = $"{_watch.DocumentSerial}/{localId}/{fingerprint}/normalise-v2/{normalisationType}";
             var lease = _cache.Geometry(key, () => Normalise(geometry, temporary ? value.GetType().Name : null));
             _leaves.Add(new(item.Identity, key, item.Path, item.Chain, lease, item.Section ?? SourceSection.Plain) { SourceItem = item.SourceItem });
+            if (item.Section is { } section && sourceSerial is not null)
+            {
+                _colours[item.Identity] = section.Style.ObjectColour;
+                if (section.Style.Pattern is not null) _scope.UsesHatchPatterns = true;
+            }
             _groups[item.Identity] = item.Top is { } top
                 ? new((int[])item.Path.Clone(), item.SourceItem, true, item.LayerIndex, item.LayerPath, top.Id, top.Name, item.LayerPattern)
                 : new((int[])item.Path.Clone(), item.SourceItem, false, item.LayerIndex, item.LayerPath, Guid.Empty, null);
@@ -283,7 +255,7 @@ public sealed class SceneCapture : IDisposable
     public LeaseEntry<PreparedScene>.Lease Accept()
     {
         var timer = Stopwatch.StartNew();
-        Verify();
+        Verify(final: true);
         if (_accepted || _pending.Count != 0) throw new InvalidOperationException("Capture is not ready for acceptance.");
         // Native coincident-edge attribution depends on insertion order. Stabilise sources as
         // well as extracted pieces, and give a permuted but identical scene the same revision.

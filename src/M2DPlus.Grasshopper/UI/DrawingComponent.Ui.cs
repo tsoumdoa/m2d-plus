@@ -1,5 +1,6 @@
 using System.Windows.Forms;
 using GH_IO.Serialization;
+using Grasshopper.Kernel;
 using M2DPlus.Core;
 using M2DPlus.Grasshopper.UI;
 using M2DPlus.Grasshopper.UI.Model;
@@ -43,7 +44,11 @@ public sealed partial class DrawingComponent
             try { _allocatedBakeNames = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(reader.GetString("M3BakeNames")) ?? new(); }
             catch (System.Text.Json.JsonException) { _allocatedBakeNames = new(); }
         }
-        return Ui.Read(reader) && base.Read(reader);
+        if (!(Ui.Read(reader) && base.Read(reader))) return false;
+        // GH saves "follow the application" as no value, so definitions from before the icon look read back as
+        // application; show the icon unless the user chose Display ▸ Name for this component.
+        if (IconDisplayMode == GH_IconDisplayMode.application) IconDisplayMode = GH_IconDisplayMode.icon;
+        return true;
     }
 
     /// <summary>Job state for the canvas. Reads the job fields owned by DrawingComponent.Async.cs.</summary>

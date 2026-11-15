@@ -8,6 +8,10 @@ Addendum, 2026-11-15: `min visible` and the tenth output **Ignored** (owner deci
 objects seen only through small gaps"; §3.9).
 Addendum, 2026-11-15: `tree = auto | layer | object` and the eleventh output **Key** (owner decision in REQUIREMENTS,
 "Output trees"; §1.2, §1.3).
+Addendum, 2026-11-15 (pre-beta polish, owner request): the component moves to **Params ▸ Util** and gets a compact
+look (§1); preview lines take the **source object's colour** (§3.6); a **severity policy** keeps normal runs out of the
+orange warning state (§5.2); and a **re-run trigger table** stops visibility and viewport changes re-running the
+drawing when Geometry is given (§5.1).
 
 **The idea:** one component and five inputs, of which only **View** must be set. Plug in a view and you
 get a correct drawing. M2D+ works out everything else from the view source and the document: what
@@ -58,9 +62,10 @@ from a slider or a number (§6).
 |---|---|
 | Name | **M2D+ Drawing** |
 | Nickname | **M2D+** |
-| Tab / panel | `M2D+` / `Drawing` (the only component in v1) |
+| Tab / panel | **Params ▸ Util**, beside the owner's Panel+ and HopperFormat (owner decision 2026-11-15). Its own group (`GH_Exposure.quarternary`) after GH's canvas helpers (primary: Panel, Scribble, Panel+, HopperFormat), data-flow tools (secondary) and cluster hooks (tertiary). There is **no M2D+ tab** (no category icon is registered). GH finds saved components by GUID, so moving it never breaks a definition. |
 | Description | "Hidden-line plans, sections, elevations and axonometrics from your model and a view. Runs in the background. Reference a planar surface as View and right-click Validate views to get an editable view box; click Bake on the component to bake to tidy layers." |
 | Icon | Uses the dark rounded tile that Panel+, HopperFormat and Conduit+ share (tile `#181E1A`, white glyph, 24-unit grid), drawn in code the same way as `ConduitIcons.cs`. **Glyph:** a cube in axonometric with its near corner cut away. The cut face is a solid white poché, the visible edges are white strokes and one hidden edge is a soft (50 % white) dash. It reads as "section + hidden line" at 24 px. **Plug-in logo:** "M+" drawn in the same way as the C+ / P+ marks. |
+| Look (2026-11-15) | **Icon, not the nickname capsule.** The component shows its dark tile icon in the body (icon display), so the tall dark "M2D+" capsule is gone. A new component, and a saved one that followed GH's application setting, shows the icon; an explicit right-click *Display ▸ Name* is kept. **Inputs on the output rows:** GH spreads few inputs over the height of many (5 beside 11 landed 44 px apart); the five inputs sit on the middle output rows (G…D beside Fc…F), centred as one block at the outputs' 20 px pitch. **Message tab:** GH's message tab shape, 16 units tall, 4-unit padding, text measured with GH's zoom-independent metrics (as GH measures its own message), so sizes and padding match at every canvas zoom. A long message shrinks to 80 % at most, then ends in an ellipsis; it never runs under the button. The body is at least 148 units wide so `6 drawings · 41 s` and **Bake** fit without shrinking. Renders: `artifacts/ui/` (idle, running, remark, warning at 100 % and 200 %), from `ComponentLookTests`. |
 | Custom attributes | Standard GH body, plus (a) a 2 px cobalt `#1F6FD1` progress line along the bottom edge of the body while a job runs, (b) a small **Bake** button at the right end of the message tab (it becomes **Cancel** while running and **Run** when paused), and (c) **double-click selects the referenced view objects in Rhino**, so their `m2d.*` user text is right there in Properties (with no view objects, double-click does nothing special). Nothing else is custom. Revision 3's cobalt dot beside **S** is gone: it meant "the editor holds values", and there is no editor. Menu defaults show as check marks in the menu, view-object values in Rhino's Properties, and Info lists every effective value with its origin. |
 
 ### 1.1 Inputs (5)
@@ -76,6 +81,9 @@ from a slider or a number (§6).
 Description text shown in GH (keep these short, as Conduit+ does):
 
 - **Geometry**: "Scene to draw, shared by every view. Leave empty to draw the visible Rhino model. Also accepts layer names such as `Walls` or `Structure::*`, and block instances (repeats are drawn once and reused)."
+  A layer name selects the **visible** objects on matching layers (as before), so showing, hiding or turning those
+  layers on and off changes that input and re-runs it (§5.1). Referenced objects and Grasshopper geometry are drawn
+  whatever their visibility.
 - **View**: "What to draw. A referenced planar surface, rectangle or M2D+ view box (right-click Validate views to make one), a named view, clipping plane name or direction (Top, Front, SW…), a referenced clipping plane, a Plane, a Rectangle (its plane is the view plane and it crops; if it cuts the model you get a section), a Box (cut, crop and depth) or a Vector (look along it). A list gives one drawing per view."
 - **Target**: "Optional plane per view. The view's own plane is moved onto it 1:1 (View[i] → Target[i]). One plane for several views lays them out in a row. Leave empty to show each drawing in place."
 - **Settings**: "Optional `key = value` lines, for example `hidden = off` or `farclip = line`. They override view-object user text (`m2d.*`) and the right-click menu. One branch applies to all views; one branch per view, or `[View name]` headers, set views separately."
@@ -350,7 +358,8 @@ A **view box** is the view as a Rhino object. It is an `Extrusion`:
 The values are the Settings syntax of §6.3, so any `m2d.<key>` of §6.3 is read (including `m2d.gap` or `m2d.tree`
 if a user adds them); `depth` and `crop` come from the box itself. A bad value is a warning naming the view, with
 the closest valid value, exactly as for Settings text. Referenced clipping planes read `m2d.*` user text the same
-way. The component re-runs when a view object or its attributes change (debounced with the other document changes).
+way. The component re-runs when a view object's geometry, name or `m2d.*` user text changes (§5.1). Hiding, showing or
+recolouring a view box, or moving it to another layer, changes nothing the drawing reads and never re-runs it.
 
 **Create view from current viewport** (right-click on V or the component): bakes a view box matching the active
 **parallel** viewport's visible rectangle, with its front face just in front of the scene and its back just behind
@@ -377,11 +386,12 @@ direction views show once the scene is read. Toggle: *Preview ▸ View frames*.
   widgets, cameras, and **anything M2D+ baked before**. Baked objects are recognised by their `m2d.*` user
   strings or by sitting on an `M2D+` layer, so an in-place bake is never drawn again.
 - **Reported:** objects that could be drawn but aren't supported, such as text in v1 or point clouds. They appear in Info
-  and as one warning with counts by type.
+  with counts by type: a remark for objects that hide nothing (text, dots, point clouds), a warning for objects that could
+  hide others (§5.2).
 - **Clipping scope:** when a Rhino 8 clipping plane only clips some layers or objects (its participation lists), only
   those are cut. The others are drawn whole, so the drawing matches the clipped viewport.
-- **Updates:** document changes are debounced (1 s after the last change). They re-run only views whose
-  volume contains the changed objects' bounding boxes.
+- **Updates:** only changes that affect the drawing re-run it (§5.1). In document mode that includes showing and
+  hiding objects and turning layers on or off; a viewport-only change never re-runs anything.
 
 ### 3.2 View range (Revit-style)
 
@@ -454,7 +464,8 @@ make Beyond a fuzzy band. Keeping both costs one extra key and maps one-to-one t
   above 1:5 and below 1:50 (including 1:10–1:20) → ≤ 0.1 mm; 1:50 and above → ≤ 1 mm**.
   Compare in physical millimetres regardless of document units. These are advisory bands; scale still never changes geometry.
 - `tolerance = 0.1 mm` explicitly overrides drawing tolerance; it never edits the document tolerance.
-- A GH runtime warning reports detail at risk. Info separates **adapter tolerance drops** (currently zero), **source edges
+- A GH runtime **remark** reports detail at risk (§5.2: it is a census, not a measured loss; a tolerance too coarse for
+  the scale, above, stays a warning). Info separates **adapter tolerance drops** (currently zero), **source edges
   at or below 2 × tolerance** (risk, not a measured loss), and **uncertain section components** at the selected tolerance.
   Native HLD does not expose every internal omission, so these counts are observations, not a completeness certificate.
   Source-edge risk includes bounded floating-point error at the threshold and edges hidden in the view.
@@ -498,6 +509,28 @@ never changes the Frame, the gap or hatch pattern scale (§4, §3.7). Default **
 "Ink" means black on a light background and near-white on a dark viewport. The preview blends toward
 Rhino's viewport colour. `weights = layers` overrides the preset: each line takes its **source layer's** print width and
 colour instead, and `scale` then changes nothing.
+
+**Preview colours (owner decision 2026-11-15).** With *Preview ▸ Object colours* (the default) the canvas preview draws
+each line in its **source object's display colour**, the colour Rhino shows the object in: `ObjectAttributes.DrawColor(doc)`
+(object colour, else layer colour, else material), with *By Parent* resolved through the block instance path, exactly
+as the no-style cut fill (§3.7). *Preview ▸ Ink* draws every line in ink, as before.
+
+| Line | Preview colour |
+|---|---|
+| Visible, profile, far clip | the object colour (ink in Ink mode) |
+| Beyond | the object colour, lighter (55 %, the class rule) |
+| Hidden | the object colour, dashed |
+| Depth fade | the object colour faded toward the background (§3.2), on top of the class rule |
+| Grasshopper geometry (no Rhino colour) | ink |
+| An object colour with too little contrast to the viewport (WCAG ratio below 1.6: black on a dark viewport, white on white) | ink, so no line vanishes |
+| Unresolved | orange `#E07A00`, never the object colour |
+| Ignored (preview off by default) | faint ink (25 %) |
+| Cut boundary, hatch | unchanged: section style, else the object's display colour for fills and ink for lines (§3.7) |
+| `weights = layers` | the source layer's colour, as before |
+
+Colours are read on the UI thread with the scene, as plain values next to the output-tree values (`SceneCapture.Colours`),
+never added to `DrawingPiece` or `ViewDrawing`, so the worker codec is untouched. A colour change in Rhino re-runs the
+presentation from the cached solve: it makes **no HLD call** (`RerunTests`). Bake is unchanged (classes and layers, §8).
 
 ### 3.7 Section styles and cut fill: where cut styling comes from
 
@@ -692,6 +725,42 @@ share the Z = 0 line" working.
   Otherwise they rerun in the background. Results are never stored in the `.gh`. (Menu defaults *are* stored in the `.gh`;
   they are settings, not results. Per-view settings are stored on the view objects, in the `.3dm`.)
 
+### 5.1a What re-runs the component
+
+Owner request, 2026-11-15: the drawing re-ran whenever object visibility changed in Rhino, even with Geometry wired. Every
+document change is now classified against **what the current drawing read** (the scope: drawn objects and block parts,
+their layers, block definitions, the view objects and layer-name items) by one policy (`RerunPolicy`, Core). A re-run re-reads
+the scene on the UI thread; visibility is solved again only when its content changed, so colour, name, section-style,
+`hidden` and `tree` changes reuse the cached solve and make no HLD call.
+
+| Change in Rhino | Geometry given (GH geometry, referenced objects, ids) | Document mode (Geometry empty) |
+|---|---|---|
+| Drawn object's geometry modified, moved, deleted, undeleted | **re-run** (re-solve) | **re-run** (re-solve) |
+| Object hidden or shown (Hide / Show) | no | **re-run** (the visible document changed) |
+| Layer on / off | no, except a layer holding parts of a drawn block, or one a layer-name item matches | **re-run** when the layer or a sublayer holds drawable objects |
+| Object or layer on / off **in one viewport or detail** | no | no |
+| Viewport camera, zoom, display mode, view changes | no (they raise no document change) | no |
+| Object locked / unlocked, selected, other user text, display-mode override | no | no |
+| Object moved to another layer | **re-run** | **re-run** |
+| Drawn object's or its layer's colour, print colour / width | **re-run**, no HLD call (preview colours, hatch fill, bake) | **re-run**, no HLD call |
+| Section style (object or layer), render material (glass) | **re-run** (restyle / glass) | **re-run** |
+| Drawn object's name (Key labels) | **re-run**, no HLD call | **re-run**, no HLD call |
+| An object that is not drawn (another object, an M2D+ bake, a view box's colour or visibility) | no | no, unless it is now visible and drawable: **re-run** |
+| Object added | no (unless a layer-name item selects it) | **re-run** if visible and drawable; hidden objects, bakes and view boxes: no |
+| View object: geometry, name or `m2d.*` user text | **re-run** | **re-run** |
+| Block definition of a drawn instance edited | **re-run** | **re-run** |
+| Hatch pattern table (when a drawn style uses one), tolerance or units | **re-run** | **re-run** |
+| Named views, clipping planes | **re-run** only when a View item is text (a named view, clipping plane name or direction) | same |
+
+- Block parts are drawn as Rhino shows them, so a part's own visibility and its layer's on/off matter in both modes.
+- The `$M2D Views` front-face fill (§2.2) is a display conduit that only reads the document: its index refresh and redraws
+  raise no document change and never re-run the component (`RerunTests`).
+- Rhino 8 *Model Object* parameters upstream (Query Model Objects…) are expired by Grasshopper itself on attribute
+  changes. M2D+ then re-reads the scene and reuses the cached solve (no HLD call) when nothing it draws changed.
+- Interactive Rhino reports changes as events; headless documents can omit them, so the watch also compares a snapshot of
+  the same facets under the same policy (at most every 200 ms while reading the scene, and before publishing).
+- Tested by `RerunTests` (solves and HLD calls counted per change, both modes) and `RerunPolicyTests` (the table).
+
 ### 5.2 Phases and the message line
 
 The GH message tab under the component shows one short line. The progress line on the body shows the whole job
@@ -705,12 +774,27 @@ fraction.
 | Draft | `Draft · refining 61 %` | continues | empty | draft at 60 % opacity | — |
 | Drawing | `Drawing 3/6 · 72 %` | 40–100 % | empty | finished views + draft for the rest | — |
 | Done | `Section A · 2.1 s` or `6 drawings · 41 s` | hidden | **complete** | full style | — |
-| Done, warnings | `6 drawings · 12 unresolved` | hidden | complete | unresolved in orange | Warning: "12 unresolved pieces in 2 views. They are in the Unresolved output (orange) and on the Unresolved layer when baked. Check them before issuing." |
-| Unsupported | (as Done) | | complete | | Warning: "4 objects not drawn: 3 Text, 1 Point cloud. See Info." |
+| Done, unresolved | `6 drawings · 41 s` | hidden | complete | unresolved in orange | **Remark** per view: "Section A: 12 unresolved pieces in the Unresolved output (orange in the preview, own layer when baked). Check them before issuing." |
+| Not drawn, harmless | (as Done) | | complete | | **Remark**: "Section A: 4 objects not drawn (3 TextDot, 1 PointCloud). They hide nothing. See Info." |
+| Not drawn, could hide | (as Done) | | complete | | **Warning**: "Section A: 2 objects not drawn (2 …). They could hide other objects. See Info." |
+| Quarantined view | (as Done) | | complete; every line Unresolved | orange | **Warning**: "Section A: visibility could not be trusted for the whole view, so its lines are Unresolved (orange). Check Info for the cause." |
 | Partial | `Partial · 5/6 drawings` | hidden | the 5 good views; the failed view's branches are empty | | Error naming the view: "View 4 'Section C': no clipping plane or named view with that name." |
 | Paused | `Paused · out of date` | — | empty (or the result, if it still matches) | stale | — |
 | Cancelled | `Cancelled` | — | empty | stale | — |
 | Error | `Error` | — | empty | — | Error text |
+
+**Severity policy** (owner decision 2026-11-15, `NoticePolicy` in Core). It follows the GH convention: a **warning (orange)
+means the user has to act**, because the drawing may be wrong or an input is wrong. What a normal run finds goes to a
+**remark (grey)** and Info. "Never wrong without saying so" still holds: unresolved pieces are always in the `?` output,
+orange in the preview, on their own bake layer, counted in Info and named in a remark.
+
+| Level | When |
+|---|---|
+| **Error** (red) | A view failed (no such named view or clipping plane, perspective view, extraction failure); Target count mismatch. |
+| **Warning** (orange) | A quarantined view; objects not drawn that **could hide** other geometry; a layer-name item that matches no layer; the effective tolerance **too coarse** for the scale (§3.4); unknown settings keys and bad values (§5.3); Validate views refusals. |
+| **Remark** (grey) | Unresolved pieces in a normal view; objects not drawn that hide nothing (text, dots, hatches, point clouds); the tolerance detail-risk census (short source edges, close gaps, uncertain section components, which are drawn Unresolved); ignored Depth, bad `m2d.color`, and other notes. |
+
+The message line stays the plain progress or result (`5 drawings · 9.9 s`); a remark never turns the component orange.
 
 ### 5.3 Settings errors
 
@@ -850,7 +934,7 @@ Scale ▸      1:20 · 1:50 · 1:100 ✓ · 1:200 · 1:500                    sc
 Line weights ▸ From scale ✓ · From source layers                    weights = auto | layers
 Reset menu defaults
 ────────────────
-Preview ▸    View frames ✓ · Hidden ✓ · Beyond ✓ · Far clip ✓ · Hatch ✓ · Frame · Ignored
+Preview ▸    View frames ✓ · Hidden ✓ · Beyond ✓ · Far clip ✓ · Hatch ✓ · Frame · Ignored ─ Object colours ✓ · Ink   (§3.6)
 Output tree ▸ Auto ✓ · By layer · By object                          tree = auto | layer | object   (§1.3)
 ────────────────
 Copy info

@@ -21,10 +21,15 @@ public sealed partial class DrawingComponent
     private DocumentWatch? _watch;
     private SceneCapture? _capture;
     private DrawingBatch? _drawing;
-    /// <summary>Output-tree values captured on the host with the scene that <see cref="_drawing"/> was drawn from.</summary>
+    /// <summary>Output-tree values and display colours captured on the host with the scene that <see cref="_drawing"/>
+    /// was drawn from (presentation only; changing them never re-runs visibility).</summary>
     private TreeSources? _drawingSources;
+    /// <summary>A View item is text (a named view, clipping plane name or direction), so clipping planes may matter.</summary>
+    private bool _textViews;
+    /// <summary>SolveInstance calls, for the re-run tests.</summary>
+    private int _solveCount;
     private GeometryInputKind _inputKind = GeometryInputKind.Document;
-    private sealed record TreeSources(GeometryInputKind Kind, IReadOnlyDictionary<string, SourceGroupInfo> Groups);
+    private sealed record TreeSources(GeometryInputKind Kind, IReadOnlyDictionary<string, SourceGroupInfo> Groups, IReadOnlyDictionary<string, uint> Colours);
     private readonly DrawingCache _drawingCache = new();
     private Plane[] _targets = Array.Empty<Plane>();
     private List<CaptureInput>? _inputs;
@@ -64,6 +69,7 @@ public sealed partial class DrawingComponent
     }
     private void SolveDrawing(IGH_DataAccess da)
     {
+        _solveCount++;
         foreach (var (level, text) in Ui.Notes) AddRuntimeMessage(level, text);
         if (_drawing is not null) { Emit(da, _drawing, _drawingSources!); return; }
         if (_error is not null) { Message = "Error"; AddRuntimeMessage(GH_RuntimeMessageLevel.Error, _error); return; }
@@ -86,6 +92,7 @@ public sealed partial class DrawingComponent
         _views = inputViews.Select(v => ViewRequest.Parse(v is IGH_GeometricGoo { IsReferencedGeometry: true } reference && reference.ReferenceID != Guid.Empty
             ? reference.ReferenceID : Value(v), document, frameScene)).ToArray();
         _excluded = _views.Where(v => v.ObjectId != Guid.Empty && v.Kind != ViewSourceKind.ClippingPlane).Select(v => v.ObjectId).ToHashSet();
+        _textViews = inputViews.Any(v => v is GH_String);
         da.GetDataTree(0, out GH_Structure<IGH_Goo> geometry);
         _inputs = null;
         if (geometry is not null && geometry.DataCount > 0)
@@ -188,12 +195,16 @@ public sealed partial class DrawingComponent
                 }
                 var document = RhinoDoc.FromRuntimeSerialNumber(_watch.DocumentSerial);
                 if (document is null) { Invalidate(); return; }
-                _capture = new(document, _watch, _inputs, excluded: _excluded);
+                // What the drawing reads, so the watch re-runs only for changes to it (UX §5.1).
+                var scope = new WatchScope(_inputs is null ? M2DPlus.Core.Watch.WatchMode.Document : M2DPlus.Core.Watch.WatchMode.Referenced,
+                    _inputs?.Select(i => i.Value).OfType<string>(), _views.Select(v => v.ObjectId), _textViews);
+                _capture = new(document, _watch, _inputs, excluded: _excluded, scope: scope);
                 _timer!.Interval = 10;
             }
             if (!_capture.Step(TimeSpan.FromMilliseconds(12))) { Message = $"Reading {_capture.CapturedCount} objects"; OnDisplayExpired(true); return; }
             var scene = _capture.Accept();
-            var sources = new TreeSources(_inputKind, new Dictionary<string, SourceGroupInfo>(_capture.Groups, StringComparer.Ordinal));
+            var sources = new TreeSources(_inputKind, new Dictionary<string, SourceGroupInfo>(_capture.Groups, StringComparer.Ordinal),
+                new Dictionary<string, uint>(_capture.Colours, StringComparer.Ordinal));
             _captureActiveSeconds = _capture.ActiveSeconds;
             _captureInfo = $"Capture active {_captureActiveSeconds:F4} s; initial enumeration {_capture.InitialEnumerationMilliseconds:F2} ms; maximum slice {_capture.MaximumSliceMilliseconds:F2} ms (12 ms target; individual copies may overrun).";
             _capture.Dispose(); _capture = null; _inputs = null;
@@ -311,12 +322,8 @@ public sealed partial class DrawingComponent
             foreach (var group in layout.Keys) keys.Append(new(group.Key), Group(group.Path));
             publicationPhase.Pause();
             info.Append(new(Info()), viewPath);
-            if (view.Report.Quarantined || view.Report.UncertainCount != 0 || view.Diagnostics.Any(d => (d.Contains("Uncertain:", StringComparison.Ordinal) || d.Contains("Unsupported:", StringComparison.Ordinal))))
-                AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"{view.Name}: uncertain/quarantined view; inspect Unresolved and Info. Uncertain points are suppressed.");
-            if (view.Report.UnsupportedByType.Count > 0)
-                AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"{view.Name}: unsupported sources: {string.Join(", ", view.Report.UnsupportedByType.Select(p => $"{p.Key}={p.Value}"))}. See Info.");
-            if (view.ToleranceWarning is { } toleranceWarning)
-                AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"{view.Name}: {toleranceWarning}");
+            // Severity policy (UX §5.2): a warning means the user has to act; a normal run's findings are remarks.
+            foreach (var notice in ViewNotices.For(view)) AddRuntimeMessage(Level(notice.Level), notice.Text);
         }
         foreach (var (level, text) in _settingsWarnings) AddRuntimeMessage(level, text);
         var good = batch.Views.Count(v => v.Error is null);
@@ -325,6 +332,11 @@ public sealed partial class DrawingComponent
         if (Params.Output.Count > 9) da.SetDataTree(9, ignored);
         if (Params.Output.Count > 10) da.SetDataTree(10, keys);
     }
+
+    internal static GH_RuntimeMessageLevel Level(NoticeLevel level) => level switch
+    {
+        NoticeLevel.Error => GH_RuntimeMessageLevel.Error, NoticeLevel.Warning => GH_RuntimeMessageLevel.Warning, _ => GH_RuntimeMessageLevel.Remark,
+    };
 
     private void Refresh(bool preserve)
     {

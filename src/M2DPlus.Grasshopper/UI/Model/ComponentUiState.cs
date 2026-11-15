@@ -8,6 +8,9 @@ public static class PreviewLayers
 {
     public const string Hidden = "hidden", Beyond = "beyond", FarClip = "farclip", Hatch = "hatch", Frame = "frame", Views = "views",
         Ignored = "ignored";
+    /// <summary>Present = Preview ▸ Ink: every line in ink. Absent (the default) = Preview ▸ Object colours. Stored as the
+    /// exception, so preview sets saved before the toggle existed read as object colours.</summary>
+    public const string Ink = "ink";
     /// <summary>Ignored (min visible) is off by default: those lines are left out of the drawing, so the preview hides
     /// them unless asked, and then draws them very faint.</summary>
     public static ImmutableArray<(string Name, string Label)> All { get; } =

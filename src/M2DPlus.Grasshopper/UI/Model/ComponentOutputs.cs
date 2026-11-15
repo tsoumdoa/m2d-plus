@@ -2,6 +2,16 @@ using System.Collections.Immutable;
 
 namespace M2DPlus.Grasshopper.UI.Model;
 
+/// <summary>Where the component sits in GH's ribbon (owner decision 2026-11-15, UX §1): Params ▸ Util, beside Panel+ and
+/// HopperFormat, in its own group after GH's canvas helpers (primary), data-flow tools (secondary) and cluster hooks
+/// (tertiary). There is no M2D+ tab. GH finds saved components by GUID, so moving it never breaks a definition.</summary>
+public static class ComponentPlacement
+{
+    public const string Tab = "Params", Panel = "Util";
+    /// <summary>The <c>GH_Exposure</c> member name (kept as text so this model stays free of GH types).</summary>
+    public const string Exposure = "quarternary";
+}
+
 public sealed record OutputSpec(int Index, string Name, string NickName, string Description);
 
 /// <summary>The component's outputs in their fixed order (UX §1.2). Saved definitions match outputs by index, so an

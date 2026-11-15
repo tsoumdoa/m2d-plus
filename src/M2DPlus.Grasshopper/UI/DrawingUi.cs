@@ -82,6 +82,11 @@ public sealed class DrawingUi
     {
         if (MenuCommands.TryParseSet(command, out var key, out var value))
         { Commit(State.With(key, value), $"M2D+ {key} = {value}"); return; }
+        if (command is MenuCommands.PreviewObjectColours or MenuCommands.PreviewInk)
+        {
+            Commit(State.WithPreview(PreviewLayers.Ink, command == MenuCommands.PreviewInk), "M2D+ preview colours", resolve: false);
+            return;
+        }
         if (command.StartsWith(MenuCommands.Preview, StringComparison.Ordinal))
         {
             var layer = command[MenuCommands.Preview.Length..];

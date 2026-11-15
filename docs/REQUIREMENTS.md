@@ -134,3 +134,22 @@ See [UX revision 4](design/ux.md) §2.2 and §6.
   straddles the front-face plane and overlaps the frame. It uses an RTree, is cached per view box and is recomputed
   only after document changes (debounced), never per frame. It may show red where the exact cut finds nothing,
   never the reverse. See [UX](design/ux.md) §2.2.
+
+## Pre-beta polish: look, warnings, colours, re-runs (owner, 2026-11-15)
+
+- **Placement:** the component lives in **Params ▸ Util** (its own group, `quarternary`), beside Panel+ and HopperFormat.
+  There is no M2D+ tab. The component GUID is unchanged, so saved definitions load.
+- **Look:** compact and calm. The dark tile icon replaces GH's tall nickname capsule (an explicit *Display ▸ Name* is
+  kept), the five inputs sit on the middle output rows as one block, and the message tab and Bake button use GH's
+  zoom-independent text metrics. See [UX](design/ux.md) §1.
+- **Severity:** a warning (orange) means the user has to act: a quarantined view, objects not drawn that could hide
+  others, a layer name that matches nothing, a tolerance too coarse for the scale, bad settings. Unresolved pieces in a
+  normal run, harmless unsupported objects and the tolerance detail census are remarks. Unresolved output stays in `?`,
+  orange in the preview, on its bake layer and in Info. See [UX](design/ux.md) §5.2.
+- **Preview colours:** lines take the source object's display colour (`DrawColor`, By Parent through the instance
+  path); GH geometry uses ink; class and fade rules apply on top; Unresolved stays orange. *Preview ▸ Object colours /
+  Ink*, default object colours. Colours are host-captured plain values; a colour change makes no HLD call. See §3.6.
+- **Re-runs:** with Geometry given, showing, hiding, layer on/off and per-viewport visibility never re-run the drawing;
+  only changes to what it draws (geometry, layer, colour, style, material, name, view objects) do. Document mode follows
+  model visibility. Viewport-only changes never re-run. Layer-name items keep selecting visible objects only, so their
+  layers' visibility still counts. See [UX](design/ux.md) §5.1a.

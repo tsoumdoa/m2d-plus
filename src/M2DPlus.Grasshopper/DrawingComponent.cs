@@ -9,11 +9,18 @@ public sealed partial class DrawingComponent : GH_Component
 {
     public DrawingComponent() : base("M2D+ Drawing", "M2D+",
         "Hidden-line plans, sections, elevations and axonometrics from your model and a view. Runs in the background. Reference a planar surface as View and right-click Validate views to get an editable view box; click Bake on the component to bake to tidy layers.",
-        "M2D+", "Drawing") { Message = "Pick a view"; }
+        UI.Model.ComponentPlacement.Tab, UI.Model.ComponentPlacement.Panel)
+    {
+        Message = "Pick a view";
+        // The dark tile icon, not GH's tall nickname capsule (UX §1). An explicit Display ▸ Name is kept (see Read).
+        IconDisplayMode = GH_IconDisplayMode.icon;
+    }
 
     // Stable component GUID, generated once for M0. Never change; append future inputs only.
     public override Guid ComponentGuid => new("c8d0f9fe-5498-45dd-8caf-10201b80d211");
-    public override GH_Exposure Exposure => GH_Exposure.primary;
+    /// <summary>Params ▸ Util in its own group (<see cref="UI.Model.ComponentPlacement"/>).</summary>
+    public override GH_Exposure Exposure => s_exposure;
+    private static readonly GH_Exposure s_exposure = Enum.Parse<GH_Exposure>(UI.Model.ComponentPlacement.Exposure);
     protected override Bitmap Icon => _icon ??= M2DIcons.Drawing();
     private Bitmap? _icon;
 

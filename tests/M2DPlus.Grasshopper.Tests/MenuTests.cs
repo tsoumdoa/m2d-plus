@@ -115,8 +115,33 @@ public sealed class MenuTests
         var state = ComponentUiState.Default.WithAutoRun(false).WithPreview(PreviewLayers.Frame, true).WithPreview(PreviewLayers.Hatch, false);
         var menu = Menu(state);
         Assert.False(Item(menu, "Run automatically").Checked);
-        var preview = Item(menu, "Preview").Children.ToDictionary(c => c.Label, c => c.Checked);
-        Assert.Equal(new Dictionary<string, bool> { ["View frames"] = true, ["Hidden"] = true, ["Beyond"] = true, ["Far clip"] = true, ["Hatch"] = false, ["Frame"] = true, ["Ignored"] = false }, preview);
+        var preview = Item(menu, "Preview").Children.Where(c => !c.IsSeparator).ToDictionary(c => c.Label, c => c.Checked);
+        Assert.Equal(new Dictionary<string, bool> { ["View frames"] = true, ["Hidden"] = true, ["Beyond"] = true, ["Far clip"] = true, ["Hatch"] = false, ["Frame"] = true, ["Ignored"] = false,
+            ["Object colours"] = true, ["Ink"] = false }, preview);
+    }
+
+    [Fact]
+    public void PreviewColoursAreObjectColoursByDefaultWithAnInkChoice()
+    {
+        var colours = Item(Menu(ComponentUiState.Default), "Preview").Children.SkipWhile(c => !c.IsSeparator).Skip(1).ToArray();
+        Assert.Equal(["Object colours", "Ink"], colours.Select(c => c.Label));
+        Assert.Equal([MenuCommands.PreviewObjectColours, MenuCommands.PreviewInk], colours.Select(c => c.Command));
+        Assert.Equal([true, false], colours.Select(c => c.Checked));
+        var ink = ComponentUiState.Default.WithPreview(PreviewLayers.Ink, true);
+        Assert.Equal([false, true], Item(Menu(ink), "Preview").Children.SkipWhile(c => !c.IsSeparator).Skip(1).Select(c => c.Checked));
+        // Stored as the exception: a preview set saved before the toggle existed reads as object colours.
+        Assert.DoesNotContain(PreviewLayers.Ink, PreviewLayers.Default);
+        var old = UiStateSerializer.Read("{\"v\":1,\"preview\":[\"views\",\"hidden\"]}", out _);
+        Assert.DoesNotContain(PreviewLayers.Ink, old.Preview);
+        Assert.Contains(PreviewLayers.Ink, UiStateSerializer.Read(UiStateSerializer.Write(ink), out _).Preview);
+    }
+
+    [Fact]
+    public void TheComponentLivesInParamsUtil()
+    {
+        Assert.Equal("Params", ComponentPlacement.Tab);
+        Assert.Equal("Util", ComponentPlacement.Panel);
+        Assert.Equal("quarternary", ComponentPlacement.Exposure);
     }
 
     [Theory]

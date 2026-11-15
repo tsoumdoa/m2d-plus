@@ -14,7 +14,7 @@ public sealed record MenuNode(string Label, string? Command = null, bool Enabled
 public static class MenuCommands
 {
     public const string Bake = "bake", BakeOne = "bake-one:", AutoRun = "autorun", Run = "run", Cancel = "cancel",
-        Set = "set:", Reset = "reset-menu", Preview = "preview:", CopyInfo = "copy-info", CopySettings = "copy-settings", ClearCache = "clear-cache";
+        Set = "set:", Reset = "reset-menu", Preview = "preview:", PreviewObjectColours = "preview-colours:object", PreviewInk = "preview-colours:ink", CopyInfo = "copy-info", CopySettings = "copy-settings", ClearCache = "clear-cache";
     public static string SetValue(string key, string value) => $"{Set}{key}={value}";
     public static bool TryParseSet(string command, out string key, out string value)
     {
@@ -95,8 +95,14 @@ public static class ComponentMenu
         items.Add(new("Reset menu defaults", MenuCommands.Reset, state.HasMenuValues,
             Tooltip: "Every item above back to its built-in default. View objects and the Settings input are not changed."));
         items.Add(MenuNode.Separator);
+        var ink = state.Preview.Contains(PreviewLayers.Ink);
         items.Add(new("Preview", Children: PreviewLayers.All
-            .Select(l => new MenuNode(l.Label, MenuCommands.Preview + l.Name, Checked: state.Preview.Contains(l.Name))).ToImmutableArray()));
+            .Select(l => new MenuNode(l.Label, MenuCommands.Preview + l.Name, Checked: state.Preview.Contains(l.Name)))
+            .Append(MenuNode.Separator)
+            .Append(new("Object colours", MenuCommands.PreviewObjectColours, Checked: !ink,
+                Tooltip: "Lines in each source object's display colour (object, else layer). Grasshopper geometry in ink. Preview only."))
+            .Append(new("Ink", MenuCommands.PreviewInk, Checked: ink, Tooltip: "Every line in ink (black, or white on a dark viewport). Preview only."))
+            .ToImmutableArray()));
         items.Add(Choice(settings, "Output tree", "tree") with { Tooltip = SettingsCatalog.Spec("tree").Tooltip });
         items.Add(MenuNode.Separator);
         items.Add(new("Copy info", MenuCommands.CopyInfo, context.HasInfo));
