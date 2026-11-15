@@ -15,8 +15,9 @@ See [M1a notes](docs/design/m1a-notes.md) for ownership, validation and admissio
 Install only through Yak: drop a locally built `.yak` onto Rhino, accept installation,
 then restart Rhino. There is no public package yet. Don't copy DLLs into Grasshopper
 Libraries. Targets .NET 8; intended to load in Rhino's .NET 8 and .NET 10 runtimes.
-The future headless worker must separately match the host runtime (Rhino 8.36 defaults
-to .NET 10 here); M0's worker only prints an identity and exits.
+Drawing sets and heavy jobs use persistent headless workers matched exactly to the host
+runtime and Rhino/engine build; the Yak includes .NET 8 and .NET 10 apphosts.
+See [worker design and measurements](docs/design/drawing-workers.md).
 
 ```powershell
 dotnet build M2DPlus.sln -c Debug
@@ -26,7 +27,7 @@ dotnet test tests/M2DPlus.Core.Tests -c Debug --no-build
 ./tools/Pack-Yak.ps1 -AllowDirty # no commit; candidate in artifacts/yak/trials
 ```
 
-Requires the .NET SDK with .NET 8 targeting support; installed Rhino is needed only
+Requires the .NET 10 SDK with .NET 8 targeting support; installed Rhino is needed only
 for Yak packaging and [licensed integration tests](tests/M2DPlus.Rhino.Tests/README.md).
 Plain `dotnet test` skips Rhino integration unless explicitly enabled. See
 [AGENTS.md](AGENTS.md) for the local hook, runtime notes and development contracts,

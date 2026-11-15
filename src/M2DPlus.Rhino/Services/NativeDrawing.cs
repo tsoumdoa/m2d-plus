@@ -11,6 +11,7 @@ public sealed record NativeSettings(bool MultipleThreads = false, bool NativeOnl
     // Correctness harnesses run in isolated, memory-capped processes. Product work
     // always retains the process-global scheduler and its admission budget.
     internal NativeScheduler Scheduler { get; init; } = NativeScheduler.Global;
+    internal bool IsWorker { get; init; }
     internal bool ReverseNativeForAudit { get; init; }
     internal Action<IReadOnlyList<VisibilityInput>>? ObserveNativeInputs { get; init; }
     internal Action<IReadOnlyCollection<string>>? ObserveKernelSources { get; init; }
@@ -40,9 +41,9 @@ public sealed class DrawingPiece : IDisposable
     /// solved-hidden pieces when <c>hidden = off</c>, exactly as the solve used to.</summary>
     internal LineClass SolvedClass { get; }
     internal string GeometricKey { get; }
-    internal DrawingPiece(GeometryBase geometry, PreparedLeaf source, LineClass classification, GeometryBase? depthGeometry = null)
+    internal DrawingPiece(GeometryBase geometry, PreparedLeaf source, LineClass classification, GeometryBase? depthGeometry = null, LineClass? solvedClass = null)
     {
-        DepthGeometry = depthGeometry; Source = source.Section; SourceItem = source.SourceItem; SolvedClass = classification;
+        DepthGeometry = depthGeometry; Source = source.Section; SourceItem = source.SourceItem; SolvedClass = solvedClass ?? classification;
         _geometry = geometry; SourceIdentity = source.Identity; _path = (int[])source.Path.Clone(); Class = classification;
         var bounds = geometry.GetBoundingBox(true);
         GeometricKey = FormattableString.Invariant($"{bounds.Min.X:R},{bounds.Min.Y:R},{bounds.Min.Z:R},{bounds.Max.X:R},{bounds.Max.Y:R},{bounds.Max.Z:R}/") +
@@ -128,7 +129,8 @@ public static class NativeDrawing
     private static long _visibilitySolves;
     internal static long VisibilitySolves => Interlocked.Read(ref _visibilitySolves);
     public static long HldCalls => Interlocked.Read(ref _hldCalls);
-    internal static void CountHld() => Interlocked.Increment(ref _hldCalls);
+    internal static Action? NativeStarting { get; set; }
+    internal static void CountHld() { Interlocked.Increment(ref _hldCalls); NativeStarting?.Invoke(); }
     public static async Task<DrawingBatch> SolveAsync(LeaseEntry<PreparedScene>.Lease sceneLease, RequestIdentity identity,
         IReadOnlyList<ViewRequest> views, NativeSettings settings, CancellationToken token, IProgress<JobProgress>? progress = null)
     {
@@ -141,7 +143,7 @@ public static class NativeDrawing
         IReadOnlyList<ViewRequest> views, NativeSettings settings, CancellationToken token, IProgress<JobProgress>? progress)
     {
             views = views.ToArray();
-            if (!scene.Cost.Admitted(views.Count, settings.Scheduler.BudgetBytes))
+            if (settings.IsWorker ? scene.Cost.Estimate(views.Count) > settings.Scheduler.BudgetBytes : !scene.Cost.Admitted(views.Count, settings.Scheduler.BudgetBytes))
                 throw new InvalidOperationException($"{SceneCost.Refusal} (estimate {scene.Cost.Estimate(views.Count):N0} bytes; {scene.Cost.BrepFaces} Brep faces; {scene.Cost.MeshTriangles} triangles; {views.Count} views).");
             progress?.Report(new(JobPhase.Queued, 0, views.Count));
             return await settings.Scheduler.RunAsync(scene.Cost.Estimate(views.Count), ct =>
