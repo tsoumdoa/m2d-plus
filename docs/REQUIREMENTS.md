@@ -93,3 +93,8 @@ See [UX revision 4](design/ux.md) §2.2 and §6.
 - **Live view boxes:** build them on Fable's "scrub stack": one solve per view direction, after which every cut depth is a lookup. First prove the section-fill (cap parity) rule against route C.
 - **Hidden lines are off by default.** This is a presentation choice only: native HLD loses visible geometry when hidden curves are disabled, so the engine always solves with hidden lines and discards them.
 - **Test data:** no owner project models. Use the campus model and the generated suites, and treat the census results as optimistic.
+
+## Engine composition decisions (2026-11-15)
+
+- **Tie rule:** an edge lying exactly on another object's surface (depth gap ≤ tolerance, e.g. a flush panel joint, coincident blocks) is drawn **Visible**. Native HLD calls these Hidden; M2D+ deliberately differs and documents it as its tie convention.
+- **Correctness gate:** where the native reference is itself Unresolved/Unset, M2D+'s independent exact check is the judge. The gate stays strict everywhere else (0 unexplained, 0 bugs).
