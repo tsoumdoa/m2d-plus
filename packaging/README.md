@@ -2,7 +2,7 @@
 
 Small-scene Make2D-style drawings, Rhino 8.20+ on Windows.
 Drop this `.yak` onto Rhino, accept installation, and restart Rhino. Open
-Grasshopper → M2D+ → Drawing → M2D+ Drawing. Wire a view (for example `Top`).
+Grasshopper → Params → Util → M2D+ Drawing (there is no M2D+ tab). Wire a view (for example `Top`).
 Direction keywords (Top, Front, Right, Back, Left, Bottom, SW, SE, NE, NW) and
 Vectors draw uncut parallel views asynchronously. Empty Geometry draws the visible
 document. Outputs: Visible (curves and points), Hidden, Unresolved, Frame and Info.

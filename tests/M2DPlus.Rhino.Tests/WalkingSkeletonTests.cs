@@ -196,7 +196,9 @@ public sealed class WalkingSkeletonTests(RhinoHost host)
         capture.Step(TimeSpan.FromTicks(1));
         using var changed = new Point(Point3d.Origin);
         document.InstanceDefinitions.ModifyGeometry(definition, new[] { changed }, new[] { new ObjectAttributes() });
-        Assert.ThrowsAny<OperationCanceledException>(() => capture.Step(TimeSpan.FromMilliseconds(12)));
+        // Headless documents raise no events; the snapshot check runs at most every 200 ms between slices and always
+        // before the scene is accepted, so the change is rejected by then at the latest.
+        Assert.ThrowsAny<OperationCanceledException>(() => { while (!capture.Step(TimeSpan.FromMilliseconds(12))) { } capture.Accept().Dispose(); });
     });
     [RhinoFact] public void UnknownTypeQuarantinesBothUncutAndSectionViews() => host.Run(() =>
     {

@@ -53,7 +53,8 @@ the GHA and its two libraries.
 - Keep `M2DPlus.Core` free of Rhino/GH types. `M2DPlus.Rhino` has no Grasshopper dependency.
 - Stable plug-in GUID: `acfcd722-881a-453e-a2f1-36a297b54c8d`.
 - Stable M2D+ Drawing component GUID: `c8d0f9fe-5498-45dd-8caf-10201b80d211`.
-  Generated once for M0, recorded in source comments and Yak keywords; never regenerate.
+  Generated once for M0, recorded in source comments and Yak keywords; never regenerate. It lives in
+  **Params ▸ Util** (no M2D+ tab; `UI/Model/ComponentPlacement`).
 - Append new GH inputs **after existing ones** to preserve saved definitions. Current
   Geometry/G and Settings/S use tree access; View/V, Target/T and Depth/D (5th, appended
   in UX rev. 4) use list access. Only View is required. Append outputs the same way and keep

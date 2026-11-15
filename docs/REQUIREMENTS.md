@@ -134,3 +134,26 @@ See [UX revision 4](design/ux.md) §2.2 and §6.
   straddles the front-face plane and overlaps the frame. It uses an RTree, is cached per view box and is recomputed
   only after document changes (debounced), never per frame. It may show red where the exact cut finds nothing,
   never the reverse. See [UX](design/ux.md) §2.2.
+
+## Pre-beta polish: look, warnings, colours, re-runs (owner, 2026-11-15)
+
+- **Placement:** the component lives in **Params ▸ Util** (its own group, `quarternary`), beside Panel+ and HopperFormat.
+  There is no M2D+ tab. The component GUID is unchanged, so saved definitions load.
+- **Look (layout B, owner's choice from rendered mockups, 2026-11-16):** no icon in the body; a slim name strip in the
+  centre; the five inputs at GH's even spacing snapped to the 20-unit row grid, so every label shares a row with an
+  output; a full-width footer with the status on the left, a fixed-width Bake / Cancel / Run button flush right (equal
+  inset) and the progress bar along its top edge; one 4-unit margin throughout. See [UX](design/ux.md) §1.
+- **Severity:** a warning (orange) means the user has to act: a quarantined view, objects not drawn that could hide
+  others, a layer name that matches nothing, a tolerance too coarse for the scale, bad settings. Unresolved pieces in a
+  normal run, harmless unsupported objects and the tolerance detail census are remarks. Unresolved output stays in `?`,
+  orange in the preview, on its bake layer and in Info. See [UX](design/ux.md) §5.2.
+- **Preview colours:** lines take the source object's display colour (`DrawColor`, By Parent through the instance
+  path); GH geometry uses ink; class and fade rules apply on top; Unresolved stays orange. *Preview ▸ Object colours /
+  Ink*, default object colours. Colours are host-captured plain values; a colour change makes no HLD call. See §3.6.
+- **Re-runs:** with Geometry given, showing, hiding, layer on/off and per-viewport visibility never re-run the drawing;
+  only changes to what it draws (geometry, layer, colour, style, material, name, view objects) do. Document mode follows
+  model visibility. Viewport-only changes never re-run. See [UX](design/ux.md) §5.1a.
+- **Layer-name inputs ignore visibility** (owner, answering the open question): `Walls` or `Structure::*` selects every
+  object on the matching layers, including hidden objects and objects on layers that are off (or under a parent that is
+  off), like referenced objects. Hiding, showing or switching those layers never re-runs; adding, deleting or editing
+  objects there, or moving an object onto or off those layers, does. Block parts are still drawn as Rhino shows them.

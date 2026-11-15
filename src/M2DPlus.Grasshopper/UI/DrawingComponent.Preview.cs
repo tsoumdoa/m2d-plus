@@ -63,6 +63,9 @@ public sealed partial class DrawingComponent
         if (_drawing is null) return;
         var background = global::Rhino.ApplicationSettings.AppearanceSettings.ViewportBackgroundColor;
         var ink = background.GetBrightness() < .5 ? Color.FromArgb(245, 245, 245) : Color.Black;
+        // Object colours (UX §3.6): host-captured with the scene, so a colour change in Rhino re-reads them without a
+        // visibility solve. Ink mode, or a source with no Rhino colour (GH geometry), uses ink.
+        var colours = Ui.State.Preview.Contains(PreviewLayers.Ink) ? null : _drawingSources?.Colours;
         foreach (var view in _drawing.Views)
         {
             if (view.Error is not null) continue;
@@ -73,9 +76,12 @@ public sealed partial class DrawingComponent
                 if (toggle is not null && !Ui.State.Preview.Contains(toggle)) continue;
                 var kind = piece.Profile && piece.Class == LineClass.Visible ? LineClass.Profile : piece.Class;
                 var style = view.Weights[kind];
-                var colour = kind == LineClass.Unresolved ? Color.FromArgb(224, 122, 0) :
-                    DrawingBake.Blend(view.Weights.UseSourceLayers ? Color.FromArgb(unchecked((int)piece.SourceColour)) : ink,
-                        background, piece.Intensity * style.InkIntensity);
+                // weights = layers draws in the layer colour (§3.6); Ignored stays faint ink; class and fade lighten on top.
+                var baseColour = view.Weights.UseSourceLayers ? Color.FromArgb(unchecked((int)piece.SourceColour))
+                    : kind == LineClass.Ignored ? ink
+                    : PreviewColours.Line(colours is not null && colours.TryGetValue(piece.SourceIdentity, out var argb) ? argb : null, ink, background);
+                var colour = kind == LineClass.Unresolved ? PreviewColours.Unresolved :
+                    DrawingBake.Blend(baseColour, background, piece.Intensity * style.InkIntensity);
                 var pixels = view.Weights.UseSourceLayers ? Math.Max(1, (int)Math.Round(piece.SourceWidth * 96 / 25.4)) : style.PreviewPixels;
                 using var geometry = piece.CopyGeometry();
                 if (geometry is Curve curve) DrawCurve(curve, colour, pixels, style.Dashed);

@@ -62,11 +62,14 @@ public sealed class ToleranceWarningTests(RhinoHost host)
         {
             Solve("scale=1:5");
             Assert.Contains(component.RuntimeMessages(GH_RuntimeMessageLevel.Warning),w => w.Contains("too coarse for scale 1:5",StringComparison.Ordinal));
-            Assert.Contains(component.RuntimeMessages(GH_RuntimeMessageLevel.Warning),w => w.Contains("source edges at or below 2 x tolerance",StringComparison.Ordinal));
+            // Severity policy (UX §5.2): a tolerance too coarse for the scale is a warning; the detail census is a remark.
+            Assert.Contains(component.RuntimeMessages(GH_RuntimeMessageLevel.Remark),w => w.Contains("source edges at or below 2 x tolerance",StringComparison.Ordinal));
+            Assert.DoesNotContain(component.RuntimeMessages(GH_RuntimeMessageLevel.Warning),w => w.Contains("source edges at or below 2 x tolerance",StringComparison.Ordinal));
             var info=((GH_String)Assert.Single(component.Params.Output[8].VolatileData.AllData(true))).Value;
             Assert.Contains("source edges at or below 2 x tolerance=1",info);
             Solve("scale=1:5\ntolerance=.001 mm");
             Assert.DoesNotContain(component.RuntimeMessages(GH_RuntimeMessageLevel.Warning),w => w.Contains("tolerance",StringComparison.OrdinalIgnoreCase));
+            Assert.DoesNotContain(component.RuntimeMessages(GH_RuntimeMessageLevel.Remark),w => w.Contains("source edges at or below 2 x tolerance",StringComparison.Ordinal));
             Assert.Equal(1,component.Params.Output[0].VolatileDataCount);
             Assert.Equal(.1,doc.ModelAbsoluteTolerance);
         }

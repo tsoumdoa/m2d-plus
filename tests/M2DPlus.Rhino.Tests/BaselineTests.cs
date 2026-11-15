@@ -67,7 +67,9 @@ public sealed class BaselineTests(RhinoHost host, ITestOutputHelper output)
         Assert.Equal(-162, solid.GetBoundingBox(true).Min.X, 6); Assert.Equal(-160, solid.GetBoundingBox(true).Max.X, 6);
     });
 
-    [RhinoFact] public void LayerStringsRespectSourcePathsAndDocumentVisibility() => host.Run(() =>
+    /// <summary>Owner decision 2026-11-15: a layer name selects every object on matching layers whatever its visibility
+    /// (hidden objects, layers that are off, a parent that is off), like referencing them. Bakes stay excluded.</summary>
+    [RhinoFact] public void LayerStringsRespectSourcePathsAndIgnoreVisibility() => host.Run(() =>
     {
         using var document = RhinoDoc.CreateHeadless(null); using var cache = new SceneCache();
         var walls = document.Layers.Add("Walls", System.Drawing.Color.Black);
@@ -77,11 +79,21 @@ public sealed class BaselineTests(RhinoHost host, ITestOutputHelper output)
         var wallId = document.Objects.AddPoint(new Point3d(1, 0, 0), new ObjectAttributes { LayerIndex = walls });
         var columnId = document.Objects.AddPoint(new Point3d(2, 0, 0), new ObjectAttributes { LayerIndex = columns });
         document.Objects.AddPoint(new Point3d(3, 0, 0), new ObjectAttributes { LayerIndex = other });
-        var hidden = document.Objects.AddPoint(new Point3d(4, 0, 0), new ObjectAttributes { LayerIndex = walls }); document.Objects.Hide(hidden, true);
-        using var batch = Solve(Capture(document, cache, new[] { new CaptureInput("Walls", new[] { 2, 1 }, "walls"), new CaptureInput("Structure::*", new[] { 7 }, "structure") }), ViewRequest.Parse("Top"));
-        var items = batch.Views[0].Items; Assert.Equal(2, items.Count);
+        var hidden = document.Objects.AddPoint(new Point3d(4, 0, 0), new ObjectAttributes { LayerIndex = walls }); Assert.True(document.Objects.Hide(hidden, true));
+        var doors = document.Layers.Add("Doors", System.Drawing.Color.Black);
+        var doorId = document.Objects.AddPoint(new Point3d(5, 0, 0), new ObjectAttributes { LayerIndex = doors });
+        var baked = new ObjectAttributes { LayerIndex = walls }; baked.SetUserString("m2d.class", "visible");
+        document.Objects.AddPoint(new Point3d(6, 0, 0), baked);
+        // The Doors layer and the Structure parent (so Structure::Columns) are switched off.
+        document.Layers[doors].IsVisible = false; document.Layers[structure].IsVisible = false;
+        Assert.False(document.Layers[doors].IsVisible); Assert.False(document.Layers[structure].IsVisible);
+        using var batch = Solve(Capture(document, cache, new[] { new CaptureInput("Walls", new[] { 2, 1 }, "walls"), new CaptureInput("Structure::*", new[] { 7 }, "structure"),
+            new CaptureInput("Doors", new[] { 8 }, "doors") }), ViewRequest.Parse("Top"));
+        var items = batch.Views[0].Items; Assert.Equal(4, items.Count);
         Assert.Contains(items, p => p.SourceIdentity.EndsWith(wallId.ToString()) && p.SourcePath.SequenceEqual(new[] { 2, 1 }));
+        Assert.Contains(items, p => p.SourceIdentity.EndsWith(hidden.ToString()) && p.SourcePath.SequenceEqual(new[] { 2, 1 }));
         Assert.Contains(items, p => p.SourceIdentity.EndsWith(columnId.ToString()) && p.SourcePath.SequenceEqual(new[] { 7 }));
+        Assert.Contains(items, p => p.SourceIdentity.EndsWith(doorId.ToString()) && p.SourcePath.SequenceEqual(new[] { 8 }));
     });
 
     [RhinoFact] public void LinkedArchiveWithDeepDefinitionsIsExpandedOnTheHost() => host.Run(() =>
