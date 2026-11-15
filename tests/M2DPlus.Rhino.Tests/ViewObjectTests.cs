@@ -21,7 +21,7 @@ namespace M2DPlus.Rhino.Tests;
 /// the settings precedence, in a real headless Rhino and Grasshopper. Expectations come from the input geometry.</summary>
 [Collection("Rhino")]
 [Trait("Category", "RhinoIntegration")]
-public sealed class ViewObjectTests(RhinoHost host, ITestOutputHelper output)
+public sealed partial class ViewObjectTests(RhinoHost host, ITestOutputHelper output)
 {
     private static readonly Guid GrasshopperId = new("b45a29b1-4343-4035-989e-044e8580d9cf");
     private static Assembly Gha => Assembly.LoadFrom(Path.Combine(AppContext.BaseDirectory, "M2DPlus.Grasshopper.gha"));
@@ -172,6 +172,8 @@ public sealed class ViewObjectTests(RhinoHost host, ITestOutputHelper output)
         Assert.Equal("1", obj.Attributes.GetUserString("m2d.view"));
         Assert.Equal("M2D View 01", obj.Attributes.Name);
         Assert.All(ViewBoxes.Keys, k => Assert.Equal("default", obj.Attributes.GetUserString("m2d." + k)));
+        Assert.Equal("default", obj.Attributes.GetUserString("m2d.color"));
+        Assert.Equal(ViewBoxes.LayerName, doc.Layers[obj.Attributes.LayerIndex].FullPath);
         Assert.True(doc.Objects.FindId(badId) is BrepObject);
         // The GH reference survives: V now holds a Brep reference to the same id, and it loads the extrusion.
         IGH_Goo[] stored = ((IEnumerable<IGH_Goo>)((dynamic)component.Params.Input[1]).PersistentData.AllData(true)).ToArray();
@@ -226,7 +228,7 @@ public sealed class ViewObjectTests(RhinoHost host, ITestOutputHelper output)
         Assert.Equal("off", obj.Attributes.GetUserString("m2d.hidden"));
         Assert.Equal("1:50", obj.Attributes.GetUserString("m2d.scale"));
         Assert.Equal("default", obj.Attributes.GetUserString("m2d.farclip"));
-        Assert.Equal(ViewBoxes.Keys.Length + 1, obj.Attributes.GetUserStrings().AllKeys.Count(k => k!.StartsWith("m2d.", StringComparison.Ordinal)));
+        Assert.Equal(ViewBoxes.Keys.Length + 2, obj.Attributes.GetUserStrings().AllKeys.Count(k => k!.StartsWith("m2d.", StringComparison.Ordinal)));
         var row = ViewBoxes.ReadRow(obj.Attributes);
         Assert.Equal(new Dictionary<string, string> { ["hidden"] = "off", ["scale"] = "1:50" }, row.Values.OrderBy(p => p.Key).ToDictionary());
 
@@ -304,7 +306,13 @@ public sealed class ViewObjectTests(RhinoHost host, ITestOutputHelper output)
         Assert.True(created.Ok, created.Message);
         var obj = doc.Objects.FindId(created.Id);
         Assert.Equal("M2D View 02", obj.Attributes.Name); // 01 is taken
-        Assert.Equal("M2D+::Views", doc.Layers[obj.Attributes.LayerIndex].FullPath);
+        var layer = doc.Layers[obj.Attributes.LayerIndex];
+        Assert.Equal("$M2D Views", layer.FullPath);
+        Assert.Equal(Guid.Empty, layer.ParentLayerId);
+        Assert.Equal(ViewBoxes.Cobalt.ToArgb(), layer.Color.ToArgb());
+        Assert.Equal(-1, layer.PlotWeight);
+        Assert.Equal("default", obj.Attributes.GetUserString("m2d.color"));
+        Assert.True(doc.Layers.FindByFullPath("M2D+::Views", -1) < 0);
         Assert.True(ViewBoxes.IsViewBox(obj));
         var read = ViewBoxes.ReadBox((Extrusion)obj.Geometry, Tol, Angle);
         Assert.Equal(frame.Depth.Value, read.Depth!.Value, 9);

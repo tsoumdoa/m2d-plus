@@ -225,7 +225,7 @@ greyed out while a wire is connected. The three view-object commands also act on
 Pick views in Rhino…                 (planar surfaces, rectangles, view boxes, clipping planes)
 Validate views                       (§2.2; also on the component menu)
 Flip view direction                  (view boxes only)
-Create view from current viewport    (bakes "M2D View 01" on M2D+::Views and adds it)
+Create view from current viewport    (bakes "M2D View 01" on the $M2D Views layer and adds it)
 ───────────────
 Named views     ▸  Level 1 · Level 2 · Roof · …          (multi-check: one drawing each)
 Clipping planes ▸  Section A · Section B · Plan cut L1 · …
@@ -263,6 +263,44 @@ A **view box** is the view as a Rhino object. It is an `Extrusion`:
   along −Z. The preview draws an arrow, so the direction is never a guess.
 - **Ignored as scene geometry.** View boxes (and any surface the View input references) are never drawn, so a box
   around the model never hides it. In Rhino they get a Wireframe display override for the same reason.
+- **Layer `$M2D Views`.** View boxes live on one top-level layer, `$M2D Views` (the `$` sorts it to the top of the
+  layer panel). M2D+ creates it only when it is missing: cobalt `#1F6FD1`, **No Print** (plot weight −1), so view
+  boxes never print. An existing `$M2D Views` layer is used as it is: the user's later colour or print edits are never
+  overwritten. Validate and Create put view boxes there (below); an old `M2D+::Views` layer from earlier builds is
+  neither deleted nor renamed. Drawing bake layers (§8.1) are unchanged.
+- **Front-face fill.** M2D+ draws a see-through fill on each view box's **front face** (the frame, view plane and cut
+  plane) in every display mode, so the type of view shows at a glance:
+
+  | Front face | Fill (opacity) |
+  |---|---|
+  | **cuts** the model: a section or plan | warm red `#D9412B` at 25 % |
+  | doesn't cut: an elevation or axo | cobalt `#1F6FD1` at 22 % (slightly lighter: these faces usually sit in front of the whole model) |
+  | `m2d.color = #RRGGBB` | that colour at the by-type opacity |
+  | `m2d.color = #RRGGBBAA` | that colour and alpha (`FF` is opaque) |
+
+  `m2d.color` blank or `default` means by type. An invalid value (`purple`, `#12345`) falls back to by type and the
+  component shows a remark naming the view; it is display only and never changes the drawing. The fill is a
+  display conduit registered when the GHA loads, not part of the object: a view box stays an `Extrusion` (which can't
+  hold per-face colour), keeps its Wireframe override, and its back face stays gumball-draggable. It is drawn only
+  for view boxes (`m2d.view`) in the active document that are visible (not hidden, layer and parent layers on, and on
+  in that viewport or detail). It is unlit, transparent and written after the model without depth, so the model's
+  wires show through it; it takes no part in picking, so selection is unchanged. A selected view box keeps Rhino's
+  highlight, and the component preview (frame, look arrow, depth volume, below) is drawn as before.
+- **How "cuts" is decided for the fill** (a display hint only; the drawing uses the component's exact cut rule, REQUIREMENTS *Cut policy*).
+  A front face counts as cutting when some **visible scene object's bounding box** straddles the front-face plane by
+  more than the document tolerance on both sides, overlaps the frame rectangle (projected onto the plane) by more
+  than the tolerance, and meets the frame's own bounding box. Scene objects are what document mode draws (not
+  hidden, layer and parents on, not on an `M2D+` bake layer, no `m2d.*` user text, so no view boxes or baked
+  drawings) and that the component can cut: surfaces, polysurfaces, extrusions, SubDs, meshes and block instances.
+  The bounding boxes sit in an RTree; each view box's answer is cached and recomputed only after a document change
+  (object added, deleted, moved or edited, attributes, layer visibility, block definitions, tolerance), debounced
+  200 ms after the last change, and only for view boxes near the changed objects. Nothing is computed per frame.
+  Measured headless: 50 176 objects and 300 view boxes build in about 140 ms; one moved object updates in about 1 ms.
+  **Differences from the real cut**, all conservative toward red: a bounding box can straddle the plane where the
+  object doesn't (an L-shaped object, a block whose parts miss the frame, a box near an inclined frame); the hint
+  always looks at the whole visible document, even when Geometry is wired or the view's far limit excludes the
+  object; a referenced surface that is not yet a view box counts as scene. A real cut inside the frame always shows
+  red. Curves and points never make a face red (the component does not cut them).
 - If Rhino turns a view box into a polysurface (some sub-object edits do), the view reports it with the fix:
   undo the edit, or reference a planar surface and validate again. It never guesses the orientation back.
 
@@ -273,8 +311,9 @@ A **view box** is the view as a Rhino object. It is an `Extrusion`:
    (no edge shorter than 10 × the absolute tolerance). Trimmed planar surfaces whose outer loop is a rectangle are
    fine. Each refusal says why: "not planar", "its corners are not right angles (78.7°)", "its outline has 3
    corners, not 4", "a polysurface with 6 faces", "the curve is not closed"…
-2. Converts each good one **in place** with `ReplaceObject`: same object id, same layer and attributes, so the GH
-   reference survives. References stored on V are re-typed to a Brep reference (a GH *Surface* reference can't
+2. Converts each good one **in place** with `ReplaceObject`: same object id, name and attributes (user text
+   included), so the GH reference survives, and moves it onto the **`$M2D Views`** layer (created if missing) in
+   the same undo record. References stored on V are re-typed to a Brep reference (a GH *Surface* reference can't
    hold a box). A surface that reaches V through a **Surface or Curve parameter wire** is refused with that reason
    instead of being converted, because converting it would break the wire.
 3. **Orientation.** Y (up) is the rectangle edge nearest world Z, or nearest north for a horizontal frame; X makes
@@ -283,7 +322,8 @@ A **view box** is the view as a Rhino object. It is an `Extrusion`:
 4. **Depth: auto**, to the back of the scene's bounding box along the look direction plus 1 % of its diagonal
    (with nothing behind the frame: the frame's longer side). Edit it by dragging the back face.
 5. Names unnamed objects `M2D View 01`, `M2D View 02`… and writes the user-text keys below. **Missing keys get
-   `default`; an existing value is never overwritten.** Validating a view box again only re-adds deleted keys.
+   `default`; an existing value is never overwritten.** Validating a view box again only re-adds deleted keys, and
+   moves it back onto `$M2D Views` if it was put on another layer.
 6. Reports each object on the Rhino command line and on the component (remarks; refusals stay as warnings until
    the next view command or a change to V).
 
@@ -305,6 +345,7 @@ A **view box** is the view as a Rhino object. It is an `Extrusion`:
 | `m2d.hatch` | `styles` · `colour` · `black` · `none` | `default` |
 | `m2d.cuts` | `separate` · `merge` | `default` |
 | `m2d.min_visible` | `off` · length (§3.9) | `default` |
+| `m2d.color` | `default` (by type) · `#RRGGBB` · `#RRGGBBAA`: the front-face fill (above). Display only, not a setting | `default` |
 
 The values are the Settings syntax of §6.3, so any `m2d.<key>` of §6.3 is read (including `m2d.gap` or `m2d.tree`
 if a user adds them); `depth` and `crop` come from the box itself. A bad value is a warning naming the view, with
@@ -313,8 +354,8 @@ way. The component re-runs when a view object or its attributes change (debounce
 
 **Create view from current viewport** (right-click on V or the component): bakes a view box matching the active
 **parallel** viewport's visible rectangle, with its front face just in front of the scene and its back just behind
-it (so it starts as an elevation, cutting nothing), names it `M2D View 01`…, puts it on the **`M2D+::Views`** layer
-(cobalt), writes the user-text defaults, and adds it to V. One undo. A perspective viewport gets "M2D+ draws parallel
+it (so it starts as an elevation, cutting nothing), names it `M2D View 01`…, puts it on the **`$M2D Views`** layer
+(above), writes the user-text defaults, and adds it to V. One undo. A perspective viewport gets "M2D+ draws parallel
 views only. Switch the viewport to Parallel and try again."
 
 **Flip view direction** (view boxes): the front face stays where it is and the box extends to the other side with the

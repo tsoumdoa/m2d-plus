@@ -133,7 +133,13 @@ public sealed partial class DrawingComponent
             var view = _views[i];
             var identity = view.ObjectId != Guid.Empty ? DrawingUi.Identity(view.ObjectId)
                 : inputViews[i] is GH_String text ? "text:" + text.Value.Trim().ToLowerInvariant() : $"index:{i}";
-            if (view.ObjectId != Guid.Empty && document.Objects.FindId(view.ObjectId) is { } obj) rows[identity] = ViewBoxes.ReadRow(obj.Attributes);
+            if (view.ObjectId != Guid.Empty && document.Objects.FindId(view.ObjectId) is { } obj)
+            {
+                rows[identity] = ViewBoxes.ReadRow(obj.Attributes);
+                // m2d.color only colours the view box's front face in Rhino; a bad value falls back to by type.
+                if (M2DPlus.Core.Views.ViewBoxFill.Validate(obj.Attributes.GetUserString(ViewBoxes.ColorKey), view.Name) is { } colour)
+                    _settingsWarnings.Add((GH_RuntimeMessageLevel.Remark, colour));
+            }
             contexts.Add(new(identity, view.Name, view.Kind, view.Cut is not null, 0, _tolerance,
                 view.Kind is ViewSourceKind.Box or ViewSourceKind.ClippingPlane ? view.Cut?.SourceDepth : null));
             if (view.Note is { } note) _settingsWarnings.Add((GH_RuntimeMessageLevel.Remark, note));
