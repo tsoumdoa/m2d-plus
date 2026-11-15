@@ -103,7 +103,8 @@ internal static class SectionGeometry
                     var intervals = EdgeProvenance.Split(curve, shared.Select(c => ((Curve)c, EdgeOrigin.Original)), tolerance);
                     try
                     {
-                        if (intervals.Any(e => e.Origin == EdgeOrigin.None && e.Curve.GetLength() > tolerance))
+                        if (intervals.Any(e => e.Origin == EdgeOrigin.None && e.Curve.GetLength() > tolerance &&
+                            !CoveredBySharedTopology(e.Curve, shared, tolerance)))
                             throw new SectionFailure("Self-intersecting Brep faces away from their shared topology.");
                     }
                     finally { foreach (var interval in intervals) interval.Dispose(); }
@@ -121,6 +122,40 @@ internal static class SectionGeometry
     private static bool OnTrimmedFace(BrepFace face, Point3d point, double tolerance) =>
         face.ClosestPoint(point, out var u, out var v) && face.PointAt(u, v).DistanceTo(point) <= tolerance &&
         face.IsPointOnFace(u, v) != PointFaceRelation.Exterior;
+
+    // Native overlap events can omit a split rim, or part of a closed rim. A box enclosing
+    // a subcurve inside a tolerance ball about a point ON a shared edge proves the whole
+    // subcurve is on shared topology. Samples alone cannot prove this. Adjacent edges may
+    // supply different witnesses. Budget exhaustion always rejects, never accepts.
+    internal static bool CoveredBySharedTopology(Curve curve, BrepEdge[] shared, double tolerance)
+    {
+        if (shared.Length == 0) return false;
+        var budget = 262144;
+        bool Cover(Curve piece, int depth)
+        {
+            if (--budget < 0) return false;
+            var box = piece.GetBoundingBox(true);
+            if (!box.IsValid) return false;
+            var p = piece.PointAtStart;
+            var roundoff = 256 * 2.2204460492503131e-16 * Math.Max(1,
+                Math.Max(box.Min.DistanceTo(Point3d.Origin), box.Max.DistanceTo(Point3d.Origin)));
+            var near = false;
+            foreach (var edge in shared)
+            {
+                if (!edge.ClosestPoint(p, out var t)) continue;
+                var witness = edge.PointAt(t);
+                if (p.DistanceTo(witness) + roundoff > tolerance) continue;
+                near = true;
+                if (box.GetCorners().All(c => c.DistanceTo(witness) + roundoff <= tolerance)) return true;
+            }
+            if (!near || depth >= 32) return false;
+            var middle = piece.Domain.Mid;
+            using var left = piece.Trim(piece.Domain.Min, middle);
+            using var right = piece.Trim(middle, piece.Domain.Max);
+            return left is not null && right is not null && Cover(left, depth + 1) && Cover(right, depth + 1);
+        }
+        return Cover(curve, 0);
+    }
 
     // Keep enclosing void shells together. Disjoint material shells are classified separately.
     public static List<Brep> MaterialComponents(Brep source, double tolerance)
@@ -212,8 +247,29 @@ internal static class SectionGeometry
     {
         if (!Intersection.BrepPlane(source, plane, tolerance, out var segments, out _))
             return Array.Empty<Curve>(); // An empty intersection is legitimate for a disjoint component.
-        try { return Curve.JoinCurves(segments, tolerance); }
+        try { return JoinIntersectionLoops(segments, plane, tolerance); }
         finally { foreach (var c in segments) c.Dispose(); }
+    }
+
+    internal static Curve[] JoinIntersectionLoops(Curve[] segments, Plane plane, double tolerance)
+    {
+        var loops = Curve.JoinCurves(segments, tolerance);
+        try
+        {
+            foreach (var loop in loops)
+            {
+                // BrepPlane approximations can satisfy the model tolerance but fail the area
+                // routine's stricter default planarity test. Preserve already measurable loops
+                // byte for byte. Projection is allowed only after bounding deviation from the
+                // requested plane, and all topology/winding/slab checks still run afterwards.
+                using var mass = AreaMassProperties.Compute(loop);
+                if (mass is not null || !loop.IsClosed) continue;
+                if (!loop.IsInPlane(plane, tolerance) || !loop.Transform(Transform.PlanarProjection(plane)))
+                    throw new SectionFailure("Intersection loop cannot be placed on its cut plane within tolerance.");
+            }
+            return loops;
+        }
+        catch { foreach (var loop in loops) loop.Dispose(); throw; }
     }
 
     public static double Area(Brep region)
