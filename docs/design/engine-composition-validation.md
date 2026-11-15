@@ -100,3 +100,29 @@ Rhino tests on each of .NET 8 and .NET 10, including the range-split regression.
 Final test and render logs are under `artifacts/kernel/`. The requested building,
 curved-steel and curved-facade plan/section contact sheets are generated under
 `artifacts/render/kernel/`; they are review evidence, not correctness approval.
+
+## Kernel-routing continuation and owner merge decision
+
+The earlier report above is retained as the failure record. The continuation
+fixes provenance endpoint residues, nonplanar mesh candidate routing, full-scene
+route-C camera bounds, planar Profile metadata, and conservative native duplicate
+handling; its regression tests include the final range-split guard already on
+the base. Actual pipeline/GH publication timings now show M 2.135x, L North
+3.075x and curved S SW 1.005x against fresh same-adapter native-only pairs.
+
+At owner direction, the very expensive L SW exact adjudication was stopped and
+the branch merge gate was replaced: all 217 small-fixture/M views completed with
+zero known bugs and zero evidenced wrong-Visible samples after hash-bound exact
+interval certificates. Two of the eight unknown small cases have full planar
+agreement; six remain explicitly Unresolved/Info. The eight M views also retain
+Info for remaining uncertified comparisons. These are audit verdicts, not a claim
+that every emitted locus is independently certified.
+
+The full gate has **not** passed: 203/226 completed views pass its strict verdict,
+30,644 samples remain unclassified, and seven L final verdicts are incomplete.
+The complete 233-view gate must run again before public beta. The non-blocking L
+list, accepted tie/exact/tolerance evidence, phase tables, trial dispositions and
+producer provenance are in `hillclimb/routing/`. All eight supplementary curved-S
+views have zero raw disagreements. Final suites passed 208 Core, 40 UI and 167
+licensed Rhino tests on each of .NET 8 and .NET 10; no section performance work
+was started, and no commit or push was made.

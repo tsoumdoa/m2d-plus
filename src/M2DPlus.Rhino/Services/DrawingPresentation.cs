@@ -100,12 +100,15 @@ public static class DrawingPresentation
                     ToleranceDroppedPieces = original.ToleranceDroppedPieces, SubToleranceSourceEdges = original.SubToleranceSourceEdges,
                     SubToleranceBoundsGaps = original.SubToleranceBoundsGaps,
                     UncertainSectionComponents = original.UncertainSectionComponents };
+                result.Phases.Include(original.Phases);
+                using var phase = result.Phases.Start("Beyond/fade splitting");
                 results.Add(result); result._diagnostics.AddRange(original.Diagnostics.Where(d => metadata is null || !d.StartsWith("Style ", StringComparison.Ordinal)));
                 var frame = original.Frame; frame.Transform(transform); result.Frame = frame;
                 if (settings is not null) result._diagnostics.Add(settings.Describe());
                 var range = settings is null ? null : new ViewRange(settings);
                 foreach (var item in original.Items)
                 {
+                    phase.Next("Beyond/fade splitting");
                     using var geometry = item.CopyGeometry();
                     var depthGeometry = item.DepthGeometry ?? geometry;
                     var parameters = new SortedSet<double>();
@@ -134,10 +137,12 @@ public static class DrawingPresentation
                             if (part is null && curve.GetBoundingBox(true).Diagonal.Length <= original.Tolerance)
                             { result.ProjectingSegments++; continue; }
                             if (part is null) throw new InvalidOperationException(FormattableString.Invariant($"Range split failed: {curve.GetType().Name} domain={curve.Domain}; interval={interval}; endpoints={curve.PointAt(interval.Min)}/{curve.PointAt(interval.Max)}; len={curve.GetLength():R}"));
+                            phase.Next("output construction");
                             Add(part, depthPart ?? depthGeometry);
+                            phase.Next("Beyond/fade splitting");
                         }
                     }
-                    else Add(geometry.Duplicate(), depthGeometry);
+                    else { phase.Next("output construction"); Add(geometry.Duplicate(), depthGeometry); }
 
                     void Add(GeometryBase part, GeometryBase depths)
                     {
@@ -149,12 +154,13 @@ public static class DrawingPresentation
                             var representative = depths is Curve c ? -original.Frame.Plane.DistanceTo(c.PointAt(c.Domain.Mid)) : span.Representative;
                             if (part is Curve && kind == LineClass.Visible && range?.Classify(representative, false) == RangeClassification.Beyond) kind = LineClass.Beyond;
                             if (!part.Transform(transform)) throw new InvalidOperationException("Placement failed.");
-                            result.Pieces.Add(new(part, new PreparedLeaf(item.SourceIdentity, item.SourcePath, part) { Section = metadata?.GetValueOrDefault(item.SourceIdentity) ?? item.Source, SourceItem = item.SourceItem }, kind)
+                            result.Pieces.Add(new(part, new PreparedLeaf(item.SourceIdentity, item.SourcePath, part) { Section = metadata?.GetValueOrDefault(item.SourceIdentity) ?? item.Source, SourceItem = item.SourceItem }, kind, depths.Duplicate())
                             { Profile = item.Profile, KernelOwned = item.KernelOwned, Depths = span, Intensity = range?.Intensity(span, kind) ?? 1 });
                         }
                         catch { part.Dispose(); throw; }
                     }
                 }
+                phase.Next("section restyle and output");
                 var freshRegions = original.Regions.Select(r =>
                 {
                     if (metadata is null) return r.Region;

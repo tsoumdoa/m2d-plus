@@ -15,8 +15,13 @@ for route C, physical near/far trimming and capping. It never resolves documents
 Each registration retains its original source identity, path, item, section style
 and far-candidate flag. Multiple clipped pieces may belong to one original source.
 An object is planar-polyhedral only when every face is planar and every edge is
-linear at model tolerance. Mesh triangles are planar occluders; naked/unwelded crease edges and view-facing transitions of welded faces
-are candidates. The A2 spike's all-crease census remains its default validation
+linear at model tolerance. Manifold meshes with planar faces and explicit unwelded creases use triangle
+occluders and topology-edge candidates. Nonmanifold meshes, nonplanar quads and
+welded nonplanar meshes remain complete native registrations: Rhino
+interpolates smooth silhouette loci that are not the topology-edge facing
+transitions. Silently triangulating a nonplanar quad can also change native occlusion.
+Substituting those edges lost curved-facade loci; the continuation
+regression keeps native candidate generation and occlusion together for this class. The A2 spike's all-crease census remains its default validation
 policy; production explicitly requests the native mesh candidate policy. Linear curves and points are non-occluding kernel candidates.
 Other curves and bodies require native candidate generation.
 
@@ -40,14 +45,20 @@ Candidate ownership is independent of occluder participation:
 * Points use the same union. Hidden points are withheld. Uncertain points are
   withheld and counted/reported; they are never published confidently.
 
+Native camera placement uses the same full-scene bounds in both adapters, including
+route C; clipped-input bounds must not change the native camera.
 All engines use the same parallel frame, larger view Z toward the viewer, and
 model tolerance. HLD always receives IncludeHiddenCurves=true; hidden-off is a
-downstream presentation filter. An entirely planar scene makes zero HLD calls.
+downstream presentation filter. A scene consisting entirely of kernel-eligible planar sources makes zero HLD calls.
 
 ## Contacts, coincident pieces and ownership
 
-The A2 tie convention is closed projected polygon boundaries with a STRICT
-view-depth gap greater than model tolerance. Equal-depth contacts do not occlude.
+The owner-sanctioned `tieConvention` is VISIBLE for zero-depth-gap contact,
+including flush panel joints and coincident blocks. Closed projected polygon
+boundaries occlude only with a STRICT view-depth gap greater than model tolerance.
+A contact whose gap is within model tolerance does not occlude. A native Hidden
+sample may be classified `tieConvention` only with independently checked visible
+coverage and recorded supporting faces and gap values.
 Holes use even/odd parity across all loops. Curved-native contacts retain native
 visibility; native Unset/non-attributable Duplicate records are uncertainty unless
 an independently retained coincident candidate proves complete coverage.
@@ -82,6 +93,19 @@ and unexplained disagreements fail the gate. Archived native timings are context
 only, with absent rows left absent. End-to-end measurements include extraction,
 native work, composition and downstream section/presentation work.
 
+When the native reference is Unresolved/Unset, the owner-sanctioned independent
+exact all-pairs check decides the comparison. It visits every planar face for
+each disputed candidate bound and uses rational polygon/depth predicates at the
+comparison samples. Scalar bounds may amortise rejection across samples of one
+candidate; no production spatial index, clipping predicate or interval union
+decides the reference. Curved occlusion participates only through definite native
+query/candidate intervals on the same world support, or exclusion by every curved
+occluder's conservative bound. A planar Hidden proof decides the occluder union;
+Visible requires a definite curved decision too. Inconclusive checks remain strict.
+Evidence records candidate identity, face IDs, signed gaps, curved-native witnesses
+and complete pair counts. These samples are counted as `exactCheckDecided`, separate
+from `tieConvention`, native-order quirks and remaining unexplained samples.
+
 
 ## Native order control (perf-E evidence)
 
@@ -104,3 +128,16 @@ contributor disqualifies the exception. Removing planar occluders can legitimate
 change visibility and is not, by itself, a native-subset exception. Kernel-owned
 spans and all non-reproducing differences remain unexplained until independently
 accounted for. Zero unexplained remains mandatory.
+The veto indexes the original projected kernel candidates as well as published
+pieces: locus reconciliation may remove a lower-class contributor without erasing
+its participation in the routing decision.
+
+## Temporary branch merge gate
+
+The owner's final branch decision permits merge with zero known bugs and zero
+evidenced wrong-Visible samples across all small fixtures and M views. Comparisons
+without a certificate retain an Unresolved/Info audit verdict; they are not
+certified Visible. Large-model gaps are explicitly non-blocking for this branch
+and listed in `hillclimb/routing/HILLCLIMB.md`. This does not relax the full
+233-view gate required again before public beta, nor change production visibility
+semantics. Raw whole-output results remain separate from the branch merge verdict.

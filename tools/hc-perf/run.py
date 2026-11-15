@@ -54,7 +54,7 @@ def main():
             if args.composition_batch:
                 from M2DPlus.HcPerf import CompositionGate
                 for case in json.loads(args.composition_batch.read_text()):
-                    CompositionGate.Run(case['path'], case['view'], case['output'])
+                    CompositionGate.Run(case['path'], case['view'], case['output'], case.get('freshNative', False),case.get('publication',False),case.get('traceNative',False))
             elif args.native_batch:
                 for case in json.loads(args.native_batch.read_text()):
                     print('native correctness: ' + case['output'], flush=True)

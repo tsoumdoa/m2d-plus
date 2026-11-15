@@ -7,6 +7,46 @@ public sealed class VisibilityTests
 {
     private static Vertex V(double x, double y, double z = 1) => new(x, y, z);
     private static PlanarFace Square => new([[V(0, 0), V(2, 0), V(2, 2), V(0, 2)]]);
+    [Fact] public void IndependentPointOracleVisitsAllPairsAndRecordsSanctionedContacts()
+    {
+        var outside=new PlanarFace([[V(10,10),V(12,10),V(12,12),V(10,12)]]);
+        var oracle=new ExactVisibilityOracle.AllPairsPoints([Square,outside],.125);
+        var pairs=oracle.Prepare(0,0,2,2);
+        Assert.Equal(2,oracle.CompletePairs);
+        foreach(double z in new[]{1d,.875})
+        {
+            var result=oracle.At(V(1,1,z),pairs);
+            Assert.Equal(VisibilityClass.Visible,result.Class);
+            Assert.Equal(1-z,Assert.Single(result.Contacts).Gap);
+        }
+        Assert.Equal(VisibilityClass.Hidden,oracle.At(V(1,1,Math.BitDecrement(.875)),pairs).Class);
+        Assert.Equal(3,oracle.ExactPointPairs);
+    }
+    [Fact] public void IndependentPointOraclePreservesHolesAndClosedBoundaryOcclusion()
+    {
+        var face=Square with {Loops=[Square.Loops[0],[V(.5,.5),V(1.5,.5),V(1.5,1.5),V(.5,1.5)]]};
+        var oracle=new ExactVisibilityOracle.AllPairsPoints([face],.125);var pairs=oracle.Prepare(0,0,2,2);
+        Assert.Equal(VisibilityClass.Visible,oracle.At(V(1,1,0),pairs).Class);
+        var boundary=oracle.At(V(.5,1,0),pairs);
+        Assert.Equal(VisibilityClass.Hidden,boundary.Class);Assert.Equal(0,boundary.BlockingFace);
+    }
+    [Fact]
+    public void FilteredPointQueriesMatchAnalyticHoleBoundaryAndDepthContacts()
+    {
+        const double tol = 1e-6;
+        var face = Square with { Loops = [Square.Loops[0], [V(.5,.5),V(1.5,.5),V(1.5,1.5),V(.5,1.5)]] };
+        var query = new EdgeFaceKernel.PointQuery([face], tol);
+        foreach (double x in new[] { -.1, 0, Math.BitIncrement(0d), .25, .5, 1, 1.5, 2, Math.BitIncrement(2d) })
+        foreach (double y in new[] { 0d, .25, .5, 1, 1.5, 2 })
+        foreach (double z in new[] { 0d, 1 - tol, Math.BitDecrement(1 - tol), 1d })
+        {
+            var p = V(x,y,z);
+            bool inMaterial = x >= 0 && x <= 2 && y >= 0 && y <= 2 && !(x > .5 && x < 1.5 && y > .5 && y < 1.5);
+            var expected = inMaterial && 1 - z > tol ? VisibilityClass.Hidden : VisibilityClass.Visible;
+            Assert.Equal(expected, query.Classify(p));
+        }
+    }
+
     [Fact]
     public void HoleBoundaryDepthCrossingAndSelfContactMatchIndependentOracle()
     {
@@ -183,5 +223,21 @@ public sealed class VisibilityTests
         var query = new EdgeFaceKernel.PointQuery([], 1e-4);
         Assert.Equal(VisibilityClass.Unresolved, query.Classify(new(1e151,0,0)));
         Assert.Equal(VisibilityClass.Unresolved, query.Classify(new(1e14,0,0)));
+    }
+
+    [Fact] public void RoundedDepthBoundaryNeedsAnIntervalCertificateRatherThanAWiderDepthTolerance()
+    {
+        const double tolerance = 1e-4;
+        var face = new PlanarFace([[V(-1,-1,-1),V(1,-1,1),V(1,1,1),V(-1,1,-1)]]);
+        var edge = new CandidateEdge(V(0,0,0),V(1,0,0),"boundary");
+        var oracle = new ExactVisibilityOracle.AllPairsPoints([face], tolerance);
+        var pairs = oracle.Prepare(0,0,1,0);
+        double rounded = Math.BitIncrement(tolerance);
+        Assert.Equal(VisibilityClass.Hidden, oracle.OnEdge(edge,rounded,pairs).Class);
+        var visible = Assert.Single(ExactVisibilityOracle.Solve([face],[edge],tolerance).Intervals,
+            interval => interval.Class == VisibilityClass.Visible);
+        Assert.Equal(tolerance, visible.End);
+        Assert.InRange(rounded-visible.End,0,tolerance);
+        Assert.Equal(VisibilityClass.Visible, oracle.OnEdge(edge,visible.End/2,pairs).Class);
     }
 }

@@ -2,7 +2,7 @@ namespace M2DPlus.Core.Visibility;
 
 /// <summary>Slow reference: all edges × all faces, rational event arrangement, no index or early out.
 /// Intentionally independent of the production clipper and its interval union.</summary>
-public static class ExactVisibilityOracle
+public static partial class ExactVisibilityOracle
 {
     public static VisibilityResult Solve(IReadOnlyList<PlanarFace> faces, IReadOnlyList<CandidateEdge> edges,
         double depthTolerance, CancellationToken token = default, int threads = 1)

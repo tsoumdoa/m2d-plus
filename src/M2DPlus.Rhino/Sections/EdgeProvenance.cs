@@ -13,6 +13,18 @@ internal static class EdgeProvenance
         var overlaps = new List<(Interval Interval, EdgeOrigin Origin)>();
         var parameters = new SortedSet<double> { curve.Domain.T0, curve.Domain.T1 };
         var bounds = curve.GetBoundingBox(true);
+        double Snap(double t)
+        {
+            // Intersection endpoints transformed through several frames can differ
+            // from the domain ends by a few ULPs. Preserve isolated short curves.
+            if (bounds.Diagonal.Length <= tolerance) return t;
+            double budget = 128 * 2.220446049250313e-16 * Math.Max(1, Math.Max(Math.Abs(curve.Domain.Min), Math.Abs(curve.Domain.Max)));
+            double geometryBudget = Math.Min(tolerance/64,128*2.220446049250313e-16*Math.Max(1,
+                Math.Max(bounds.Min.DistanceTo(Point3d.Origin),bounds.Max.DistanceTo(Point3d.Origin))));
+            var point = curve.PointAt(t);
+            return Math.Abs(t - curve.Domain.Min) <= budget && point.DistanceTo(curve.PointAtStart) <= geometryBudget ? curve.Domain.Min :
+                Math.Abs(t - curve.Domain.Max) <= budget && point.DistanceTo(curve.PointAtEnd) <= geometryBudget ? curve.Domain.Max : t;
+        }
         foreach (var reference in references)
         {
             var other = reference.Curve.GetBoundingBox(true);
@@ -23,7 +35,7 @@ internal static class EdgeProvenance
             foreach (var item in events)
             {
                 if (!item.IsOverlap) continue;
-                var interval = item.OverlapA;
+                var interval = new Interval(Snap(item.OverlapA.Min), Snap(item.OverlapA.Max));
                 overlaps.Add((interval, reference.Origin));
                 parameters.Add(Math.Clamp(interval.Min, curve.Domain.Min, curve.Domain.Max));
                 parameters.Add(Math.Clamp(interval.Max, curve.Domain.Min, curve.Domain.Max));

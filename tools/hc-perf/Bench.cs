@@ -42,7 +42,7 @@ public static class Bench
     public static string Run(string path, string viewName, string output, bool oracle, bool native, int repeats, int threads)
     {
         long peakManaged = 0, peakPrivate = 0;
-        using var memorySampler = new Timer(_ =>
+        using var memorySampler = new System.Threading.Timer(_ =>
         {
             long m = GC.GetTotalMemory(false); Interlocked.Exchange(ref peakManaged, Math.Max(Interlocked.Read(ref peakManaged), m));
             using var p = Process.GetCurrentProcess(); p.Refresh();

@@ -14,6 +14,8 @@ public sealed record NativeSettings(bool MultipleThreads = false, bool NativeOnl
     internal bool ReverseNativeForAudit { get; init; }
     internal Action<IReadOnlyList<VisibilityInput>>? ObserveNativeInputs { get; init; }
     internal Action<IReadOnlyCollection<string>>? ObserveKernelSources { get; init; }
+    internal Action<PlanarExtraction, Plane>? ObservePlanarScene { get; init; }
+    internal Action<string,int,bool,LineClass,Curve>? ObserveCompositionRecord { get; init; }
 }
 public sealed class DrawingPiece : IDisposable
 {
@@ -76,6 +78,7 @@ public sealed class ViewDrawing : IDisposable
     public string? ToleranceWarning => ToleranceDroppedPieces + SubToleranceSourceEdges + SubToleranceBoundsGaps + UncertainSectionComponents == 0 ? null :
         $"Detail may be lost or uncertain at tolerance {Tolerance:G6} document units: {ToleranceDroppedPieces} adapter tolerance drops; {SubToleranceSourceEdges} source edges at or below 2 x tolerance; {SubToleranceBoundsGaps} close source-bound gaps; {UncertainSectionComponents} uncertain section components. See Info; use a finer document tolerance or tolerance = override when needed.";
     public double Seconds { get; internal set; }
+    public PhaseTimings Phases { get; } = new();
     public string Info => $"{Name}: {(Error ?? "finished")} · {Seconds:F3} s\n" +
         $"{Report.Route}; deterministic={!MultipleThreads}; tolerance={Tolerance:R}; validation: {Report.ValidationDomain}\n" +
         $"Visible={Pieces.Count(p => p.Class == LineClass.Visible)}, hidden={Pieces.Count(p => p.Class == LineClass.Hidden)}, unresolved={Report.UncertainCount}, hidden points={HiddenPoints}; " +
@@ -83,7 +86,7 @@ public sealed class ViewDrawing : IDisposable
         $"Tolerance counts: adapter tolerance drops={ToleranceDroppedPieces}; source edges at or below 2 x tolerance={SubToleranceSourceEdges}; close source-bound gaps={SubToleranceBoundsGaps}; uncertain section components={UncertainSectionComponents}. Native internal drops=unknown; risk counts are not measured native loss counts.\n" +
         $"Unsupported: {string.Join(", ", Report.UnsupportedByType.Select(p => $"{p.Key}={p.Value}"))}\n" +
         string.Join("; ", Report.Normalisation.Concat(Diagnostics)) +
-        $"\nCut regions={Regions.Count}, Hatch={Regions.Count(r => r.Region.Hatch is not null)}, Beyond={Pieces.Count(p => p.Class == LineClass.Beyond)}, Far clip={Pieces.Count(p => p.Class == LineClass.FarClip)}; weights={Weights.BandName}.";
+        $"\nRouting: kernel candidates={KernelEdges}; native candidates={NativeEdges}; native calls={NativeCalls}.\nPhases: {string.Join(", ", Phases.Seconds.Select(p => $"{p.Key}={p.Value:F4}s"))}\nCut regions={Regions.Count}, Hatch={Regions.Count(r => r.Region.Hatch is not null)}, Beyond={Pieces.Count(p => p.Class == LineClass.Beyond)}, Far clip={Pieces.Count(p => p.Class == LineClass.FarClip)}; weights={Weights.BandName}.";
     public int KernelEdges { get; internal set; }
     public int NativeEdges { get; internal set; }
     public int NativeCalls { get; internal set; }
@@ -138,12 +141,15 @@ public static class NativeDrawing
                 try
                 {
                     progress?.Report(new(JobPhase.Preparing, 0, scene.SourceCount));
+                    var prepareTimer = Stopwatch.StartNew();
                     var prepared = scene.Prepare(ct);
+                    double preparationSeconds = prepareTimer.Elapsed.TotalSeconds;
                     var edgeCensus = new Dictionary<double, int>(); // per distinct drawing tolerance (overrides may differ per view)
                     for (var index = 0; index < views.Count; index++)
                     {
                         ct.ThrowIfCancellationRequested(); progress?.Report(new(JobPhase.Drawing, index, views.Count));
                         var drawing = SolveView(scene, prepared, views[index], settings, ct);
+                        drawing.Phases.Add("normalisation", preparationSeconds / views.Count);
                         results.Add(drawing);
                         if (!edgeCensus.TryGetValue(drawing.Tolerance, out var census))
                             edgeCensus[drawing.Tolerance] = census = ToleranceDiagnostics.SourceEdgeCensus(prepared, drawing.Tolerance, ct);
@@ -189,17 +195,17 @@ public static class NativeDrawing
             result.Frame = view.Resolve(scene.Bounds, tolerance);
             result._diagnostics.Add($"Admission: {scene.Cost.GeometryBytes} geometry bytes; {scene.Cost.BrepFaces} faces; {scene.Cost.MeshTriangles} triangles; {scene.SourceCount} sources. Native multipleThreads={settings.MultipleThreads} (serial global scheduler).");
             if (sources.Count == 0) return result;
-            if (!settings.NativeOnly)
+            if (!settings.NativeOnly && sources.Any(s => !ReferenceEquals(s.Geometry,s.KernelClassifiedGeometry) || s.KernelTolerance != tolerance || s.KernelEligible))
             {
-                route = ComposedVisibility.Solve(sources.Select(s => new VisibilityInput(s.Geometry, s)).ToArray(), result, view, settings, token);
+                route = ComposedVisibility.Solve(sources.Select(s => new VisibilityInput(s.Geometry, s)).ToArray(), result, view, settings, token, scene.Bounds);
                 invalid += result.RoutingInvalid; quarantine |= result.RoutingQuarantine;
                 uncertainSources.UnionWith(result.UncertainRoutingSources);
                 foreach (var piece in result.Pieces.ToArray())
                 {
                     if (piece.Class == LineClass.Hidden && view.Settings?.Hidden == false)
                     { result.Pieces.Remove(piece); piece.Dispose(); continue; }
-                    using var geometry = piece.CopyGeometry();
                     if (view.Named is not { Crop: true }) continue;
+                    using var geometry = piece.CopyGeometry();
                     result.Pieces.Remove(piece);
                     try
                     {
@@ -215,6 +221,7 @@ public static class NativeDrawing
             }
             else
             {
+            using var phase = result.Phases.Start("native setup");
             using var viewport = new ViewportInfo();
             var frame = result.Frame; var radius = scene.Bounds.IsValid ? Math.Max(scene.Bounds.Diagonal.Length, 1) : 1;
             viewport.IsParallelProjection = true;
@@ -229,12 +236,15 @@ public static class NativeDrawing
                 token.ThrowIfCancellationRequested();
                 if (!parameters.AddGeometry(source.Geometry, source)) { invalid++; quarantine = true; result._diagnostics.Add($"Native rejected {source.Identity}"); }
             }
-            CountHld();
+            CountHld(); result.NativeCalls++;
+            phase.Next("native solve");
             using var drawing = HiddenLineDrawing.Compute(parameters, settings.MultipleThreads, NativeProgress, token);
+            phase.Next("output construction");
             token.ThrowIfCancellationRequested();
             if (drawing is null) throw new InvalidOperationException("Native HLD returned null without cancellation.");
             if (!drawing.WorldToHiddenLine.TryGetInverse(out var inverse)) throw new InvalidOperationException("Invalid native frame.");
             var toPlane = Transform.PlanarProjection(frame.Plane) * inverse;
+            var nativeParents = new HashSet<int>(); int nativeFragments = 0;
             foreach (var segment in drawing.Segments)
             {
                 token.ThrowIfCancellationRequested();
@@ -259,10 +269,12 @@ public static class NativeDrawing
                 var parent = segment.ParentCurve;
                 if (parent?.SourceObject?.Tag is not PreparedLeaf source)
                 { invalid++; quarantine = true; result._diagnostics.Add($"Parentless/source-less segment {segment.Index}"); continue; }
+                if (visibility != HiddenLineDrawingSegment.Visibility.Projecting) nativeParents.Add(parent.Index);
                 if (visibility == HiddenLineDrawingSegment.Visibility.Duplicate) { result.DuplicateSegments++; continue; }
                 if (visibility == HiddenLineDrawingSegment.Visibility.Projecting) { result.ProjectingSegments++; continue; }
                 var proxy = segment.CurveGeometry;
                 if (proxy is null) { invalid++; uncertainSources.Add(source.Identity); result._diagnostics.Add($"Null geometry {segment.Index}: {source.Identity}"); continue; }
+                nativeFragments++;
                 var owned = proxy.DuplicateCurve();
                 try
                 {
@@ -283,6 +295,7 @@ public static class NativeDrawing
                 }
                 catch { owned.Dispose(); throw; }
             }
+            result.NativeEdges = result.CurvedCandidateEdges = nativeParents.Count; result.NativeFragments = nativeFragments;
             foreach (var point in drawing.Points)
             {
                 token.ThrowIfCancellationRequested();

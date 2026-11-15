@@ -40,7 +40,7 @@ public static class SectionRegionEngine
     }
 
     public static SectionResult Compute(IEnumerable<SectionSource> sources, SectionRequest request,
-        CancellationToken cancellationToken = default, bool prepareVisibility = false, Plane? farPlane = null)
+        CancellationToken cancellationToken = default, bool prepareVisibility = false, Plane? farPlane = null, M2DPlus.Rhino.Services.PhaseTimings? phases = null)
     {
         SectionGeometry.Validate(request);
         var ordered = sources.OrderBy(s => s.Id, StringComparer.Ordinal).ToArray();
@@ -64,7 +64,9 @@ public static class SectionRegionEngine
                         result.Diagnostics.Add(new(source.Id, SectionStatus.Crossing, "Viewport background resolved to object display colour."));
                     if (prepareVisibility)
                     {
+                        var trimTimer = System.Diagnostics.Stopwatch.StartNew();
                         var visibility = PhysicalSectionClipper.Clip(source, request, farPlane);
+                        phases?.Add("route C trim", trimTimer.Elapsed.TotalSeconds);
                         result.Visibility.Add(source.Id, visibility);
                         result.Diagnostics.AddRange(visibility.Diagnostics);
                     }

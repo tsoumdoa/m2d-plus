@@ -36,29 +36,41 @@ public static class EdgeFaceKernel
             token.ThrowIfCancellationRequested();
             if (!Resolvable(point)) return VisibilityClass.Unresolved;
             var ids = new List<int>(); _tree.Query(new(point, point, "point"), ids);
-            var p = P<Rational>.From(point); var zero = Rational.From(0);
             foreach (int id in ids)
             {
-                token.ThrowIfCancellationRequested(); var f = _faces[id].Exact.Value;
-                if (Rational.Compare(f.Normal.Z, zero) == 0) continue;
-                var gap = (f.D - P<Rational>.Dot(f.Normal, p)) / f.Normal.Z;
-                if (Rational.Compare(gap, Rational.From(_tolerance)) <= 0) continue;
-                bool inside = false, boundary = false;
-                foreach (var loop in f.Loops)
-                    for (int j = 0; j < loop.Length; j++)
-                    {
-                        if ((j & 255) == 0) token.ThrowIfCancellationRequested();
-                        var a = loop[j]; var b = loop[(j + 1) % loop.Length];
-                        var cross = (b.X - a.X) * (p.Y - a.Y) - (b.Y - a.Y) * (p.X - a.X);
-                        int sign = Rational.Compare(cross, zero);
-                        if (sign == 0 && Between(p.X, a.X, b.X) && Between(p.Y, a.Y, b.Y)) boundary = true;
-                        if ((Rational.Compare(a.Y, p.Y) > 0) == (Rational.Compare(b.Y, p.Y) > 0)) continue;
-                        if (sign == Rational.Compare(b.Y, a.Y)) inside = !inside;
-                    }
-                if (inside || boundary) return VisibilityClass.Hidden;
+                token.ThrowIfCancellationRequested(); var face = _faces[id];
+                bool hidden;
+                try
+                {
+                    if (face.Filtered is null) throw new IndeterminateException();
+                    hidden = Hides(face.Filtered, point, _tolerance, token);
+                }
+                catch (IndeterminateException) { hidden = Hides(face.Exact.Value, point, _tolerance, token); }
+                if (hidden) return VisibilityClass.Hidden;
             }
             return VisibilityClass.Visible;
         }
+    }
+
+    private static bool Hides<T>(Polygon<T> face, Vertex point, double tolerance, CancellationToken token) where T : IScalar<T>
+    {
+        var zero = T.From(0); var p = P<T>.From(point);
+        if (T.Compare(face.Normal.Z, zero) == 0) return false;
+        var gap = (face.D - P<T>.Dot(face.Normal, p)) / face.Normal.Z;
+        if (T.Compare(gap, T.From(tolerance)) <= 0) return false;
+        bool inside = false, boundary = false;
+        foreach (var loop in face.Loops)
+            for (int j = 0; j < loop.Length; j++)
+            {
+                if ((j & 255) == 0) token.ThrowIfCancellationRequested();
+                var a = loop[j]; var b = loop[(j + 1) % loop.Length];
+                var cross = (b.X - a.X) * (p.Y - a.Y) - (b.Y - a.Y) * (p.X - a.X);
+                int sign = T.Compare(cross, zero);
+                if (sign == 0 && Between(p.X, a.X, b.X) && Between(p.Y, a.Y, b.Y)) boundary = true;
+                if ((T.Compare(a.Y, p.Y) > 0) == (T.Compare(b.Y, p.Y) > 0)) continue;
+                if (sign == T.Compare(b.Y, a.Y)) inside = !inside;
+            }
+        return inside || boundary;
     }
 
     public static VisibilityResult Solve(IReadOnlyList<PlanarFace> faces, IReadOnlyList<CandidateEdge> edges,

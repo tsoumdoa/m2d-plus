@@ -38,6 +38,9 @@ internal sealed record SceneLeaf(string Identity, string Key, int[] Path,
 { internal int SourceItem { get; init; } }
 internal sealed record PreparedLeaf(string Identity, int[] Path, GeometryBase Geometry)
 {
+    internal GeometryBase? KernelClassifiedGeometry { get; init; }
+    internal double KernelTolerance { get; init; }
+    internal bool KernelEligible { get; init; }
     internal int SourceItem { get; init; }
     internal SourceSection Section { get; init; } = SourceSection.Plain;
 }
@@ -119,7 +122,7 @@ public sealed class PreparedScene : IDisposable
                     // Transform reverses closed-solid orientation for odd reflections. Normalize after the whole chain.
                     if (geometry is Brep { SolidOrientation: BrepSolidOrientation.Inward } brep) brep.Flip();
                     if (geometry is Mesh { IsClosed: true } mesh && mesh.SolidOrientation() < 0) mesh.Flip(true, true, true);
-                    prepared.Add(new(leaf.Identity, leaf.Path, geometry) { Section = leaf.Section, SourceItem = leaf.SourceItem });
+                    prepared.Add(new(leaf.Identity, leaf.Path, geometry) { Section = leaf.Section, SourceItem = leaf.SourceItem, KernelClassifiedGeometry = geometry, KernelTolerance = Tolerance, KernelEligible = PlanarExtraction.MayProduceKernelCandidates(geometry,Tolerance) });
                 }
                 catch { geometry.Dispose(); throw; }
             }

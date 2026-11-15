@@ -42,8 +42,10 @@ internal static class SectionDrawing
         string route = "native HLD (in process)";
         try
         {
+            using var phase = result.Phases.Start("sections");
             using var sections = SectionRegionEngine.Compute(bodies.Select(s => new SectionSource(s.Identity, s.Geometry, cut.Style(s))),
-                request, token, prepareVisibility: true, farPlane: far);
+                request, token, prepareVisibility: true, farPlane: far, phases: result.Phases);
+            result.Phases.Add("sections", -result.Phases.Seconds.GetValueOrDefault("route C trim"));
             result.UncertainSectionComponents = sections.Components.Count(c => c.Status == SectionStatus.Uncertain);
             foreach (var diagnostic in sections.Diagnostics.Where(d => d.Status is SectionStatus.Uncertain or SectionStatus.Unsupported))
             {
@@ -122,10 +124,14 @@ internal static class SectionDrawing
                     { owned.Add(curve); registered.Add((curve, entry.Tag)); }
                 }
             }
-            if (!settings.NativeOnly)
+            phase.Next("section output construction");
+            if (!settings.NativeOnly && registered.Any(r => PlanarExtraction.MayProduceKernelCandidates(r.Geometry,tol)))
             {
+                phase.Pause();
                 using var routed = new ViewDrawing { Frame = result.Frame, Tolerance = tol };
-                route = ComposedVisibility.Solve(registered.Select(r => new VisibilityInput(r.Geometry, r.Tag.Source, r.Tag.Far)).ToArray(), routed, view, settings, token);
+                route = ComposedVisibility.Solve(registered.Select(r => new VisibilityInput(r.Geometry, r.Tag.Source, r.Tag.Far)).ToArray(), routed, view, settings, token, scene.Bounds);
+                phase.Next("section output construction");
+                result.Phases.Include(routed.Phases);
                 result.KernelEdges = routed.KernelEdges; result.NativeEdges = routed.NativeEdges; result.NativeCalls = routed.NativeCalls;
                 result.CurvedCandidateEdges = routed.CurvedCandidateEdges; result.PlanarNativeEdges = routed.PlanarNativeEdges; result.NativeFragments = routed.NativeFragments;
                 result.HiddenPoints += routed.HiddenPoints; result.DuplicateSegments += routed.DuplicateSegments;
@@ -188,10 +194,13 @@ internal static class SectionDrawing
                 { invalid++; quarantine = true; result._diagnostics.Add($"Native rejected {entry.Tag.Source.Identity}"); }
             if (curvesAndBodies.Length != 0)
             {
-                NativeDrawing.CountHld();
+                NativeDrawing.CountHld(); result.NativeCalls++;
+                phase.Next("native solve");
                 using var drawing = HiddenLineDrawing.Compute(parameters, settings.MultipleThreads, NativeDrawing.NativeProgress, token);
+                phase.Next("section output construction");
                 if (drawing is null || !drawing.WorldToHiddenLine.TryGetInverse(out var inverse)) throw new InvalidOperationException("Route C HLD failed.");
                 var project = Transform.PlanarProjection(cut.Plane) * inverse;
+                var nativeParents = new HashSet<int>(); int nativeFragments = 0;
                 foreach (var segment in drawing.Segments)
                 {
                     token.ThrowIfCancellationRequested(); var visibility = segment.SegmentVisibility;
@@ -210,12 +219,14 @@ internal static class SectionDrawing
                         }
                         continue;
                     }
+                    if (visibility != HiddenLineDrawingSegment.Visibility.Projecting && segment.ParentCurve is { } parent) nativeParents.Add(parent.Index);
                     if (visibility == HiddenLineDrawingSegment.Visibility.Duplicate) { result.DuplicateSegments++; continue; }
                     if (visibility == HiddenLineDrawingSegment.Visibility.Projecting) { result.ProjectingSegments++; continue; }
                     if (segment.ParentCurve?.SourceObject?.Tag is not Candidate candidate || segment.CurveGeometry is not { } proxy)
                     { invalid++; quarantine = true; continue; }
                     if (visibility == HiddenLineDrawingSegment.Visibility.Hidden && view.Settings?.Hidden == false) continue;
                     if (candidate.Far && visibility != HiddenLineDrawingSegment.Visibility.Visible) continue;
+                    nativeFragments++;
                     using var depthCurve = proxy.DuplicateCurve(); depthCurve.Transform(inverse);
                     using var curve = proxy.DuplicateCurve(); curve.EnsurePrivateCopy();
                     if (!curve.Transform(project) || !curve.IsValid) throw new InvalidOperationException("Invalid Route C extraction.");
@@ -243,6 +254,7 @@ internal static class SectionDrawing
                         }
                     }
                 }
+                result.NativeEdges = result.CurvedCandidateEdges = nativeParents.Count; result.NativeFragments = nativeFragments;
             }
             foreach (var entry in registered.Where(p => p.Geometry is Point))
             {

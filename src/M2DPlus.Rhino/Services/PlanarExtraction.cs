@@ -15,22 +15,46 @@ public sealed class PlanarExtraction
     };
     public List<PlanarFace> Faces { get; } = [];
     public List<CandidateEdge> Edges { get; } = [];
+    public List<bool> Profiles { get; } = [];
     public List<string> Excluded { get; } = [];
     public int EligibleObjects { get; private set; }
     public int OtherObjects { get; private set; }
+
+#if !LICENSE_FREE
+    internal static bool MayProduceKernelCandidates(GeometryBase geometry, double tolerance) => geometry switch
+    {
+        Point => true,
+        Brep b => b.Faces.All(f => f.IsPlanar(tolerance)) && b.Edges.All(e => e.IsLinear(tolerance)),
+        Mesh m => !RequiresNativeMesh(m,tolerance),
+        Curve c => c.TryGetPolyline(out _) || c.IsLinear(tolerance),
+        _ => true // Unsupported wrappers are classified by extraction, never skipped.
+    };
+    private static bool RequiresNativeMesh(Mesh mesh, double tolerance)
+    {
+        if (Enumerable.Range(0,mesh.TopologyEdges.Count).Any(i => mesh.TopologyEdges.GetConnectedFaces(i).Length > 2)) return true;
+        foreach (var face in mesh.Faces.Where(f => !f.IsTriangle))
+        {
+            var quadPlane = new Plane(mesh.Vertices[face.A],mesh.Vertices[face.B],mesh.Vertices[face.C]);
+            if (!quadPlane.IsValid || Math.Abs(quadPlane.DistanceTo(mesh.Vertices[face.D])) > tolerance) return true;
+        }
+        if (!Enumerable.Range(0,mesh.TopologyEdges.Count).Any(i => mesh.TopologyEdges.GetConnectedFaces(i).Length == 2 && !mesh.TopologyEdges.IsEdgeUnwelded(i))) return false;
+        var vertices = mesh.Vertices.ToPoint3dArray();
+        return Plane.FitPlaneToPoints(vertices,out var plane) != PlaneFitResult.Success || vertices.Any(p => Math.Abs(plane.DistanceTo(p)) > tolerance);
+    }
+#endif
 
     public bool Add(GeometryBase geometry, Transform transform, Plane view, double tolerance, string source, CancellationToken token = default, bool nativeMeshCandidates = false, bool tangents = false)
     {
 #if LICENSE_FREE
         if (nativeMeshCandidates) throw new NotSupportedException("Production welded-mesh candidates require RhinoCommon; A2 retains its all-crease census.");
 #endif
-        var faces = new List<PlanarFace>(); var edges = new List<CandidateEdge>();
+        var faces = new List<PlanarFace>(); var edges = new List<CandidateEdge>(); var profiles = new List<bool>();
         Vertex Project(Point3d p)
         {
             p.Transform(transform); var d = p - view.Origin;
             return new(d * view.XAxis, d * view.YAxis, d * view.ZAxis);
         }
-        void Edge(Point3d a, Point3d b) => edges.Add(new(Project(a), Project(b), source));
+        void Edge(Point3d a, Point3d b, bool profile = false) { edges.Add(new(Project(a), Project(b), source)); profiles.Add(profile); }
         bool BrepShape(Brep b)
         {
             if (b.Faces.Any(f => !f.IsPlanar(tolerance)) || b.Edges.Any(e => !e.IsLinear(tolerance))) return false;
@@ -54,7 +78,13 @@ public sealed class PlanarExtraction
                 var adj = e.AdjacentFaces();
                 if (!tangents && adj.Length == 2 && b.Faces[adj[0]].TryGetPlane(out var p) && b.Faces[adj[1]].TryGetPlane(out var q)
                     && Vector3d.CrossProduct(p.Normal, q.Normal).Length <= 1e-12) continue;
-                Edge(e.PointAtStart, e.PointAtEnd);
+                double Facing(int index)
+                {
+                    var face = b.Faces[index]; face.TryGetPlane(out var support); support.Transform(transform);
+                    return (face.OrientationIsReversed ? -support.Normal : support.Normal) * view.ZAxis;
+                }
+                bool profile = adj.Length == 1 || adj.Length == 2 && (Facing(adj[0]) > 0) != (Facing(adj[1]) > 0);
+                Edge(e.PointAtStart, e.PointAtEnd, profile);
             }
             return true;
         }
@@ -69,6 +99,13 @@ public sealed class PlanarExtraction
                 using (var b = s.ToBrep()) ok = b is not null && BrepShape(b);
                 break;
             case Mesh original:
+#if !LICENSE_FREE
+                // Rhino HLD owns nonmanifold/nonplanar-quad candidates and interpolates
+                // smooth silhouettes on welded nonplanar meshes;
+                // topology-edge facing transitions are not equivalent candidate loci.
+                // Retain the complete mesh in native, including its occlusion.
+                if (nativeMeshCandidates && RequiresNativeMesh(original,tolerance)) { ok = false; break; }
+#endif
                 using (var mesh = original.DuplicateMesh())
                 {
                     mesh.Faces.ConvertQuadsToTriangles(); mesh.FaceNormals.ComputeFaceNormals();
@@ -95,7 +132,14 @@ public sealed class PlanarExtraction
                             }
 #endif
                         }
-                        var line = mesh.TopologyEdges.EdgeLine(i); Edge(line.From, line.To);
+                        bool profile = adj.Length == 1;
+                        if (adj.Length == 2)
+                        {
+                            var p = new Plane(Point3d.Origin, new Vector3d(mesh.FaceNormals[adj[0]])); p.Transform(transform);
+                            var q = new Plane(Point3d.Origin, new Vector3d(mesh.FaceNormals[adj[1]])); q.Transform(transform);
+                            profile |= (p.Normal * view.ZAxis > 0) != (q.Normal * view.ZAxis > 0);
+                        }
+                        var line = mesh.TopologyEdges.EdgeLine(i); Edge(line.From, line.To, profile);
                     }
                 }
                 ok = true; break;
@@ -106,7 +150,7 @@ public sealed class PlanarExtraction
             default: ok = false; break;
         }
         if (!ok) { Excluded.Add(source + ":" + geometry.GetType().Name); OtherObjects++; return false; }
-        Faces.AddRange(faces); Edges.AddRange(edges); EligibleObjects++; return true;
+        Faces.AddRange(faces); Edges.AddRange(edges); Profiles.AddRange(profiles); EligibleObjects++; return true;
     }
 
     /// <summary>Borrowed definition leaves and cumulative transforms; model must outlive enumeration.</summary>
