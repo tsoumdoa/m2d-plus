@@ -98,3 +98,11 @@ See [UX revision 4](design/ux.md) §2.2 and §6.
 
 - **Tie rule:** an edge lying exactly on another object's surface (depth gap ≤ tolerance, e.g. a flush panel joint, coincident blocks) is drawn **Visible**. Native HLD calls these Hidden; M2D+ deliberately differs and documents it as its tie convention.
 - **Correctness gate:** where the native reference is itself Unresolved/Unset, M2D+'s independent exact check is the judge. The gate stays strict everywhere else (0 unexplained, 0 bugs).
+
+## Ignoring objects seen only through small gaps (owner, 2026-11-15)
+
+- **Setting:** `min visible = <length>` in Settings, or `m2d.min_visible` on a view object. Default `0` (off). Normal precedence applies.
+- **Rule:** an object is *ignored* when it is partly hidden in the view and its longest continuous visible piece is shorter than the threshold, measured in 2D. Objects that are fully visible are never ignored, however small (the setting targets modelling gaps, not small details). Points, annotations and section cuts/hatches are never ignored.
+- **Output:** all visible lines of an ignored object move to a new, separate **Ignored** output (appended as output 10; the nine existing indices stay fixed), plus an `Ignored` bake layer. Nothing is deleted, and Info reports the count.
+- **Cost:** a presentation filter over the per-source classification. Changing the threshold never re-runs visibility. It does not speed up the solve; culling before the solve is a possible later experiment, behind its own correctness gate.
+- **Timing:** implement after the kernel-routing branch lands, since both touch the presentation code.
