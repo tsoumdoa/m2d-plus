@@ -6,6 +6,8 @@ section styles. It follows [REQUIREMENTS.md](../REQUIREMENTS.md).
 Visual mockup: [ux-mockup.html](ux-mockup.html).
 Addendum, 2026-11-15: `min visible` and the tenth output **Ignored** (owner decision in REQUIREMENTS, "Ignoring
 objects seen only through small gaps"; §3.9).
+Addendum, 2026-11-15: `tree = auto | layer | object` and the eleventh output **Key** (owner decision in REQUIREMENTS,
+"Output trees"; §1.2, §1.3).
 
 **The idea:** one component and five inputs, of which only **View** must be set. Plug in a view and you
 get a correct drawing. M2D+ works out everything else from the view source and the document: what
@@ -92,7 +94,7 @@ Near/Far/Cut, Crop (§2, §3.2); Scale (now the line-weight preset key `scale`, 
 Dock to/side/gap (§4); Fade on/start/end/min
 (now the Revit-style `fade.*` keys, §3.2); Show hidden (§3.8).
 
-### 1.2 Outputs (10)
+### 1.2 Outputs (11)
 
 | # | Name | Nick | Type | Contents |
 |---|---|---|---|---|
@@ -106,24 +108,77 @@ Dock to/side/gap (§4); Fade on/start/end/min
 | 7 | Frame | F | Rectangle | One placed drawing frame per view, at 1:1. It does not depend on the output's bounds (§3.3). For a Rectangle view it is that rectangle, placed (§4). |
 | 8 | Info | i | Text | One report per view: source, effective settings and where each came from, counts, styles, unresolved and unsupported objects, timing (§5.4). |
 | 9 | Ignored | Ig | Curve | **Appended 2026-11-15.** Lines of objects seen only through small gaps: partly hidden objects whose longest continuous visible piece is shorter than `min visible` (§3.9). They are moved out of Visible, Beyond and Far clip, never deleted. Empty while `min visible` is off (the default). |
+| 10 | Key | K | Text | **Appended 2026-11-15.** One label per output group, at the same `{view; group}` path the group's lines use (§1.3): the layer's full path (`Walls::Exterior`) by layer; the object id, then its name if it has one (`3f2a…c9 Column A`), for a referenced object by object; the input path and item (`{0;0} 3`) for Grasshopper geometry by object. Only groups that hold something in that view are listed. |
 
 Outputs are only ever appended, so saved definitions keep their wires: a definition saved with the nine outputs before
-Ignored loads with the nine unchanged (same indices and ids) and an empty Ignored added at index 9.
+Ignored, or with the ten before Key, loads with those unchanged (same indices and ids, so their wires reconnect) and
+the missing outputs added empty (Ignored at index 9, Key at index 10). The component GUID never changes.
 
 Line weights, fill colours and depth-cue fading are not outputs. The preview and Bake apply them (§3.6, §3.7). The
 curve outputs are plain, so they work with every downstream component. All geometry outputs are at 1:1 in model units.
 
 ### 1.3 Output trees
 
-- **Path = `{view; source path}`**, always, even for one view. Going from 1 to 3 views never changes the
-  shape of the downstream tree.
-  - `view` is the index of the view in View's list. A tree wired to View is flattened in path order.
-  - `source path` is the Geometry input's branch path. Items are the drawn pieces of that branch, in
-    source item order. Document mode (Geometry empty) uses `{view; 0}`.
-- Right-click **Output tree ▸ Branch per object** adds the source item index: `{view; source path; item}`.
-  It is off by default, because 50k objects × 7 outputs would mean 350k branches.
-- Merged cut regions (`cuts = merge`) go to the lowest source path that took part.
-- Frame and Info have one item per view, at `{view}`.
+Owner decision, 2026-11-15 (REQUIREMENTS, "Output trees"). One setting, `tree = auto | layer | object` (default
+`auto`), says how the outputs split into **groups**. It is in the Settings input, on view objects as `m2d.tree`, and in
+the right-click menu as *Output tree ▸ Auto · By layer · By object*; normal precedence applies (§6).
+
+- **Every path starts with `view`**, the index of the view in View's list (a tree wired to View is flattened in path
+  order), even for one view. Going from 1 to 3 views never changes the shape of the downstream tree.
+- **Line outputs** (Visible, Hidden, Beyond, Far clip, Unresolved, Ignored) use **`{view; group}`**. All of them use
+  the same group paths, so a layer or object has the same path in every output, and in **Key**.
+- **Cut and Hatch** add one trailing level for the region: **`{view; group; region}`**. `region` counts that group's
+  regions from 0, so each region's loops (outer + holes) and its single Hatch item share one path (PLAN contract 5).
+  An open outline keeps its own region branch with a null hatch. A merged region (`cuts = merge`) goes to the lowest
+  group (in path order) whose sources took part.
+- **Frame and Info** stay one item per view, at `{view}`.
+- **Key** holds one label per group at `{view; group}` (§1.2).
+
+**`tree = layer`: `group = layerIndex`**, the Rhino layer-table index of each drawn piece's layer.
+
+- The index stays the same when layers are added, renamed or reordered (unlike a sorted position), so the paths of a
+  drawing don't move when the model grows. Paths are sparse: `{0;2}`, `{0;7}` and `{0;12}` is a normal tree.
+- **Block instances are split by their parts' own layers**, as Rhino's Make2D does. A frame inside a window block on
+  layer `Frames` goes to the `Frames` branch, whatever layer the instance itself is on; nested blocks resolve through
+  the instance path to the innermost object's layer. Rhino has no layer *By Parent* (only colour, linetype, print
+  colour/width, section style and material inherit), so a part on `Default` inside a block is drawn on `Default`,
+  exactly as Rhino shows it in BlockEdit and Properties.
+- Grasshopper geometry has no Rhino layer. With an explicit `tree = layer` it shares one reserved branch,
+  `{view; 2147483647}` (the largest path index, which no layer can use; GH paths can't be negative), labelled
+  `(no layer)` in Key. `auto` never puts Grasshopper geometry here.
+
+**`tree = object`: `group = <Geometry input branch path…>; item`.** One branch per input item, so the outputs keep
+the input tree's shape and relate 1:1 to what was wired in: input `{0;1}` item 3 draws to `{view; 0; 1; 3}`.
+
+- In **document mode** (Geometry empty) the input path is `{0}` and `item` numbers each **top-level** Rhino object in
+  the scene in order of object id, so a drawing of the same model always has the same order; adding or deleting
+  objects can renumber the ones after them (Key tells you which is which). A block instance is one object: all its
+  parts share its branch.
+- A **referenced** item (an object id, or a referenced Rhino object) is also one top-level object. A **layer name**
+  item (`Walls`, `Structure::*`) is one input item, so every object it selects shares that item's branch.
+
+**`tree = auto`** (the default) is **by layer** when Geometry is empty (document mode) or every Geometry item is a
+referenced Rhino object (ids, referenced objects, layer names), and **by object** as soon as one item is geometry made
+in Grasshopper, so mixed input falls back to by object. Info says which it chose and why:
+`Output tree: by layer (auto: document mode)`.
+
+Examples, for view 0 of a plan:
+
+```
+Document with Walls::Exterior (layer 2), Columns (5), and a window block whose parts are on Frames (7) and Glass (8):
+  tree = auto → by layer        Visible {0;2} {0;5} {0;7} {0;8}       Cut {0;2;0} {0;5;0} {0;5;1} {0;7;0} …
+                                Key {0;2} "Walls::Exterior"  {0;5} "Columns"  {0;7} "Frames"  {0;8} "Glass"
+Three GH boxes, input {0} items 0–1 and {1} item 0:
+  tree = auto → by object       Visible {0;0;0} {0;0;1} {0;1;0}        Cut {0;0;0;0} {0;0;1;0} {0;1;0;0}
+                                Key {0;0;0} "{0} 0"  {0;0;1} "{0} 1"  {0;1;0} "{1} 0"
+The same document, tree = object:
+                                Visible {0;0;0} … {0;0;3}               Key {0;0;3} "9b1e…07 W1" (the window, with its name)
+```
+
+- Grouping is **presentation only**. Layer and object values are read on the host when the scene is captured, and the
+  outputs are grouped from the cached solve: changing `tree` never re-runs visibility and makes no HLD call.
+- The old *Output tree ▸ Per source branch* (`tree = branch`, `{view; source path}`) is gone. Saved menu state, user
+  text or Settings text with `branch` reads as `auto`; `object` keeps meaning by object.
 - Geometry is **never matched item by item to View**. Every view sees the whole scene, so nothing that
   could hide something is ever left out.
 
@@ -717,7 +772,7 @@ fade.limit = 25 %
 | `gap` | `auto` · distance | `auto` (1/10 of mean frame width) | distance on the target | — (sheet placement) | text only |
 | `name` | text | auto (§8.1): the view object's name | — | View Name | view object (`m2d.name`), the object's Rhino name |
 | **Output and diagnosis** | | | | | |
-| `tree` | `branch` · `object` | `branch` | — | — | menu |
+| `tree` | `auto` · `layer` · `object` | `auto` (by layer for the document or referenced objects, else by object, §1.3) | — | — | view object (`m2d.tree`), menu |
 | `tolerance` | distance | document absolute tolerance | distance | — | text only |
 
 ---
@@ -755,7 +810,7 @@ Line weights ▸ From scale ✓ · From source layers                    weights
 Reset menu defaults
 ────────────────
 Preview ▸    View frames ✓ · Hidden ✓ · Beyond ✓ · Far clip ✓ · Hatch ✓ · Frame · Ignored
-Output tree ▸ Per source branch ✓ · Branch per object               tree = branch | object
+Output tree ▸ Auto ✓ · By layer · By object                          tree = auto | layer | object   (§1.3)
 ────────────────
 Copy info
 Copy settings as text

@@ -13,7 +13,9 @@ public enum FarClipMode { None, Line, NoLine }
 public enum CropMode { Auto, Off }
 public enum GlassMode { Opaque, Clear }
 public enum WeightMode { Auto, Layers }
-public enum OutputTreeMode { Branch, Object }
+/// <summary>How outputs are split into branches (UX §1.3). Auto is by layer for document mode or an all-referenced
+/// Geometry input, else by object; see <see cref="Output.OutputTree.Effective"/>.</summary>
+public enum OutputTreeMode { Auto, Layer, Object }
 public enum ViewSourceKind { Rectangle, Plane, Box, ClippingPlane, NamedView, Vector, Direction }
 public enum DistanceMode { Auto, Off, Value }
 

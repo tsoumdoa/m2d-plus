@@ -39,7 +39,8 @@ public static class SettingsCatalog
         new("scale", "Scale", Placement, FieldKind.Scale, [O("1:20", "1:20"), O("1:50", "1:50"), O("1:100", "1:100"), O("1:200", "1:200"), O("1:500", "1:500")], "scale = 1:n. Line weights only (Revit's View Scale): the drawing stays 1:1."),
         new("gap", "Gap", Placement, FieldKind.Distance, [O("auto", "Auto")], "gap = auto | <distance>: space between drawings laid out on one Target. Auto: 1/10 of the mean frame width."),
         new("name", "Name", Placement, FieldKind.Text, [], "name = <text>: the drawing's bake layer name. Empty: from the view."),
-        new("tree", "Output tree", "Output", FieldKind.Choice, [O("branch", "Per source branch"), O("object", "Branch per object")], "tree = branch | object"),
+        new("tree", "Output tree", "Output", FieldKind.Choice, [O("auto", "Auto"), O("layer", "By layer"), O("object", "By object")],
+            "tree = auto | layer | object: how outputs split into branches. By layer: {view; layer index}. By object: {view; Geometry path; item}. Auto: by layer for the document or referenced objects, by object as soon as Geometry holds Grasshopper geometry. The Key output labels each branch."),
     ];
 
     public static FieldSpec Spec(string key) => Fields.First(f => f.Key == key);
@@ -53,7 +54,8 @@ public static class SettingsCatalog
         {
             case FieldKind.Toggle:
                 return lower is "on" or "true" or "yes" or "1" ? "on" : lower is "off" or "false" or "no" or "0" ? "off" : lower;
-            case FieldKind.Choice: return lower;
+            // tree = branch (the old "Per source branch" menu item, saved before 2026-11-15) now means auto.
+            case FieldKind.Choice: return key == "tree" && lower == "branch" ? "auto" : lower;
             case FieldKind.Scale: return ScaleDenominator(value) is double n ? "1:" + Number(n) : lower;
             case FieldKind.Percent: return Percent(value) is double p ? Number(p) + " %" : lower;
             case FieldKind.Distance: return lower is "auto" or "off" ? lower : value;

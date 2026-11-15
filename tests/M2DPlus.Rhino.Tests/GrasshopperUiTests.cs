@@ -47,9 +47,10 @@ public sealed class GrasshopperUiTests(RhinoHost host)
         Assert.Equal("DrawingAttributes", component.Attributes.GetType().Name);
         Assert.Equal("ViewParam", component.Params.Input[1].GetType().Name);
         Assert.IsAssignableFrom<Param_GenericObject>(component.Params.Input[1]);
-        Assert.Equal((5, 10), (component.Params.Input.Count, component.Params.Output.Count));
+        Assert.Equal((5, 11), (component.Params.Input.Count, component.Params.Output.Count));
         Assert.Equal(new Guid("c8d0f9fe-5498-45dd-8caf-10201b80d211"), component.ComponentGuid);
-        Assert.Equal(["V", "H", "B", "Fc", "C", "Ha", "?", "F", "i", "Ig"], component.Params.Output.Select(p => p.NickName));
+        Assert.Equal(["V", "H", "B", "Fc", "C", "Ha", "?", "F", "i", "Ig", "K"], component.Params.Output.Select(p => p.NickName));
+        Assert.Equal(GH_ParamAccess.tree, component.Params.Output[10].Access);
         Assert.Equal(["G", "V", "T", "S", "D"], component.Params.Input.Select(p => p.NickName));
         Assert.Equal(GH_ParamAccess.list, component.Params.Input[4].Access);
         Assert.True(component.Params.Input[4].Optional);
@@ -149,30 +150,52 @@ public sealed class GrasshopperUiTests(RhinoHost host)
             Assert.Equal("Depth", five.Params.Input[4].Name);
             Assert.Equal(0, five.Params.Input[4].SourceCount);
 
-            // A definition saved before the Ignored output existed (9 outputs) still reads: the nine keep their
-            // indices and instance ids (so downstream wires still find them), and Ignored is added empty at index 9.
-            var nineOutputs = new GH_Archive();
-            Guid[] oldOutputIds;
-            using (var old = new GH_Document())
+            // Definitions saved before the Ignored output (9 outputs) or before Key (10 outputs, with a wire from
+            // Ignored) still read: the old outputs keep their indices, instance ids and wires, and the missing ones are
+            // appended empty (Ignored at index 9, Key at index 10).
+            foreach (var savedCount in new[] { 9, 10 })
             {
-                var nine = NewComponent(old, 0, 0);
-                nine.Params.UnregisterOutputParameter(nine.Params.Output[9]);
-                Assert.Equal(9, nine.Params.Output.Count);
-                ((dynamic)nine.Params.Input[1]).SetTexts(new[] { "Front" }, "test");
-                oldOutputIds = nine.Params.Output.Select(p => p.InstanceGuid).ToArray();
-                Assert.True(nineOutputs.AppendObject(old, "Definition"));
+                var outputArchive = new GH_Archive();
+                Guid[] oldOutputIds;
+                Guid? ignoredRecipient = null;
+                using (var old = new GH_Document())
+                {
+                    var older = NewComponent(old, 0, 0);
+                    while (older.Params.Output.Count > savedCount) older.Params.UnregisterOutputParameter(older.Params.Output[^1]);
+                    Assert.Equal(savedCount, older.Params.Output.Count);
+                    ((dynamic)older.Params.Input[1]).SetTexts(new[] { "Front" }, "test");
+                    if (savedCount == 10)
+                    {
+                        var panel = new GH_Panel(); panel.CreateAttributes(); old.AddObject(panel, false);
+                        panel.AddSource(older.Params.Output[9]); ignoredRecipient = panel.InstanceGuid;
+                    }
+                    oldOutputIds = older.Params.Output.Select(p => p.InstanceGuid).ToArray();
+                    Assert.True(outputArchive.AppendObject(old, "Definition"));
+                }
+                var outputObjects = outputArchive.GetRootNode.FindChunk("Definition").FindChunk("DefinitionObjects");
+                var savedComponent = Enumerable.Range(0, outputObjects.GetInt32("ObjectCount")).Select(i => outputObjects.FindChunk("Object", i))
+                    .Single(o => o.GetGuid("GUID") == component.ComponentGuid);
+                using var upgradedOutputs = new GH_Document();
+                var current = NewComponent(upgradedOutputs, 0, 0);
+                Assert.True(current.Read(savedComponent.FindChunk("Container")));
+                Assert.Equal((5, 11), (current.Params.Input.Count, current.Params.Output.Count));
+                Assert.Equal(new Guid("c8d0f9fe-5498-45dd-8caf-10201b80d211"), current.ComponentGuid);
+                Assert.Equal(oldOutputIds, current.Params.Output.Take(savedCount).Select(p => p.InstanceGuid));
+                Assert.Equal(["Visible", "Hidden", "Beyond", "Far clip", "Cut", "Hatch", "Unresolved", "Frame", "Info", "Ignored", "Key"], current.Params.Output.Select(p => p.Name));
+                Assert.Empty(current.Params.Output[10].Recipients);
+                Assert.Equal(0, current.Params.Output[10].VolatileDataCount);
+                Assert.Equal(["Front"], ViewTexts(current));
+                if (savedCount == 10)
+                {
+                    // The saved wire from Ignored is stored on the panel as Ignored's instance id, which the upgraded
+                    // component kept at index 9, so the wire reconnects on load (and nothing is wired to Key).
+                    var panelChunk = Enumerable.Range(0, outputObjects.GetInt32("ObjectCount")).Select(i => outputObjects.FindChunk("Object", i))
+                        .Single(o => o.GetGuid("GUID") == new GH_Panel().ComponentGuid).FindChunk("Container");
+                    Assert.Equal(ignoredRecipient, panelChunk.GetGuid("InstanceGuid"));
+                    Assert.Equal(1, panelChunk.GetInt32("SourceCount"));
+                    Assert.Equal(current.Params.Output[9].InstanceGuid, panelChunk.GetGuid("Source", 0));
+                }
             }
-            var nineObjects = nineOutputs.GetRootNode.FindChunk("Definition").FindChunk("DefinitionObjects");
-            var nineSaved = Enumerable.Range(0, nineObjects.GetInt32("ObjectCount")).Select(i => nineObjects.FindChunk("Object", i))
-                .Single(o => o.GetGuid("GUID") == component.ComponentGuid);
-            using var upgradedOutputs = new GH_Document();
-            var ten = NewComponent(upgradedOutputs, 0, 0);
-            Assert.True(ten.Read(nineSaved.FindChunk("Container")));
-            Assert.Equal((5, 10), (ten.Params.Input.Count, ten.Params.Output.Count));
-            Assert.Equal(oldOutputIds, ten.Params.Output.Take(9).Select(p => p.InstanceGuid));
-            Assert.Equal(["Visible", "Hidden", "Beyond", "Far clip", "Cut", "Hatch", "Unresolved", "Frame", "Info", "Ignored"], ten.Params.Output.Select(p => p.Name));
-            Assert.Empty(ten.Params.Output[9].Recipients);
-            Assert.Equal(["Front"], ViewTexts(ten));
         }
         finally { File.Delete(path); }
     });

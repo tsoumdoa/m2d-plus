@@ -104,13 +104,15 @@ public sealed class GrasshopperTests(RhinoHost host)
         Assert.True(SceneCache.Shared.SceneHits > before);
         Assert.Equal(1, PreparedScene.TotalPreparations - preparations);
         Assert.True(first.Params.Output[0].VolatileDataCount > 0); Assert.True(second.Params.Output[0].VolatileDataCount > 0);
-        Assert.Equal(5, first.Params.Input.Count); Assert.Equal(10, first.Params.Output.Count);
+        Assert.Equal(5, first.Params.Input.Count); Assert.Equal(11, first.Params.Output.Count);
         var visible = (GH_Curve)first.Params.Output[0].VolatileData.AllData(true).First(g => g is GH_Curve);
         var secondCurve = (GH_Curve)second.Params.Output[0].VolatileData.AllData(true).First(g => g is GH_Curve);
         var original = secondCurve.Value.GetBoundingBox(true);
         visible.Value.Transform(Transform.Translation(100, 0, 0));
         Assert.Equal(original, secondCurve.Value.GetBoundingBox(true));
-        Assert.All(first.Params.Output[0].VolatileData.Paths, path => Assert.Equal(2, path.Length));
+        // One GH box: tree = auto is by object, {view; input path; item} = {view; 0; 0}.
+        Assert.All(first.Params.Output[0].VolatileData.Paths, path => Assert.Equal(new[] { path.Indices[0], 0, 0 }, path.Indices));
+        Assert.Equal(["{0} 0"], first.Params.Output[10].VolatileData.AllData(true).Cast<GH_String>().Select(s => s.Value).Distinct());
     });
     private static GH_Component Component(GH_Document document, Brep box)
     {

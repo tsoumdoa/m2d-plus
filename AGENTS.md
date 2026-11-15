@@ -53,7 +53,8 @@ the GHA and its two libraries.
 - Append new GH inputs **after existing ones** to preserve saved definitions. Current
   Geometry/G and Settings/S use tree access; View/V, Target/T and Depth/D (5th, appended
   in UX rev. 4) use list access. Only View is required. Append outputs the same way and keep
-  their indices fixed: ten outputs, Ignored/Ig (index 9, for `min visible`) appended after Info/i.
+  their indices fixed: eleven outputs, Ignored/Ig (index 9, for `min visible`) appended after Info/i, then
+  Key/K (index 10, one label per `tree` group, UX §1.3).
 
 ## Runtime and ownership contracts
 

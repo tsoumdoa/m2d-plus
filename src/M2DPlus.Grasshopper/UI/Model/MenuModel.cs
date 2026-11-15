@@ -97,7 +97,7 @@ public static class ComponentMenu
         items.Add(MenuNode.Separator);
         items.Add(new("Preview", Children: PreviewLayers.All
             .Select(l => new MenuNode(l.Label, MenuCommands.Preview + l.Name, Checked: state.Preview.Contains(l.Name))).ToImmutableArray()));
-        items.Add(Choice(settings, "Output tree", "tree"));
+        items.Add(Choice(settings, "Output tree", "tree") with { Tooltip = SettingsCatalog.Spec("tree").Tooltip });
         items.Add(MenuNode.Separator);
         items.Add(new("Copy info", MenuCommands.CopyInfo, context.HasInfo));
         items.Add(new("Copy settings as text", MenuCommands.CopySettings,

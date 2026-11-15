@@ -5,10 +5,11 @@ namespace M2DPlus.Grasshopper.UI.Model;
 public sealed record OutputSpec(int Index, string Name, string NickName, string Description);
 
 /// <summary>The component's outputs in their fixed order (UX §1.2). Saved definitions match outputs by index, so an
-/// output is only ever appended: Ignored was added as the 10th (index 9) and the first nine never move.</summary>
+/// output is only ever appended: Ignored was added as the 10th (index 9), Key as the 11th (index 10), and the first
+/// ones never move.</summary>
 public static class ComponentOutputs
 {
-    public const int Visible = 0, Hidden = 1, Beyond = 2, FarClip = 3, Cut = 4, Hatch = 5, Unresolved = 6, Frame = 7, Info = 8, Ignored = 9;
+    public const int Visible = 0, Hidden = 1, Beyond = 2, FarClip = 3, Cut = 4, Hatch = 5, Unresolved = 6, Frame = 7, Info = 8, Ignored = 9, Key = 10;
 
     public static ImmutableArray<OutputSpec> All { get; } =
     [
@@ -22,5 +23,6 @@ public static class ComponentOutputs
         new(Frame, "Frame", "F", "One placed drawing frame per view, at 1:1. It does not depend on the output's bounds. For a Rectangle view it is that rectangle, placed."),
         new(Info, "Info", "i", "One report per view: source, effective settings and where each came from, counts, styles, unresolved and unsupported objects, timing."),
         new(Ignored, "Ignored", "Ig", "Lines of objects seen only through small gaps: partly hidden objects whose longest continuous visible piece is shorter than min visible (Settings, or m2d.min_visible on a view object). They are moved out of Visible, Beyond and Far clip, never deleted. Empty while min visible is off (the default)."),
+        new(Key, "Key", "K", "One label per output branch, at the same {view; group} path as the lines, cuts and hatches of that group: the layer's full path (by layer), or the object's id and name, or the Geometry input path and item (by object). Set the grouping with tree = auto | layer | object."),
     ];
 }
