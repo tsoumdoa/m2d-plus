@@ -10,11 +10,7 @@ public sealed partial class DrawingComponent : GH_Component
     public DrawingComponent() : base("M2D+ Drawing", "M2D+",
         "Hidden-line plans, sections, elevations and axonometrics from your model and a view. Runs in the background. Reference a planar surface as View and right-click Validate views to get an editable view box; click Bake on the component to bake to tidy layers.",
         UI.Model.ComponentPlacement.Tab, UI.Model.ComponentPlacement.Panel)
-    {
-        Message = "Pick a view";
-        // The dark tile icon, not GH's tall nickname capsule (UX §1). An explicit Display ▸ Name is kept (see Read).
-        IconDisplayMode = GH_IconDisplayMode.icon;
-    }
+    { Message = "Pick a view"; }
 
     // Stable component GUID, generated once for M0. Never change; append future inputs only.
     public override Guid ComponentGuid => new("c8d0f9fe-5498-45dd-8caf-10201b80d211");

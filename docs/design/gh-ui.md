@@ -1,7 +1,7 @@
 # M3 Grasshopper UI layer
 
 Implements UX revision 4 §1 (custom attributes), §1.1 (the Depth input), §2.1–2.2 (View input menu and view
-objects), §5.2 (states and the message tab), §6 (precedence) and §7 (component menu) on top of the M3 Core API
+objects), §5.2 (states and the footer), §6 (precedence) and §7 (component menu) on top of the M3 Core API
 ([m3-core.md](m3-core.md)). Revision 3's View Range & Settings editor (PR #7) is **removed** (owner, 2026-11-14):
 global defaults are menu toggles, per-view values are `m2d.*` user text on view objects, and `Settings.Resolve`
 still decides everything.
@@ -10,9 +10,9 @@ still decides everything.
 
 | File | What it shows | Made by |
 |---|---|---|
-| [gh-ui/canvas.png](gh-ui/canvas.png) | The component with **five inputs** (G V T S **D**) in six states on GH's default skin: Done · **Bake**, Drawing 72 % · **Cancel** (determinate progress line), Reading · Cancel (indeterminate sweep), Paused · **Run**, Cancelled · Run, and No view (GH's required-input warning). Panels wired into S (`hidden = off`) and D (`8 m`). No S dot. | `GrasshopperUiTests.CanvasRender` (real GH canvas, `GenerateHiResImageTile`, 2×) |
+| [gh-ui/canvas.png](gh-ui/canvas.png) | The component with **five inputs** (G V T S **D**) in layout B (UX §1) in six states on GH's default skin: Done · **Bake**, Drawing 72 % · **Cancel** (determinate progress bar on the footer's top edge), Reading · Cancel (indeterminate sweep), Paused · **Run**, Cancelled · Run, and No view (GH's required-input warning). Panels wired into S (`hidden = off`) and D (`8 m`). No S dot. | `GrasshopperUiTests.CanvasRender` (real GH canvas, `GenerateHiResImageTile`, 2×) |
 | [gh-ui/canvas-dark.png](gh-ui/canvas-dark.png) | The same on a dark GH skin. | same test |
-| `artifacts/ui/after/component-{idle,running,remark,warning}-{100,200}.png` (local, not committed) | The compact look (UX §1, 2026-11-15): icon instead of the nickname capsule, inputs centred on the output rows, the message tab at 100 % and 200 % canvas zoom; a normal run with unresolved pieces stays grey (remark), only a must-act warning is orange. `artifacts/ui/before/` holds the same renders of the previous look. | `ComponentLookTests` (real GH canvas) |
+| `artifacts/ui/after/component-{done,running,remark,warning,paused}-{100,200}.png`, `component-display-{name,icon}-200.png` (local, not committed) | Layout B (UX §1, owner choice 2026-11-16): slim name strip, inputs on rows 1/3/5/7/9, full-width footer with a fixed-width button and the progress bar on its top edge, at 100 % and 200 %; a normal run with unresolved pieces stays grey (remark), only a must-act warning is orange; explicit Display ▸ Name / Icon on the same grid. `artifacts/ui/before/` holds the original look, `artifacts/ui/mockups-200.png` the A–D choice. | `ComponentLookTests` (real GH canvas; asserts the grid, margin, footer and button invariants) |
 | [gh-ui/menu.png](gh-ui/menu.png) | The component's right-click items after `hidden = off` and `farclip = line` from the menu; the view-object group on top (greyed: V references no Rhino objects in that test). | `GrasshopperUiTests.AttributesMenusUndoAndSavedGhRoundTrip` |
 | [gh-ui/view-menu.png](gh-ui/view-menu.png) | The View input's right-click items. | same test |
 | [gh-ui/view-box-preview.png](gh-ui/view-box-preview.png) | A validated view box's preview (frame, look arrow, dotted depth volume, name) over two boxes, unselected (subtle) and selected (cobalt). An **offscreen GDI axonometric** of the exact `ViewPreview` lines the component draws, not a Rhino viewport capture (headless Rhino has no viewports). | `ViewObjectTests.SettingsPrecedence…` |
@@ -41,7 +41,7 @@ dotnet test tests/M2DPlus.Rhino.Tests -c Debug --filter "FullyQualifiedName~Comp
 | `UI/ViewObjects.cs` | GH side of view objects: which Rhino objects V references (`IdOf`, `References`), Validate (refuses Surface/Curve **wires**, re-types references stored on V to Brep), Flip, Create (+ adds the reference), Select. Reports to the command line and the component. |
 | `UI/ViewParam.cs` | View input (`Param_GenericObject` subclass, GUID `a865210f-…`, hidden) with Pick views in Rhino…, the view-object commands and the text choices. |
 | `UI/DrawingUi.cs` | Controller: state, GH Write/Read, undo, menu execution, view-command notes, double-click selection, fallback context (object rows included). |
-| `UI/DrawingAttributes.cs` | Canvas: progress line, message tab with button, double-click → `SelectViewObjects`. No S dot. |
+| `UI/DrawingAttributes.cs` | Canvas, layout B: row grid and margin, GH's own parameter layout snapped to the grid, slim name strip (or GH's name / icon when chosen), full-width footer with status, fixed-width Bake / Cancel / Run button and progress bar; double-click → `SelectViewObjects`. No S dot. |
 | `UI/DrawingComponent.Preview.cs` | `DrawViewportWires`/`ClippingBox` for the view previews. |
 | `DrawingComponent*.cs` | Input 4 **Depth** (text list, optional), Settings resolution after capture, depth applied to the engine. |
 

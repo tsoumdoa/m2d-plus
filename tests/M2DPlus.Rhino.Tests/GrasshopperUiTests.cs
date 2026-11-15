@@ -222,7 +222,7 @@ public sealed class GrasshopperUiTests(RhinoHost host)
         for (var i = 0; i < states.Length; i++)
         {
             var (caption, message, phase, fraction) = states[i];
-            var x = 140 + i % 3 * 230f; var y = 90 + i / 3 * 270f;
+            var x = 140 + i % 3 * 240f; var y = 100 + i / 3 * 300f; // room for layout B (UX §1) and its caption
             var component = NewComponent(document, x, y);
             Assert.Equal(5, component.Params.Input.Count);
             dynamic ui = ((dynamic)component).Ui;
@@ -236,7 +236,7 @@ public sealed class GrasshopperUiTests(RhinoHost host)
             }
             var scribble = new GH_Scribble { Text = caption, Font = new Font("Segoe UI", 11, FontStyle.Bold) };
             scribble.CreateAttributes();
-            scribble.Attributes.Pivot = new PointF(x - 70, y - 115);
+            scribble.Attributes.Pivot = new PointF(x - 80, y - 150);
             document.AddObject(scribble, false);
             components.Add(component);
         }
@@ -244,8 +244,8 @@ public sealed class GrasshopperUiTests(RhinoHost host)
         {
             var panel = new GH_Panel { UserText = text };
             panel.CreateAttributes();
-            panel.Attributes.Bounds = new RectangleF(-40, y, 110, 22);
-            panel.Attributes.Pivot = new PointF(-40, y);
+            panel.Attributes.Bounds = new RectangleF(-110, y, 110, 22);
+            panel.Attributes.Pivot = new PointF(-110, y);
             document.AddObject(panel, false);
             return panel;
         }

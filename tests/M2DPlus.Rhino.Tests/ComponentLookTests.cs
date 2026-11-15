@@ -11,9 +11,13 @@ using Xunit;
 
 namespace M2DPlus.Rhino.Tests;
 
-/// <summary>Renders the M2D+ Drawing component with GH's own canvas (headless), in the idle, running, remark and warning
-/// states at 100 % and 200 % canvas zoom, beside stock GH parameters for scale. Set M2D_UI_SCREENSHOTS to a folder to
-/// write the PNGs (the owner reviews them, UX §1). The assertions check the compact layout.</summary>
+/// <summary>
+/// The component's look, layout B (owner choice 2026-11-16, UX §1), on the real <c>DrawingAttributes</c> with GH's own
+/// canvas (headless): one 20-unit row grid, one 4-unit margin, inputs on GH's even spacing snapped to the grid (labels
+/// share output rows), a slim name strip by default, and a full-width footer with the status left, a fixed-width button
+/// flush right (inset by the margin on every side) and the progress bar along the footer's top edge. Renders the done,
+/// running, remark and warning states at 100 % and 200 %; set M2D_UI_SCREENSHOTS to write the PNGs.
+/// </summary>
 [Collection("Rhino")]
 [Trait("Category", "RhinoIntegration")]
 public sealed class ComponentLookTests(RhinoHost host)
@@ -22,52 +26,96 @@ public sealed class ComponentLookTests(RhinoHost host)
     private static Assembly Gha => Assembly.LoadFrom(Path.Combine(AppContext.BaseDirectory, "M2DPlus.Grasshopper.gha"));
     private static Type UiType(string name) => Gha.GetType("M2DPlus.Grasshopper.UI." + name, true)!;
     private static string? ScreenshotFolder => Environment.GetEnvironmentVariable("M2D_UI_SCREENSHOTS");
+    private const float Row = 20, Margin = 4, Footer = 24, Strip = 14, NameColumn = 24;
 
     private sealed class Restore(Action action) : IDisposable { public void Dispose() => action(); }
 
     /// <summary>Level: 0 none, 1 remark (a normal run with unresolved pieces: stays calm), 2 warning (the user must act).</summary>
-    private static readonly (string File, string Message, string Phase, double? Fraction, int Level)[] States =
+    private static readonly (string File, string Message, string Phase, double? Fraction, int Level, string Button)[] States =
     [
-        ("idle", "5 drawings · 9.9 s", "Done", null, 0),
-        ("running", "Drawing 3/5", "Running", .72, 0),
-        ("remark", "5 drawings · 9.9 s", "Done", null, 1),
-        ("warning", "5 drawings · 9.9 s", "Done", null, 2),
+        ("done", "5 drawings · 9.9 s", "Done", null, 0, "Bake"),
+        ("running", "Drawing 3/5", "Running", .6, 0, "Cancel"),
+        ("remark", "5 drawings · 9.9 s", "Done", null, 1, "Bake"),
+        ("warning", "5 drawings · 9.9 s", "Done", null, 2, "Bake"),
+        ("paused", "Paused · out of date", "Paused", null, 0, "Run"),
     ];
 
-    [RhinoFact] public void ComponentStatesRenderCompactly() => host.Run(() =>
+    private static (GH_Document Document, GH_Component Component) Build(string phase, double? fraction)
+    {
+        var document = new GH_Document();
+        var component = (GH_Component)Activator.CreateInstance(Gha.GetType("M2DPlus.Grasshopper.DrawingComponent", true)!)!;
+        component.CreateAttributes();
+        component.Attributes.Pivot = new PointF(300, 200);
+        document.AddObject(component, false);
+        dynamic ui = ((dynamic)component).Ui;
+        var runtimeType = UiType("Model.DrawingRuntime");
+        var runtime = Activator.CreateInstance(runtimeType, Enum.Parse(UiType("Model.DrawingPhase"), phase), fraction)!;
+        ui.GetType().GetProperty("Runtime")!.SetValue(ui,
+            Expression.Lambda(typeof(Func<>).MakeGenericType(runtimeType), Expression.Constant(runtime, runtimeType)).Compile());
+        ui.Execute("autorun", false);
+        // Context: a geometry param and a panel wired in, a curve param wired out, as on the owner's canvas.
+        var geometry = new Param_Geometry { NickName = "Model" };
+        geometry.CreateAttributes(); geometry.Attributes.Pivot = new PointF(170, 140);
+        document.AddObject(geometry, false);
+        component.Params.Input[0].AddSource(geometry);
+        var views = new GH_Panel { UserText = "Section A" };
+        views.CreateAttributes(); views.Attributes.Bounds = new RectangleF(110, 175, 90, 20); views.Attributes.Pivot = new PointF(110, 175);
+        document.AddObject(views, false);
+        component.Params.Input[1].AddSource(views);
+        var curves = new Param_Curve { NickName = "Lines" };
+        curves.CreateAttributes();
+        document.AddObject(curves, false);
+        curves.AddSource(component.Params.Output[0]);
+        foreach (var o in document.Objects) { o.Attributes.ExpireLayout(); o.Attributes.PerformLayout(); }
+        curves.Attributes.Pivot = new PointF(component.Attributes.Bounds.Right + 90, 110);
+        curves.Attributes.ExpireLayout(); curves.Attributes.PerformLayout();
+        return (document, component);
+    }
+
+    private static RectangleF Get(GH_Component component, string property) =>
+        (RectangleF)component.Attributes.GetType().GetProperty(property)!.GetValue(component.Attributes)!;
+
+    /// <summary>The grid, margin, footer and button invariants of layout B, for any display mode.</summary>
+    private static void AssertLayout(GH_Component component, float centreWidth)
+    {
+        var body = component.Attributes.Bounds;
+        var footer = Get(component, "FooterBounds"); var button = Get(component, "ButtonBounds"); var centre = Get(component, "CentreBounds");
+        var outputs = component.Params.Output; var inputs = component.Params.Input;
+        // Rows: eleven outputs on a 20-unit grid; the body is the rows plus the footer.
+        Assert.Equal(11 * Row + Footer, body.Height, 3);
+        for (var i = 0; i < outputs.Count; i++) Assert.Equal(body.Top + (i + .5f) * Row, outputs[i].Attributes.OutputGrip.Y, 1);
+        // Inputs: GH's even spacing snapped to the grid, every label on an output row.
+        Assert.Equal([1, 3, 5, 7, 9], inputs.Select(p => (int)Math.Round((p.Attributes.InputGrip.Y - body.Top - Row / 2) / Row)));
+        foreach (var p in inputs) Assert.Contains(outputs, o => Math.Abs(o.Attributes.OutputGrip.Y - p.Attributes.InputGrip.Y) < .51f);
+        // One margin: labels end / start two margins from the centre column, which is inset one margin top and bottom.
+        Assert.Equal(centreWidth, centre.Width, 3);
+        Assert.Equal(body.Top + Margin, centre.Top, 3); Assert.Equal(footer.Top - Margin, centre.Bottom, 3);
+        foreach (var p in inputs) Assert.InRange(centre.Left - p.Attributes.Bounds.Right, 2 * Margin - 1, 2 * Margin + 1);
+        foreach (var p in outputs) Assert.InRange(p.Attributes.Bounds.Left - centre.Right, 2 * Margin - 1, 2 * Margin + 1);
+        Assert.Equal(body.Left, inputs.Min(p => p.Attributes.Bounds.Left), 1);
+        Assert.Equal(body.Right, outputs.Max(p => p.Attributes.Bounds.Right), 1);
+        // Footer: full width at the bottom; the button inset one margin on every side and footer-high less two margins.
+        Assert.Equal((body.Left, body.Width, body.Bottom, Footer), (footer.Left, footer.Width, footer.Bottom, footer.Height));
+        Assert.Equal(Footer - 2 * Margin, button.Height, 3);
+        Assert.Equal(footer.Top + Margin, button.Top, 3); Assert.Equal(footer.Bottom - Margin, button.Bottom, 3); Assert.Equal(footer.Right - Margin, button.Right, 3);
+    }
+
+    [RhinoFact] public void LayoutBHoldsItsGridInEveryStateAndDisplayMode() => host.Run(() =>
     {
         Assert.True(global::Rhino.PlugIns.PlugIn.LoadPlugIn(GrasshopperId));
         using var rhino = RhinoDoc.CreateHeadless(null);
         RhinoDoc.ActiveDoc = rhino;
         GH_Document.EnableSolutions = false;
         using var restore = new Restore(() => GH_Document.EnableSolutions = true);
-        foreach (var (file, message, phase, fraction, level) in States)
+        var buttons = new List<RectangleF>();
+        foreach (var (file, message, phase, fraction, level, label) in States)
         {
-            using var document = new GH_Document();
-            var component = (GH_Component)Activator.CreateInstance(Gha.GetType("M2DPlus.Grasshopper.DrawingComponent", true)!)!;
-            component.CreateAttributes();
-            component.Attributes.Pivot = new PointF(300, 200);
-            document.AddObject(component, false);
-            dynamic ui = ((dynamic)component).Ui;
-            var runtimeType = UiType("Model.DrawingRuntime");
-            var runtime = Activator.CreateInstance(runtimeType, Enum.Parse(UiType("Model.DrawingPhase"), phase), fraction)!;
-            ui.GetType().GetProperty("Runtime")!.SetValue(ui,
-                Expression.Lambda(typeof(Func<>).MakeGenericType(runtimeType), Expression.Constant(runtime, runtimeType)).Compile());
-            ui.Execute("autorun", false);
-            // Context: a geometry param and a panel wired in, a curve param wired out, as on the owner's canvas.
-            var geometry = new Param_Geometry { NickName = "Model" };
-            geometry.CreateAttributes(); geometry.Attributes.Pivot = new PointF(170, 170);
-            document.AddObject(geometry, false);
-            component.Params.Input[0].AddSource(geometry);
-            var views = new GH_Panel { UserText = "Section A" };
-            views.CreateAttributes(); views.Attributes.Bounds = new RectangleF(110, 205, 90, 20); views.Attributes.Pivot = new PointF(110, 205);
-            document.AddObject(views, false);
-            component.Params.Input[1].AddSource(views);
-            var curves = new Param_Curve { NickName = "Lines" };
-            curves.CreateAttributes(); curves.Attributes.Pivot = new PointF(470, 175);
-            document.AddObject(curves, false);
-            curves.AddSource(component.Params.Output[0]);
-            foreach (var o in document.Objects) { o.Attributes.ExpireLayout(); o.Attributes.PerformLayout(); }
+            var (document, component) = Build(phase, fraction);
+            using var owned = document;
+            Assert.Equal(("Params", "Util", GH_Exposure.quarternary), (component.Category, component.SubCategory, component.Exposure));
+            // Default: GH's "application" display, drawn as layout B's slim name strip (no icon).
+            Assert.Equal(GH_IconDisplayMode.application, component.IconDisplayMode);
+            AssertLayout(component, Strip);
             void Settle()
             {
                 component.ClearRuntimeMessages();
@@ -76,36 +124,57 @@ public sealed class ComponentLookTests(RhinoHost host)
                 if (level == 2) component.AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, "Section A: 2 objects not drawn (2 Mesh). They could hide other objects. See Info.");
             }
             foreach (var zoom in new[] { 1f, 2f })
-                Render(document, $"component-{file}-{(int)(zoom * 100)}.png", zoom, Settle);
-            // Compact: the body is no taller than GH needs for 11 outputs and no wider than a typical component; the
-            // dark tile icon, not the nickname capsule; the five inputs on the middle output rows.
-            Assert.Equal(GH_IconDisplayMode.icon, component.IconDisplayMode);
-            Assert.Equal(component.Params.Output[3].Attributes.Bounds.Y, component.Params.Input[0].Attributes.Bounds.Y);
-            Assert.Equal(component.Params.Output[7].Attributes.Bounds.Y, component.Params.Input[4].Attributes.Bounds.Y);
-            Assert.Equal(("Params", "Util", GH_Exposure.quarternary), (component.Category, component.SubCategory, component.Exposure));
-            var bounds = component.Attributes.Bounds;
-            Assert.True(bounds.Height <= 11 * 20 + 6, $"body height {bounds.Height}");
-            Assert.True(bounds.Width <= 150, $"body width {bounds.Width}");
+            {
+                using var image = Render(document, $"component-{file}-{(int)(zoom * 100)}.png", zoom, Settle, out var offset);
+                var last = component.Attributes.GetType().GetProperty("LastButton")!.GetValue(component.Attributes)!;
+                var shown = last.GetType().GetField("Item1")!.GetValue(last)!; var bounds = (RectangleF)last.GetType().GetField("Item2")!.GetValue(last)!;
+                Assert.Equal(label, shown.ToString());
+                Assert.Equal(Get(component, "ButtonBounds"), bounds);
+                buttons.Add(bounds);
+                // The progress bar runs along the footer's top edge: cobalt on its first canvas unit while running.
+                var footer = Get(component, "FooterBounds");
+                var pixel = image.GetPixel((int)((footer.Left + 12) * zoom + offset.X), (int)((footer.Top + .5f) * zoom + offset.Y));
+                if (phase == "Running") Assert.True(Bluish(pixel), $"progress pixel {pixel}");
+                else Assert.False(Bluish(pixel), $"no progress expected, pixel {pixel}");
+            }
+        }
+        // One button width in every state.
+        Assert.Single(buttons.Select(b => b.Width).Distinct());
+        // An explicit Display ▸ Name or Icon works the GH way, on the same grid.
+        foreach (var mode in new[] { GH_IconDisplayMode.name, GH_IconDisplayMode.icon })
+        {
+            var (document, component) = Build("Done", null);
+            using var owned = document;
+            component.IconDisplayMode = mode;
+            component.Attributes.ExpireLayout(); component.Attributes.PerformLayout();
+            AssertLayout(component, NameColumn);
+            using var image = Render(document, $"component-display-{mode}-200.png", 2, () => component.Message = "5 drawings · 9.9 s", out _);
         }
     });
 
-    private static void Render(GH_Document document, string file, float zoom, Action settle)
+    /// <summary>Cobalt, or cobalt anti-aliased into its neighbours at 100 %: clearly blue, unlike the grey body and dark footer.</summary>
+    private static bool Bluish(Color c) => c.B - c.R > 60 && c.B > c.G + 25;
+
+    /// <param name="offset">The viewport translation: canvas point p is at image pixel p × zoom + offset.</param>
+    private static Bitmap Render(GH_Document document, string file, float zoom, Action settle, out PointF offset)
     {
         using var canvas = new GH_Canvas();
         _ = canvas.Handle;
         canvas.Document = document;
         var bounds = document.Objects.Select(o => o.Attributes.Bounds).Aggregate(RectangleF.Union);
-        bounds = RectangleF.FromLTRB(bounds.Left - 24, bounds.Top - 34, bounds.Right + 24, bounds.Bottom + 40);
+        bounds = RectangleF.FromLTRB(bounds.Left - 24, bounds.Top - 34, bounds.Right + 24, bounds.Bottom + 24);
         var viewport = new GH_Viewport(canvas.Viewport)
         {
             Width = (int)(bounds.Width * zoom), Height = (int)(bounds.Height * zoom), Zoom = zoom,
             Tx = (int)(-bounds.X * zoom), Ty = (int)(-bounds.Y * zoom)
         };
+        offset = new PointF(viewport.Tx, viewport.Ty);
         canvas.GenerateHiResImageTile(viewport, GH_Skin.canvas_back).Dispose();
         settle();
-        using var image = canvas.GenerateHiResImageTile(viewport, GH_Skin.canvas_back);
+        var image = canvas.GenerateHiResImageTile(viewport, GH_Skin.canvas_back);
         Assert.True(image.Width > 50 && image.Height > 50);
         if (ScreenshotFolder is { } folder) { Directory.CreateDirectory(folder); image.Save(Path.Combine(folder, file), ImageFormat.Png); }
         canvas.Document = null;
+        return image;
     }
 }

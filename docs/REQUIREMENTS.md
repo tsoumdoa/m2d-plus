@@ -139,9 +139,10 @@ See [UX revision 4](design/ux.md) §2.2 and §6.
 
 - **Placement:** the component lives in **Params ▸ Util** (its own group, `quarternary`), beside Panel+ and HopperFormat.
   There is no M2D+ tab. The component GUID is unchanged, so saved definitions load.
-- **Look:** compact and calm. The dark tile icon replaces GH's tall nickname capsule (an explicit *Display ▸ Name* is
-  kept), the five inputs sit on the middle output rows as one block, and the message tab and Bake button use GH's
-  zoom-independent text metrics. See [UX](design/ux.md) §1.
+- **Look (layout B, owner's choice from rendered mockups, 2026-11-16):** no icon in the body; a slim name strip in the
+  centre; the five inputs at GH's even spacing snapped to the 20-unit row grid, so every label shares a row with an
+  output; a full-width footer with the status on the left, a fixed-width Bake / Cancel / Run button flush right (equal
+  inset) and the progress bar along its top edge; one 4-unit margin throughout. See [UX](design/ux.md) §1.
 - **Severity:** a warning (orange) means the user has to act: a quarantined view, objects not drawn that could hide
   others, a layer name that matches nothing, a tolerance too coarse for the scale, bad settings. Unresolved pieces in a
   normal run, harmless unsupported objects and the tolerance detail census are remarks. Unresolved output stays in `?`,
