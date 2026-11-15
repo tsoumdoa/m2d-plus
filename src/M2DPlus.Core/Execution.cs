@@ -49,7 +49,7 @@ public enum LineClass { Visible, Hidden, Unresolved, Beyond, FarClip, Cut, Hatch
 public sealed record QualityReport(
     string Route, int UncertainCount, int InvalidExtractionCount,
     IReadOnlyDictionary<string, int> UnsupportedByType, IReadOnlyList<string> Normalisation,
-    bool Quarantined, string ValidationDomain = "Native uncut parallel; analytic M1a fixtures only");
+    bool Quarantined, string ValidationDomain = "Native uncut parallel; analytic baseline properties only; general freeform visibility unknown; sections not evaluated (M2)");
 
 /// <summary>One native slot, process wide. A token cancels waiting/cooperative work, never releases a live call.</summary>
 public sealed class NativeScheduler

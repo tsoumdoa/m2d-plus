@@ -17,6 +17,34 @@ public sealed class GrasshopperTests(RhinoHost host)
     private sealed class CallbackProgress(Action<double> callback) : IProgress<double>
     { public void Report(double value) => callback(value); }
     private sealed class Cleanup(Action action) : IDisposable { public void Dispose() => action(); }
+    [RhinoFact] public void ModelObjectsReferencedGooPrimitivesAndModelViewsReachTheActualComponent() => host.Run(() =>
+    {
+        Assert.True(global::Rhino.PlugIns.PlugIn.LoadPlugIn(new Guid("b45a29b1-4343-4035-989e-044e8580d9cf")));
+        using var rhinoDocument = RhinoDoc.CreateHeadless(null); RhinoDoc.ActiveDoc = rhinoDocument;
+        using var document = new GH_Document { Enabled = true };
+        using var box = Brep.CreateFromBox(new BoundingBox(Point3d.Origin, new Point3d(2, 2, 2)));
+        var id = rhinoDocument.Objects.AddBrep(box);
+        var component = Component(document, box);
+        using var cleanup = new Cleanup(() => { component.RemovedFromDocument(document); SceneCache.Shared.Clear(); });
+        var geometry = (Param_GenericObject)component.Params.Input[0]; geometry.PersistentData.Clear();
+        geometry.PersistentData.Append(new global::Grasshopper.Rhinoceros.Model.ModelObject(rhinoDocument.Objects.FindId(id)));
+        var referenced = new GH_Brep(); referenced.ReferenceID = id; geometry.PersistentData.Append(referenced);
+        using var inlineBox = Brep.CreateFromBox(new BoundingBox(new Point3d(4, 0, 0), new Point3d(5, 1, 1)));
+        geometry.PersistentData.Append(new global::Grasshopper.Rhinoceros.Model.ModelObject(rhinoDocument, new global::Rhino.DocObjects.ObjectAttributes(), inlineBox));
+        geometry.PersistentData.Append(new GH_Box(new Box(new BoundingBox(new Point3d(6, 0, 0), new Point3d(7, 1, 1)))));
+        geometry.PersistentData.Append(new GH_ObjectWrapper(new Sphere(new Point3d(9, 0, 0), .5)));
+        using var viewport = new global::Rhino.DocObjects.ViewportInfo(); viewport.IsParallelProjection = true;
+        viewport.SetCameraLocation(new Point3d(5, 0, 20)); viewport.SetCameraDirection(-Vector3d.ZAxis); viewport.SetCameraUp(Vector3d.YAxis);
+        viewport.SetFrustum(-20, 20, -20, 20, .1, 100);
+        var views = (Param_GenericObject)component.Params.Input[1]; views.PersistentData.Clear();
+        views.PersistentData.Append(new global::Grasshopper.Rhinoceros.Display.ModelView(viewport));
+        document.NewSolution(true, GH_SolutionMode.Silent);
+        PumpUntil(() => component.Params.Output[8].VolatileDataCount == 1, () => component.Message,
+            () => { if (document.ScheduleDelay >= 0) document.NewSolution(false, GH_SolutionMode.Silent); });
+        var info = ((GH_String)Assert.Single(component.Params.Output[8].VolatileData.AllData(true))).Value;
+        Assert.DoesNotContain("quarantined=True", info); Assert.DoesNotContain("ModelObject=", info);
+        Assert.Contains("5 sources", info); Assert.True(component.Params.Output[0].VolatileDataCount > 10, info);
+    });
     [RhinoFact] public void ChangedInputsCancelImmediatelyAndOnlyLatestViewPublishes() => host.Run(() =>
     {
         Assert.True(global::Rhino.PlugIns.PlugIn.LoadPlugIn(new Guid("b45a29b1-4343-4035-989e-044e8580d9cf")));

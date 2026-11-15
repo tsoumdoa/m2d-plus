@@ -32,7 +32,19 @@ public sealed partial class DrawingComponent
     private sealed record Completion(RequestIdentity Identity, long Epoch, long DocumentGeneration, DrawingBatch? Batch, string? Error);
     private Completion? _completion;
 
-    private static object? Value(IGH_Goo? goo) => goo?.ScriptVariable();
+    // Model Object/View values are host-only GH adapters; compute never sees a GH wrapper.
+    internal static object? Value(IGH_Goo? goo)
+    {
+        var value = goo?.ScriptVariable();
+        if (value is global::Grasshopper.Rhinoceros.Model.ModelObject model)
+        {
+            GeometryBase geometry = null!;
+            if (model.Id is { } id && RhinoDoc.ActiveDoc?.Objects.FindId(id) is not null) return id;
+            if (model.CastTo(out geometry)) return geometry;
+        }
+        if (value is global::Grasshopper.Rhinoceros.Display.ModelView view) return view.ToViewportInfo();
+        return value;
+    }
     private void SolveDrawing(IGH_DataAccess da)
     {
         if (_drawing is not null) { Emit(da, _drawing); return; }
@@ -47,7 +59,7 @@ public sealed partial class DrawingComponent
         {
             DetachWatch(); _watch = new(document); _watch.Changed += DocumentChanged;
         }
-        _views = inputViews.Select(v => ViewRequest.Parse(Value(v))).ToArray();
+        _views = inputViews.Select(v => ViewRequest.Parse(Value(v), document)).ToArray();
         da.GetDataTree(0, out GH_Structure<IGH_Goo> geometry);
         _inputs = null;
         if (geometry is not null && geometry.DataCount > 0)
@@ -73,7 +85,7 @@ public sealed partial class DrawingComponent
                 if (assignment.View != "*") { _settingsWarnings.Add("Per-view settings are not in this build yet."); continue; }
                 if (assignment.Key == "multiplethreads" && bool.TryParse(assignment.Value, out var enabled)) _settings = new(enabled);
                 else if (assignment.Key == "multiplethreads" && assignment.Value is "on" or "off") _settings = new(assignment.Value == "on");
-                else _settingsWarnings.Add($"Setting '{assignment.Key} = {assignment.Value}' is not supported in M1a; default retained.");
+                else _settingsWarnings.Add($"Setting '{assignment.Key} = {assignment.Value}' is not supported in M1b; default retained.");
             }
         }
         catch (FormatException ex) { _settingsWarnings.Add(ex.Message); }
@@ -125,7 +137,7 @@ public sealed partial class DrawingComponent
             var scene = _capture.Accept();
             _captureInfo = $"Capture: initial enumeration {_capture.InitialEnumerationMilliseconds:F2} ms; maximum slice {_capture.MaximumSliceMilliseconds:F2} ms (12 ms target; individual copies may overrun).";
             _capture.Dispose(); _capture = null; _inputs = null;
-            var request = _requests.Begin(scene.Value.Revision, string.Join("|", _views.Select(v => v.ToString())), _settings.ToString());
+            var request = _requests.Begin(scene.Value.Revision, string.Join("|", _views.Select(v => v.Revision)), _settings.ToString());
             var epoch = _epoch; var documentGeneration = _watch.Generation;
             lock (_progressSync) _progress = new(JobPhase.Queued, 0, _views.Length);
             _timer!.Interval = 100;

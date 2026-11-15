@@ -12,9 +12,16 @@ public sealed class DrawingPiece : IDisposable
     private readonly int[] _path;
     public string SourceIdentity { get; }
     public int[] SourcePath => (int[])_path.Clone();
+    internal ReadOnlySpan<int> Path => _path;
     public LineClass Class { get; internal set; }
+    internal string GeometricKey { get; }
     internal DrawingPiece(GeometryBase geometry, PreparedLeaf source, LineClass classification)
-    { _geometry = geometry; SourceIdentity = source.Identity; _path = (int[])source.Path.Clone(); Class = classification; }
+    {
+        _geometry = geometry; SourceIdentity = source.Identity; _path = (int[])source.Path.Clone(); Class = classification;
+        var bounds = geometry.GetBoundingBox(true);
+        GeometricKey = FormattableString.Invariant($"{bounds.Min.X:R},{bounds.Min.Y:R},{bounds.Min.Z:R},{bounds.Max.X:R},{bounds.Max.Y:R},{bounds.Max.Z:R}/") +
+            GeometryFingerprint.Compute(geometry);
+    }
     public GeometryBase CopyGeometry()
     {
         var copy = _geometry.Duplicate();
@@ -43,7 +50,7 @@ public sealed class ViewDrawing : IDisposable
         $"invalid extraction={Report.InvalidExtractionCount}; duplicate={DuplicateSegments}; projecting={ProjectingSegments}; quarantined={Report.Quarantined}\n" +
         $"Unsupported: {string.Join(", ", Report.UnsupportedByType.Select(p => $"{p.Key}={p.Value}"))}\n" +
         string.Join("; ", Report.Normalisation.Concat(Diagnostics)) +
-        "\nM1a: Beyond, Far clip, Cut and Hatch are empty; Target placement is not in this build yet.";
+        "\nM1b: Beyond, Far clip, Cut and Hatch are empty; Target placement is not in this build yet.";
     internal bool MultipleThreads;
     internal double Tolerance;
     public void Dispose() { foreach (var item in Pieces) item.Dispose(); Pieces.Clear(); }
@@ -70,11 +77,10 @@ public static class NativeDrawing
         {
             var scene = sceneLease.Value;
             views = views.ToArray();
-            // M1a is deliberately a small-scene in-process route. No worker capable of drawing is shipped yet.
-            if (scene.SourceCount > 512 || views.Count > 16)
-                throw new InvalidOperationException("Worker unavailable: M1a admits at most 512 sources and 16 views in process.");
+            if (!scene.Cost.Admitted(views.Count, NativeScheduler.Global.BudgetBytes))
+                throw new InvalidOperationException($"{SceneCost.Refusal} (estimate {scene.Cost.Estimate(views.Count):N0} bytes; {scene.Cost.BrepFaces} Brep faces; {scene.Cost.MeshTriangles} triangles; {views.Count} views).");
             progress?.Report(new(JobPhase.Queued, 0, views.Count));
-            return await NativeScheduler.Global.RunAsync(scene.EstimatedBytes, ct =>
+            return await NativeScheduler.Global.RunAsync(scene.Cost.Estimate(views.Count), ct =>
             {
                 var results = new List<ViewDrawing>();
                 try
@@ -104,6 +110,8 @@ public static class NativeDrawing
         {
             if (view.Error is not null) { result.Error = view.Error; return result; }
             result.Frame = view.Resolve(scene.Bounds, scene.Tolerance);
+            result._diagnostics.Add($"Admission: {scene.Cost.GeometryBytes} geometry bytes; {scene.Cost.BrepFaces} faces; {scene.Cost.MeshTriangles} triangles; {scene.SourceCount} sources. Native multipleThreads={settings.MultipleThreads} (serial global scheduler).");
+            if (sources.Count == 0) return result;
             using var viewport = new ViewportInfo();
             var frame = result.Frame; var radius = scene.Bounds.IsValid ? Math.Max(scene.Bounds.Diagonal.Length, 1) : 1;
             viewport.IsParallelProjection = true;
@@ -142,11 +150,17 @@ public static class NativeDrawing
                 {
                     owned.EnsurePrivateCopy();
                     if (!owned.Transform(toPlane) || !owned.IsValid) throw new InvalidOperationException("Native curve extraction failed.");
-                    result.Pieces.Add(new(owned, source, visibility switch
+                    var classification = visibility switch
                     {
                         HiddenLineDrawingSegment.Visibility.Visible => LineClass.Visible,
                         HiddenLineDrawingSegment.Visibility.Hidden => LineClass.Hidden, _ => LineClass.Unresolved
-                    }));
+                    };
+                    if (view.Named is { Crop: true })
+                    {
+                        foreach (var clipped in Crop(owned, frame, scene.Tolerance)) result.Pieces.Add(new(clipped, source, classification));
+                        owned.Dispose();
+                    }
+                    else result.Pieces.Add(new(owned, source, classification));
                 }
                 catch { owned.Dispose(); throw; }
             }
@@ -159,6 +173,7 @@ public static class NativeDrawing
                 if (point.PointVisibility != HiddenLineDrawingPoint.Visibility.Visible)
                 { invalid++; result._diagnostics.Add("Uncertain native point"); continue; }
                 var location = point.Location; location.Transform(toPlane);
+                if (view.Named is { Crop: true } && !Inside(location, frame, scene.Tolerance)) continue;
                 result.Pieces.Add(new(new Point(location), source, LineClass.Visible));
             }
         }
@@ -167,11 +182,58 @@ public static class NativeDrawing
         finally
         {
             quarantine |= invalid != 0;
-            if (quarantine) { foreach (var piece in result.Pieces) piece.Class = LineClass.Unresolved; }
+            if (quarantine)
+            {
+                foreach (var piece in result.Pieces.ToArray())
+                {
+                    using var geometry = piece.CopyGeometry();
+                    if (geometry is Point) { result.Pieces.Remove(piece); piece.Dispose(); result._diagnostics.Add($"Uncertain point suppressed: {piece.SourceIdentity}"); }
+                    else piece.Class = LineClass.Unresolved;
+                }
+            }
+            result.Pieces.Sort(ComparePieces);
             result.Report = new("Native HLD (in process)", result.Pieces.Count(p => p.Class == LineClass.Unresolved), invalid,
                 scene.Unsupported, scene.Conversions, quarantine);
             result.Seconds = timer.Elapsed.TotalSeconds;
         }
         return result;
+    }
+
+    private static int ComparePieces(DrawingPiece a, DrawingPiece b)
+    {
+        var x = a.Path; var y = b.Path;
+        for (var i = 0; i < Math.Min(x.Length, y.Length); i++) { var c = x[i].CompareTo(y[i]); if (c != 0) return c; }
+        var result = x.Length.CompareTo(y.Length);
+        if (result == 0) result = StringComparer.Ordinal.Compare(a.SourceIdentity, b.SourceIdentity);
+        if (result == 0) result = StringComparer.Ordinal.Compare(a.GeometricKey, b.GeometricKey);
+        if (result == 0) result = a.Class.CompareTo(b.Class);
+        return result;
+    }
+    private static bool Inside(Point3d p, Rectangle3d frame, double tolerance)
+    {
+        frame.Plane.ClosestParameter(p, out var x, out var y);
+        return x >= frame.X.Min - tolerance && x <= frame.X.Max + tolerance && y >= frame.Y.Min - tolerance && y <= frame.Y.Max + tolerance;
+    }
+    private static IEnumerable<Curve> Crop(Curve curve, Rectangle3d frame, double tolerance)
+    {
+        var parameters = new List<double> { curve.Domain.Min, curve.Domain.Max };
+        var sides = new[] { new Plane(frame.Corner(0), frame.Plane.XAxis), new Plane(frame.Corner(2), frame.Plane.XAxis),
+            new Plane(frame.Corner(0), frame.Plane.YAxis), new Plane(frame.Corner(2), frame.Plane.YAxis) };
+        foreach (var side in sides)
+        {
+            var intersections = global::Rhino.Geometry.Intersect.Intersection.CurvePlane(curve, side, tolerance);
+            if (intersections is null) continue;
+            foreach (var hit in intersections)
+            { if (hit.IsOverlap) { parameters.Add(hit.OverlapA.Min); parameters.Add(hit.OverlapA.Max); } else parameters.Add(hit.ParameterA); }
+        }
+        var sorted = parameters.Distinct().Order().ToArray();
+        for (var i = 1; i < sorted.Length; i++)
+        {
+            var interval = new Interval(sorted[i - 1], sorted[i]);
+            if (!Inside(curve.PointAt(interval.Mid), frame, tolerance)) continue;
+            var trimmed = curve.Trim(interval);
+            if (trimmed is null) throw new InvalidOperationException("Named-view crop failed; output suppressed.");
+            yield return trimmed;
+        }
     }
 }
