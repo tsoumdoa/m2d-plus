@@ -54,6 +54,8 @@ def worker(args):
             raise RuntimeError('File3dm.Read returned null')
         base['readSeconds'] = time.perf_counter() - t
         adapter = importlib.import_module(args.engine)
+        if hasattr(adapter, 'dependency_hashes'):
+            base['adapterHashes'] = adapter.dependency_hashes()
         result, svg = adapter.run(model, sidecar, descriptor, args.threads == 'on', phase)
         out.with_suffix('.svg').write_text(svg, encoding='utf-8')
         base.update(result)
@@ -143,6 +145,9 @@ def main():
                     modules = ['common.py', 'owned_job.py', 'run.py', args.engine.replace('.', '/') + '.py']
                     code_matches = all(existing.get('harnessHashes', {}).get(n) == digest(Path(__file__).parent / n)
                                        for n in modules if (Path(__file__).parent / n).exists())
+                    adapter = importlib.import_module(args.engine)
+                    if hasattr(adapter, 'dependency_hashes'):
+                        code_matches = code_matches and existing.get('adapterHashes') == adapter.dependency_hashes()
                     caps_match = watch.get('limits') == {'wallSeconds': wall, 'privateGiB': args.memory}
                     if code_matches and caps_match and existing.get('fixtureSha256') == meta['sha256'] and existing.get('sidecarSha256') == digest(side_path) and (existing.get('phase') == 'complete' or watch['status'] in ('wall_timeout', 'private_memory_limit')):
                         print('resume', name, flush=True); continue
@@ -150,7 +155,14 @@ def main():
                            '--view', v['name'], '--threads', threads, '--result', str(target), '--engine', args.engine,
                            '--admission', str(admission_path), '--coordination-note', args.coordination_note]
                 # A failed fresh attempt cannot reuse an older drawing or status.
-                for old in (target, target.with_suffix('.svg'), watch_path, admission_path):
+                # Adapter checkpoints must not survive a fresh, possibly capped attempt.
+                suffixes = ('.json', '.svg', '.png', '.watch.json', '.admission.json',
+                            '.native.json', '.native-loci.json', '.native.svg', '.m2d.json',
+                            '.m2d-loci.json', '.planar-loci.json', '.engine-phase.json',
+                            '.engine-phase.json.tmp', '.agreement.json', '.audit.json',
+                            '.native-metamorphic.json', '.m2d-metamorphic.json',
+                            '.analytic-rays.json', '.profile.svg', '.profile.png')
+                for old in (target.with_suffix(suffix) for suffix in suffixes):
                     old.unlink(missing_ok=True)
                 print('start', name, flush=True)
                 watch = run(command, target.with_suffix('.log'), wall, args.memory,

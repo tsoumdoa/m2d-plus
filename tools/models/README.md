@@ -12,6 +12,70 @@ capture script uses only its newly launched process's document. The suite never
 attaches to an existing interactive process, installs a plug-in, or terminates a
 process by name. No binaries go into GH Libraries.
 
+## Non-world-aligned view cases (5–8)
+
+`view_cases.py` adds 20 archives and 423 views: eight rotated S/M blocks models,
+four unrotated controls, six existing curved-scene extensions, a round tower and
+a planar control. Every view stores GH plane/rectangle/box values and a persisted
+M2D+ Extrusion view box. Radial directions cover 360° in 15° steps (12 diametral
+planes × both directions). Repeated-member station coverage is by distinct
+rail/profile family, not every repeated instance. Sidecars state this scope and
+all analytic/metamorphic expectations.
+
+Run manually using the Python environment below. Native processes share the
+same cross-worktree slot and release it between views. Default priority is Normal.
+Build before starting a batch; do not overwrite its loaded assemblies mid-run.
+
+```powershell
+# Rebuild source archives in a fresh clone, or reuse hash-verified prior archives.
+& $py -B -u tools/models/generate.py --tiers S,M --flavors blocks
+& $py -B -u tools/models/curved.py --only curved-steel,space-frame,diagrid-shell,curved-facade --tiers S,M --flavors blocks
+& $py -B -u tools/models/view_cases.py
+dotnet build M2DPlus.sln -c Release
+dotnet build tools/render/M2DPlus.Render.csproj -c Release -o artifacts/view-engine-v4-bin
+dotnet build tools/render/M2DPlus.Render.csproj -c Release -o artifacts/view-component-bin
+dotnet build tools/models/renderer/ModelRenderer.csproj -c Release
+& $py -B -u tools/models/run.py --models artifacts/view-models --out artifacts/baseline/view-cases --features --tiers S --engine view_engine --threads off --wall 600 --memory 8 --yield-seconds 5
+# Optional future targeted M reproduction only; the owner ended this matrix.
+# Do not resume the exhaustive M queue. Use --select and --views for a chosen case.
+& $py -B -u tools/models/run.py --models artifacts/view-models --out artifacts/baseline/view-repro --select view-curved-perf-M-blocks --views "Normal b00-f00-bay00-mullion-000002 station 1" --engine view_engine --threads off --wall 120 --memory 8 --yield-seconds 5
+& $py -B -u tools/models/view_aux.py component
+& $py -B -u tools/models/view_aux.py capture
+& $py -B tools/models/view_report.py --freeze --compare
+& $py -B tools/models/test_view_cases.py
+```
+
+While a long batch is running, `view_report.py --compare --follow` refreshes the
+local gallery/document after each 20 finished attempts and writes
+`completed-matrix.json` only after every requested view has completed or has a
+recorded terminal failure/cap. This report process starts no Rhino host.
+
+The adapter checkpoints raw native HLD before running the unchanged engine on
+main (route C with the stability certificate). It tests the persisted box through
+the component's view resolver and compares all four value representations. Six
+additional real GH component solves cover oblique, normal and opposed radial box
+inputs. The whole-scene planar kernel is run only when every source is eligible;
+the original orthogonal tiers include curved sources and are explicitly excluded.
+
+`view_audit.py` uses only managed Core code for canonical classed locus comparison;
+it starts no Rhino host. It separately measures missing ink and class swaps and
+integrates closed output polylines for independent profile checks. Native
+Duplicate/Unset presence does not prove the cause of a mismatch. Completed and
+capped rows retain their denominators; an incomplete metamorphic pair is never a
+pass. Reports include the method/tolerance and do not claim full curved-locus truth.
+`ViewCurveTessellation` handles failed Rhino tessellation with a positive-weight
+rational Bézier control-hull bound. Its unlicensed tests use an analytic circle,
+independent Bernstein evaluation, a tiny closed loop and a zero-extent point.
+The curve-locus union excludes zero-length spans; their diagnostic coordinates
+are retained. Original failed collector attempts are archived before a retry.
+
+Only JSON view definitions and expectations freeze under `tests/fixtures/view-cases/`,
+with manual-only manifest entries for all 20 models. All generated geometry remains
+under the gitignored `artifacts/view-models/`. The owner stopped this matrix;
+`owner-stop.json` records the decision and `skipped.json` lists every unrun view.
+`view_remaining.py` refuses to resume while that stop receipt exists. Shaded references are explicitly labeled CPU mesh
+fallbacks. Nothing runs in CI, the hook, packaging, or an owner's Rhino process.
+
 ## Curved/freeform extension
 
 `curved.py` adds six focused feature archives and S/M/L/XL curved buildings in
@@ -270,8 +334,8 @@ def run(model, sidecar, view, multiple_threads, emit_phase):
 
 Run it with `--engine module_name`. Initialization, limits, input hashing, result
 paths and reporting are shared. An M2D+ adapter can load GH headlessly and solve
-the registered component in its own document. M0 has no drawing engine, so this
-suite does not invent an M2D+ baseline. Independent analytic expectations belong
+the registered component in its own document. The original M0 baselines were
+native-only; `view_engine` now runs the engine on main. Independent analytic expectations belong
 in sidecars/validation, never in a second call to the engine being evaluated.
 
 `report.py` rebuilds `docs/research/test-models.md` and both offline HTML reports

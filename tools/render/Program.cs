@@ -35,6 +35,12 @@ internal static class Program
     {
         using var core = new RhinoCore(new[] { "/nosplash", "/notemplate" }, WindowStyle.NoWindow);
         var output = Path.GetFullPath(args[2], args[1]); Directory.CreateDirectory(output);
+        if (args[3] == "view-component")
+        {
+            Assembly.LoadFrom(@"C:\Program Files\Rhino 8\Plug-ins\Grasshopper\GH_IO.dll");
+            Assembly.LoadFrom(@"C:\Program Files\Rhino 8\Plug-ins\Grasshopper\Grasshopper.dll");
+            ViewCaseComponent.Run(args[4], args[5], args[6], output); return;
+        }
         if (args[3] == "fingerprints") { Benchmark(args.Skip(4), output); return; }
         IRenderEngine engine = args[3] switch { "m3" => new M3Engine(), "m2d" or "m2" => new M2DEngine(), "raw" => new RawHldEngine(), _ => throw new ArgumentException("Unknown engine adapter (m2d or raw)") };
         var cards = new StringBuilder(); var records = new List<object>();
@@ -131,7 +137,7 @@ internal static class Program
     private static string FileHash(string file)
     { using var stream = File.OpenRead(file); return Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(stream)); }
 
-    private static string Render(ViewDrawing view, string png)
+    internal static string Render(ViewDrawing view, string png)
     {
         var frame = view.Frame.IsValid ? view.Frame : new Rectangle3d(Plane.WorldXY, new Interval(-1, 1), new Interval(-1, 1));
         var width = Math.Max(frame.Width, 1e-6); var height = Math.Max(frame.Height, 1e-6);

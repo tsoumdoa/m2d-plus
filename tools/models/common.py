@@ -97,7 +97,7 @@ def expand(model, R):
                 raise ValueError('Cyclic/missing definition: ' + key)
             for oid in definitions[key].GetObjectIds():
                 yield from walk(objects[str(oid)], transform * geo.Xform, path + [name], seen | {key})
-        elif not isinstance(geo, G.ClippingPlaneSurface):
+        elif not isinstance(geo, G.ClippingPlaneSurface) and obj.Attributes.GetUserString('m2d.view') != '1':
             yield geo, transform, '/'.join(path + [name]), obj.Attributes
 
     for obj in model.Objects:
@@ -109,7 +109,7 @@ def stats(model, R):
     from collections import Counter
     G = R.Geometry
     top = [o for o in model.Objects if not o.Attributes.IsInstanceDefinitionObject
-           and not isinstance(o.Geometry, G.ClippingPlaneSurface)]
+           and not isinstance(o.Geometry, G.ClippingPlaneSurface) and o.Attributes.GetUserString('m2d.view') != '1']
     types = Counter(str(o.Geometry.GetType().Name) for o in top)
     expanded = Counter()
     faces = triangles = 0

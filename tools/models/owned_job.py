@@ -69,7 +69,7 @@ def run(command, log_path, seconds, gib, admission_path=None, admission_timeout=
         with open(log_path, 'w', encoding='utf-8') as log:
             process = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=log, stderr=subprocess.STDOUT,
                                        env=dict(os.environ, PYTHONDONTWRITEBYTECODE='1'),
-                                       creationflags=subprocess.CREATE_NO_WINDOW | 0x4)  # CREATE_SUSPENDED
+                                       creationflags=subprocess.CREATE_NO_WINDOW | subprocess.NORMAL_PRIORITY_CLASS | 0x4)  # CREATE_SUSPENDED
             if not k.AssignProcessToJobObject(job, W.HANDLE(int(process._handle))):
                 # Rhino has not initialized; this is only the process we just created.
                 process.kill(); process.wait()

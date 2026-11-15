@@ -126,6 +126,7 @@ public static class Renderer
 
         void Walk(File3dmObject obj, Transform transform, Color parent, HashSet<Guid> visited)
         {
+            if (obj.Attributes.GetUserString("m2d.view") == "1") return;
             var color = Resolve(obj.Attributes, parent);
             if (obj.Geometry is InstanceReferenceGeometry reference)
             {
@@ -162,7 +163,7 @@ public static class Renderer
             return JsonSerializer.Serialize(new { status = "ok", method = "offscreen CPU mesh renderer (fallback)", model = id,
                 paths = outputs, uniqueMeshes = assets.Sum(a => a.Meshes.Count), sceneLeaves = instances.Count,
                 notes = new[] { "1200x800, parallel projection, light background, depth-tested layer/object-colour shading",
-                    "Green dashed overlays show view-source frames; overlays do not clip the model",
+                      frames.Count == 0 ? "View-source overlays omitted for shaded geometry references" : "Green dashed overlays show view-source frames; overlays do not clip the model",
                     "Annotations use simplified screen labels; materials are shaded opaque", "Mesh reuse requires normalized Brep.IsDuplicate, never bounding boxes alone" } });
         }
         finally { foreach (var asset in assets) asset.Dispose(); }
@@ -177,6 +178,8 @@ public static class Renderer
     private static List<Frame> ReadFrames(JsonElement root)
     {
         var result = new List<Frame>();
+        // Drawing-set frames overwhelm a shaded geometry reference; individual renders show their own frame.
+        if (root.TryGetProperty("family", out var family) && family.GetString() == "view-cases") return result;
         foreach (var view in root.GetProperty("views").EnumerateArray())
         {
             if (!view.TryGetProperty("plane", out var p)) continue;

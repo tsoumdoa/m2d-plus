@@ -7,5 +7,7 @@
   <ItemGroup>
     <ProjectReference Include="../../src/M2DPlus.Rhino/M2DPlus.Rhino.csproj" />
     <PackageReference Include="RhinoCommon" Version="$(RhinoApiVersion)" ExcludeAssets="runtime" />
+    <PackageReference Include="Grasshopper" Version="$(RhinoApiVersion)" ExcludeAssets="runtime" />
+    <Reference Update="Grasshopper;GH_IO"><Private>false</Private></Reference>
   </ItemGroup>
 </Project>
