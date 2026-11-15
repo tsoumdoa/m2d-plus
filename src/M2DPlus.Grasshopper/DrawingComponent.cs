@@ -20,7 +20,7 @@ public sealed partial class DrawingComponent : GH_Component
     protected override void RegisterInputParams(GH_InputParamManager p)
     {
         p.AddGenericParameter("Geometry", "G", "Scene to draw, shared by every view. Leave empty to draw the visible Rhino model. Also accepts layer names such as Walls or Structure::*, and block instances (repeats are drawn once and reused).", GH_ParamAccess.tree);
-        p.AddGenericParameter("View", "V", "What to draw. A named view, clipping plane name or direction (Top, Front, SW…), a referenced clipping plane, a Plane, a Rectangle (its plane is the view plane and it crops; if it cuts the model you get a section), a Box (cut, crop and depth) or a Vector (look along it). A list gives one drawing per view.", GH_ParamAccess.list);
+        p.AddParameter(new UI.ViewParam(), "View", "V", "What to draw. A named view, clipping plane name or direction (Top, Front, SW…), a referenced clipping plane, a Plane, a Rectangle (its plane is the view plane and it crops; if it cuts the model you get a section), a Box (cut, crop and depth) or a Vector (look along it). A list gives one drawing per view.", GH_ParamAccess.list);
         p.AddPlaneParameter("Target", "T", "Optional plane per view. The view's own plane is moved onto it 1:1 (View[i] → Target[i]). One plane for several views lays them out in a row. Leave empty to show each drawing in place.", GH_ParamAccess.list);
         p.AddTextParameter("Settings", "S", "Optional key = value lines, for example depth = 8 m or farclip = line. They override the editor (double-click the component). One branch applies to all views; one branch per view, or [View name] headers, set views separately.", GH_ParamAccess.tree);
         p[0].Optional = true;
