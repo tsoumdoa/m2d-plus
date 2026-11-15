@@ -46,9 +46,9 @@ public sealed class DrawingCache : IDisposable
                 if (lease is null)
                 {
                     // The supplied scene lease stays alive throughout native work.
-                    // The solve always keeps hidden pieces; presentation drops them for hidden = off.
+// The solve always keeps hidden pieces; presentation drops them for hidden = off.
                     var solveViews = views.Select(v => v.Settings is { } s ? v with { Settings = s.ForVisibilitySolve() } : v).ToArray();
-                    var raw = await NativeDrawing.SolveBorrowedAsync(scene.Value, identity, solveViews, settings, token, progress).ConfigureAwait(false);
+                    var raw = await DrawingExecution.SolveBorrowedAsync(scene.Value, identity, solveViews, settings, token, progress).ConfigureAwait(false);
                     var owner = new LeaseEntry<DrawingBatch>(raw); lease = owner.Acquire();
                     lock (_sync)
                     {

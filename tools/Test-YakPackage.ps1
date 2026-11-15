@@ -14,6 +14,11 @@ $Package = (Resolve-Path -LiteralPath $Package).Path
 $expectedName = "m2d-plus-$Version-rh8_20-win.yak"
 if ([IO.Path]::GetFileName($Package) -cne $expectedName) { throw "Expected Windows/Rhino 8.20 archive name $expectedName" }
 $required = @('M2DPlus.Core.dll', 'M2DPlus.Grasshopper.gha', 'M2DPlus.Rhino.dll', 'LICENSE', 'README.md', 'icon.png', 'manifest.yml')
+foreach ($major in 8, 10) {
+    foreach ($name in 'M2DPlus.Worker.exe', 'M2DPlus.Worker.dll', 'M2DPlus.Worker.deps.json', 'M2DPlus.Worker.runtimeconfig.json', 'M2DPlus.Core.dll', 'M2DPlus.Rhino.dll') {
+        $required += "workers/net$major/$name"
+    }
+}
 $zip = [IO.Compression.ZipFile]::OpenRead($Package)
 try {
     $names = @($zip.Entries | ForEach-Object FullName)

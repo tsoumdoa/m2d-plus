@@ -37,9 +37,9 @@ the owner unless asked; they can drop a `.yak` onto Rhino and restart it.
 ```
 
 Packaging never publishes. `Publish-Yak.ps1` requires explicit release authorization;
-public versions are immutable. Dirty trial candidates cannot be published. Worker
-distribution is deferred until a matching-runtime worker actually exists; M0 Yak
-contains only the in-process skeleton and its two libraries.
+public versions are immutable. Dirty trial candidates cannot be published. The Yak
+ships the drawing worker for both runtimes (`workers/net8`, `workers/net10`) next to
+the GHA and its two libraries.
 
 ## Workflow and stable identity
 
@@ -66,9 +66,13 @@ M0 headless Rhino/GH load-and-solve checks passed on Rhino 8.36.26296.17001 unde
 Yak warns that assembly name `M2D+` differs from package name `m2d-plus`; both
 names are intentional and package inventory/restore-GUID validation still passes.
 
-The worker only emits an M0 identity (schema 0, no capabilities) and exits. See
-[S1a](docs/research/s1a-worker.md): Rhino 8.36 defaults to **.NET 10** here. Future
-workers must match actual host runtime/architecture and exact Rhino build/revision,
+Drawing sets (two or more views) and jobs too large for in-process run in a pool of
+persistent headless workers, one whole view per worker ([design](docs/design/drawing-workers.md)):
+named pipes, Job Object memory caps sized from machine RAM, hard cancel, crash and
+stale-reply isolation, results byte-identical to in-process. The codec must carry
+every `ViewDrawing`/`DrawingPiece` field; `WorkerCodecStateTests` enforces it. See
+[S1a](docs/research/s1a-worker.md): Rhino 8.36 defaults to **.NET 10** here. Workers
+must match actual host runtime/architecture and exact Rhino build/revision,
 RhinoCommon and engine fingerprints/schema before accepting scene data. A .NET 8
 worker is unavailable to a .NET 10 host under that contract. Don't silently change
 the owner's runtime or fall back to a heavy in-process solve.

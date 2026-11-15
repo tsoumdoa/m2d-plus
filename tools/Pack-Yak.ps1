@@ -74,6 +74,13 @@ $payload = @{
     'README.md' = Join-Path $repo 'packaging/README.md'
     'icon.png' = Join-Path $repo 'assets/icon.png'
 }
+# Framework-dependent apphosts are built for both supported host runtimes. Never roll across majors.
+foreach ($major in 8, 10) {
+    $worker = Join-Path $repo "src/M2DPlus.Worker/bin/Release/net$major.0-windows"
+    foreach ($name in 'M2DPlus.Worker.exe', 'M2DPlus.Worker.dll', 'M2DPlus.Worker.deps.json', 'M2DPlus.Worker.runtimeconfig.json', 'M2DPlus.Core.dll', 'M2DPlus.Rhino.dll') {
+        $payload["workers/net$major/$name"] = Join-Path $worker $name
+    }
+}
 foreach ($source in $payload.Values) {
     if (-not (Test-Path -LiteralPath $source -PathType Leaf) -or (Get-Item -LiteralPath $source).Length -eq 0) {
         throw "Missing or empty packaging input: $source"
@@ -85,7 +92,11 @@ foreach ($source in $payload.Values) {
 }
 if (Test-Path -LiteralPath $stage) { Remove-Item -LiteralPath $stage -Recurse -Force }
 New-Item -ItemType Directory -Path $stage -Force | Out-Null
-foreach ($name in $payload.Keys) { Copy-Item -LiteralPath $payload[$name] -Destination (Join-Path $stage $name) }
+foreach ($name in $payload.Keys) {
+    $target = Join-Path $stage $name
+    New-Item -ItemType Directory -Path (Split-Path $target -Parent) -Force | Out-Null
+    Copy-Item -LiteralPath $payload[$name] -Destination $target
+}
 $manifest.Replace('@VERSION@', $version) | Set-Content -LiteralPath (Join-Path $stage 'manifest.yml') -Encoding utf8
 if ($StageOnly) {
     Write-Output "Staged $version at $stage (Release build and tests passed; no Yak archive built)."
@@ -116,7 +127,7 @@ $files = foreach ($name in @($payload.Keys | Sort-Object)) {
     builtAtUtc = [DateTime]::UtcNow.ToString('o')
     platform = 'win'
     minimumRhino = '8.20'
-    runtime = 'net8.0-windows'
+    runtime = 'host net8.0/net10.0; matching workers net8.0/net10.0'
     package = $packages[0].Name
     sha256 = $hash
     validation = 'Release build, unit tests, archive inventory, assembly versions and staged payload hashes passed'

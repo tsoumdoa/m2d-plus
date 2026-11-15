@@ -56,6 +56,7 @@ public sealed class PreparedScene : IDisposable
     private static long _totalPreparations;
     public static long TotalPreparations => Interlocked.Read(ref _totalPreparations);
     private readonly List<SceneLeaf> _leaves;
+    internal IReadOnlyList<SceneLeaf> TransportLeaves => _leaves;
     private List<PreparedLeaf>? _prepared;
     /// <summary>Section validation verdicts, reused by every view of this scene and cleared with it.</summary>
     internal Sections.SectionVerdictCache SectionVerdicts { get; } = new();
