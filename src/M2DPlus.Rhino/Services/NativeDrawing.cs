@@ -8,6 +8,7 @@ namespace M2DPlus.Rhino.Services;
 
 public sealed record NativeSettings(bool MultipleThreads = false, bool NativeOnly = false)
 {
+    public NativeVerificationOptions Verification { get; init; } = new();
     // Correctness harnesses run in isolated, memory-capped processes. Product work
     // always retains the process-global scheduler and its admission budget.
     internal NativeScheduler Scheduler { get; init; } = NativeScheduler.Global;
@@ -318,6 +319,8 @@ public static class NativeDrawing
                 if (view.Named is { Crop: true } && !Inside(location, frame, tolerance)) continue;
                 result.Pieces.Add(new(new Point(location), source, LineClass.Visible, new Point(world)));
             }
+            phase.Next("native ray verification");
+            NativeVisibilityVerifier.Apply(sources.Select(s => new VisibilityInput(s.Geometry,s)).ToArray(), result, settings, token);
             }
         }
         catch (OperationCanceledException) { result.Dispose(); throw; }

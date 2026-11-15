@@ -9,12 +9,20 @@ var expected = VisibilityLoci.Create(input.Edges,reference,input.Tolerance);
 var actual = VisibilityLoci.Union(input.Actual,input.Tolerance);
 var missing = VisibilityLoci.Compare(expected,actual,input.Tolerance,input.Spacing);
 var extra = VisibilityLoci.Compare(actual,expected,input.Tolerance,input.Spacing);
+var points = new ExactVisibilityOracle.AllPairsPoints(input.Faces,input.Tolerance);
+var checks = input.Points?.Select(p =>
+{
+    var edge = input.Edges[p.Edge];
+    var pairs = points.Prepare(Math.Min(edge.A.X,edge.B.X),Math.Min(edge.A.Y,edge.B.Y),Math.Max(edge.A.X,edge.B.X),Math.Max(edge.A.Y,edge.B.Y));
+    return new { p.Edge, p.Parameter, check = points.OnEdge(edge,p.Parameter,pairs) };
+}).ToArray();
 var result = new { passed = missing.Missed == 0 && extra.Missed == 0,
     inputSha256 = Hash(args[0]), executableSha256 = Hash(typeof(AuditInput).Assembly.Location),
     coreSha256 = Hash(typeof(ExactVisibilityOracle).Assembly.Location), reference.FaceTests,
     completePairs = (long)input.Faces.Length * input.Edges.Count(e => e.A.X != e.B.X || e.A.Y != e.B.Y),
-    reference.Intervals, referenceLoci = expected, missing, extra };
+    reference.Intervals, referenceLoci = expected, missing, extra, checks, pointPairs = points.CompletePairs };
 File.WriteAllText(args[1],JsonSerializer.Serialize(result));
 Console.WriteLine($"{Path.GetFileName(args[0])}: missed {missing.Missed}/{extra.Missed}; pairs {reference.FaceTests}");
 return result.passed ? 0 : 1;
-internal sealed record AuditInput(PlanarFace[] Faces,CandidateEdge[] Edges,Locus[] Actual,double Tolerance,double Spacing);
+internal sealed record AuditInput(PlanarFace[] Faces,CandidateEdge[] Edges,Locus[] Actual,double Tolerance,double Spacing, AuditPoint[]? Points = null);
+internal sealed record AuditPoint(int Edge,double Parameter);

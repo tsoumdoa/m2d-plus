@@ -20,6 +20,7 @@ def completed_watch(case):
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--select',default='')
+    p.add_argument('--required-only',action='store_true',help='Owner branch gate: small fixtures and eight M views; exclude L and curved-S supplements')
     p.add_argument('--fresh-native',action='store_true')
     p.add_argument('--fresh-native-select',default='',help='Re-time selected views back to back; other native geometry may use the cache')
     p.add_argument('--publication',action='store_true')
@@ -47,6 +48,7 @@ def main():
     compiled=ROOT/'tools/hc-perf/bin/Release/net8.0-windows'
     producer={k:digest(compiled/v) for k,v in [('engineSha256','M2DPlus.Rhino.dll'),('coreSha256','M2DPlus.Core.dll'),('harnessSha256','M2DPlus.HcPerf.dll')]}
     for model,view in cases:
+        if a.required_only and (model.stem.startswith('perf-L-') or model.stem.startswith('curved-perf-')):continue
         stem=model.stem+'__'+view
         if a.select and not any(s in stem for s in a.select.split(',')):continue
         if not model.exists():raise FileNotFoundError(model)
