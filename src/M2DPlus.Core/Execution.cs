@@ -45,7 +45,9 @@ public sealed class RequestGate : IDisposable
 }
 
 // Append only: the M1 identities remain unchanged.
-public enum LineClass { Visible, Hidden, Unresolved, Beyond, FarClip, Cut, Hatch, Profile }
+/// <summary>Values are stable: append only. <see cref="Ignored"/> holds the drawn lines of objects the
+/// <c>min visible</c> rule ignores (seen only through small gaps); they keep nothing else.</summary>
+public enum LineClass { Visible, Hidden, Unresolved, Beyond, FarClip, Cut, Hatch, Profile, Ignored }
 public sealed record QualityReport(
     string Route, int UncertainCount, int InvalidExtractionCount,
     IReadOnlyDictionary<string, int> UnsupportedByType, IReadOnlyList<string> Normalisation,

@@ -18,7 +18,7 @@ public sealed class MenuTests
         var labels = Menu(ComponentUiState.Default, DrawingPhase.Running).Where(n => !n.IsSeparator).Select(n => n.Label).ToArray();
         Assert.Equal(["Validate views", "Flip view direction", "Create view from current viewport", "Select view objects",
             "Bake drawing", "Bake one", "Run automatically", "Run now", "Cancel",
-            "Hidden lines", "Tangent edges", "Seams", "Beyond", "Far clip", "Depth cueing", "Cuts", "Hatch", "Scale", "Line weights",
+            "Hidden lines", "Tangent edges", "Seams", "Min visible", "Beyond", "Far clip", "Depth cueing", "Cuts", "Hatch", "Scale", "Line weights",
             "Reset menu defaults", "Preview", "Output tree", "Copy info", "Copy settings as text", "Clear drawing cache"], labels);
         Assert.DoesNotContain(Menu(ComponentUiState.Default, DrawingPhase.Done), n => n.Label == "Cancel");
         var all = Flatten(Menu(ComponentUiState.Default)).ToArray();
@@ -116,7 +116,7 @@ public sealed class MenuTests
         var menu = Menu(state);
         Assert.False(Item(menu, "Run automatically").Checked);
         var preview = Item(menu, "Preview").Children.ToDictionary(c => c.Label, c => c.Checked);
-        Assert.Equal(new Dictionary<string, bool> { ["View frames"] = true, ["Hidden"] = true, ["Beyond"] = true, ["Far clip"] = true, ["Hatch"] = false, ["Frame"] = true }, preview);
+        Assert.Equal(new Dictionary<string, bool> { ["View frames"] = true, ["Hidden"] = true, ["Beyond"] = true, ["Far clip"] = true, ["Hatch"] = false, ["Frame"] = true, ["Ignored"] = false }, preview);
     }
 
     [Theory]

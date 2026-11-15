@@ -13,6 +13,7 @@ public static class BakeNames
     {
         LineClass.Visible or LineClass.Profile => "Visible", LineClass.Hidden => "Hidden", LineClass.Beyond => "Beyond",
         LineClass.FarClip => "Far clip", LineClass.Cut => "Cut", LineClass.Hatch => "Hatch", LineClass.Unresolved => "Unresolved",
+        LineClass.Ignored => "Ignored",
         _ => throw new ArgumentOutOfRangeException(nameof(lineClass))
     };
 

@@ -34,7 +34,9 @@ public sealed class LineWeightTests
             Assert.Equal(s[LineClass.Beyond].PrintWidthMillimetres, s[LineClass.Hatch].PrintWidthMillimetres);
             Assert.Equal(3, s[LineClass.Cut].PreviewPixels); Assert.Equal(2, s[LineClass.Profile].PreviewPixels);
             Assert.Equal(1, s[LineClass.Visible].PreviewPixels); Assert.Equal(0, s[LineClass.Hatch].PreviewPixels);
-            Assert.Equal(8, s.Styles.Count);
+            Assert.Equal(s[LineClass.Beyond].PrintWidthMillimetres, s[LineClass.Ignored].PrintWidthMillimetres);
+            Assert.True(s[LineClass.Ignored].InkIntensity < s[LineClass.Beyond].InkIntensity);
+            Assert.Equal(9, s.Styles.Count);
         }
     }
 

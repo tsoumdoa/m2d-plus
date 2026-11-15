@@ -9,7 +9,19 @@ public static partial class Settings
 {
     public const bool DefaultHidden = true;
     public static ImmutableArray<string> Keys { get; } = ["depth", "farclip", "beyond", "fade", "fade.start", "fade.end",
-        "fade.limit", "crop", "hidden", "tangents", "seams", "glass", "scale", "weights", "hatch", "cuts", "gap", "name", "tree", "tolerance"];
+        "fade.limit", "crop", "hidden", "tangents", "seams", "glass", "scale", "weights", "hatch", "cuts", "gap", "name", "tree", "tolerance", "min_visible"];
+
+    /// <summary>The keys that change what the visibility solve computes, and so key the drawing cache (UX §12.14).
+    /// Every other key, including <c>hidden</c> and <c>min_visible</c>, is presentation over a cached solve and
+    /// never re-runs visibility. The solve always keeps hidden lines (<see cref="EffectiveSettings.ForVisibilitySolve"/>).</summary>
+    public static ImmutableArray<string> VisibilityKeys { get; } = ["depth", "farclip", "crop", "tangents", "seams", "glass", "tolerance"];
+
+    /// <summary>Canonical key spelling: lower case, runs of spaces as one underscore, so <c>min visible</c>,
+    /// <c>Min_Visible</c> and the user-text key <c>m2d.min_visible</c> all name <c>min_visible</c>.</summary>
+    public static string NormalizeKey(string key) => WhitespaceRun().Replace(key.Trim().ToLowerInvariant(), "_");
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"\s+")]
+    private static partial System.Text.RegularExpressions.Regex WhitespaceRun();
 
     public static double MetresPerUnit(DocumentUnits units) => units switch
     {
@@ -32,6 +44,13 @@ public static partial class Settings
                 var distance = ParseDistance(text, units);
                 if (distance < 0) throw new FormatException("Distance must be nonnegative.");
                 return DistanceSetting.At(distance);
+            case "min_visible":
+                // Off and 0 both mean off (the default). Otherwise a 2D length, in the drawing at 1:1.
+                if (value == "off") return 0d;
+                if (value.Length > 0 && char.IsLetter(value[0])) throw new FormatException(Suggest(value, ["off"]));
+                var minimum = ParseDistance(text, units);
+                if (minimum < 0) throw new FormatException("Distance must be nonnegative.");
+                return minimum;
             case "tolerance":
                 var tolerance = ParseDistance(text, units);
                 if (tolerance <= 0) throw new FormatException("Tolerance must be positive.");
@@ -103,7 +122,7 @@ public static partial class Settings
     {
         DistanceSetting d => d.Mode switch { DistanceMode.Auto => "auto", DistanceMode.Off => "off", _ => Numeric(d.Value) },
         bool b => b ? "on" : "off",
-        double n => key == "scale" ? $"1:{Numeric(n)}" : key.StartsWith("fade.", StringComparison.Ordinal) ? $"{Numeric(n)} %" : Numeric(n),
+        double n => key == "min_visible" ? n == 0 ? "off" : Numeric(n) : key == "scale" ? $"1:{Numeric(n)}" : key.StartsWith("fade.", StringComparison.Ordinal) ? $"{Numeric(n)} %" : Numeric(n),
         string s => JsonSerializer.Serialize(s),
         _ => value.ToString()!.ToLowerInvariant()
     };
@@ -116,6 +135,7 @@ public static partial class Settings
         "fade.start" => 0d, "fade.end" => 100d, "fade.limit" => 30d, "crop" => CropMode.Auto,
         "glass" => GlassMode.Opaque, "scale" => 100d, "weights" => WeightMode.Auto, "hatch" => HatchMode.Styles,
         "cuts" => CutMode.Separate, "name" => "auto", "tree" => OutputTreeMode.Branch, "tolerance" => view.DocumentTolerance,
+        "min_visible" => 0d,
         _ => throw new ArgumentException("Unknown key.", nameof(key))
     };
 }

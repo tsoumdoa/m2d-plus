@@ -34,15 +34,17 @@ public sealed partial class DrawingComponent : GH_Component
 
     protected override void RegisterOutputParams(GH_OutputParamManager p)
     {
-        p.AddGeometryParameter("Visible", "V", "Visible linework: profiles, edges, projected curves and points, nearer than the beyond distance.", GH_ParamAccess.tree);
-        p.AddCurveParameter("Hidden", "H", "Lines hidden by other geometry. Empty when Hidden lines is off.", GH_ParamAccess.tree);
-        p.AddCurveParameter("Beyond", "B", "Visible lines farther than the beyond distance. They are moved out of Visible, not copied.", GH_ParamAccess.tree);
-        p.AddCurveParameter("Far clip", "Fc", "Where the far clip plane cuts geometry, drawn only with farclip = line. Otherwise empty.", GH_ParamAccess.tree);
-        p.AddCurveParameter("Cut", "C", "Section boundaries. One branch per cut region holding its outer loop and any holes (one region per object by default). Open outlines from open geometry get their own branches and no hatch.", GH_ParamAccess.tree);
-        p.AddParameter(new global::Grasshopper.Kernel.Parameters.Param_Hatch(), "Hatch", "Ha", "One hatch per Cut region branch, at the same path, so each Cut branch has exactly one matching Hatch item. The pattern comes from the object's Rhino 8 section style when it has one; otherwise it is a solid hatch in the object's display colour. Where there is no fill (a style without fill, an open outline, hatch = none), the item is null, so the branches stay aligned.", GH_ParamAccess.tree);
-        p.AddCurveParameter("Unresolved", "?", "Pieces whose visibility the engine could not decide. They never appear in Visible or Hidden. Usually empty.", GH_ParamAccess.tree);
-        p.AddRectangleParameter("Frame", "F", "One placed drawing frame per view, at 1:1. It does not depend on the output's bounds. For a Rectangle view it is that rectangle, placed.", GH_ParamAccess.tree);
-        p.AddTextParameter("Info", "i", "One report per view: source, effective settings and where each came from, counts, styles, unresolved and unsupported objects, timing.", GH_ParamAccess.tree);
+        // Names, nicknames and order come from ComponentOutputs (UX 1.2). Never reorder outputs: saved definitions
+        // match them by index. Ignored (index 9) was appended for min visible.
+        var o = UI.Model.ComponentOutputs.All;
+        void Curve(int i) => p.AddCurveParameter(o[i].Name, o[i].NickName, o[i].Description, GH_ParamAccess.tree);
+        p.AddGeometryParameter(o[0].Name, o[0].NickName, o[0].Description, GH_ParamAccess.tree);
+        Curve(1); Curve(2); Curve(3); Curve(4);
+        p.AddParameter(new global::Grasshopper.Kernel.Parameters.Param_Hatch(), o[5].Name, o[5].NickName, o[5].Description, GH_ParamAccess.tree);
+        Curve(6);
+        p.AddRectangleParameter(o[7].Name, o[7].NickName, o[7].Description, GH_ParamAccess.tree);
+        p.AddTextParameter(o[8].Name, o[8].NickName, o[8].Description, GH_ParamAccess.tree);
+        Curve(9);
     }
 
     protected override void SolveInstance(IGH_DataAccess da)

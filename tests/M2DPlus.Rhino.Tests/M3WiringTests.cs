@@ -134,7 +134,7 @@ public sealed class M3WiringTests(RhinoHost host, ITestOutputHelper output)
         using var baseline = Draw(doc, scene, cache, views); Healthy(baseline.Views[0]);
         var calls = NativeDrawing.VisibilitySolves;
         var target = new Plane(new Point3d(100, 20, 30), Vector3d.YAxis, Vector3d.ZAxis);
-        var styled = views.Select(v => SettingsFor(v, "scale=1:50", "fade=on", "gap=3", "hatch=black", "cuts=merge")).ToArray();
+        var styled = views.Select(v => SettingsFor(v, "scale=1:50", "fade=on", "gap=3", "hatch=black", "cuts=merge", "min visible = 2 mm", "hidden=off")).ToArray();
         using var placed = Draw(doc, scene, cache, styled, target);
         Assert.Equal(calls, NativeDrawing.VisibilitySolves);
         Assert.Equal(target.Origin, placed.Views[0].Frame.Plane.Origin);
