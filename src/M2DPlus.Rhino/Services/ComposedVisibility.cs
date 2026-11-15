@@ -151,6 +151,27 @@ internal static class ComposedVisibility
                     settings.ObserveCompositionRecord?.Invoke(tag.Input.Source.Identity,tag.Edge,visibility == HiddenLineDrawingSegment.Visibility.Duplicate,kind,world);
                 }
                 output.CurvedCandidateEdges = nativeParents.Count;
+                phase.Next("native ray verification");
+                // HLD sees curved occluders only. The exact planar union below is
+                // a proof, not a native contradiction (including at its boundaries).
+                if (settings.Verification.MaxSamples != 0)
+                using (var verifier = new NativeVisibilityVerifier(curved, output, settings.Verification, token, new PlanarExtraction()))
+                {
+                    var verified = new List<NativeRecord>();
+                    foreach (var record in records)
+                    {
+                        var spans = verifier.Verify(record.World, record.Class, record.Tag.Input.Source.Identity, token);
+                        if (spans.Length == 1 && spans[0].Class == record.Class) { verified.Add(record); continue; }
+                        foreach (var span in spans)
+                        {
+                            var part = record.World.Trim(span.A,span.B) ?? throw new InvalidOperationException("Native verifier span trim failed");
+                            owned.Add(part); verified.Add(record with { World = part, Class = span.Class });
+                        }
+                    }
+                    records = verified; verifier.Report();
+                }
+                else output._diagnostics.Add("Native ray verifier disabled by sample budget; native confidence unverified.");
+                phase.Next("native extraction and duplicates");
                 var retained = new List<NativeRecord>();
                 if (records.Any(r => r.Duplicate) && kernel.Intervals.Any(i => i.Class == VisibilityClass.Hidden))
                 {

@@ -47,3 +47,23 @@ sh tools/perf-f/pair.sh <label> <model.3dm> <view>     # main, then this tree: c
 
 `PERFF_TIMEOUT` (seconds, default 1500) bounds one view solve. The harness calls the view solver
 directly, so it bypasses the in-process admission cap and the tolerance census.
+
+Native verification measurements (one owned Rhino process at a time):
+
+```powershell
+python -B tools/perf-f/native-verifier.py --resolver C:/path/to/Rhino.Inside_v8_net8.0.dll
+```
+
+This runs curved-S SW/North and facade/steel/diagrid SW, with `audit-off`, `audit-on`
+and `audit-on-repeat` on the same prepared scene. Each solve has a 120 s cancellation
+budget; the owned process has a 400 s wall / 8 GiB cap. `measurements.json` binds
+fixture/engine hashes, native runtime, counts, phase timings, work-budget coverage
+and contradictions. Compare `native ray audit work` with `native solve`; paired
+wall differences also include warm native state and machine contention. The work
+cap is deterministic, not a promise of a particular wall-time percentage.
+
+`trace-native` records the canonical native inputs, complete planar extraction
+and detached native records for mixed gate witnesses. When `PERFF_RAY_POINTS`
+names a JSON array of world XYZ points, it additionally checks every owned curved
+body against five rays per point, using conservative scalar bounds and direct
+Brep/mesh intersections. This is correctness evidence, not a timing variant.

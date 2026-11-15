@@ -53,6 +53,33 @@ downstream presentation filter. A scene consisting entirely of kernel-eligible p
 
 ## Contacts, coincident pieces and ownership
 
+Native Visible/Hidden curve records also receive an independent, deterministic
+ray audit against owned curved Breps/meshes. In composed views the exact planar
+union below the audit supplies planar occlusion; a planar hit is a proof, not a
+contradiction of an HLD solve that intentionally omitted planar bodies. Native
+fallbacks audit the full owned scene, extracting exact planar faces as needed.
+The audit includes source self-occlusion. It uses finite curve/Brep intersections
+and mesh rays, never native HLD classifications to decide a ray. Definite curved
+decisions require agreement of the central ray and four tolerance-offset rays;
+failures, grazing intersections and margin cases are inconclusive.
+
+Samples include ends and arc-length-spaced interior points (at least four cells,
+spacing bounded by 1/128 of the view diagonal, with an 8-tolerance floor). A
+contradiction splits the native piece at neighbouring sample-cell boundaries and
+moves that neighbourhood to Unresolved. Sampling never flips confidence or proves
+a whole interval. The later exact planar union may still prove a span Hidden.
+Info records each contradiction and aggregate coverage. Unchecked interiors,
+budget skips and inconclusive rays retain an explicit **unverified native** Info
+verdict; this is not certification of general freeform output.
+
+`NativeSettings.Verification` configures fixed per-view sample and intersection
+caps (defaults 16384 samples / 4096 individual curved ray tests). A zero sample
+budget is an explicit disabled audit with an Info diagnostic. Native-only remains
+the raw comparison adapter. The cap bounds work rather than wall time: using
+elapsed native time to stop at 10% would make classification depend on machine
+load. Timing is reported separately in phases, never deterministic diagnostics.
+Fully planar scenes never instantiate the verifier and preserve their output.
+
 The owner-sanctioned `tieConvention` is VISIBLE for zero-depth-gap contact,
 including flush panel joints and coincident blocks. Closed projected polygon
 boundaries occlude only with a STRICT view-depth gap greater than model tolerance.

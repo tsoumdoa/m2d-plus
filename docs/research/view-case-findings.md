@@ -1,5 +1,10 @@
 # View-case findings
 
+**Visibility follow-up:** #20's planar routing and the independent native ray
+verifier are rechecked in [native visibility verification](native-visibility-verifier.md).
+The historical native/route-C failures below describe the original snapshot;
+they are not the verdict for the current planar composition route.
+
 **Execution stopped by owner decision.** The active curved-S roof-diagonal station 5 finished; all subsequent cases were skipped. No optional M probes were started. Normal-priority native jobs ran serially, releasing the shared Rhino slot between views; only this task's owned controllers/jobs were stopped. A queued worker exited before Rhino admission and is counted as skipped, not an engine crash; its original admission/watch logs remain.
 
 **Inventory:** 20 models, 423 defined views; 263 complete, 2 timeouts, 158 owner-skipped. Twelve grid archives (eight rotated and four controls), six curved/feature extensions, a round tower and a two-box planar control. Cases 5/6/7/8 contain 146/140/33/104 views. The review set contains only 20 JSON view-definition/expectation fixtures; all geometry, screenshots, timings and output loci remain ignored artifacts.

@@ -58,6 +58,7 @@ internal static class Program
         var curved = viewName.StartsWith("curved:", StringComparison.Ordinal); if (curved) viewName = viewName[7..];
         ViewRequest view = viewName switch
         {
+            "North" => ViewRequest.Parse(-Vector3d.YAxis) with { Name = "North" },
             "long" => ViewRequest.Parse(new Plane(new Point3d(0, bounds.Center.Y, 0), Vector3d.XAxis, Vector3d.ZAxis)) with { Name = "Long-section" },
             "trans" => ViewRequest.Parse(new Plane(new Point3d(bounds.Center.X, 0, 0), Vector3d.YAxis, Vector3d.ZAxis)) with { Name = "Trans-section" },
             "plan" => ViewRequest.Parse(new Plane(new Point3d(0, 0, bounds.Min.Z + Math.Min(1.2, bounds.Diagonal.Z * .4)), Vector3d.XAxis, Vector3d.YAxis)) with { Name = "Plan" },
@@ -86,12 +87,31 @@ internal static class Program
             using var self = Process.GetCurrentProcess(); var cpu0 = self.TotalProcessorTime;
             using var limit = new CancellationTokenSource(TimeSpan.FromSeconds(timeout));
             timer.Restart(); DrawingBatch? batch = null; string? failure = null;
+#if !PERFF_BASELINE
+            var visibilityTrace = new List<object>();
+            using var rayEvidence = new NativeRayEvidence();
+#endif
             try
             {
                 // Direct view solve: bypasses the in-process admission cap (L exceeds it) and the tolerance census.
                 run++;
                 var solve = typeof(NativeDrawing).GetMethod("SolveView", BindingFlags.NonPublic | BindingFlags.Static)!;
-                var drawn = (ViewDrawing)solve.Invoke(null, new object[] { scene, prepared, view, new NativeSettings(), limit.Token })!;
+                var nativeSettings = new NativeSettings();
+#if !PERFF_BASELINE
+                if (variant == "audit-off") nativeSettings = nativeSettings with { Verification = new(MaxSamples:0) };
+                if (variant == "trace-native") nativeSettings = nativeSettings with
+                {
+                    ObserveCompositionRecord = (source,edge,duplicate,kind,world) => visibilityTrace.Add(new { Source=source, Edge=edge, Duplicate=duplicate, Class=kind, World=world.ToJSON(new()) }),
+                    ObserveNativeInputs = inputs => { rayEvidence.Capture(inputs); File.WriteAllText(Path.Combine(output,stem+"-native-inputs.json"),JsonSerializer.Serialize(inputs.Select(i => new { source=i.Source.Identity, path=i.Source.Path, geometry=GeometryFingerprint.Compute(i.Geometry), i.KernelCandidate, i.Far }))); },
+                    ObservePlanarScene = (extraction,plane) => File.WriteAllText(Path.Combine(output,stem+"-planar-scene.json"),JsonSerializer.Serialize(new { extraction.Faces, extraction.Edges, origin=new[]{plane.OriginX,plane.OriginY,plane.OriginZ}, x=new[]{plane.XAxis.X,plane.XAxis.Y,plane.XAxis.Z}, y=new[]{plane.YAxis.X,plane.YAxis.Y,plane.YAxis.Z} }))
+                };
+#endif
+                var drawn = (ViewDrawing)solve.Invoke(null, new object[] { scene, prepared, view, nativeSettings, limit.Token })!;
+#if !PERFF_BASELINE
+                if (variant == "trace-native") File.WriteAllText(Path.Combine(output,stem+"-foreign-records.json"),JsonSerializer.Serialize(visibilityTrace));
+                if (variant == "trace-native" && Environment.GetEnvironmentVariable("PERFF_RAY_POINTS") is { } rayPoints)
+                    rayEvidence.Write(rayPoints,Path.Combine(output,stem+"-ray-evidence.json"),drawn.Frame.Plane,scene.Bounds,scene.Tolerance);
+#endif
                 batch = new DrawingBatch(new RequestIdentity(scene.Revision, "perf-f", variant, run), new List<ViewDrawing> { drawn });
             }
             catch (TargetInvocationException ex) when (ex.InnerException is OperationCanceledException) { failure = $"timeout after {timeout} s"; }
@@ -116,7 +136,7 @@ internal static class Program
                     summary = new { drawing.Seconds, drawing.Error, pieces = drawing.Items.Count,
                         classes = drawing.Items.GroupBy(p => p.Class).ToDictionary(g => g.Key.ToString(), g => g.Count()),
                         regions = drawing.Regions.Count, hatches = drawing.Regions.Count(r => r.Region.Hatch is not null),
-                        drawing.Report.Quarantined, drawing.Report.UncertainCount, drawing.Report.InvalidExtractionCount, dump = path };
+                        drawing.Report.Quarantined, drawing.Report.UncertainCount, drawing.Report.InvalidExtractionCount, phases = drawing.Phases.Seconds, dump = path };
                     failure = drawing.Error;
                 }
             }

@@ -270,6 +270,8 @@ internal static class SectionDrawing
                 if (cut.Crop is { } crop && !NativeDrawing.Inside(location, crop, tol)) continue;
                 result.Pieces.Add(new(new Point(location), entry.Tag.Source, LineClass.Visible, new Point(point)));
             }
+            phase.Next("native ray verification");
+            NativeVisibilityVerifier.Apply(registered.Select(r => new VisibilityInput(r.Geometry,r.Tag.Source,r.Tag.Far)).ToArray(), result, settings, token);
             }
         }
         catch (OperationCanceledException) { result.Dispose(); throw; }
