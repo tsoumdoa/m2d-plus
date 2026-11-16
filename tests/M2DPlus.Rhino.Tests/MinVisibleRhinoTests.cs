@@ -85,9 +85,9 @@ public sealed class MinVisibleRhinoTests(RhinoHost host, ITestOutputHelper outpu
         // Bake: ignored lines go to their own Ignored layer, beside the existing scheme; nothing is deleted.
         var bake = DrawingBake.Bake(doc, Guid.NewGuid(), [new BakeDrawing(ignored, "Gap")]);
         var baked = bake.Added.Select(id => doc.Objects.FindId(id)).ToArray();
-        var onIgnored = baked.Where(o => doc.Layers[o.Attributes.LayerIndex].FullPath.StartsWith("M2D+::Gap::Ignored", StringComparison.Ordinal)).ToArray();
+        var onIgnored = baked.Where(o => doc.Layers[o.Attributes.LayerIndex].FullPath is var p && p.StartsWith("M2D+::Gap::", StringComparison.Ordinal) && p.EndsWith("::Ignored", StringComparison.Ordinal)).ToArray();
         Assert.Equal(ignored.IgnoredPieces, onIgnored.Length);
         Assert.All(onIgnored, o => Assert.Equal("ignored", o.Attributes.GetUserString(BakeTags.Class)));
-        Assert.Contains(baked, o => doc.Layers[o.Attributes.LayerIndex].FullPath.StartsWith("M2D+::Gap::Visible", StringComparison.Ordinal));
+        Assert.Contains(baked, o => doc.Layers[o.Attributes.LayerIndex].FullPath is var p && p.StartsWith("M2D+::Gap::", StringComparison.Ordinal) && p.EndsWith("::Visible", StringComparison.Ordinal));
     });
 }

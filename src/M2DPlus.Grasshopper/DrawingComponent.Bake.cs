@@ -21,8 +21,9 @@ public sealed partial class DrawingComponent
     private IReadOnlyList<Guid> BakeCurrent(RhinoDoc? doc, bool copy, int? viewIndex)
     {
         if (doc is null || _drawing is null) return Array.Empty<Guid>();
-        // Document events during bake must not dispose the very drawing being enumerated.
-        DetachWatch();
+        // Document events during bake must not dispose the very drawing being enumerated. Nothing the bake changes is read
+        // by the drawing, so the watch ignores it and keeps the scene: a later bake-only change can republish (UX §8.1).
+        using var mute = _watch is { IsClosed: false } watch && watch.DocumentSerial == doc.RuntimeSerialNumber ? watch.Mute(doc) : null;
         try
         {
             var reserved = DrawingBake.Names(doc).ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -40,13 +41,14 @@ public sealed partial class DrawingComponent
                 var chosen = !copy && _allocatedBakeNames.TryGetValue(key, out var existing) ? existing :
                     BakeNames.Unique(new[] { name }, reserved.Concat(allocated))[0];
                 if (!copy) _allocatedBakeNames[key] = chosen;
-                allocated.Add(chosen); reserved.Add(chosen); drawings.Add(new(view, chosen));
+                // The layout comes from the latest resolution: a bake-only change republishes the drawing without redrawing it,
+                // so the drawing's own settings may hold an older bake value (UX §8.1).
+                allocated.Add(chosen); reserved.Add(chosen); drawings.Add(new(view, chosen, request.Settings?.Bake ?? view.Settings?.Bake));
             }
             var result = DrawingBake.Bake(doc, InstanceGuid, drawings);
             foreach (var message in result.Messages) { RhinoApp.WriteLine(message); AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, message); }
             OnDisplayExpired(true); return result.Added;
         }
         catch (Exception ex) { AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "Bake failed: " + ex.Message); return Array.Empty<Guid>(); }
-        finally { _watch = new(doc); _watch.Changed += DocumentChanged; }
     }
 }

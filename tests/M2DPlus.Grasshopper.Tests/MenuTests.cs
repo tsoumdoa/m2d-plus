@@ -17,7 +17,7 @@ public sealed class MenuTests
     {
         var labels = Menu(ComponentUiState.Default, DrawingPhase.Running).Where(n => !n.IsSeparator).Select(n => n.Label).ToArray();
         Assert.Equal(["Convert to view boxes", "Flip view direction", "Create view from current viewport", "Select view objects",
-            "Bake drawing", "Bake one", "Run automatically", "Run now", "Cancel",
+            "Bake drawing", "Bake one", "Bake layers", "Run automatically", "Run now", "Cancel",
             "Hidden lines", "Engine", "Tangent edges", "Seams", "Min visible", "Beyond", "Far clip", "Cut only", "Depth cueing", "Cuts", "Hatch", "Scale", "Line weights",
             "Reset menu defaults", "Preview", "Output tree", "Copy info", "Copy settings as text", "Clear drawing cache"], labels);
         Assert.DoesNotContain(Menu(ComponentUiState.Default, DrawingPhase.Done), n => n.Label == "Cancel");
@@ -40,6 +40,25 @@ public sealed class MenuTests
         var locked=Item(Menu(ComponentUiState.Default,DrawingPhase.Done,["engine=fast"]),"Engine");
         Assert.False(locked.Enabled);Assert.Contains("set by input",locked.Label);
         Assert.True(locked.Children[1].Checked);Assert.All(locked.Children,n=>Assert.False(n.Enabled));
+    }
+
+    [Fact]
+    public void BakeLayersOffersFourLayoutsDefaultsToViewLayerAndInputLocksIt()
+    {
+        var menu = Menu(ComponentUiState.Default);
+        var labels = menu.Select(n => n.Label).ToList();
+        Assert.Equal(labels.IndexOf("Bake one") + 1, labels.IndexOf("Bake layers"));
+        var bake = Item(menu, "Bake layers");
+        Assert.Equal(["View › Layer", "Layer › View", "Layer only", "View › Type (classic)"], bake.Children.Select(n => n.Label));
+        Assert.Equal([true, false, false, false], bake.Children.Select(n => n.Checked));
+        Assert.Equal("bake = view-layer", bake.Hint);
+        Assert.Equal(MenuCommands.SetValue("bake", "layer"), bake.Children[2].Command);
+        Assert.Contains("never redraws", bake.Tooltip);
+        Assert.True(Item(Menu(ComponentUiState.Default.With("bake", "view-type")), "Bake layers").Children[3].Checked);
+        var locked = Item(Menu(ComponentUiState.Default, DrawingPhase.Done, ["bake = layer-view"]), "Bake layers");
+        Assert.False(locked.Enabled); Assert.Contains("set by input", locked.Label); Assert.True(locked.Children[1].Checked);
+        // Reset menu defaults clears it like any other menu value.
+        Assert.False(ComponentUiState.Default.With("bake", "layer").ResetMenu().HasMenuValues);
     }
 
     [Fact]

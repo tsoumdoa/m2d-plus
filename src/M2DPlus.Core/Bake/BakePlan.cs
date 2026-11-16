@@ -18,6 +18,16 @@ public static class BakeTags
         BakeNames.ValidateSegment(drawing);
         return $"{component:D}/{drawing}";
     }
+    /// <summary>Reads a baked object's <see cref="Bake"/> marker (<c>component/drawing</c>). Any other <c>m2d.bake</c> text, such as
+    /// a view object's layout setting (<c>m2d.bake = layer</c>), is not an owner.</summary>
+    public static bool TryParseOwner(string? value, out Guid component, out string drawing)
+    {
+        component = Guid.Empty; drawing = "";
+        if (value is null || value.Length < 38 || value[36] != '/' || !Guid.TryParseExact(value[..36], "D", out component) || component == Guid.Empty)
+            return false;
+        drawing = value[37..];
+        return !string.IsNullOrWhiteSpace(drawing);
+    }
     public static ImmutableDictionary<string, string> Create(Guid component, string drawing, string source,
         LineClass lineClass, string geometryHash, string layerPath)
     {
@@ -65,6 +75,35 @@ public static class BakePlan
         var summary = string.Create(System.Globalization.CultureInfo.InvariantCulture,
             $"Baked {drawing}: {add.Length:N0} objects (replaced {delete.Count:N0} · kept {keep.Count:N0} you edited)");
         return new(delete.ToImmutable(), keep.ToImmutable(), add, summary);
+    }
+}
+
+/// <summary>The editable style of a bake layer, as the host reads it. M2D+ stores its <see cref="Signature"/> on each layer it
+/// creates (<see cref="Tag"/>) and updates it only with its own preset-width changes, so any user edit makes them differ.</summary>
+public sealed record BakeLayerStyle(int Colour, int PlotColour, double PlotWeight, int Linetype, int Material)
+{
+    public const string Tag = "m2d.style";
+    public const string Created = "m2d.created";
+    public string Signature => string.Create(System.Globalization.CultureInfo.InvariantCulture,
+        $"v1|{Colour:X8}|{PlotColour:X8}|{PlotWeight:R}|{Linetype}|{Material}");
+}
+
+/// <summary>A layer that held objects a re-bake replaced. <paramref name="StyleTag"/> is the stored <see cref="BakeLayerStyle.Tag"/>
+/// (null on layers from beta.3 and earlier); <paramref name="ClassicSignature"/> is then the style M2D+ would have created that
+/// classic layer with, or null when it cannot tell.</summary>
+public sealed record BakeLayerState(string FullPath, bool CreatedByM2D, bool Empty, bool HasChildren, bool Visible, bool Locked,
+    string? StyleTag, string Signature, string? ClassicSignature = null);
+
+public static class BakeLayerCleanup
+{
+    /// <summary>After a re-bake, possibly with another layout (UX §8.2), an emptied layer is removed only when M2D+ created it,
+    /// it holds no objects and no sublayers, and the user has not changed it: same style as created, still on and unlocked.
+    /// The <c>M2D+</c> root and every layer the user created or changed are kept.</summary>
+    public static bool Removable(BakeLayerState layer)
+    {
+        if (!layer.CreatedByM2D || !layer.Empty || layer.HasChildren || !layer.Visible || layer.Locked) return false;
+        if (!layer.FullPath.StartsWith(BakeNames.Root + "::", StringComparison.Ordinal)) return false;
+        return layer.StyleTag is not null ? layer.StyleTag == layer.Signature : layer.ClassicSignature == layer.Signature;
     }
 }
 

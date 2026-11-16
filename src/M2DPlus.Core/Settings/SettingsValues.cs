@@ -9,7 +9,28 @@ public static partial class Settings
 {
     public const bool DefaultHidden = true;
     public static ImmutableArray<string> Keys { get; } = ["depth", "farclip", "beyond", "fade", "fade.start", "fade.end",
-        "fade.limit", "crop", "hidden", "tangents", "seams", "glass", "scale", "weights", "hatch", "cuts", "gap", "name", "tree", "tolerance", "min_visible", "engine", "cutonly"];
+        "fade.limit", "crop", "hidden", "tangents", "seams", "glass", "scale", "weights", "hatch", "cuts", "gap", "name", "tree", "tolerance", "min_visible", "engine", "cutonly", "bake"];
+
+    /// <summary>Keys read only when baking (UX §8.1). A change to them alone republishes the current drawing: no
+    /// visibility solve and no presentation (<see cref="RunText"/>).</summary>
+    public static ImmutableArray<string> BakeTimeKeys { get; } = ["bake"];
+
+    /// <summary>True for a <c>key = value</c> line whose key is bake-time only (comments and headers are not).</summary>
+    public static bool IsBakeTimeLine(string line)
+    {
+        var text = line; var hash = text.IndexOf('#');
+        if (hash >= 0) text = text[..hash];
+        var equals = text.IndexOf('=');
+        return equals > 0 && BakeTimeKeys.Contains(NormalizeKey(text[..equals]));
+    }
+
+    /// <summary>Settings text with bake-time lines left out: what a drawing run depends on. Two runs whose run text,
+    /// views, inputs and scene are equal draw the same thing, whatever their <c>bake</c> values.</summary>
+    public static string RunText(IEnumerable<string> lines) => string.Join("\n", lines.Where(l => !IsBakeTimeLine(l)));
+
+    /// <summary>A stored row (menu or view object) without its bake-time keys, as canonical text for run keys.</summary>
+    public static string RunText(SettingsRow row) => string.Join("\n", row.Values
+        .Where(p => !BakeTimeKeys.Contains(NormalizeKey(p.Key))).OrderBy(p => p.Key, StringComparer.Ordinal).Select(p => p.Key + "=" + p.Value));
 
     /// <summary>The keys that change what the visibility solve computes, and so key the drawing cache (UX §12.14).
     /// Hidden is additionally keyed in fast mode by <see cref="EffectiveSettings.VisibilityKey"/>.
@@ -81,6 +102,7 @@ public static partial class Settings
             case "crop": return Choice(value, ("auto", CropMode.Auto), ("off", CropMode.Off));
             case "glass": return Choice(value, ("opaque", GlassMode.Opaque), ("clear", GlassMode.Clear));
             case "engine": return Choice(value, ("exact", EngineMode.Exact), ("fast", EngineMode.Fast));
+            case "bake": return Choice(value, Bake.BakeNames.Layouts.Select(l => (Bake.BakeNames.LayoutText(l), l)).ToArray());
             case "weights": return Choice(value, ("auto", WeightMode.Auto), ("layers", WeightMode.Layers));
             case "hatch": return Choice(value, ("styles", HatchMode.Styles), ("colour", HatchMode.Colour), ("black", HatchMode.Black), ("none", HatchMode.None));
             case "cuts": return Choice(value, ("separate", CutMode.Separate), ("merge", CutMode.Merge));
@@ -131,6 +153,7 @@ public static partial class Settings
         bool b => b ? "on" : "off",
         double n => key == "min_visible" ? n == 0 ? "off" : Numeric(n) : key == "scale" ? $"1:{Numeric(n)}" : key.StartsWith("fade.", StringComparison.Ordinal) ? $"{Numeric(n)} %" : Numeric(n),
         string s => JsonSerializer.Serialize(s),
+        BakeLayout layout => Bake.BakeNames.LayoutText(layout),
         _ => value.ToString()!.ToLowerInvariant()
     };
     private static string Numeric(double value) => value.ToString("R", CultureInfo.InvariantCulture);
@@ -142,7 +165,7 @@ public static partial class Settings
         "fade.start" => 0d, "fade.end" => 100d, "fade.limit" => 30d, "crop" => CropMode.Auto,
         "glass" => GlassMode.Opaque, "scale" => 100d, "weights" => WeightMode.Auto, "hatch" => HatchMode.Styles,
         "cuts" => CutMode.Separate, "name" => "auto", "tree" => OutputTreeMode.Auto, "tolerance" => view.DocumentTolerance,
-        "min_visible" => 0d, "engine" => EngineMode.Exact,
+        "min_visible" => 0d, "engine" => EngineMode.Exact, "bake" => BakeLayout.ViewLayer,
         _ => throw new ArgumentException("Unknown key.", nameof(key))
     };
 }

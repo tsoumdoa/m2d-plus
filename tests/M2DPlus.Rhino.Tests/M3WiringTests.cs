@@ -194,8 +194,8 @@ public sealed class M3WiringTests(RhinoHost host, ITestOutputHelper output)
         using var batch = Draw(doc, scene, cache, new[] { SettingsFor(ViewRequest.Parse(Plane.WorldXY)) }); Healthy(batch.Views[0]);
         var owner = Guid.NewGuid(); var drawings = new[] { new BakeDrawing(batch.Views[0], "Section A") };
         var first = DrawingBake.Bake(doc, owner, drawings); Assert.True(first.Added.Count >= 3);
-        var hatchLayer = doc.Layers.FindByFullPath("M2D+::Section A::Hatch::Arch::Walls", -1); Assert.True(hatchLayer >= 0);
-        var visibleLayer = doc.Layers.FindByFullPath("M2D+::Section A::Visible::Arch::Walls", -1); Assert.True(visibleLayer >= 0);
+        var hatchLayer = doc.Layers.FindByFullPath("M2D+::Section A::Arch::Walls::Hatch", -1); Assert.True(hatchLayer >= 0);
+        var visibleLayer = doc.Layers.FindByFullPath("M2D+::Section A::Arch::Walls::Visible", -1); Assert.True(visibleLayer >= 0);
         Assert.Equal(.18, doc.Layers[visibleLayer].PlotWeight, 8);
         var edited = first.Added.First(id => doc.Objects.FindId(id).Geometry is Curve);
         var layerMoved = first.Added.First(id => id != edited && doc.Objects.FindId(id).Geometry is Curve);
@@ -228,7 +228,7 @@ public sealed class M3WiringTests(RhinoHost host, ITestOutputHelper output)
         var obj = doc.Objects.FindId(Assert.Single(first.Added));
         Assert.Equal(Color.FromArgb(38, 38, 38).ToArgb(), obj.Attributes.ObjectColor.ToArgb());
         Assert.Equal(obj.Attributes.ObjectColor.ToArgb(), obj.Attributes.PlotColor.ToArgb());
-        var category = doc.Layers.FindByFullPath("M2D+::Line::Visible", -1); Assert.Equal(.18, doc.Layers[category].PlotWeight, 8);
+        var category = doc.Layers.FindByFullPath("M2D+::Line::Steel::Visible", -1); Assert.Equal(.18, doc.Layers[category].PlotWeight, 8);
         using var detail = Draw(doc, scene, cache, new[] { SettingsFor(ViewRequest.Parse(Plane.WorldXY), "scale=1:50") });
         DrawingBake.Bake(doc, owner, new[] { new BakeDrawing(detail.Views[0], "Line") }); Assert.Equal(.25, doc.Layers[category].PlotWeight, 8);
         doc.Layers[category].PlotWeight = .42; doc.Layers[category].Color = Color.Purple;
@@ -244,7 +244,7 @@ public sealed class M3WiringTests(RhinoHost host, ITestOutputHelper output)
         layers.Views[0].Pieces[0].Class = LineClass.Unresolved;
         var unresolved = DrawingBake.Bake(doc, owner, new[] { new BakeDrawing(layers.Views[0], "Uncertain") });
         var uncertain = doc.Objects.FindId(Assert.Single(unresolved.Added));
-        Assert.Equal("M2D+::Uncertain::Unresolved::Steel", doc.Layers[uncertain.Attributes.LayerIndex].FullPath);
+        Assert.Equal("M2D+::Uncertain::Steel::Unresolved", doc.Layers[uncertain.Attributes.LayerIndex].FullPath);
         Assert.Equal(Color.FromArgb(224, 122, 0).ToArgb(), uncertain.Attributes.ObjectColor.ToArgb());
     });
 

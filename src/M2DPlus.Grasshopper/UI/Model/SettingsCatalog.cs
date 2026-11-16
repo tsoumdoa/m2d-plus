@@ -43,6 +43,9 @@ public static class SettingsCatalog
         new("name", "Name", Placement, FieldKind.Text, [], "name = <text>: the drawing's bake layer name. Empty: from the view."),
         new("tree", "Output tree", "Output", FieldKind.Choice, [O("auto", "Auto"), O("layer", "By layer"), O("object", "By object")],
             "tree = auto | layer | object: how outputs split into branches. By layer: {view; layer index}. By object: {view; Geometry path; item}. Auto: by layer for the document or referenced objects, by object as soon as Geometry holds Grasshopper geometry. The Key output labels each branch."),
+        new("bake", "Bake layers", "Bake", FieldKind.Choice,
+            [O("view-layer", "View › Layer"), O("layer-view", "Layer › View"), O("layer", "Layer only"), O("view-type", "View › Type (classic)")],
+            "bake = view-layer | layer-view | layer | view-type: how Bake arranges its layers under M2D+. The line type (Visible, Hidden, Cut…) is always the last level. View › Layer: drawing, then the source layers. Layer › View: source layers, then the drawing. Layer only: every drawing shares the source layers. View › Type: drawing, line type, then source layers (beta.3 and earlier). Bake time only: changing it never redraws."),
     ];
 
     public static FieldSpec Spec(string key) => Fields.First(f => f.Key == key);

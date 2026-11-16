@@ -204,8 +204,33 @@ public sealed class DocumentWatch : IDisposable
         return false;
     }
 
+    private int _muted;
+    /// <summary>The component's own Bake: baked objects and M2D+ layers are never scene geometry and view objects are not
+    /// touched, so nothing it changes is read by the drawing. While muted, events are ignored; afterwards the snapshot is
+    /// retaken so headless verification does not see them either. The scene, generation and subscriptions are kept, so
+    /// the next run can reuse the scene (and republish a drawing when only <c>bake</c> changed, UX §8.1).</summary>
+    public IDisposable Mute(RhinoDoc document)
+    {
+        if (_hostThread != Environment.CurrentManagedThreadId) throw new InvalidOperationException("Mute must run on the host thread.");
+        _muted++;
+        return new Unmute(this, document);
+    }
+    private sealed class Unmute(DocumentWatch watch, RhinoDoc document) : IDisposable
+    {
+        private bool _done;
+        public void Dispose()
+        {
+            if (_done) return;
+            _done = true;
+            if (--watch._muted > 0 || watch.Mine(document) is not { IsAvailable: true } mine) return;
+            watch._snapshot = watch.UsesSnapshots ? watch.Take(mine, watch._scope) : Snapshot.Light(mine);
+            watch._rebase = false;
+        }
+    }
+
     private void Decide(bool rerun, string reason)
     {
+        if (_muted > 0) { Ignored++; return; }
         if (!rerun) { Ignored++; return; }
         _rebase = true;
         Touch(reason);

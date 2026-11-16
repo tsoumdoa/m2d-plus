@@ -16,6 +16,8 @@ Addendum, 2026-11-16 (owner decision for beta.4): a small **View box depth** pop
 *Create view from current viewport*, one depth per run with **Auto** as the default, and a better **Auto depth by view
 type** (plan one storey down; section and elevation to the back of what is inside the frame). It is the one dialog
 M2D+ has, an explicit owner exception to "no settings dialogs" (§2.1, §2.2, §6.1).
+Addendum, 2026-11-16 (owner decision for beta.4, REQUIREMENTS "Bake layer layout"): `bake = view-layer | layer-view |
+layer | view-type` arranges the bake layers; the new default puts the line type last (§8.1). Bake time only.
 
 **The idea:** one component and five inputs, of which only **View** must be set. Plug in a view and you
 get a correct drawing. M2D+ works out everything else from the view source and the document: what
@@ -419,12 +421,14 @@ frame rectangle and that reaches behind the frame plane (what is in front of the
 | `m2d.hatch` | `styles` · `colour` · `black` · `none` | `default` |
 | `m2d.cuts` | `separate` · `merge` | `default` |
 | `m2d.min_visible` | `off` · length (§3.9) | `default` |
+| `m2d.bake` | `view-layer` · `layer-view` · `layer` · `view-type`: bake layer layout (§8.1). Bake time only | `default` |
 | `m2d.color` | `default` (by type) · `#RRGGBB` · `#RRGGBBAA`: the front-face fill (above). Display only, not a setting | `default` |
 
 The values are the Settings syntax of §6.3, so any `m2d.<key>` of §6.3 is read (including `m2d.gap` or `m2d.tree`
 if a user adds them); `depth` and `crop` come from the box itself. A bad value is a warning naming the view, with
 the closest valid value, exactly as for Settings text. Referenced clipping planes read `m2d.*` user text the same
-way. The component re-runs when a view object's geometry, name or `m2d.*` user text changes (§5.1). Hiding, showing or
+way. The component re-runs when a view object's geometry, name or `m2d.*` user text changes (§5.1); a change to
+`m2d.bake` alone only republishes the drawing it has (§8.1). Hiding, showing or
 recolouring a view box, or moving it to another layer, changes nothing the drawing reads and never re-runs it.
 
 **Create view from current viewport** (right-click on V or the component): asks for the depth (the View box depth
@@ -594,7 +598,8 @@ never changes the Frame, the gap or hatch pattern scale (§4, §3.7). Default **
 - **Preview px widths are fixed per class** (the right column) and do not change with `scale`. Keeping them fixed keeps
   the canvas readable at any zoom; the print widths are what changes, and Rhino's print preview shows them.
 - Each view can have its own `scale` (`m2d.scale` on its view object or a `[view]` header), so one component can bake a 1:50 detail and a
-  1:200 site plan. Their bake layers are separate (§8.1), so the widths never clash.
+  1:200 site plan. Their bake layers are separate (§8.1), so the widths never clash, except with `bake = layer`, where
+  every drawing shares the same layers (the last bake's preset sets the widths of layers you have not changed).
 
 "Ink" means black on a light background and near-white on a dark viewport. The preview blends toward
 Rhino's viewport colour. `weights = layers` overrides the preset: each line takes its **source layer's** print width and
@@ -877,6 +882,7 @@ layer names, Grasshopper geometry) is drawn whatever its visibility.
 | Settings `tangents = on`, menu `seams` (visibility keys) | 0 | 0 | 0 | re-solve |
 | Settings/menu/view-object `engine`, or `hidden` while fast | 0 | 0 | 0 | re-solve; planar/analytic-only views still make no HLD call |
 | View object `m2d.*` text (e.g. `m2d.fade`) | 0 | 0 | 0 | 0 |
+| Settings/menu/view-object `bake` only (`BakeLayoutTests`) | 0 | 0 | 0 | 0, and no presentation: the same drawing is republished |
 | View box moved (its view changes) | 0 | 0 | 0 | re-solve |
 | A drawn object moved | 1 | only that object | 1 | re-solve |
 | Geometry input changed | 1 | only new objects | 1 | re-solve |
@@ -1065,6 +1071,7 @@ fade.limit = 25 %
 | `name` | text | auto (§8.1): the view object's name | — | View Name | view object (`m2d.name`), the object's Rhino name |
 | **Output and diagnosis** | | | | | |
 | `tree` | `auto` · `layer` · `object` | `auto` (by layer for the document or referenced objects, else by object, §1.3) | — | — | view object (`m2d.tree`), menu |
+| `bake` | `view-layer` · `layer-view` · `layer` · `view-type` | **`view-layer`** (§8.1). Bake time only: changing it never redraws | — | — | view object (`m2d.bake`), menu *Bake layers ▸* |
 | `tolerance` | distance | document absolute tolerance | distance | — | text only |
 
 ---
@@ -1083,6 +1090,7 @@ Select view objects               Double-click
 ────────────────
 Bake drawing                      Shift-click: add as a copy
 Bake one ▸        Section A · Section B · South elevation · …
+Bake layers ▸     View › Layer ✓ · Layer › View · Layer only · View › Type (classic)   bake = view-layer | layer-view | layer | view-type   (§8.1)
 ────────────────
 Run automatically            ✓
 Run now
@@ -1120,10 +1128,86 @@ command does the same, and its layer dialog is ignored, with a remark saying so.
 
 ### 8.1 Layers
 
+Owner decision, 2026-11-16 (beta.4): **`bake`** chooses how the layers are arranged under the `M2D+` root. Set it in
+the Settings input, as `m2d.bake` view-object user text, or from *Bake layers ▸ View › Layer · Layer › View · Layer
+only · View › Type (classic)*; normal precedence applies (§6), so each view can bake its own way.
+
+| `bake` | Menu | Layer path |
+|---|---|---|
+| **`view-layer`** (default) | View › Layer | `M2D+ › <drawing> › <source layer path…> › <line type>` |
+| `layer-view` | Layer › View | `M2D+ › <source layer path…> › <drawing> › <line type>` |
+| `layer` | Layer only | `M2D+ › <source layer path…> › <line type>`: every drawing shares these layers |
+| `view-type` | View › Type (classic) | `M2D+ › <drawing> › <line type> › <source layer path…>`: the layout of beta.3 and earlier |
+
+The examples bake *Section A* and *Plan +3.00* of walls on `Arch::Walls`, columns on `Structure`, and one Grasshopper curve.
+
+**`view-layer`** (default): one tree per drawing; each source layer holds its line types.
+
 ```
 M2D+
-└─ Section A                       ← drawing name
-   ├─ Visible   ── Arch::Walls, Arch::Doors, Structure::Columns …   (source layer paths mirrored)
+├─ Plan +3.00                        ← drawing name
+│  └─ …
+└─ Section A
+   ├─ Grasshopper (no layer)         ← GH geometry: no source layer
+   │  └─ Visible
+   ├─ Arch
+   │  └─ Walls                       ← source layer paths mirrored as sublayers
+   │     ├─ Cut
+   │     ├─ Hatch
+   │     ├─ Hidden
+   │     └─ Visible
+   └─ Structure
+      ├─ Cut
+      └─ Visible
+```
+
+**`layer-view`**: the model's layer tree first; each source layer holds one level per drawing.
+
+```
+M2D+
+├─ Grasshopper (no layer)
+│  └─ Section A
+│     └─ Visible
+├─ Arch
+│  └─ Walls
+│     ├─ Plan +3.00
+│     │  └─ …
+│     └─ Section A
+│        ├─ Cut
+│        ├─ Hatch
+│        ├─ Hidden
+│        └─ Visible
+└─ Structure
+   └─ Section A
+      ├─ Cut
+      └─ Visible
+```
+
+**`layer`**: no drawing level. Every drawing baked with `layer` lands on the same layers (each object still knows its
+drawing, §8.2).
+
+```
+M2D+
+├─ Grasshopper (no layer)
+│  └─ Visible
+├─ Arch
+│  └─ Walls
+│     ├─ Cut                         ← Section A and Plan +3.00 together
+│     ├─ Hatch
+│     ├─ Hidden
+│     └─ Visible
+└─ Structure
+   ├─ Cut
+   └─ Visible
+```
+
+**`view-type`** (classic): line type first, then source layer, as Make2D does. Kept unchanged for existing files,
+including GH geometry going straight onto the line-type layer.
+
+```
+M2D+
+└─ Section A
+   ├─ Visible   ── Arch::Walls, Structure …   (source layer paths mirrored; GH geometry on Visible itself)
    ├─ Hidden    ── …
    ├─ Beyond    ── …
    ├─ Far clip  ── …               (only when farclip = line)
@@ -1133,29 +1217,46 @@ M2D+
    └─ Ignored   ── …               (only when min visible ignores something, §3.9)
 ```
 
-- Category first, then source layer, as Make2D does. One click hides every hidden line, and the source
-  sublayers still let you hide, for example, furniture.
-- Category layers get the styles in §3.6, with the print widths of the drawing's `scale` preset, when they are
-  **created**. **Re-baking never restyles a layer the user has changed,** so the user's own layer styling survives.
-  One exception keeps `scale` working: each category layer records the widths M2D+ gave it (user string
-  `m2d.weights = 1:100`); if the drawing's preset has changed and the layer still has exactly those widths, re-bake
-  updates them to the new preset. A layer the user restyled is kept, and the result says so. Depth-cue fading is per
-  object (object colour + print colour), so it never touches layers.
+- **The line type is always the leaf** in the three new layouts: Visible, Hidden, Beyond, Far clip, Cut, Hatch,
+  Unresolved (orange) and Ignored (§3.9), each only when the drawing has some. The source layers still let you hide,
+  for example, furniture; a line type is hidden per source layer (or with Rhino's layer search).
+- **GH geometry** has no source layer: it goes under a `Grasshopper (no layer)` group at the source-layer level (the owner asked for `(Grasshopper)`, but Rhino refuses layer names that start with `(` or `[`), so the layout
+  stays the same shape. Classic keeps putting it straight onto the line-type layer.
+- **Line-type layers** get the styles in §3.6, with the print widths of the drawing's `scale` preset, when they are
+  **created**: the leaf in the new layouts, the line-type layer and its source sublayers in classic. Drawing and
+  source-layer grouping layers stay plain (black, default width). **Re-baking never restyles a layer the user has
+  changed,** so the user's own layer styling survives. One exception keeps `scale` working: each line-type layer
+  records the widths M2D+ gave it (user string `m2d.weights = 1:100`); if the drawing's preset has changed and the
+  layer still has exactly those widths, re-bake updates them to the new preset. A layer the user restyled is kept, and
+  the result says so. Depth-cue fading is per object (object colour + print colour), so it never touches layers.
 - Cut fills that come from the object's colour are per object too (object colour + print colour, §3.7), so the
   Hatch layer's own colour doesn't matter and one Hatch layer can hold every material colour.
-- GH geometry with no source layer goes straight onto the category layer.
+- Every layer M2D+ creates records it (`m2d.created = <component id>`) and its style as created (`m2d.style`), so a
+  later bake can tell an unchanged layer from one the user changed (§8.2).
+- **Bake time only.** Changing `bake` from the menu, the view object or the Settings input never re-solves and never
+  re-runs presentation: the component publishes the drawing it already has (0 HLD calls), Info shows the new value,
+  and the next Bake uses it.
 - **Drawing name** = the named view or clipping plane name. Otherwise it is an automatic description:
-  `Plan +1.20`, `Section 1`, `Elevation South`, `Axo SW`. It is unit-aware. Duplicates get ` (2)`, and `name = …`
-  overrides it.
+  `Plan +1.20`, `Section 1`, `Elevation South`, `Axo SW`. It is unit-aware. Duplicates of a drawing already baked in
+  the document (by any component, read from the bake markers) get ` (2)`, and `name = …` overrides it.
 
 ### 8.2 Replace, not pile up
 
 - Each baked object carries user strings: `m2d.bake = <component id>/<drawing name>`, `m2d.source =
   <object id>`, `m2d.class = visible|hidden|beyond|farclip|cut|hatch|unresolved|ignored`, `m2d.hash = <geometry hash>`.
+  The same `m2d.bake` key on a view object holds the layout setting instead; only a `<component id>/<drawing>` value
+  is a bake marker, so a view object's layout is never read as an owner and a marker is never read as a setting.
 - **Re-bake replaces** the objects from the earlier bake of the same component and drawing. Objects the user has since
   **edited** (hash changed) or **moved to another layer** are kept, and the result says how many:
-  `Baked Section A: 3,412 objects (replaced 3,390 · kept 2 you edited)`. Empty sublayers that M2D+ created are
-  removed.
+  `Baked Section A: 3,412 objects (replaced 3,390 · kept 2 you edited)`.
+- **Across layouts too.** The earlier bake is found by its `m2d.bake` markers, not by layer path, so re-baking with
+  another `bake` layout replaces the old objects wherever they are instead of leaving them on the old layers. With
+  `bake = layer`, re-baking one drawing replaces only that drawing's objects on the shared layers.
+- **Emptied layers.** A layer the replaced objects leave empty is removed, and then its emptied parents, only when
+  M2D+ created it and the user has not changed it: same colour, print colour, print width, linetype and material as
+  created (`m2d.style`; layers from beta.3 and earlier are compared with the classic style they were created with),
+  still on and unlocked, with no objects and no sublayers. Layers the user created or changed are never removed, nor
+  is the `M2D+` root. The result says how many went: `Section A: removed 9 empty M2D+ layers`.
 - **Shift-click Bake** adds a copy instead (`Section A (2)`).
 - **Undo:** each Bake is **one Rhino undo record** ("M2D+ Bake 6 drawings"), deletes included.
 - Locked target layers are unlocked for the bake and locked again afterwards. A layer hidden by the user stays hidden, and

@@ -133,16 +133,16 @@ public sealed class OutputTreeRhinoTests(RhinoHost host, ITestOutputHelper outpu
             Assert.Equal(calls, NativeDrawing.VisibilitySolves);
             Assert.Equal(layers, Paths(component, Visible, 0));
 
-            // Bake keeps its scheme: category, then the source layer, with block parts on their own layers.
+            // Bake (default bake = view-layer): source layer, then line type, with block parts on their own layers.
             ui.Execute("bake", false);
             var baked = doc.Objects.Where(o => o.Attributes.GetUserString(BakeTags.Bake)?.StartsWith(component.InstanceGuid.ToString(), StringComparison.Ordinal) == true)
                 .Select(o => doc.Layers[o.Attributes.LayerIndex].FullPath).ToHashSet(StringComparer.Ordinal);
             output.WriteLine(string.Join("\n", baked.Order(StringComparer.Ordinal)));
-            Assert.Contains(baked, p => p.EndsWith("::Visible::Frames", StringComparison.Ordinal));
-            Assert.Contains(baked, p => p.EndsWith("::Visible::Panes", StringComparison.Ordinal));
-            Assert.Contains(baked, p => p.EndsWith("::Visible::Walls::Exterior", StringComparison.Ordinal));
-            Assert.Contains(baked, p => p.EndsWith("::Cut::Columns", StringComparison.Ordinal));
-            Assert.Contains(baked, p => p.EndsWith("::Hatch::Frames", StringComparison.Ordinal));
+            Assert.Contains(baked, p => p.EndsWith("::Frames::Visible", StringComparison.Ordinal));
+            Assert.Contains(baked, p => p.EndsWith("::Panes::Visible", StringComparison.Ordinal));
+            Assert.Contains(baked, p => p.EndsWith("::Walls::Exterior::Visible", StringComparison.Ordinal));
+            Assert.Contains(baked, p => p.EndsWith("::Columns::Cut", StringComparison.Ordinal));
+            Assert.Contains(baked, p => p.EndsWith("::Frames::Hatch", StringComparison.Ordinal));
         }
         finally { component.RemovedFromDocument(gh); SceneCache.Shared.Clear(); }
     });
