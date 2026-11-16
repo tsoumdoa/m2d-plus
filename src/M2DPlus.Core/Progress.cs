@@ -54,11 +54,11 @@ public sealed class JobProgressModel
     /// <summary>Within a view: where each step usually starts, so a view's own progress moves forward too.</summary>
     private static double StepStart(string? step) => step switch
     {
-        ViewSteps.ExactLines => .05, ViewSteps.HiddenLines or ViewSteps.Fast => .2, ViewSteps.Sections => .75, ViewSteps.Checking => .85, ViewSteps.Output => .92, _ => 0,
+        ViewSteps.ExactLines => .05, ViewSteps.HiddenLines or ViewSteps.Fast => .2, ViewSteps.Sections => .75, ViewSteps.Checking or ViewSteps.ExactCurved => .85, ViewSteps.Output => .92, _ => 0,
     };
     private static double StepEnd(string? step) => step switch
     {
-        ViewSteps.ExactLines => .2, ViewSteps.HiddenLines or ViewSteps.Fast => .75, ViewSteps.Sections => .85, ViewSteps.Checking => .92, ViewSteps.Output => 1, _ => .05,
+        ViewSteps.ExactLines => .2, ViewSteps.HiddenLines or ViewSteps.Fast => .75, ViewSteps.Sections => .85, ViewSteps.Checking or ViewSteps.ExactCurved => .92, ViewSteps.Output => 1, _ => .05,
     };
 
     /// <summary>Folds one report in; <paramref name="elapsedSeconds"/> is the job's running time.</summary>
@@ -119,7 +119,8 @@ public sealed class JobProgressModel
 /// <summary>The steps of drawing one view, as the status shows them, and how the engine's phase names map to them.</summary>
 public static class ViewSteps
 {
-    public const string ExactLines = "exact lines", HiddenLines = "hidden lines", Fast = "fast", Sections = "sections", Checking = "checking", Output = "output";
+    public const string ExactLines = "exact lines", HiddenLines = "hidden lines", Fast = "fast", Sections = "sections", Checking = "checking", Output = "output",
+        ExactCurved = "exact curved";
 
     /// <summary>The user-facing step of an engine phase (PhaseTimings names), or null for bookkeeping phases.</summary>
     public static string? Of(string phase) => phase switch
@@ -128,6 +129,7 @@ public static class ViewSteps
         "native setup" or "native solve" or "native extraction and duplicates" => HiddenLines,
         "sections" or "section output construction" or "section restyle and output" => Sections,
         "native ray verification" => Checking,
+        "exact curved" => ExactCurved,
         "output construction" or "Beyond/fade splitting" or "min visible" => Output,
         _ => null,
     };

@@ -35,6 +35,7 @@ public sealed class PublicationProbe
     {
         double before = batch.Views.Sum(v => v.Phases.Seconds.GetValueOrDefault("GH publication"));
         var timer = Stopwatch.StartNew();
+        // TreeSources(Kind, Groups, Colours): the object-colour map (preview only) is empty here.
         var sources = Activator.CreateInstance(_emit.GetParameters()[2].ParameterType,
             BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null,
             [GeometryInputKind.Document, groups, colours], null)!;

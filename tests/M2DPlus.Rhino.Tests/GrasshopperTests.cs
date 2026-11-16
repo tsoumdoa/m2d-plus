@@ -52,7 +52,10 @@ public sealed class GrasshopperTests(RhinoHost host)
         RhinoDoc.ActiveDoc = rhinoDocument;
         GH_Document.EnableSolutions = true;
         using var document = new GH_Document { Enabled = true };
-        using var box = new Sphere(new Point3d(1, 1, 1), 1).ToBrep();
+        // An ellipsoid, not a sphere: a sphere is an exact analytic solid and would never enter native HLD.
+        using var ellipsoid = NurbsSurface.CreateFromSphere(new Sphere(new Point3d(1, 1, 1), 1));
+        Assert.True(ellipsoid.Transform(Transform.Scale(new Plane(new Point3d(1, 1, 1), Vector3d.XAxis, Vector3d.YAxis), 1, 1, 1.5)));
+        using var box = ellipsoid.ToBrep();
         var component = Component(document, box);
         using var cleanup = new Cleanup(() => { component.RemovedFromDocument(document); SceneCache.Shared.Clear(); });
         using var entered = new ManualResetEventSlim(); using var release = new ManualResetEventSlim();

@@ -60,7 +60,8 @@ public sealed class CompositionTests(RhinoHost host)
         using var cache = new SceneCache(); using var lease = BaselineTests.Capture(document,cache);
         var view = cut ? ViewRequest.Parse(Plane.WorldXY) : ViewRequest.Parse("SW");
         var identity = new RequestIdentity(lease.Value.Revision,view.Revision,"native-fallback",1);
-        using var routed = NativeDrawing.SolveBorrowedAsync(lease.Value,identity,[view],new(),default,null).GetAwaiter().GetResult();
+        // Spheres are exact analytic solids now; this test is about the native fallback, so the analytic tier is off.
+        using var routed = NativeDrawing.SolveBorrowedAsync(lease.Value,identity,[view],new() { Analytic = false },default,null).GetAwaiter().GetResult();
         using var native = NativeDrawing.SolveBorrowedAsync(lease.Value,identity,[view],new(NativeOnly:true),default,null).GetAwaiter().GetResult();
         var a=routed.Views[0]; var b=native.Views[0];
         Assert.Null(a.Error); Assert.Null(b.Error); Assert.Equal(0,a.KernelEdges); Assert.Equal(1,a.NativeCalls);
@@ -144,7 +145,8 @@ public sealed class CompositionTests(RhinoHost host)
         using var a = new LineCurve(new Point3d(-3,0,-2),new Point3d(3,0,-2));
         using var b = new LineCurve(new Point3d(3,0,-2),new Point3d(-3,0,-2));
         int queries = 0;
-        using var result = Route([sphere,a,b],settings:new() { ObserveNativeInputs = inputs => queries=inputs.Count(i => i.KernelCandidate) });
+        // The sphere stands for any native body: the analytic tier is off so that the foreign query exists.
+        using var result = Route([sphere,a,b],settings:new() { Analytic = false, ObserveNativeInputs = inputs => queries=inputs.Count(i => i.KernelCandidate) });
         Assert.Equal(1,queries);
         Assert.DoesNotContain(result.Items,p => p.Class == LineClass.Unresolved);
         Assert.Equal(4,Length(result,"1",LineClass.Visible)+Length(result,"2",LineClass.Visible),5);
@@ -236,9 +238,12 @@ public sealed class CompositionTests(RhinoHost host)
         using var wall = Brep.CreateFromBox(new BoundingBox(new Point3d(-3, -1, 0), new Point3d(-1, 1, 1)));
         using var sphere = new Sphere(new Point3d(2, 0, 0), 1).ToBrep();
         using var line = new LineCurve(new Point3d(-5, 0, -2), new Point3d(5, 0, -2));
-        using var result = Route([wall, sphere, line]);
+        using var result = Route([wall, sphere, line], settings: new() { Analytic = false });   // planar + native
         Assert.Equal(1, result.NativeCalls); Assert.Equal(6, Length(result, "2", LineClass.Visible), 4);
         Assert.Equal(4, Length(result, "2", LineClass.Hidden), 4); Assert.Equal(0, Length(result, "2", LineClass.Unresolved), 6);
+        using var exact = Route([wall, sphere, line]);                                         // planar + exact analytic: the same drawing, no HLD
+        Assert.Equal(0, exact.NativeCalls); Assert.Equal(6, Length(exact, "2", LineClass.Visible), 6);
+        Assert.Equal(4, Length(exact, "2", LineClass.Hidden), 6); Assert.Equal(0, Length(exact, "2", LineClass.Unresolved), 6);
     });
 
     [RhinoFact] public void CurvedCandidateUsesAllPlaneRootsThroughAPlanarOccluder() => host.Run(() =>
@@ -277,7 +282,7 @@ public sealed class CompositionTests(RhinoHost host)
         using var wall = Brep.CreateFromBox(new BoundingBox(new Point3d(-2,-2,0),new Point3d(2,2,1)));
         using var sphere = new Sphere(new Point3d(0,0,-2),.5).ToBrep();
         using var line = new LineCurve(new Point3d(-.5,0,-4),new Point3d(.5,0,-4));
-        using var result = Route([wall,sphere,line]);
+        using var result = Route([wall,sphere,line], settings: new() { Analytic = false });   // the sphere stands for any native body
         Assert.Equal(1, result.NativeCalls);
         Assert.Contains("planar edges submitted=0", result.Report.Route);
         Assert.Equal(1, Length(result,"2",LineClass.Hidden),6);

@@ -56,11 +56,19 @@ internal static class Program
         var prepared = scene.Prepare(CancellationToken.None);
         var prepareSeconds = timer.Elapsed.TotalSeconds;
         var bounds = scene.Bounds;
+#if !PERFF_BASELINE
+        if (viewName == "ce-census") { CurvedCensus.Run(scene, prepared, Path.GetFileNameWithoutExtension(file), output); return 0; }
+#endif
         var curved = viewName.StartsWith("curved:", StringComparison.Ordinal); if (curved) viewName = viewName[7..];
         var spike = viewName.StartsWith("spike:", StringComparison.Ordinal); if (spike) viewName = viewName[6..];
+        var engine = viewName.StartsWith("ce:", StringComparison.Ordinal); if (engine) viewName = viewName[3..];
+        var analytic = viewName.StartsWith("av:", StringComparison.Ordinal); if (analytic) viewName = viewName[3..];
         ViewRequest view = viewName switch
         {
             "North" => ViewRequest.Parse(-Vector3d.YAxis) with { Name = "North" },
+            "South" => ViewRequest.Parse(Vector3d.YAxis) with { Name = "South" },
+            "East" => ViewRequest.Parse(-Vector3d.XAxis) with { Name = "East" },
+            "West" => ViewRequest.Parse(Vector3d.XAxis) with { Name = "West" },
             "long" => ViewRequest.Parse(new Plane(new Point3d(0, bounds.Center.Y, 0), Vector3d.XAxis, Vector3d.ZAxis)) with { Name = "Long-section" },
             "trans" => ViewRequest.Parse(new Plane(new Point3d(bounds.Center.X, 0, 0), Vector3d.YAxis, Vector3d.ZAxis)) with { Name = "Trans-section" },
             "plan" => ViewRequest.Parse(new Plane(new Point3d(0, 0, bounds.Min.Z + Math.Min(1.2, bounds.Diagonal.Z * .4)), Vector3d.XAxis, Vector3d.YAxis)) with { Name = "Plan" },
@@ -105,6 +113,8 @@ internal static class Program
         if (spike) { Spike.Run(scene, prepared, view, stem, output, variants, timeout); return 0; }
 #if !PERFF_BASELINE
         if (variants.Contains("section-probe")) { SectionProbe.Run(prepared, view, scene.Tolerance, Path.Combine(output, stem + "-section-probe.json")); return 0; }
+        if (engine) { CurvedEngine.Run(scene, prepared, view, stem, output, variants, timeout); return 0; }
+        if (analytic) { AnalyticCheck.Run(scene, prepared, view, stem, output, variants, timeout); return 0; }
         if (variants.Contains("audit-verdicts")) { Verdicts.Audit(scene, prepared, stem, output); return 0; }
         if (variants.Contains("stress-parallel")) { Verdicts.Stress(scene, prepared, stem, output); return 0; }
 #endif

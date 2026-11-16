@@ -84,7 +84,9 @@ public sealed class UnitScaleRhinoTests(RhinoHost host, ITestOutputHelper output
     public void LocalAndWorkerReportPhaseProgressWithoutChangingDrawingBytes() => host.Run(() =>
     {
         using var doc=RhinoDoc.CreateHeadless(null);using var cache=new SceneCache();
-        using var sphere=new Sphere(Point3d.Origin,1).ToBrep();doc.Objects.AddBrep(sphere);
+        // An ellipsoid: a sphere is an exact analytic solid and would report "exact curved", not "hidden lines".
+        using var ellipsoid=NurbsSurface.CreateFromSphere(new Sphere(Point3d.Origin,1));Assert.True(ellipsoid.Transform(Transform.Scale(Plane.WorldXY,1,1,1.5)));
+        using var sphere=ellipsoid.ToBrep();doc.Objects.AddBrep(sphere);
         using var scene=BaselineTests.Capture(doc,cache);var identity=new RequestIdentity(scene.Value.Revision,"views","settings",1);
         ViewRequest[] views=[ViewRequest.Parse("Front")];
         var localProgress=new Sink();

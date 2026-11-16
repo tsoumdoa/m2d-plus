@@ -37,7 +37,11 @@ public sealed class MinVisibleRhinoTests(RhinoHost host, ITestOutputHelper outpu
         Box(doc, new(1000, 0, 0), new(2000, 100, 3000));
         var column = Box(doc, new(-200, 500, 500), new(200, 800, 2500)).ToString();
         string round;
-        using (var cylinder = new Cylinder(new Circle(new Plane(new Point3d(998.5, 650, 500), Vector3d.ZAxis), 150), 2000).ToBrep(true, true))
+        // An elliptic column, deeper along the view than it is wide: the same elevation as a round one, but not one of
+        // the exact analytic solids, so it still exercises native HLD.
+        using (var ellipse = new Ellipse(new Plane(new Point3d(998.5, 650, 500), Vector3d.XAxis, Vector3d.YAxis), 150, 195).ToNurbsCurve())
+        using (var wall = Surface.CreateExtrusion(ellipse, Vector3d.ZAxis * 2000).ToBrep())
+        using (var cylinder = wall.CapPlanarHoles(doc.ModelAbsoluteTolerance))
             round = doc.Objects.AddBrep(cylinder).ToString();
         using var scene = new SceneCache(); using var cache = new DrawingCache();
         var front = ViewRequest.Parse("Front");
