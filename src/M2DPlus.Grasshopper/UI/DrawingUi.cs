@@ -100,7 +100,7 @@ public sealed class DrawingUi
         switch (command)
         {
             case ViewCommands.Validate or ViewCommands.Flip or ViewCommands.Create or ViewCommands.Select:
-                if (ViewInput is { } views && RhinoDoc.ActiveDoc is { } document) ViewObjects.Execute(command, views, document, this);
+                if (ViewInput is { } views && RhinoDoc.ActiveDoc is { } document) ViewObjects.Execute(command, views, document, this, DepthDialog.Prompt);
                 break;
             case MenuCommands.Bake: Raise(BakeRequested, new BakeRequest(shift, null), "Bake isn't available in this build yet."); break;
             case MenuCommands.AutoRun: Commit(State.WithAutoRun(!State.AutoRun), "M2D+ run automatically", resolve: !State.AutoRun); break;

@@ -74,7 +74,8 @@ See [UX revision 4](design/ux.md) §2.2 and §6.
    are converted **in place** (same object id, one undo) into an **M2D+ view box**: an `Extrusion` whose profile
    is the view frame (and the cut plane where it passes through the model) and whose path runs into the model
    along the look direction (−Z of the frame); its length is the depth, edited by dragging the back face. Default
-   depth: to the back of the scene plus a margin. **Flip view direction** reverses it. Per-view settings are
+   depth: to the back of the scene plus a margin (superseded on 2026-11-16 by the depth pop-up and Auto by view type,
+   below). **Flip view direction** reverses it. Per-view settings are
    Attribute User Text `m2d.*` keys (`m2d.view = 1` marks the object); Convert to view boxes writes `default` for missing keys
    and never overwrites a value. The component reacts to object and attribute changes.
 2. **Create view from current viewport** bakes a view box matching the active parallel viewport, named
@@ -194,3 +195,27 @@ From the owner's first real use of v0.1.0-beta.1 on a ~6,000-object model.
   still treats hidden as presentation. Fast native output is not promised byte-identical across runs or workers;
   exact-mode worker equality tests retain their strict gate. Transporting one result remains lossless in either
   mode. `min visible` and styling remain presentation; they do not change verifier or visibility budgets.
+
+## View box depth pop-up and Auto depth by view type (owner decision, 2026-11-16, beta.4)
+
+- **Pop-up:** *Convert to view boxes* and *Create view from current viewport* open a small Eto dialog, **View box depth**,
+  once per run and before anything changes, when the run makes at least one new view box. It has a depth text box
+  (document units or a distance with units, read by the settings unit parser: `8 m`, `3000 mm`, `10'`), an **Auto**
+  button (the default) that fills in the Auto value, a one-line hint saying what Auto means for this selection, OK and
+  Cancel. One depth applies to every box in the run; Auto gives each box its own Auto depth. Invalid input shows an inline
+  error and keeps the dialog open. **Cancel** aborts the whole run with no change and no undo record. Re-converting
+  existing view boxes never asks and never changes their depth. It is modal on the Rhino UI thread, owned by the Rhino
+  main window, and works from the V and component menus.
+- **Explicit exception:** the owner rejected *settings* dialogs (2026-11-14, UX §6.1). This depth prompt is an explicit
+  owner exception: it asks one question when a box is made and stores nothing of its own. The depth goes into the
+  geometry only (the box's length, edited afterwards with the back face); no new user text.
+- **Never blocks:** Grasshopper's non-interactive paths (tests, headless runs, scripts) never show it. Non-interactive
+  overloads take an explicit depth or Auto.
+- **Auto by view type** (when the user keeps Auto, and whenever no dialog is shown): a **plan** (a horizontal frame looking
+  down that cuts the model) is **one storey, 3 m** in document units (3000 mm in a mm file), extended to the back of what is
+  inside the frame when nothing lies within that storey. A **section** (any other frame that cuts) and an **elevation** or
+  uncut view go to the **back of the geometry inside the frame's extrusion** plus a small margin, counting only objects
+  whose bounds overlap the frame's projected rectangle. **Nothing inside:** the frame's longer side.
+- **What counts** is what document mode draws: hidden objects and layers that are off don't count; view boxes and M2D+
+  bakes never count (the #36 exclusion rule). Bounding boxes in an RTree, never per-face work: fast on 50k objects.
+  See [UX](design/ux.md) §2.2.

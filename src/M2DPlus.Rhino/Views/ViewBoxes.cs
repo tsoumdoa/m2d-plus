@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using M2DPlus.Core;
+using M2DPlus.Core.Views;
 using M2DPlus.Rhino.Services;
 using Rhino;
 using Rhino.DocObjects;
@@ -15,8 +16,9 @@ public sealed record ViewFrameCheck(Rectangle3d? Frame, double? Depth, string? R
     public static ViewFrameCheck Fail(string reason) => new(null, null, reason);
 }
 
-/// <summary>One object's outcome for Convert to view boxes, Flip view direction or Create view.</summary>
-public sealed record ViewObjectResult(Guid Id, string Label, bool Ok, bool Changed, string Message)
+/// <summary>One object's outcome for Convert to view boxes, Flip view direction or Create view. <see cref="Cancelled"/>:
+/// the user cancelled the "View box depth" dialog, so the whole run changed nothing.</summary>
+public sealed record ViewObjectResult(Guid Id, string Label, bool Ok, bool Changed, string Message, bool Cancelled = false)
 {
     public override string ToString() => $"{Label}: {Message}";
 }
@@ -176,16 +178,13 @@ public static class ViewBoxes
         return new(flipped, new Interval(0, frame.X.Length), new Interval(0, frame.Y.Length));
     }
 
-    /// <summary>Auto depth (UX rev. 4 §2.2): to the back of the scene behind the frame plus a margin. With nothing
-    /// behind the frame, the frame's longer side.</summary>
-    public static double AutoDepth(Rectangle3d frame, BoundingBox scene, double tolerance)
-    {
-        var fallback = Math.Max(frame.Width, frame.Height);
-        if (!scene.IsValid) return fallback;
-        var back = scene.GetCorners().Max(p => -frame.Plane.DistanceTo(p));
-        var margin = Math.Max(tolerance * 10, scene.Diagonal.Length * .01);
-        return back > tolerance ? back + margin : fallback;
-    }
+    /// <summary>Metres per document model unit (any Rhino unit system).</summary>
+    public static double MetresPerUnit(RhinoDoc document) => RhinoMath.UnitScale(document.ModelUnitSystem, UnitSystem.Meters);
+
+    /// <summary>Reads depth text in this document's units (<c>8 m</c>, <c>3000 mm</c>, <c>10'</c>, a bare number, or
+    /// <c>auto</c>) with the settings unit parser; false with the error the dialog shows.</summary>
+    public static bool TryParseDepth(RhinoDoc document, string? text, out DepthChoice choice, out string? error) =>
+        DepthChoice.TryParse(text, MetresPerUnit(document), document.ModelAbsoluteTolerance, out choice, out error);
 
     // ---------------------------------------------------------------- the box
 
@@ -256,22 +255,58 @@ public static class ViewBoxes
 
     /// <summary>Convert to view boxes: converts each referenced planar rectangle (surface or curve) in place into a view box,
     /// keeping its id, writes default user text to every view box and moves every view box onto <see cref="LayerName"/>.
-    /// One undo record for the whole call.</summary>
-    public static IReadOnlyList<ViewObjectResult> Validate(RhinoDoc document, IEnumerable<Guid> ids, BoundingBox? scene = null)
+    /// One undo record for the whole call. Non-interactive: every new box gets <paramref name="depth"/> (Auto by default,
+    /// each box its own <see cref="ViewDepthScene.Auto"/>). Existing view boxes keep their depth.</summary>
+    public static IReadOnlyList<ViewObjectResult> Validate(RhinoDoc document, IEnumerable<Guid> ids, DepthChoice depth = default, BoundingBox? scene = null) =>
+        Validate(document, ids, _ => depth, scene);
+
+    /// <summary>Convert to view boxes, asking for the depth once for the whole run (the "View box depth" dialog) when it
+    /// converts at least one new object. Everything is checked first and nothing changes before the answer; a null
+    /// answer (Cancel) returns a single <see cref="ViewObjectResult.Cancelled"/> result with no change and no undo
+    /// record. Re-converting existing view boxes never asks.</summary>
+    public static IReadOnlyList<ViewObjectResult> Validate(RhinoDoc document, IEnumerable<Guid> ids, DepthPrompt prompt, BoundingBox? scene = null)
     {
-        var results = new List<ViewObjectResult>();
         var list = ids.Distinct().ToArray();
-        var bounds = scene ?? SceneBounds(document, list);
+        using var depthScene = ViewDepthScene.Collect(document, list);
+        var bounds = scene ?? depthScene.Bounds;
+        var planned = new Dictionary<Guid, (Rectangle3d Frame, AutoDepth Auto)>();
+        foreach (var id in list)
+            if (Plan(document, id, bounds) is { } frame) planned[id] = (frame, depthScene.Auto(frame));
+        var choice = DepthChoice.Auto;
+        if (planned.Count > 0)
+        {
+            var answer = prompt(new ViewDepthPrompt([.. list.Where(planned.ContainsKey).Select(id => planned[id].Auto)],
+                depthScene.MetresPerUnit, depthScene.Tolerance));
+            if (answer is null) return [Cancelled("Convert to view boxes")];
+            choice = answer.Value;
+        }
+        var results = new List<ViewObjectResult>();
         var record = document.BeginUndoRecord("M2D+ Convert to view boxes");
         try
         {
-            foreach (var id in list) results.Add(ValidateOne(document, id, bounds));
+            foreach (var id in list)
+                results.Add(planned.TryGetValue(id, out var plan) ? ConvertOne(document, id, plan.Frame, plan.Auto, choice) : ValidateOne(document, id));
         }
         finally { if (record != 0) document.EndUndoRecord(record); }
         return results;
     }
 
-    private static ViewObjectResult ValidateOne(RhinoDoc document, Guid id, BoundingBox scene)
+    /// <summary>The result for a run the user cancelled in the depth dialog.</summary>
+    public static ViewObjectResult Cancelled(string title) => new(Guid.Empty, title, false, false, "cancelled; nothing changed.", true);
+
+    /// <summary>The faced frame a new conversion would get, or null when the object is not converted (a view box, a
+    /// clipping plane, a refusal: <see cref="ValidateOne"/> reports those).</summary>
+    private static Rectangle3d? Plan(RhinoDoc document, Guid id, BoundingBox scene)
+    {
+        var obj = document.Objects.FindId(id);
+        if (obj is null || obj is ClippingPlaneObject || IsViewBox(obj) || obj.Geometry is Extrusion) return null;
+        var frame = Establish(obj.Geometry, document.ModelAbsoluteTolerance, document.ModelAngleToleranceRadians);
+        return frame.IsValid ? Face(frame.Frame!.Value, scene, document.ModelAbsoluteTolerance) : null;
+    }
+
+    /// <summary>Everything Convert to view boxes does except a new conversion: not found, clipping planes, existing view
+    /// boxes (re-adds missing keys, moves them back onto the views layer; never changes their depth) and refusals.</summary>
+    private static ViewObjectResult ValidateOne(RhinoDoc document, Guid id)
     {
         var obj = document.Objects.FindId(id);
         if (obj is null) return new(id, id.ToString("D"), false, false, "not found in the Rhino document.");
@@ -298,9 +333,14 @@ public static class ViewBoxes
         if (obj.Geometry is Extrusion)
             return new(id, label, false, false, "it is an extrusion or box, not a planar surface or rectangle. Reference one planar surface or a closed rectangle curve.");
         var frame = Establish(obj.Geometry, tolerance, angle);
-        if (!frame.IsValid) return new(id, label, false, false, frame.Reason!);
-        var faced = Face(frame.Frame!.Value, scene, tolerance);
-        var depth = AutoDepth(faced, scene, tolerance);
+        return new(id, label, false, false, frame.Reason ?? "it can't frame a view.");
+    }
+
+    private static ViewObjectResult ConvertOne(RhinoDoc document, Guid id, Rectangle3d faced, AutoDepth auto, DepthChoice choice)
+    {
+        var obj = document.Objects.FindId(id)!;
+        var label = Label(obj);
+        var depth = choice.Resolve(auto);
         using var extrusion = Build(faced, depth);
         if (!document.Objects.Replace(id, extrusion)) return new(id, label, false, false, "Rhino refused to replace it (is it locked or in a block?).");
         var replaced = document.Objects.FindId(id)!;
@@ -310,8 +350,10 @@ public static class ViewBoxes
         if (ViewsLayer(document) is var layerIndex and >= 0) next.LayerIndex = layerIndex;
         Wireframe(next);
         document.Objects.ModifyAttributes(replaced, next, true);
-        return new(id, next.Name!, true, true, $"converted to a view box on layer {LayerName}, looking {Direction(-faced.Plane.ZAxis)}, depth {Format(depth)} (auto).");
+        return new(id, next.Name!, true, true, $"converted to a view box on layer {LayerName}, looking {Direction(-faced.Plane.ZAxis)}, depth {Format(depth)} ({DepthSource(choice, auto)}).");
     }
+
+    private static string DepthSource(DepthChoice choice, AutoDepth auto) => choice.IsAuto ? "auto: " + auto.Describe() : "given";
 
     /// <summary>Flip view direction: the front face stays, the box extends to the other side with the same depth.</summary>
     public static IReadOnlyList<ViewObjectResult> Flip(RhinoDoc document, IEnumerable<Guid> ids)
@@ -343,8 +385,9 @@ public static class ViewBoxes
         return results;
     }
 
-    /// <summary>The box for a parallel viewport's visible rectangle: front face just in front of the scene, depth to
-    /// just behind it (an elevation). An empty scene uses the camera target and the frame's longer side.</summary>
+    /// <summary>The frame for a parallel viewport's visible rectangle, with its front face just in front of the scene;
+    /// <see cref="ViewFrameCheck.Depth"/> runs to just behind the whole scene (Create uses Auto depth instead). An
+    /// empty scene uses the camera target and the frame's longer side.</summary>
     public static ViewFrameCheck FrameFromViewport(ViewportInfo viewport, BoundingBox scene, double tolerance)
     {
         if (!viewport.IsParallelProjection)
@@ -364,22 +407,34 @@ public static class ViewBoxes
         return new(new Rectangle3d(plane, new Interval(0, right - left), new Interval(0, top - bottom)), depth, null);
     }
 
-    /// <summary>Create view from current viewport: bakes a named view box on the <see cref="LayerName"/> layer (one undo record).</summary>
-    public static ViewObjectResult Create(RhinoDoc document, ViewportInfo viewport, BoundingBox? scene = null)
+    /// <summary>Create view from current viewport, non-interactive: bakes a named view box on the <see cref="LayerName"/>
+    /// layer (one undo record), front face just in front of the scene, depth <paramref name="depth"/> (Auto: to the back
+    /// of what is inside the frame). <paramref name="excluded"/>: view objects that are not scene.</summary>
+    public static ViewObjectResult Create(RhinoDoc document, ViewportInfo viewport, IReadOnlyCollection<Guid>? excluded = null, DepthChoice depth = default) =>
+        Create(document, viewport, excluded, _ => depth);
+
+    /// <summary>Create view from current viewport, asking for the depth first (the "View box depth" dialog). A null
+    /// answer (Cancel) adds nothing and leaves no undo record.</summary>
+    public static ViewObjectResult Create(RhinoDoc document, ViewportInfo viewport, IReadOnlyCollection<Guid>? excluded, DepthPrompt prompt)
     {
-        var frame = FrameFromViewport(viewport, scene ?? SceneBounds(document, []), document.ModelAbsoluteTolerance);
+        using var depthScene = ViewDepthScene.Collect(document, excluded ?? []);
+        var frame = FrameFromViewport(viewport, depthScene.Bounds, document.ModelAbsoluteTolerance);
         if (!frame.IsValid) return new(Guid.Empty, "Create view", false, false, frame.Reason!);
+        var auto = depthScene.Auto(frame.Frame!.Value);
+        var answer = prompt(new ViewDepthPrompt([auto], depthScene.MetresPerUnit, depthScene.Tolerance));
+        if (answer is not { } choice) return Cancelled("Create view");
+        var value = choice.Resolve(auto);
         var record = document.BeginUndoRecord("M2D+ Create view from viewport");
         try
         {
-            using var extrusion = Build(frame.Frame!.Value, frame.Depth!.Value);
+            using var extrusion = Build(frame.Frame!.Value, value);
             var attributes = new ObjectAttributes { Name = NextName(document) };
             if (ViewsLayer(document) is var layerIndex and >= 0) attributes.LayerIndex = layerIndex;
             WriteDefaults(attributes);
             Wireframe(attributes);
             var id = document.Objects.AddExtrusion(extrusion, attributes);
             return id == Guid.Empty ? new(id, attributes.Name, false, false, "Rhino could not add the view box.")
-                : new(id, attributes.Name, true, true, $"created on layer {LayerName}, depth {Format(frame.Depth!.Value)}.");
+                : new(id, attributes.Name, true, true, $"created on layer {LayerName}, depth {Format(value)} ({DepthSource(choice, auto)}).");
         }
         finally { if (record != 0) document.EndUndoRecord(record); }
     }

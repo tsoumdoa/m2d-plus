@@ -12,6 +12,10 @@ Addendum, 2026-11-15 (pre-beta polish, owner request): the component moves to **
 look (§1); preview lines take the **source object's colour** (§3.6); a **severity policy** keeps normal runs out of the
 orange warning state (§5.2); and a **re-run trigger table** stops visibility and viewport changes re-running the
 drawing when Geometry is given (§5.1).
+Addendum, 2026-11-16 (owner decision for beta.4): a small **View box depth** pop-up on *Convert to view boxes* and
+*Create view from current viewport*, one depth per run with **Auto** as the default, and a better **Auto depth by view
+type** (plan one storey down; section and elevation to the back of what is inside the frame). It is the one dialog
+M2D+ has, an explicit owner exception to "no settings dialogs" (§2.1, §2.2, §6.1).
 
 **The idea:** one component and five inputs, of which only **View** must be set. Plug in a view and you
 get a correct drawing. M2D+ works out everything else from the view source and the document: what
@@ -230,12 +234,14 @@ world Y (north up).
 
 This works like Conduit+'s `Param_TextOption`. Choosing an item sets persistent data, and choosing is
 greyed out while a wire is connected. The three view-object commands also act on wired references.
+*Convert to view boxes* and *Create view from current viewport* open the **View box depth** pop-up (§2.2) before they
+change anything, when the run makes at least one new view box.
 
 ```
 Pick views in Rhino…                 (planar surfaces, rectangles, view boxes, clipping planes)
-Convert to view boxes                (§2.2; also on the component menu)
+Convert to view boxes                (§2.2; asks for the depth once; also on the component menu)
 Flip view direction                  (view boxes only)
-Create view from current viewport    (bakes "M2D View 01" on the $M2D Views layer and adds it)
+Create view from current viewport    (asks for the depth, bakes "M2D View 01" on the $M2D Views layer and adds it)
 ───────────────
 Named views     ▸  Level 1 · Level 2 · Roof · …          (multi-check: one drawing each)
 Clipping planes ▸  Section A · Section B · Plan cut L1 · …
@@ -329,13 +335,69 @@ A **view box** is the view as a Rhino object. It is an `Extrusion`:
 3. **Orientation.** Y (up) is the rectangle edge nearest world Z, or nearest north for a horizontal frame; X makes
    it right-handed; the origin is the lower-left corner (the placement anchor, §4). A **horizontal** frame looks
    down (a plan); any other frame looks toward the middle of the scene. **Flip view direction** reverses either.
-4. **Depth: auto**, to the back of the scene's bounding box along the look direction plus 1 % of its diagonal
-   (with nothing behind the frame: the frame's longer side). Edit it by dragging the back face.
+4. **Depth** comes from the **View box depth** pop-up (below), once for the whole run, before anything changes.
+   **Auto** (the default) gives each new box its own Auto depth by view type (below). The depth is written into the
+   geometry only (the path length), never as user text, and is edited afterwards by dragging the back face. Existing
+   view boxes in the run keep their depth, and a run with no new box doesn't ask.
 5. Names unnamed objects `M2D View 01`, `M2D View 02`… and writes the user-text keys below. **Missing keys get
    `default`; an existing value is never overwritten.** Converting a view box again only re-adds deleted keys, and
    moves it back onto `$M2D Views` if it was put on another layer.
 6. Reports each object on the Rhino command line and on the component (remarks; refusals stay as warnings until
-   the next view command or a change to V).
+   the next view command or a change to V), with its depth and where it came from (`depth 3000 (auto: plan, one
+   storey below the cut)` or `depth 8000 (given)`).
+
+**The View box depth pop-up** (owner decision 2026-11-16; the only dialog in M2D+, an explicit exception to §6.1).
+A small Eto dialog in Rhino's own style, modal on the Rhino UI thread and owned by the Rhino main window, titled
+**View box depth**. It opens once per run, from the V menu or the component menu, and its single depth applies to
+every box the run converts or creates. Rendered states: `tools/dialog-render` (its README).
+
+```
+┌ View box depth ──────────────────────────────────────────────────────── ✕ ┐
+│ Depth for all 3 [ auto                                     ] [  Auto  ]   │
+│ Auto: plans 3 m below the cut; sections and elevations to the back of     │
+│ what's inside the frame.                         (one line in the dialog) │
+│ (inline error, red, when the text is not a depth)                         │
+│                                                     [  OK  ] [ Cancel ]   │
+└───────────────────────────────────────────────────────────────────────────┘
+```
+
+- **Depth box:** a number in document units, or a distance with units read by the settings unit parser (`8 m`,
+  `3000 mm`, `10'`, `12 ft`), or `auto`. The label says `Depth`, or `Depth for all 3` when the run makes several boxes.
+- **Auto** (the default, and what the box holds when it opens) fills in the Auto value: the depth itself with units
+  (`3000 mm`) when every box in the run agrees, else `auto`. Leaving that text unchanged keeps Auto, so each box gets its
+  own Auto depth.
+- **Hint:** one line saying what Auto means for this selection, e.g. "Auto: plans 3 m below the cut; sections and
+  elevations to the back of what's inside the frame."
+- **Invalid input** (`8 parsecs`, `-3`, blank, at most the tolerance) shows a one-line red error under the hint and
+  keeps the dialog open: "Unknown distance unit: parsecs. Use mm, cm, m, km, in or ft."
+- **OK** applies the depth. **Cancel** (or Esc, or ✕) aborts the whole run: no change, no undo record, only a line
+  on the command line ("M2D+ Convert to view boxes: cancelled; nothing changed."), no warning on the component.
+- **Never blocks a non-interactive path.** Only the right-click menus pass the dialog. Tests, scripts and headless
+  runs call the non-interactive overloads (`ViewBoxes.Validate(doc, ids, DepthChoice)`, `ViewBoxes.Create(doc,
+  viewport, excluded, DepthChoice)`, `ViewObjects.Execute(…, prompt: null)`), which use Auto or an explicit depth. The
+  menu prompt itself answers Auto without showing anything when Rhino is headless, the call is off the UI thread or
+  there is no visible main window.
+
+**Auto depth by view type** (owner decision 2026-11-16). It applies when the user keeps Auto and whenever no dialog
+is shown. "Inside the frame" means a scene object whose bounding box, projected onto the frame plane, overlaps the
+frame rectangle and that reaches behind the frame plane (what is in front of the frame is removed by the drawing anyway).
+
+| The new box | Kind | Auto depth |
+|---|---|---|
+| Horizontal frame looking down whose front face **cuts** the model | **Plan** | **One storey: 3 m** in document units (3000 in a mm file). If nothing apart from the cut objects lies within that storey, to the back of what is inside the frame plus the margin, never less than a storey. |
+| Any other frame (vertical, tilted, or looking up) whose front face **cuts** | **Section** | To the back of the geometry inside the frame, plus the margin |
+| A frame that **cuts nothing** (elevation, roof plan, axo; *Create view* boxes start this way) | **Elevation** | To the back of the geometry inside the frame, plus the margin |
+| **Nothing inside** the frame | any | The frame's longer side |
+
+- **Cuts** uses the same rule as the front-face colour (above): a cuttable object's bounding box straddles the
+  front-face plane and overlaps the frame. Curves and points never make a plan or a section.
+- **Margin:** 1 % of the diagonal of the bounding box of what is inside the frame, at least 10 × the tolerance.
+- **What counts:** what document mode would draw. Hidden objects and objects on layers that are off (or under a parent
+  that is off) don't count; view boxes, anything on `$M2D Views` and M2D+ baked geometry never count (§3.1); the run's
+  own view objects don't either. Objects beside the frame, however far back, don't count.
+- **Cost:** one pass over the object table for bounding boxes into an RTree, then one RTree search per box over the
+  frame swept back to the scene's far side. No meshing and no per-face work (measured headless on 50 177 objects:
+  collecting about 0.35 s once per run, then 100 Auto depths in about 10 ms, on .NET 8 and .NET 10).
 
 **Per-view settings: Attribute User Text.** Edit them in Rhino's *Properties ▸ Attribute User Text*. `default`
 (or blank) means "not set here": the menu default, then the built-in default, applies (§6).
@@ -364,9 +426,10 @@ the closest valid value, exactly as for Settings text. Referenced clipping plane
 way. The component re-runs when a view object's geometry, name or `m2d.*` user text changes (§5.1). Hiding, showing or
 recolouring a view box, or moving it to another layer, changes nothing the drawing reads and never re-runs it.
 
-**Create view from current viewport** (right-click on V or the component): bakes a view box matching the active
-**parallel** viewport's visible rectangle, with its front face just in front of the scene and its back just behind
-it (so it starts as an elevation, cutting nothing), names it `M2D View 01`…, puts it on the **`$M2D Views`** layer
+**Create view from current viewport** (right-click on V or the component): asks for the depth (the View box depth
+pop-up, Auto by default), then bakes a view box matching the active **parallel** viewport's visible rectangle, with
+its front face just in front of the scene (so it starts as an elevation, cutting nothing) and Auto reaching the back
+of what is inside the frame, names it `M2D View 01`…, puts it on the **`$M2D Views`** layer
 (above), writes the user-text defaults, and adds it to V. One undo. A perspective viewport gets "M2D+ draws parallel
 views only. Switch the viewport to Parallel and try again."
 
@@ -929,6 +992,11 @@ Revision 3 had a View Range & Settings editor. It is removed (§10): the menu co
 cover per-view values where the view itself lives, and text covers parametric control. There is nothing else to
 store, so there is nothing to open.
 
+**One exception, by owner decision (2026-11-16):** the small **View box depth** pop-up (§2.2) when *Convert to view
+boxes* or *Create view from current viewport* makes new view boxes. It asks one question, the depth, at the moment the
+box is made, and stores nothing of its own: the depth goes into the box's geometry, edited afterwards with the back
+face. It is not a settings dialog, and no other dialog is planned.
+
 ### 6.2 Settings text
 
 - One `key = value` per line. `#` starts a comment. Keys are case-insensitive. Text items may hold several lines
@@ -1113,7 +1181,8 @@ M2D+
 ```
   Rhino: draw a vertical planar surface through the building (PlaneSrf / Rectangle + PlanarSrf)
   GH:    right-click V ▸ Pick views in Rhino… ▸ pick it ▸ right-click V ▸ Convert to view boxes
-  → "M2D View 01": a view box looking at the model, depth to the back of the scene, arrow + depth volume in preview
+  → View box depth pop-up: OK keeps Auto (a section: to the back of what's inside the frame)
+  → "M2D View 01": a view box looking at the model, arrow + depth volume in preview
   Rhino: gumball-drag its back face to 12 m; Properties ▸ Attribute User Text: m2d.farclip = line, m2d.fade = on
   Double-click the component to select it in Rhino again. Flip view direction to look the other way.
 ```
