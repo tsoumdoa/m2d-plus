@@ -20,6 +20,82 @@ public sealed class ContactTests
         Assert.Empty(EdgeFaceKernel.Solve(faces, edges, new(.001) { Joints = false }).Intervals);
     }
 
+    [Theory] [InlineData(false, false)] [InlineData(false, true)] [InlineData(true, false)] [InlineData(true, true)]
+    public void CompleteHiddenCoverageStopsBudgetedOcclusionButStillFindsFlushContacts(bool joints, bool flush)
+    {
+        var (panels, edges) = Panels();
+        var faces = new List<PlanarFace> { panels[0] };
+        for (int i = 1; i <= 10; i++) faces.Add(Face("slab-" + i, new(-1,-1,i), new(3,-1,i), new(3,2,i), new(-1,2,i)));
+        if (flush) faces.Add(panels[1]);
+        var result = EdgeFaceKernel.Solve(faces, edges, new(.001) { Joints=joints, MaxFacesPerEdge=4 });
+        Assert.Equal(1, result.FaceTests);
+        if (!joints && flush) Assert.Empty(result.Intervals);
+        else Assert.Equal(VisibilityClass.Hidden, Assert.Single(result.Intervals).Class);
+        Assert.DoesNotContain(result.Diagnostics, d => d.Contains("budget exceeded", StringComparison.Ordinal));
+    }
+
+    [Theory] [InlineData(true, false)] [InlineData(false, true)] [InlineData(true, true)]
+    public void MissingOutwardOrientationNeverFallsBackToWindingForFlush(bool ownMissing, bool foreignMissing)
+    {
+        var (faces, edges) = Panels();
+        if (ownMissing) faces[0] = faces[0] with { OutwardNormal=null };
+        if (foreignMissing) faces[1] = faces[1] with { OutwardNormal=null };
+        var result = EdgeFaceKernel.Solve(faces, edges, new(.001) { Joints=false });
+        Assert.Equal(VisibilityClass.Visible, Assert.Single(result.Intervals).Class);
+        Assert.Equal(ContactKind.Seated, Assert.Single(result.Contacts).Kind);
+        Assert.False(new ExactVisibilityOracle.AllPairsPoints(faces,.001).IsFlushContact(edges[0],.5,1));
+    }
+
+    [Theory] [InlineData(false)] [InlineData(true)]
+    public void ApproximateAndExactFlushInOneCellCannotDropOrPromoteUncertainty(bool joints)
+    {
+        var (faces, edges) = Panels();
+        var approximate = Panels(.0005).Faces[1] with { Source="C" };
+        var result = EdgeFaceKernel.Solve([..faces, approximate], edges, new(.001) { Joints=joints });
+        Assert.Contains(result.Contacts, c => c.Kind==ContactKind.Flush);
+        Assert.Contains(result.Contacts, c => c.Kind==ContactKind.Approximate);
+        Assert.Equal(VisibilityClass.Unresolved, Assert.Single(result.Intervals).Class);
+        var occluder = Face("opaque", new(-1,-1,1),new(3,-1,1),new(3,2,1),new(-1,2,1));
+        result = EdgeFaceKernel.Solve([..faces, approximate, occluder], edges, new(.001) { Joints=joints });
+        Assert.All(result.Intervals, i => Assert.Equal(VisibilityClass.Hidden,i.Class));
+    }
+
+    [Theory] [InlineData(false)] [InlineData(true)]
+    public void WorldContactPlanarityCannotCauseAnUnrelatedWholeViewFailure(bool near)
+    {
+        var (faces, edges) = Panels();
+        var z = near ? 0 : 10;
+        faces[1] = faces[1] with { WorldLoops=[[new(0,0,z),new(0,-1,z),new(2,-1,z),new(2,0,z+1)]], WorldOutwardNormal=new(0,0,1) };
+        edges[0] = edges[0] with { WorldA=edges[0].A,WorldB=edges[0].B };
+        var result = EdgeFaceKernel.Solve(faces, edges, new(.001));
+        Assert.Equal(near ? VisibilityClass.Unresolved : VisibilityClass.Visible, Assert.Single(result.Intervals).Class);
+        Assert.DoesNotContain(result.Diagnostics, d => d.Contains("Nonplanar face",StringComparison.Ordinal));
+        if (!near) Assert.Empty(result.Contacts);
+    }
+
+    [Fact] public void ExactFarFromOriginContactsRetainTheSameRuleAndDiscloseSameSourceTies()
+    {
+        var (faces, edges) = Panels();
+        Vertex Move(Vertex p) => new(p.X+5e6,p.Y+5e6,p.Z+5e6);
+        faces=faces.Select(f=>f with {Loops=f.Loops.Select(l=>l.Select(Move).ToArray()).ToArray()}).ToArray();
+        edges=edges.Select(e=>e with {A=Move(e.A),B=Move(e.B)}).ToArray();
+        var result=EdgeFaceKernel.Solve(faces,edges,new(.001) {Joints=false});
+        Assert.Empty(result.Intervals);Assert.Equal(ContactKind.Flush,Assert.Single(result.Contacts).Kind);
+        faces[1]=faces[1] with {Source="A"};
+        result=EdgeFaceKernel.Solve(faces,edges,new(.001) {Joints=false});
+        Assert.Equal(VisibilityClass.Visible,Assert.Single(result.Intervals).Class);Assert.Empty(result.Contacts);
+        Assert.Contains(result.Diagnostics,d=>d.Contains("Same-source/self-face depth ties retain the tolerance rule",StringComparison.Ordinal));
+    }
+
+    [Theory] [InlineData("exact", false, false)] [InlineData("exact", true, true)]
+    [InlineData("fast", false, false)] [InlineData("fast", true, true)]
+    public void JointsKeysOnlyActivePlanarVisibility(string engine, bool cutOnly, bool equal)
+    {
+        EffectiveSettings Resolve(bool joints) => Settings.Resolve([new("v","v",ViewSourceKind.Direction,false,10,.001)],
+            [[$"engine={engine}",$"cutonly={(cutOnly ? "on" : "off")}",$"joints={(joints ? "on" : "off")}"]],DocumentUnits.Metres).Views[0];
+        Assert.Equal(equal,Resolve(true).VisibilityKey()==Resolve(false).VisibilityKey());
+    }
+
     [Fact] public void WallOnSlabIsSeatedEvenWithACoplanarBottomFaceAndStillOccludesNormally()
     {
         PlanarFace[] faces = [

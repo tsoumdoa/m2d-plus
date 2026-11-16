@@ -1,7 +1,146 @@
-# Contact edges for beta.4
+# Contact edges: beta.4 review fixes
 
-Implementation against beta.3 / `e091e09ceed13d751138ab536cafd60d46e66384`, 2026-11-16.
-The implementation and evidence are uncommitted.
+Current base: **`894065b`**, the committed contact implementation rebased onto
+**`9d4b9a7` / 0.1.0-beta.4**. The review fixes described here are uncommitted.
+
+## Review fixes
+
+- Complete Hidden coverage stops budgeted occlusion clipping with either joints
+  value. Joints off then performs only contact checks behind a filtered world-plane
+  distance test, without charging `MaxFacesPerEdge`. A failed suppression check
+  retains independently proved Hidden coverage.
+- Flush requires explicit certified outward normals from closed, outward-oriented
+  solids/meshes. Open/unoriented sources carry null normals; neither kernel nor
+  independent oracle substitutes triangle winding. The mirror regression now uses
+  document capture, block transformation, orientation normalisation and Identity
+  extraction, matching production.
+- Full world polygons are lazy and created only inside the contact band. They are
+  not globally prepared/validated as a second set of occluders. Approximate contact
+  in a cell takes precedence over exact Flush suppression.
+- Info and the contracts disclose that the tie is retired **between source objects
+  only**. Same-source/self-face ties remain, including one mesh building or a
+  multi-lump Brep.
+- Cut-only views omit joints from the effective visibility key. Fast mode retains
+  it: fast still uses the exact planar kernel, and a cache regression demonstrates
+  different joint output with on/off. Removing its key would reuse the wrong drawing.
+- Regressions include the stacked-slab budget probe, missing/wrong open orientation,
+  real mirrored preparation, axonometric bearing ownership and third-object hiding,
+  far coordinates, byte-identical section regions/hatches, mixed exact/Approximate
+  cells, and active/inactive cache behavior.
+
+## Current review verification and measurements
+
+Both unfiltered `Test-WalkingSkeleton.ps1` runtime passes succeed on the rebased
+code plus fixes: **461 Core, 74 UI-model and 313 licensed Rhino tests per runtime**,
+with one opt-in capture-profile skip. This includes persistent-worker byte identity
+and the new contact/section/cache regressions. Debug and Release solution builds,
+the licensed and license-free gate tools, and the forced local hook pass with zero
+warnings/errors. The current run records are under `artifacts/contact-review-894065b`.
+The fresh **light gate passes 223/223 required views**, with zero known bugs,
+zero proven wrong Visible results and zero legacy `tieConvention` exceptions.
+It retains **29 Unresolved/Info cases**. The stricter verified whole-output
+comparison remains 186/223 passing rows, with 49,248 unclassified comparison
+samples; this is not a general native/freeform or full global-beta certificate.
+All rows share the fixed Core/Rhino/harness fingerprints. The 160 independently
+certified tolerance-boundary samples comprise ten small planar samples and
+58 / 92 mixed perf-M samples; mixed certificates include complete planar
+interval/interior-point checks and complete captured curved-body ray checks.
+
+The durable review archive is
+`~/.t3/m2d-plus-models/evidence/contact-review-894065b-20261116`. It contains the
+fresh raw rows/certificates, light-gate receipts bound to archived paths, strict
+off-gate, original/fixed timing binaries and observations, native transformed
+captures/census, full test logs/TRX, source snapshot and SHA-256 manifest.
+No review fixes were committed, pushed, installed or published.
+
+### Before/after timing observations
+
+Before is the engine at `894065b`, preserved before editing production code. Both
+builds use identical timing instrumentation, Top view, hidden on, beyond off, one
+observation per cell, a retained prepared scene, and on then off in that order.
+View-solve wall time excludes file opening/capture/preparation, result dumps, GH
+publication and worker IPC. Both kernel time and total solve time are reported;
+the machine was shared and load/CPU/memory receipts are retained. These are
+descriptive observations, not a calibrated speedup or throughput claim.
+
+| Fixture | Objects | Joints on: before → after (s) | Joints off: before → after (s) |
+|---|---:|---:|---:|
+| perf-M blocks | 5,000 | 8.087 → 9.466 | 13.956 → 8.916 |
+| perf-M exploded | 5,000 | 8.089 → 8.340 | 13.125 → 8.713 |
+| Generated small Breps | 50,000 | 25.282 → 25.066 | 19.776 → 19.881 |
+| Real terrain campus | 2,983 | 193.268 → 191.528 | 185.383 → 204.914 |
+
+The 527 MiB terrain campus has about 14 million mesh triangles; it is **not** the
+50k-object fixture. Both were measured to avoid conflating them.
+
+| Fixture | Kernel on: before → after (s) | Kernel off: before → after (s) |
+|---|---:|---:|
+| perf-M blocks | 2.125 → 2.056 | 7.311 → 2.964 |
+| perf-M exploded | 1.882 → 1.778 | 7.448 → 2.756 |
+| Generated small Breps | 8.579 → 7.813 | 6.065 → 5.841 |
+| Real terrain campus | 0.324 → 0.249 | 2.351 → 0.752 |
+
+The stacked-slab regression proves the budget correction independently of timing:
+with ten slabs and `MaxFacesPerEdge=4`, both modes remain Hidden after **one**
+budgeted face test; off still finds and suppresses a later certified Flush span.
+The campus remains native-dominated and its observed off solve is slower overall.
+No full-campus improvement is claimed.
+
+Current frozen Release SHA-256:
+
+- Core: `7F80EF2428831C1C303323013294A8B61DE7770E4438A892BCE9934A000D44DF`
+- Rhino: `ACD084FA04052EDB06F2B283C0486513445E15246B9FB6EE64B66E136A4D4ACA`
+
+### Native transformed-geometry census
+
+Both perf-M forms are captured and prepared by Rhino. Owned geometry and the Top
+view are then transformed together, followed by production-style **Identity**
+extraction. Translation is `(5e6, 5e6, 5e6)`; rotation is `0.37` radians about
+axis `(1, 2, 3)`. There is no plane fitting, geometry repair or HLD solve in this
+census. Source IDs and local topology/adjacency, rather than global array indices,
+match retained candidate edges when eligibility changes.
+
+Counts below are candidate-edge occurrences in the extracted planar subset.
+Seated/Flush/Approximate kinds can overlap on an edge. They are not final drawing
+records or a certificate for the remaining native sources.
+
+| Form / transform | Planar objects / 5,000 | Seated | Flush | Approximate | Contact edges with Unresolved spans, joints on | Previously Visible edge with a new Unresolved span* |
+|---|---:|---:|---:|---:|---:|---:|
+| Blocks / identity | 4,790 | 24,729 | 19,582 | 1,298 | 7 | — |
+| Blocks / offset | 3,542 | 21,811 | 18,727 | 0 | 0 | 0 |
+| Blocks / tilted axis | 4,790 | 8,840 | 54 | 29,059 | 3,416 | 314 |
+| Blocks / offset + tilted | 0 | N/A | N/A | N/A | N/A | N/A |
+| Exploded / identity | 4,790 | 24,729 | 19,582 | 1,298 | 7 | — |
+| Exploded / offset | 3,542 | 21,811 | 18,727 | 0 | 0 | 0 |
+| Exploded / tilted axis | 4,790 | 8,814 | 56 | 29,084 | 3,366 | 312 |
+| Exploded / offset + tilted | 0 | N/A | N/A | N/A | N/A | N/A |
+
+\* Positive overlap in edge-parameter space on sources with matching candidate
+and face counts and local adjacency. Counts do not mean that each whole physical
+edge became Unresolved. Rounded view projection can also create microscopic
+nonzero projections of formerly edge-on candidates.
+
+Offset alone loses **1,248** previously planar sources to native extraction;
+43,764 edges on 3,542 sources remain comparable. Tilt alone retains all 4,790
+planar sources / 58,740 candidates but loses many exact binary64 contact proofs,
+which become reported uncertainty. Joints off retains the same 3,416 / 3,366
+uncertain contact-edge occurrences rather than suppressing them. Offset plus tilt
+leaves no planar census domain at all: its zero raw counters must not be read as
+zero uncertainty or successful classification. These eligibility/precision limits
+are disclosed, not repaired by nudging or by assuming a native certificate.
+
+The separate strict `joints=off` flush-panel gate passes Top/North/SW with
+**154** suppressed-joint witnesses (39 / 19 / 96), zero unexplained samples and
+zero wrong Visible findings. It uses the fixed producer, not historical receipts.
+
+Historical results below describe the original implementation, not this review's
+acceptance or timing comparison.
+
+## Historical original implementation
+
+The original measurements below used beta.3 / `e091e09ceed13d751138ab536cafd60d46e66384`
+on 2026-11-16. That implementation was subsequently committed and rebased as
+`894065b`. Its evidence archive remains separate from the review-fix archive.
 
 ## Rules
 
@@ -55,7 +194,7 @@ disclosure. There is no analytic visibility adapter in this checkout; no analyti
 contact certificate is inferred from proximity. Fable's analytic hook must opt
 into a whole-support certificate separately.
 
-## Verification
+## Historical verification
 
 The frozen implementation passes both unfiltered `Test-WalkingSkeleton.ps1`
 runtimes: **386 Core, 72 UI-model and 285 licensed Rhino tests per runtime**, with
@@ -92,7 +231,7 @@ A separate flush-panel fixture with `joints = off` passes the strict whole-outpu
 comparison in Top, North and SW. It records **154 independent suppressed-joint
 witnesses** (39 / 19 / 96), with zero unexplained samples or wrong Visible results.
 
-## Measurements
+## Historical measurements
 
 The whole-output baseline is an untouched build of the commit above. Three
 uncached visibility solves of Top, North and SW are compared per model, with the
@@ -179,7 +318,7 @@ fixtures retain one contributing owner and draw the edge once.
   contact gate rejects legacy blanket-tie evidence and records independent
   contact-edge / suppressed-joint witnesses.
 
-## Evidence
+## Historical evidence
 
 The durable archive is under
 `~/.t3/m2d-plus-models/evidence/contact-edges-20261116-e091e09` (or the corresponding

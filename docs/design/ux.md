@@ -721,7 +721,8 @@ style; the API suggests they don't).
   remain and are occluded normally. Shared edges draw once with stable source ownership.
   Approximate contacts stay Unresolved; native/freeform contacts retain their disclosed native
   behaviour. Settings, `m2d.joints` user text and the menu use normal precedence. Joints keys
-  visibility, so changing it re-solves from the kept scene.
+  visibility whenever projection runs, including fast mode's planar kernel, so changing it
+  re-solves from the kept scene. Cut-only views omit joints from the effective visibility key.
 - **Hidden lines:** on by default. Turning it off empties the Hidden output. With `engine = exact` it is a
   presentation choice: the solve keeps hidden lines (also needed by `min visible`), so toggling it reuses visibility.
   With `engine = fast`, native HLD computes hidden curves only when requested; changing hidden re-solves visibility.

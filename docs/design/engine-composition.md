@@ -89,7 +89,12 @@ load. Timing is reported separately in phases, never deterministic diagnostics.
 Fully planar scenes never instantiate the verifier and preserve their output.
 
 The 2026-11-16 contact decision replaces the planar `tieConvention`. Planar inputs
-carry source identity, adjacent face indices and outward face orientation. Exact
+carry source identity, adjacent face indices and certified outward face orientation.
+Only closed, outward-oriented Breps/meshes supply that orientation; open geometry
+and unnormalised solids carry null normals. Winding normals never prove Flush in
+either the kernel or the independent gate oracle. Scene preparation applies the
+complete block transform and normalises closed-solid orientation before extraction.
+Exact
 contact predicates use owned world vertices/normals retained before rounded view
 projection, so changing the camera cannot turn an exact world contact into a
 tolerance tie. Projected broad-phase bounds are conservatively expanded for
@@ -106,16 +111,28 @@ draw normally. Flush contacts draw with `joints=on` (default); `off` suppresses
 only certified flush spans, before locus reconciliation. Other objects occlude
 retained contacts normally. Coincident blocks retain their exterior outlines.
 
+Complete Hidden coverage stops occlusion clipping and its face budget in both
+joints modes. With joints off, remaining pairs perform only contact predicates,
+after a conservative filtered world-plane distance test. Full world polygons are
+created lazily inside the contact band, not globally prepared as a second set of
+occluders. An inconclusive suppression check retains already proved Hidden spans.
+
 Filtered predicates fall back to rationals of the supplied binary64 values.
 Nonzero incidence residuals inside the conservative tolerance × L1-normal band,
 or approximate planarity/continuity, produce Unresolved unless an occluder proves
-Hidden. This band contains the Euclidean tolerance neighbourhood and may extend
+Hidden. Approximate contact in the same cell takes precedence over exact Flush
+suppression, so joints off cannot silently remove that uncertainty. This band
+contains the Euclidean tolerance neighbourhood and may extend
 to √3 tolerances. Both ends of the straight support must be in the band: a
 transverse crossing has no positive-length contact interval and keeps ordinary
 occlusion. The band is an uncertainty bound, never a contact certificate.
 Endpoints retain the kernel's quarter-tolerance representability budget. Closed
 polygon boundaries otherwise occlude only with a strict view-depth gap above
-tolerance. Self-face tolerance is retained for approximate input geometry.
+tolerance. The tie is retired **between source objects only**. Same-source and
+self-face tolerance ties remain, including contacts within one mesh building or
+multi-lump Brep. These intra-object contacts are not certified; Info says so.
+Joints is omitted from the effective visibility key for cut-only views. Fast mode
+still runs the exact planar kernel, so its joints value must remain keyed.
 
 Native/freeform candidates keep native contact behaviour and the existing audit;
 Info explicitly says that planar joint suppression does not certify them. Fast

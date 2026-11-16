@@ -81,8 +81,6 @@ public static partial class EdgeFaceKernel
         if (!double.IsFinite(options.DepthTolerance) || options.DepthTolerance <= 0 || options.Threads < 1 || options.MaxPairOperations < 1 || options.MaxFacesPerEdge < 1)
             throw new ArgumentOutOfRangeException(nameof(options));
         var prepared = new Face[faces.Count];
-        var contactFaces = faces.Select(ContactGeometry.Face).ToArray();
-        var contactPrepared = new Face[faces.Count];
         try
         {
             if (options.DepthTolerance < 1e-150) throw new ArithmeticException("Tolerance exceeds output arithmetic range; whole view unresolved");
@@ -101,7 +99,6 @@ public static partial class EdgeFaceKernel
                 if (faces[i].Loops.Sum(l => (long)l.Length) > options.MaxPairOperations)
                     throw new ArithmeticException("Planar face preparation work budget exceeded; whole view unresolved");
                 prepared[i] = new(faces[i], options.DepthTolerance);
-                contactPrepared[i] = ReferenceEquals(contactFaces[i], faces[i]) ? prepared[i] : new(contactFaces[i], options.DepthTolerance);
                 if ((i & 255) == 0) options.Progress?.Invoke(i, faces.Count + edges.Count);
             }
             if (edges.Any(e => !Finite(e.A) || !Finite(e.B) || e.WorldA is {} a && !Finite(a) || e.WorldB is {} b && !Finite(b)
@@ -112,12 +109,14 @@ public static partial class EdgeFaceKernel
             return new(edges.Select((_, i) => new EdgeInterval(i, 0, 1, VisibilityClass.Unresolved)).ToArray(), 0, 0, [e.Message]);
         }
         var tree = options.UseIndex ? new FaceTree(prepared, token) : null;
+        var contactFaces = new ContactData(faces, prepared, options.MaxPairOperations);
         var outputs = new EdgeInterval[edges.Count][];
         var contacts = new ContactInterval[edges.Count][];
-        long tests = 0, fallback = 0, exactTicks = 0; int done = 0, budgetEdges = 0;
+        long tests = 0, fallback = 0, exactTicks = 0; int done = 0, budgetEdges = 0, suppressedChecksFailed = 0;
         Parallel.For(0, edges.Count, new ParallelOptions { MaxDegreeOfParallelism = options.Threads, CancellationToken = token }, ei =>
         {
             var edge = edges[ei];
+            var worldEdge = ContactGeometry.Edge(edge);
             double endpointSpan=Math.BitIncrement(Math.BitIncrement(Math.Abs(edge.B.X-edge.A.X))+Math.BitIncrement(Math.Abs(edge.B.Y-edge.A.Y)));
             contacts[ei] = [];
             if (edge.A.X == edge.B.X && edge.A.Y == edge.B.Y) { outputs[ei] = []; return; }
@@ -130,24 +129,36 @@ public static partial class EdgeFaceKernel
             var ids = new List<int>();
             if (tree is null) ids.AddRange(Enumerable.Range(0, faces.Count)); else tree.Query(edge, ids,edge.AdjacentFaces.Length==0?0:options.DepthTolerance);
             ids.Sort((a, b) => prepared[b].Z.CompareTo(prepared[a].Z));
-            long localTests = 0, localExact = 0; bool unresolved = false;
+            long localTests = 0, localExact = 0; bool unresolved = false, suppressionUncertain = false;
             foreach (int fi in ids)
             {
-                if ((localTests++ & 255) == 0) token.ThrowIfCancellationRequested();
-                if (localTests > options.MaxFacesPerEdge) { unresolved = true; Interlocked.Increment(ref budgetEdges); break; }
+                token.ThrowIfCancellationRequested();
+                bool contactOnly = hidden.Count == 1 && hidden[0].A == 0 && hidden[0].B == 1;
+                if (contactOnly && (options.Joints || edge.AdjacentFaces.Length == 0)) break;
+                // Once another face has proved complete occlusion, further
+                // occlusion clips cannot change Hidden. Only contact suppression
+                // remains, and does not consume the occlusion face budget.
+                if (!contactOnly && ++localTests > options.MaxFacesPerEdge)
+                { unresolved = true; Interlocked.Increment(ref budgetEdges); break; }
                 var f = prepared[fi];
-                var contactFace = contactPrepared[fi];
-                IReadOnlyList<(double A, double B)> pieces;
+                IReadOnlyList<(double A, double B)> pieces = [];
                 bool foreign = faces[fi].Source is { } source && source != edge.Source && edge.AdjacentFaces.Length != 0;
                 IReadOnlyList<ContactInterval> pairContacts = [];
+                var support = foreign ? contactFaces.Support(fi) : null;
+                bool possibleContact = support?.MayContact(worldEdge, options.DepthTolerance) == true;
+                if (contactOnly && !possibleContact) continue;
                 try
                 {
-                    if (f.Filtered is null) throw new IndeterminateException();
-                    pieces = Clip(f.Filtered, edge, options.DepthTolerance, token, options.MaxPairOperations);
-                    if (foreign)
+                    if (!contactOnly)
                     {
-                        if (contactFace.Filtered is null) throw new IndeterminateException();
-                        pairContacts = Contacts(contactFace.Filtered, ContactGeometry.Edge(edge), ei, fi, contactFaces, options.DepthTolerance, token, options.MaxPairOperations,
+                        if (f.Filtered is null) throw new IndeterminateException();
+                        pieces = Clip(f.Filtered, edge, options.DepthTolerance, token, options.MaxPairOperations);
+                    }
+                    if (possibleContact)
+                    {
+                        var polygon = support!.Filtered.Value;
+                        if (polygon is null) throw new IndeterminateException();
+                        pairContacts = Contacts(polygon, worldEdge, ei, fi, contactFaces, options.DepthTolerance, token, options.MaxPairOperations,
                             endpointSpan);
                     }
                 }
@@ -157,14 +168,19 @@ public static partial class EdgeFaceKernel
                     long start = options.ObserveWork is null ? 0 : System.Diagnostics.Stopwatch.GetTimestamp();
                     try
                     {
-                        pieces = Clip(f.Exact.Value, edge, options.DepthTolerance, token, options.MaxPairOperations);
-                        if (foreign) pairContacts = Contacts(contactFace.Exact.Value, ContactGeometry.Edge(edge), ei, fi, contactFaces, options.DepthTolerance, token, options.MaxPairOperations,
+                        if (!contactOnly) pieces = Clip(f.Exact.Value, edge, options.DepthTolerance, token, options.MaxPairOperations);
+                        if (possibleContact) pairContacts = Contacts(support!.Exact.Value, worldEdge, ei, fi, contactFaces, options.DepthTolerance, token, options.MaxPairOperations,
                             endpointSpan);
                     }
+                    catch (ArithmeticException) when (contactOnly) { suppressionUncertain = true; continue; }
                     catch (EndpointResolutionException) { unresolved = true; break; }
+                    catch (WorkBudgetException) when (contactOnly) { suppressionUncertain = true; continue; }
                     catch (WorkBudgetException) { unresolved = true; Interlocked.Increment(ref budgetEdges); break; }
                     finally { if (options.ObserveWork is not null) Interlocked.Add(ref exactTicks, System.Diagnostics.Stopwatch.GetTimestamp() - start); }
                 }
+                catch (ArithmeticException) when (contactOnly) { suppressionUncertain = true; continue; }
+                catch (ArithmeticException) { unresolved = true; break; }
+                catch (WorkBudgetException) when (contactOnly) { suppressionUncertain = true; continue; }
                 catch (WorkBudgetException) { unresolved = true; Interlocked.Increment(ref budgetEdges); break; }
                 // An exact world contact cannot be hidden by its own support
                 // face, even when rounded projection makes that face almost edge-on.
@@ -179,11 +195,11 @@ public static partial class EdgeFaceKernel
                     foreach (var span in remainder) InsertHidden(hidden,span);
                 }
                 contact.AddRange(pairContacts);
-                if (hidden.Count == 1 && hidden[0].A == 0 && hidden[0].B == 1 && (options.Joints || edge.AdjacentFaces.Length == 0)) break;
             }
             Interlocked.Add(ref tests, localTests); Interlocked.Add(ref fallback, localExact);
             options.Progress?.Invoke(faces.Count + Interlocked.Increment(ref done), faces.Count + edges.Count);
             if (unresolved) { outputs[ei] = [new(ei, 0, 1, VisibilityClass.Unresolved)]; return; }
+            if (suppressionUncertain) Interlocked.Increment(ref suppressedChecksFailed);
             contacts[ei] = contact.ToArray();
             if (contact.Count != 0)
             {
@@ -195,9 +211,10 @@ public static partial class EdgeFaceKernel
                     double a = ends[i - 1], b = ends[i];
                     // Whole-cell coverage, without geometric sampling.
                     var active = contact.Where(c => c.Start <= a && c.End >= b).ToArray();
-                    if (!options.Joints && active.Any(c => c.Kind == ContactKind.Flush)) continue;
+                    bool approximate = active.Any(c => c.Kind == ContactKind.Approximate);
+                    if (!options.Joints && !suppressionUncertain && !approximate && active.Any(c => c.Kind == ContactKind.Flush)) continue;
                     var kind = hidden.Any(h => h.A <= a && h.B >= b) ? VisibilityClass.Hidden
-                        : active.Any(c => c.Kind == ContactKind.Approximate) ? VisibilityClass.Unresolved : VisibilityClass.Visible;
+                        : approximate ? VisibilityClass.Unresolved : VisibilityClass.Visible;
                     if (spans.Count != 0 && spans[^1].End == a && spans[^1].Class == kind) spans[^1] = spans[^1] with { End = b };
                     else spans.Add(new(ei, a, b, kind));
                 }
@@ -212,11 +229,14 @@ public static partial class EdgeFaceKernel
             if (cursor < 1) result.Add(new(ei, cursor, 1, VisibilityClass.Visible));
             outputs[ei] = result.ToArray();
         });
-        options.ObserveWork?.Invoke(new(fallback, (double)exactTicks / System.Diagnostics.Stopwatch.Frequency, prepared.Concat(contactPrepared).Distinct().Count(f => f.Exact.IsValueCreated), budgetEdges));
+        options.ObserveWork?.Invoke(new(fallback, (double)exactTicks / System.Diagnostics.Stopwatch.Frequency,
+            prepared.Count(f => f.Exact.IsValueCreated) + contactFaces.ExtraExactFaces, budgetEdges));
         var allContacts = contacts.SelectMany(c => c).ToArray();
         var diagnostics = new List<string>();
         if (allContacts.Length != 0) diagnostics.Add($"Planar contacts: seated={allContacts.Count(c => c.Kind == ContactKind.Seated)}; flush={allContacts.Count(c => c.Kind == ContactKind.Flush)}; approximate={allContacts.Count(c => c.Kind == ContactKind.Approximate)}; joints={(options.Joints ? "on" : "off")}. Approximate contacts are Unresolved unless occluded.");
+        if (edges.Any(e => e.AdjacentFaces.Length != 0)) diagnostics.Add("Planar contact rules apply between source objects only. Same-source/self-face depth ties retain the tolerance rule; intra-object contacts are not certified. Flush suppression requires certified outward normals; unoriented contacts are retained.");
         if (budgetEdges != 0) diagnostics.Add($"Planar certificate work budget exceeded for {budgetEdges} candidates; their complete spans are Unresolved.");
+        if (suppressedChecksFailed != 0) diagnostics.Add($"Contact suppression could not be certified for {suppressedChecksFailed} fully hidden candidates; their proven Hidden coverage was retained.");
         return new(outputs.SelectMany(x => x).ToArray(), tests, fallback, diagnostics) { Contacts = allContacts };
     }
 

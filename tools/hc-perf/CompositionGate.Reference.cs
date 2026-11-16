@@ -167,7 +167,7 @@ public static partial class CompositionGate
                 var edge=_scene.Edges[candidate.Edge];double t=candidate.Parameter;var local=new Vertex(edge.A.X+(edge.B.X-edge.A.X)*t,edge.A.Y+(edge.B.Y-edge.A.Y)*t,edge.A.Z+(edge.B.Z-edge.A.Z)*t);var world=World(local);
                 kernelPoints.Add((edge.Source,world));
                 var planar=planarChecks[ci];
-                if(!_joints&&planar.Contacts.Any(c=>c.Foreign&&c.ExactIncidence&&_oracle.IsFlushContact(edge,t,c.Face)))
+                if(!_joints&&!planar.Contacts.Any(c=>c.ApproximateIncidence)&&planar.Contacts.Any(c=>c.Foreign&&c.ExactIncidence&&_oracle.IsFlushContact(edge,t,c.Face)))
                 {suppressed=true;evidence.Add(new{source=edge.Source,edge=candidate.Edge,parameter=t,suppressed=true,planar.Contacts});continue;}
                 any=true;
                 matched|=actual.Piece?.Source==edge.Source&&actualWorld is { } aw&&aw.DistanceTo(world)<=_tol/16;

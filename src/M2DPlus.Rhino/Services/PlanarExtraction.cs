@@ -74,6 +74,7 @@ public sealed class PlanarExtraction
         bool BrepShape(Brep b)
         {
             if (b.Faces.Any(f => !f.IsPlanar(tolerance)) || b.Edges.Any(e => !e.IsLinear(tolerance))) return false;
+            bool oriented = b.IsSolid && b.SolidOrientation == BrepSolidOrientation.Outward;
             foreach (var f in b.Faces)
             {
                 token.ThrowIfCancellationRequested();
@@ -88,8 +89,8 @@ public sealed class PlanarExtraction
                 }
                 if (loops.Count == 0) return false;
                 if (!f.TryGetPlane(out var facePlane)) return false;
-                faces.Add(new(loops.ToArray()) { Source = source, OutwardNormal = Normal(facePlane, f.OrientationIsReversed),
-                    WorldLoops=worldLoops.ToArray(),WorldOutwardNormal=Normal(facePlane,f.OrientationIsReversed,world:true) });
+                faces.Add(new(loops.ToArray()) { Source = source, OutwardNormal = oriented ? Normal(facePlane, f.OrientationIsReversed) : null,
+                    WorldLoops=worldLoops.ToArray(),WorldOutwardNormal=oriented ? Normal(facePlane,f.OrientationIsReversed,world:true) : null });
             }
             foreach (var e in b.Edges)
             {
@@ -128,13 +129,14 @@ public sealed class PlanarExtraction
                 using (var mesh = original.DuplicateMesh())
                 {
                     mesh.Faces.ConvertQuadsToTriangles(); mesh.FaceNormals.ComputeFaceNormals();
+                    bool oriented = mesh.IsClosed && mesh.SolidOrientation() > 0;
                     foreach (var f in mesh.Faces)
                     {
                         token.ThrowIfCancellationRequested();
                         faces.Add(new([[Project(mesh.Vertices[f.A]), Project(mesh.Vertices[f.B]), Project(mesh.Vertices[f.C])]])
-                        { Source = source, OutwardNormal = Normal(new Plane(Point3d.Origin, new Vector3d(mesh.FaceNormals[faces.Count]))),
+                        { Source = source, OutwardNormal = oriented ? Normal(new Plane(Point3d.Origin, new Vector3d(mesh.FaceNormals[faces.Count]))) : null,
                             WorldLoops=[[World(mesh.Vertices[f.A]),World(mesh.Vertices[f.B]),World(mesh.Vertices[f.C])]],
-                            WorldOutwardNormal=Normal(new Plane(Point3d.Origin,new Vector3d(mesh.FaceNormals[faces.Count])),world:true) });
+                            WorldOutwardNormal=oriented ? Normal(new Plane(Point3d.Origin,new Vector3d(mesh.FaceNormals[faces.Count])),world:true) : null });
                     }
                     for (int i = 0; i < mesh.TopologyEdges.Count; i++)
                     {

@@ -41,11 +41,14 @@ public static partial class EdgeFaceKernel
             foreach (int adjacent in edge.AdjacentFaces)
             {
                 if ((uint)adjacent >= (uint)faces.Count) throw new ArithmeticException("Invalid contact adjacency");
+                // Winding is not an outward-orientation certificate for open
+                // surfaces, meshes or unnormalised/mirrored solids.
+                if (faces[adjacent].OutwardNormal is not { } on || faces[fi].OutwardNormal is not { } fn) continue;
                 var own = new Polygon<T>(faces[adjacent]);
                 var cross = P<T>.Cross(n, own.Normal);
                 bool parallel = T.Compare(cross.X, zero) == 0 && T.Compare(cross.Y, zero) == 0 && T.Compare(cross.Z, zero) == 0;
-                var ownOutward = faces[adjacent].OutwardNormal is { } on ? P<T>.From(on) : own.Normal;
-                var foreignOutward = faces[fi].OutwardNormal is { } fn ? P<T>.From(fn) : n;
+                var ownOutward = P<T>.From(on);
+                var foreignOutward = P<T>.From(fn);
                 if (T.Compare(P<T>.Dot(ownOutward, foreignOutward), zero) <= 0) continue;
                 if (!parallel)
                 {
@@ -72,6 +75,88 @@ public static partial class EdgeFaceKernel
         }
         Clip(polygon, new(MapVertex(edge.A) with { Z = 0 }, MapVertex(edge.B) with { Z = 0 }, edge.Source), 0, token, limit, Classify, tolerance,endpointSpan);
         return result;
+    }
+
+    // Only small plane headers are inspected by the distance prefilter. The
+    // complete world polygon is materialised only inside the contact band, and
+    // is not a second globally validated occluder/planarity failure path.
+    private sealed class ContactData(IReadOnlyList<PlanarFace> input, Face[] prepared, int limit) : IReadOnlyList<PlanarFace>
+    {
+        private readonly ContactSupport?[] _supports = new ContactSupport?[input.Count];
+        public int Count => input.Count;
+        public PlanarFace this[int index] => Support(index).Geometry.Value;
+        public int ExtraExactFaces => _supports.Count(s => s is { SharesView: false } && s.Exact.IsValueCreated);
+        public ContactSupport Support(int index)
+        {
+            var value = Volatile.Read(ref _supports[index]);
+            if (value is not null) return value;
+            var created = new ContactSupport(input[index], prepared[index], limit);
+            return Interlocked.CompareExchange(ref _supports[index], created, null) ?? created;
+        }
+        public IEnumerator<PlanarFace> GetEnumerator() { for (int i = 0; i < Count; i++) yield return this[i]; }
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
+    }
+
+    private sealed class ContactSupport
+    {
+        public bool SharesView { get; }
+        public Lazy<PlanarFace> Geometry { get; }
+        public Lazy<Polygon<Filter>?> Filtered { get; }
+        public Lazy<Polygon<Rational>> Exact { get; }
+        private readonly Lazy<(P<Filter> Normal, P<Filter> Anchor)?> _plane;
+        public ContactSupport(PlanarFace input, Face prepared, int limit)
+        {
+            SharesView = input.WorldLoops is null;
+            Geometry = new(() =>
+            {
+                var face = ContactGeometry.Face(input);
+                if (face.Loops.Length == 0 || face.Loops.Any(l => l.Length < 3 || l.Any(p => !Finite(p)))
+                    || face.Loops.Sum(l => (long)l.Length) > limit || face.OutwardNormal is { } n && !Finite(n))
+                    throw new ArithmeticException("Invalid world contact metadata");
+                return face;
+            });
+            Filtered = new(() =>
+            {
+                if (SharesView) return prepared.Filtered;
+                try { return new Polygon<Filter>(Geometry.Value); }
+                catch (IndeterminateException) { return null; }
+            });
+            Exact = new(() => SharesView ? prepared.Exact.Value : new Polygon<Rational>(Geometry.Value));
+            _plane = new(() =>
+            {
+                if (SharesView && prepared.Filtered is { } polygon) return (polygon.Normal, polygon.Anchor);
+                try
+                {
+                    var zero = Filter.From(0);
+                    foreach (var loop in input.WorldLoops ?? input.Loops)
+                        for (int i = 1; i + 1 < loop.Length; i++)
+                        {
+                            var anchor = P<Filter>.From(loop[0]);
+                            var normal = P<Filter>.Cross(P<Filter>.From(loop[i]) - anchor, P<Filter>.From(loop[i + 1]) - anchor);
+                            if (Filter.Compare(normal.X, zero) == 0 && Filter.Compare(normal.Y, zero) == 0 && Filter.Compare(normal.Z, zero) == 0) continue;
+                            return (normal, anchor);
+                        }
+                }
+                catch (IndeterminateException) { }
+                catch (ArithmeticException) { }
+                return null; // An inconclusive prefilter must never reject contact.
+            });
+        }
+        public bool MayContact(CandidateEdge edge, double tolerance)
+        {
+            var plane = _plane.Value;
+            if (plane is null) return true;
+            try
+            {
+                var zero = Filter.From(0); var (normal, anchor) = plane.Value;
+                Filter Abs(Filter v) => Filter.Compare(v, zero) < 0 ? zero - v : v;
+                var band = Filter.From(tolerance) * (Abs(normal.X) + Abs(normal.Y) + Abs(normal.Z));
+                return Filter.Compare(Abs(P<Filter>.Dot(normal, P<Filter>.From(edge.A) - anchor)), band) <= 0
+                    && Filter.Compare(Abs(P<Filter>.Dot(normal, P<Filter>.From(edge.B) - anchor)), band) <= 0;
+            }
+            catch (IndeterminateException) { return true; }
+            catch (ArithmeticException) { return true; }
+        }
     }
 
     // Exact symbolic infinitesimal: classify p + epsilon*d, epsilon > 0.

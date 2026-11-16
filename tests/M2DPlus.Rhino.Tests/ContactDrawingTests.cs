@@ -41,7 +41,7 @@ public sealed class ContactDrawingTests(RhinoHost host)
     });
 
     [RhinoTheory] [InlineData(1)] [InlineData(1000)]
-    public void StackedWallJointsAndSeatedBearingEdgesObeyTheRulesInSideView(double scale) => host.Run(()=>
+    public void StackedWallJointsAndAxonometricBearingEdgesObeyTheRules(double scale) => host.Run(()=>
     {
         var plane=new Plane(Point3d.Origin,Vector3d.XAxis,Vector3d.ZAxis);
         using var lower=Box(0,0,0,2,2,1);using var upper=Box(0,0,1,2,2,2);
@@ -52,12 +52,16 @@ public sealed class ContactDrawingTests(RhinoHost host)
         Assert.Equal(LineClass.Visible,joint.Class);Assert.Equal("0",joint.SourceIdentity);
         Assert.Empty(At(off,new(scale,0,scale)));
         using var slab=Box(-1,-1,-1,3,2,0);using var wall=Box(0,0,0,2,.2,2);
-        using var occluder=Box(.5,-2,-.2,1.5,-1,1);
+        using var occluder=Box(-1,-3,-.5,4,-.5,4);
         slab.Transform(transform);wall.Transform(transform);occluder.Transform(transform);
-        using var seated=Draw([wall,slab],false,1e-6*scale,plane);
-        using var hidden=Draw([wall,slab,occluder],false,1e-6*scale,plane);
-        Assert.Equal(LineClass.Visible,Assert.Single(At(seated,new(scale,0,0))).Class);
-        Assert.Equal(LineClass.Hidden,Assert.Single(At(hidden,new(scale,0,0))).Class);
+        var axon=new Plane(Point3d.Origin,new Vector3d(1,-2,1.5));var foot=new Point3d(scale,0,0);
+        using var seated=Draw([wall,slab],false,1e-6*scale,axon);
+        using var hidden=Draw([wall,slab,occluder],false,1e-6*scale,axon);
+        var bearing=Assert.Single(At(seated,axon.ClosestPoint(foot)));
+        Assert.Equal(LineClass.Visible,bearing.Class);Assert.Equal("0",bearing.SourceIdentity);
+        var support=Assert.IsAssignableFrom<Curve>(bearing.DepthGeometry);
+        Assert.True(support.ClosestPoint(foot,out var t));Assert.True(support.PointAt(t).DistanceTo(foot)<1e-7*scale);
+        Assert.Equal(LineClass.Hidden,Assert.Single(At(hidden,axon.ClosestPoint(foot))).Class);
     });
 
     [RhinoFact] public void CoincidentBlocksAreDrawnOnceWithoutSuppressingTheirOutline() => host.Run(()=>
@@ -71,14 +75,107 @@ public sealed class ContactDrawingTests(RhinoHost host)
 
     [RhinoFact] public void MirroredBlockNormalsPreserveFlushContinuity() => host.Run(()=>
     {
+        using var doc=RhinoDoc.CreateHeadless(null);doc.ModelAbsoluteTolerance=1e-6;
         using var a=Box(0,0,0,2,2,1);using var b=Box(0,0,0,2,2,1);
-        var scene=new PlanarExtraction();scene.Add(a,Transform.Mirror(Plane.WorldYZ),Plane.WorldXY,1e-6,"A");
-        scene.Add(b,Transform.Identity,Plane.WorldXY,1e-6,"B");
+        int definition=doc.InstanceDefinitions.Add("contact mirror","",Point3d.Origin,[a],[new global::Rhino.DocObjects.ObjectAttributes()]);
+        doc.Objects.AddInstanceObject(definition,Transform.Mirror(Plane.WorldYZ));doc.Objects.AddBrep(b);
+        using var cache=new SceneCache();using var lease=BaselineTests.Capture(doc,cache);
+        var prepared=lease.Value.Prepare(default);Assert.Equal(2,prepared.Count);
+        var scene=new PlanarExtraction();
+        foreach(var leaf in prepared)
+        {
+            Assert.Equal(BrepSolidOrientation.Outward,Assert.IsType<Brep>(leaf.Geometry).SolidOrientation);
+            Assert.True(scene.Add(leaf.Geometry,Transform.Identity,Plane.WorldXY,1e-6,leaf.Identity));
+        }
+        Assert.All(scene.Faces,f=>{Assert.NotNull(f.OutwardNormal);Assert.NotNull(f.WorldOutwardNormal);});
         var result=EdgeFaceKernel.Solve(scene.Faces,scene.Edges,new(1e-6) {Joints=false});
         Assert.Contains(result.Contacts,c=>c.Kind==ContactKind.Flush);
         Assert.DoesNotContain(result.Intervals,i=>{
             var e=scene.Edges[i.Edge];return e.A.X==0&&e.B.X==0&&e.A.Z==1&&e.B.Z==1;
         });
+        var identity=new RequestIdentity(lease.Value.Revision,"mirror","joints",1);
+        using var on=NativeDrawing.SolveBorrowedAsync(lease.Value,identity,[ViewRequest.Parse("Top") with {Settings=SettingsFor(true,1e-6)}],new(),default,null).GetAwaiter().GetResult();
+        using var off=NativeDrawing.SolveBorrowedAsync(lease.Value,identity,[ViewRequest.Parse("Top") with {Settings=SettingsFor(false,1e-6)}],new(),default,null).GetAwaiter().GetResult();
+        Assert.Single(At(on.Views[0],on.Views[0].Frame.Plane.ClosestPoint(new(0,1,1))));
+        Assert.Empty(At(off.Views[0],off.Views[0].Frame.Plane.ClosestPoint(new(0,1,1))));
+    });
+
+    [RhinoTheory] [InlineData(false)] [InlineData(true)]
+    public void OpenAndArbitrarilyOrientedGeometryNeverSuppliesOutwardNormalsOrDropsBearingEdges(bool flip) => host.Run(()=>
+    {
+        using var bottom=Brep.CreateFromCornerPoints(new(0,0,0),new(2,0,0),new(2,.2,0),new(0,.2,0),1e-6);
+        using var upright=Brep.CreateFromCornerPoints(new(0,0,0),new(2,0,0),new(2,0,2),new(0,0,2),1e-6);
+        using var wall=Assert.Single(Brep.JoinBreps([bottom,upright],1e-6));
+        var bottomFace=wall.Faces.Single(f=>{f.TryGetPlane(out var p);return Math.Abs(p.Normal.Z)>.9;});
+        bottomFace.TryGetPlane(out var support);
+        if((bottomFace.OrientationIsReversed?-support.Normal:support.Normal).Z<0)wall.Flip();
+        if(flip)wall.Flip();
+        using var surface=bottom.Surfaces[0].Duplicate();
+        using var mesh=new Mesh();mesh.Vertices.Add(0,0,0);mesh.Vertices.Add(2,0,0);mesh.Vertices.Add(2,.2,0);mesh.Vertices.Add(0,.2,0);
+        mesh.Faces.AddFace(0,1,2,3);if(flip)mesh.Flip(true,true,true);
+        using var inward=Box(0,0,0,2,2,1);inward.Flip();
+        foreach(var geometry in new GeometryBase[]{wall,surface,mesh,inward})
+        {
+            var extracted=new PlanarExtraction();Assert.True(extracted.Add(geometry,Transform.Identity,Plane.WorldXY,1e-6,"open"));
+            Assert.All(extracted.Faces,f=>{Assert.Null(f.OutwardNormal);Assert.Null(f.WorldOutwardNormal);});
+        }
+        using var slab=Box(-1,-1,-1,3,2,0);
+        var axon=new Plane(Point3d.Origin,new Vector3d(1,-2,1.5));
+        using var drawing=Draw([wall,slab],false,1e-6,axon);
+        var bearing=Assert.Single(At(drawing,axon.ClosestPoint(new(1,0,0))));
+        Assert.Equal(LineClass.Visible,bearing.Class);Assert.Equal("0",bearing.SourceIdentity);
+    });
+
+    [RhinoFact] public void SectionCutsAndHatchesThroughFlushAndSeatedContactsIgnoreJoints() => host.Run(()=>
+    {
+        using var doc=RhinoDoc.CreateHeadless(null);doc.ModelAbsoluteTolerance=1e-6;
+        using var a=Box(-2,0,0,0,2,2);using var b=Box(0,0,0,2,2,2);using var slab=Box(-3,-1,-1,3,3,0);
+        doc.Objects.AddBrep(a);doc.Objects.AddBrep(b);doc.Objects.AddBrep(slab);
+        using var cache=new SceneCache();using var lease=BaselineTests.Capture(doc,cache);
+        ViewRequest Section(bool joints)
+        {
+            var v=ViewRequest.Parse(new Plane(new Point3d(0,1,0),Vector3d.XAxis,Vector3d.ZAxis));
+            return v with {Settings=Settings.Resolve([new("section",v.Name,v.Kind,true,20,1e-6)],
+                [[$"joints={(joints?"on":"off")}","hidden=on","beyond=off","depth=5","hatch=black"]],DocumentUnits.Metres).Views[0]};
+        }
+        var identity=new RequestIdentity(lease.Value.Revision,"contact section","joints",1);
+        using var on=NativeDrawing.SolveBorrowedAsync(lease.Value,identity,[Section(true)],new(),default,null).GetAwaiter().GetResult();
+        using var off=NativeDrawing.SolveBorrowedAsync(lease.Value,identity,[Section(false)],new(),default,null).GetAwaiter().GetResult();
+        Assert.Null(on.Views[0].Error);Assert.Null(off.Views[0].Error);
+        Assert.Equal(3,on.Views[0].Regions.Count);Assert.All(on.Views[0].Regions,r=>Assert.NotNull(r.Region.Hatch));
+        byte[] Regions(ViewDrawing d)=>WorkerCodec.Encode(WorkerCodec.Decode<WorkerCodec.Drawing>(WorkerCodec.CaptureDrawing(d,true)).Regions);
+        Assert.Equal(Regions(on.Views[0]),Regions(off.Views[0]));
+    });
+
+    [RhinoFact] public void FastStillRunsPlanarJointVisibilityAndMustKeepItsCacheKey() => host.Run(()=>
+    {
+        using var doc=RhinoDoc.CreateHeadless(null);doc.ModelAbsoluteTolerance=1e-6;
+        using var a=Box(-2,0,0,0,2,1);using var b=Box(0,0,0,2,2,1);doc.Objects.AddBrep(a);doc.Objects.AddBrep(b);
+        using var cache=new SceneCache();using var lease=BaselineTests.Capture(doc,cache);
+        ViewRequest View(bool joints)=>ViewRequest.Parse("Top") with {Settings=Settings.Resolve([new("fast","Top",ViewSourceKind.Direction,false,10,1e-6)],
+            [["engine=fast",$"joints={(joints?"on":"off")}","hidden=on","beyond=off"]],DocumentUnits.Metres).Views[0]};
+        Assert.NotEqual(View(true).Settings!.VisibilityKey(),View(false).Settings!.VisibilityKey());
+        using var drawings=new DrawingCache();var identity=new RequestIdentity(lease.Value.Revision,"fast contact","joints",1);
+        using var on=drawings.SolveAsync(BaselineTests.Capture(doc,cache),identity,[View(true)],new(),[],default).GetAwaiter().GetResult();
+        using var off=drawings.SolveAsync(BaselineTests.Capture(doc,cache),identity,[View(false)],new(),[],default).GetAwaiter().GetResult();
+        Assert.Single(At(on.Views[0],on.Views[0].Frame.Plane.ClosestPoint(new(0,1,1))));
+        Assert.Empty(At(off.Views[0],off.Views[0].Frame.Plane.ClosestPoint(new(0,1,1))));
+    });
+
+    [RhinoFact] public void CutOnlyJointsChangesReuseTheVisibilityCache() => host.Run(()=>
+    {
+        using var doc=RhinoDoc.CreateHeadless(null);doc.ModelAbsoluteTolerance=1e-6;
+        using var box=Box(-1,-1,-1,1,1,1);doc.Objects.AddBrep(box);
+        using var cache=new SceneCache();using var lease=BaselineTests.Capture(doc,cache);using var drawings=new DrawingCache();
+        ViewRequest View(bool joints)=>ViewRequest.Parse(Plane.WorldXY) with {Settings=Settings.Resolve(
+            [new("cut","cut",ViewSourceKind.Plane,true,10,1e-6)],
+            [["cutonly=on",$"joints={(joints?"on":"off")}"]],DocumentUnits.Metres).Views[0]};
+        var identity=new RequestIdentity(lease.Value.Revision,"cut contact","joints",1);
+        using var on=drawings.SolveAsync(BaselineTests.Capture(doc,cache),identity,[View(true)],new(),[],default).GetAwaiter().GetResult();
+        var solves=NativeDrawing.VisibilitySolves;
+        using var off=drawings.SolveAsync(BaselineTests.Capture(doc,cache),identity,[View(false)],new(),[],default).GetAwaiter().GetResult();
+        Assert.Equal(solves,NativeDrawing.VisibilitySolves);Assert.Null(off.Views[0].Error);
+        Assert.Equal(on.Views[0].Regions.Count,off.Views[0].Regions.Count);
     });
 
     [RhinoFact] public void WallOnSlabAndTJunctionRetainSeatedContactsAndSplitFlushContacts() => host.Run(()=>

@@ -50,7 +50,7 @@ public static partial class ExactVisibilityOracle
         {
             edge=ContactGeometry.Edge(edge);
             var face=_contactFaces[faceIndex].Value;var zero=Rational.From(0);
-            if(_input[faceIndex].Source is not {} source||source==edge.Source)return false;
+            if(_input[faceIndex].Source is not {} source||source==edge.Source||_contactInput[faceIndex].OutwardNormal is not {} normal)return false;
             var a=P<Rational>.From(edge.A);var b=P<Rational>.From(edge.B);var n=face.Normal;
             bool On(P<Rational> p)=>P<Rational>.Dot(n,p-face.Anchor).N.IsZero;
             if(!On(a)||!On(b)||face.Loops.SelectMany(l=>l).Any(p=>!On(p)))return false;
@@ -80,10 +80,11 @@ public static partial class ExactVisibilityOracle
                 return (parity&1)!=0;
             }
             bool plus=Interior(face,1),minus=Interior(face,-1);
-            var outward=_contactInput[faceIndex].OutwardNormal is {} normal?P<Rational>.From(normal):n;
+            var outward=P<Rational>.From(normal);
             foreach(int id in edge.AdjacentFaces)
             {
-                var own=_contactFaces[id].Value;var ownOutward=_contactInput[id].OutwardNormal is {} value?P<Rational>.From(value):own.Normal;
+                if(_contactInput[id].OutwardNormal is not {} value)continue;
+                var own=_contactFaces[id].Value;var ownOutward=P<Rational>.From(value);
                 if(P<Rational>.Dot(outward,ownOutward).N.Sign<=0||own.Loops.SelectMany(l=>l).Any(p=>!On(p)))continue;
                 if(plus&&Interior(own,-1)||minus&&Interior(own,1))return true;
             }

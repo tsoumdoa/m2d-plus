@@ -5,7 +5,8 @@ public readonly record struct Vertex(double X, double Y, double Z);
 public sealed record PlanarFace(Vertex[][] Loops)
 {
     public string? Source { get; init; }
-    /// <summary>Optional oriented face normal; loop winding alone need not match Brep orientation.</summary>
+    /// <summary>Certified outward normal of a closed, outward-oriented solid only.
+    /// Null for unoriented/open sources; loop winding must never substitute for this certificate.</summary>
     public Vertex? OutwardNormal { get; init; }
     /// <summary>Owned coordinates before rounded view projection, for view-independent contact certificates.</summary>
     public Vertex[][]? WorldLoops { get; init; }
