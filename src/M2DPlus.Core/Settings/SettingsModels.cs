@@ -101,6 +101,7 @@ public sealed class EffectiveSettings
     public EngineMode Engine => Get<EngineMode>("engine");
     public bool Tangents => Get<bool>("tangents");
     public bool Seams => Get<bool>("seams");
+    public bool Joints => Get<bool>("joints");
     public GlassMode Glass => Get<GlassMode>("glass");
     public double Scale => Get<double>("scale");
     public WeightMode Weights => Get<WeightMode>("weights");

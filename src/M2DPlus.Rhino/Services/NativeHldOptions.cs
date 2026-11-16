@@ -12,6 +12,7 @@ internal readonly record struct NativeHldOptions(bool MultipleThreads, bool Incl
     {
         output.MultipleThreads |= MultipleThreads;
         output._diagnostics.Add($"Native HLD options: multipleThreads={MultipleThreads}; IncludeHiddenCurves={IncludeHiddenCurves}.");
+        if (!output.Diagnostics.Contains(ContactNote, StringComparer.Ordinal)) output._diagnostics.Add(ContactNote);
         if (Fast)
         {
             // A fallback sees the full registrations, a superset of an attempted
@@ -24,4 +25,5 @@ internal readonly record struct NativeHldOptions(bool MultipleThreads, bool Incl
     }
 
     private const string HiddenAuditNote = "Native hidden curves not requested: false-Hidden checking skipped for uncomputed hidden curves; any residual native Hidden fragments are still audited. Verifier budgets are unchanged.";
+    private const string ContactNote = "Native contacts retain native tolerance ties; joints suppresses only certified planar flush contacts. Native/freeform contact classification is not certified; shared native edges retain native duplicate ownership where supplied.";
 }

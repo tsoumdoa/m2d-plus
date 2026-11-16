@@ -27,6 +27,8 @@ def main():
     p.add_argument('--publication',action='store_true')
     p.add_argument('--resolver',type=Path,default=Path(os.environ['M2D_RHINO_INSIDE']) if os.environ.get('M2D_RHINO_INSIDE') else None,help='Compatible Rhino.Inside resolver DLL; defaults to M2D_RHINO_INSIDE')
     p.add_argument('--trace-native',action='store_true')
+    p.add_argument('--joints',choices=('on','off'),default='on',help='Planar contact visibility; off suppresses only certified flush continuations')
+    p.add_argument('--extra-model',type=Path,action='append',default=[],help='Additional external model, in Top/North/SW/Long-section; never copies or writes the model')
     p.add_argument('--resume',action='store_true',help='Reuse completed rows only for an identical compiled engine and model')
     p.add_argument('--serial-mutex',action='store_true',help='Share model-suite admission with other local owned Rhino harnesses')
     p.add_argument('--watchdog-seconds',type=int,default=1800,help='Owned-model wall budget including independent exact adjudication; memory stays capped at 16 GiB')
@@ -46,6 +48,8 @@ def main():
         for view in ('North','SW','Top','Long-section'):cases.append(((MODELS_ROOT/'curved')/f'curved-perf-S-{form}.3dm',view))
     for model in sorted((ROOT/'tests/fixtures/sections').glob('*.3dm')):
         for view in ('Plan-section','Long-section'):cases.append((model,view))
+    for model in a.extra_model:
+        for view in ('Top','North','SW','Long-section'):cases.append((model.resolve(),view))
     selected=[]
     compiled=ROOT/'tools/hc-perf/bin/Release/net8.0-windows'
     producer={k:digest(compiled/v) for k,v in [('engineSha256','M2DPlus.Rhino.dll'),('coreSha256','M2DPlus.Core.dll'),('harnessSha256','M2DPlus.HcPerf.dll')]}
@@ -55,7 +59,7 @@ def main():
         if a.select and not any(s in stem for s in a.select.split(',')):continue
         if not model.exists():raise FileNotFoundError(model)
         prefix=a.output/stem
-        selected.append({'path':str(model),'view':view,'output':str(prefix),'freshNative':a.fresh_native or any(s in stem for s in a.fresh_native_select.split(',') if s),'publication':a.publication,'traceNative':a.trace_native})
+        selected.append({'path':str(model),'view':view,'output':str(prefix),'freshNative':a.fresh_native or any(s in stem for s in a.fresh_native_select.split(',') if s),'publication':a.publication,'traceNative':a.trace_native,'joints':a.joints=='on'})
     write_json(a.output/'manifest.json',selected)
     # One serial owned worker per model, amortising startup across its views.
     from itertools import groupby
@@ -65,7 +69,7 @@ def main():
             previous=Path(case['output']+'.gate.json')
             if a.resume and previous.exists():
                 r=json.loads(previous.read_text())
-                if r.get('modelSha256','').lower()==digest(case['path']) and all(r.get(k,'').lower()==v.lower() for k,v in producer.items()) and completed_watch(case):
+                if r.get('contactRuleVersion')==1 and r.get('joints')==case['joints'] and r.get('modelSha256','').lower()==digest(case['path']) and all(r.get(k,'').lower()==v.lower() for k,v in producer.items()) and completed_watch(case):
                     print('reuse completed',case['output'],flush=True);continue
             requests.append(case)
         if not requests:continue
@@ -81,7 +85,7 @@ def main():
     rows=[json.loads(Path(c['output']+'.gate.json').read_text()) if Path(c['output']+'.gate.json').exists() else {'passed':False,'disagreements':0,'model':c['path'],'view':c['view'],'executionFailure':True} for c in selected]
     for case,row in zip(selected,rows):
         watch=Path(case['output']+'.watch.json')
-        if not completed_watch(case) or not all(row.get(k,'').lower()==v.lower() for k,v in producer.items()) or row.get('modelSha256','').lower()!=digest(case['path']).lower():
+        if row.get('contactRuleVersion')!=1 or row.get('joints')!=case['joints'] or not completed_watch(case) or not all(row.get(k,'').lower()==v.lower() for k,v in producer.items()) or row.get('modelSha256','').lower()!=digest(case['path']).lower():
             row['passed']=False;row['producerOrExecutionFailure']=True
     write_json(a.output/'gate.json',{'producer':producer,'completeInventory':not a.select and len(rows)==233,'passed':all(r['passed'] for r in rows),'cases':len(rows),'disagreements':sum(r['disagreements'] for r in rows),'rows':rows})
 if __name__=='__main__':main()

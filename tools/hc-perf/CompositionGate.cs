@@ -129,7 +129,7 @@ public static partial class CompositionGate
         if (!contributors.At(new(.5,0,0),1e-6))
             throw new InvalidOperationException("Native-order audit lost a kernel contributor removed by locus reconciliation");
     }
-    public static void Run(string path, string viewName, string prefix, bool freshNative = false, bool measurePublication = false, bool traceNative = false)
+    public static void Run(string path, string viewName, string prefix, bool freshNative = false, bool measurePublication = false, bool traceNative = false, bool joints = true)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(prefix))!);
         CheckKernelContributorVeto();
@@ -167,7 +167,7 @@ public static partial class CompositionGate
         }
         view = view with { Name = viewName };
         var context = new ViewSettingsContext("gate", viewName, view.Kind, view.Cut is not null, bounds.Diagonal.Length * 2, doc.ModelAbsoluteTolerance);
-        var settings = Settings.Resolve([context], [["hidden=on", "beyond=off"]], DocumentUnits.Metres);
+        var settings = Settings.Resolve([context], [["hidden=on", "beyond=off", $"joints={(joints ? "on" : "off")}"]], DocumentUnits.Metres);
         view = view with { Settings = settings.Views[0] };
         string Hash(string file) { using var stream = File.OpenRead(file); return Convert.ToHexString(SHA256.HashData(stream)); }
         File.WriteAllText(prefix + ".sources.json", JsonSerializer.Serialize(lease.Value.Prepare(default).Select(s => new {
@@ -270,8 +270,8 @@ public static partial class CompositionGate
         bool Eligible(Failure f) => !f.KernelOwned && nativeSourceIds.Contains(f.Source) && !kernelSourceIds.Contains(f.Source) &&
             (f.Expected is "Visible" or "Hidden" or "Unresolved") && (f.Actual is null or "Visible" or "Hidden" or "Unresolved");
         var orderWitnesses = new List<object>(); var classified = new HashSet<int>();
-        int tieConvention=0,exactCheckDecided=0,exactInconclusive=0,exactContradictions=0;
-        using var reference=observedScene is null?null:new MixedReference(observedScene,observedFrame,tolerance,view.Cut is not null,nativeTrace,curvedBounds,contributors,n,k,nativeSourceIds);
+        int contactEdges=0,contactJointSuppressed=0,exactCheckDecided=0,exactInconclusive=0,exactContradictions=0;
+        using var reference=observedScene is null?null:new MixedReference(observedScene,observedFrame,tolerance,view.Cut is not null,nativeTrace,curvedBounds,contributors,n,k,nativeSourceIds,joints);
         using(var witnesses=new StreamWriter(prefix+".exact-witnesses.jsonl"))
             if(reference is not null)for(int i=0;i<failures.Count;i++)
             {
@@ -279,12 +279,14 @@ public static partial class CompositionGate
                 string? nativeClass=f.Direction=="native-to-kernel"?f.Expected:f.Actual;
                 string? routedClass=f.Direction=="native-to-kernel"?f.Actual:f.Expected;
                 bool unknown=nativeClass=="Unresolved";
-                if(routedClass is not ("Visible" or "Hidden")||!(unknown||nativeClass=="Hidden"&&routedClass=="Visible"))continue;
+                bool droppedJoint=!joints&&routedClass is null&&nativeClass is "Visible" or "Hidden" or "Unresolved";
+                if(!droppedJoint&&(routedClass is not ("Visible" or "Hidden")||!(unknown||nativeClass=="Hidden"&&routedClass=="Visible")))continue;
                 var check=reference.Check(new(f.X,f.Y,f.Z));string? classification=null;
-                if(check.Class.ToString()==routedClass)
+                if(droppedJoint&&check.Suppressed){classification="contactJointSuppressed";contactJointSuppressed++;}
+                else if(check.Class.ToString()==routedClass)
                 {
                     if(unknown){classification="exactCheckDecided";exactCheckDecided++;}
-                    else if(check.Contact){classification="tieConvention";tieConvention++;}
+                    else if(check.Contact){classification="contactEdge";contactEdges++;}
                 }
                 if(classification is not null)classified.Add(i);
                 else if(check.Class==M2DPlus.Core.Visibility.VisibilityClass.Unresolved)exactInconclusive++;
@@ -336,7 +338,8 @@ public static partial class CompositionGate
             rhino = RhinoApp.Version.ToString(), runtime = System.Environment.Version.ToString(), tolerance, spacing, multipleThreads = false, harnessSha256 = Hash(typeof(CompositionGate).Assembly.Location), captureBudgetSeconds = 300, comparison = "exact line-support distance for linear loci; native exact-curve closest point otherwise",
             nativePurpose = "correctness only; no timing mutex; native seconds diagnostic only, not a benchmark", captureSeconds, prepareSeconds, solveSeconds,
             endToEndSeconds = captureSeconds + prepareSeconds + solveSeconds, includesPresentation = true, includesGhPublication = measurePublication, publicationAdapter = "actual component Emit / GH volatile trees; excludes scheduling, downstream solves and redraw", nativeSolveSeconds, nativeEndToEndSeconds = captureSeconds + prepareSeconds + nativeSolveSeconds, nativePhases = native.Phases, routedPhases = actual.Phases, actual.KernelEdges, actual.NativeEdges, actual.NativeCalls, actual.CurvedCandidateEdges, actual.PlanarNativeEdges, actual.NativeFragments, nativeCountKind = "drawable native parent curves", nativeInfo = native.Info, kernelInfo = actual.Info,
-            samples, disagreements = failures.Count, unexplained = failures.Count - classified.Count, classes = new { nativeOrderQuirk = orderWitnesses.Count, tieConvention, exactCheckDecided, toleranceArtefact = 0, unclassified = failures.Count - classified.Count }, exactInconclusive, exactContradictions, exactCompletePairs=reference?.CompletePairs??0,exactPointPairs=reference?.ExactPointPairs??0,
+            contactRuleVersion=1,joints,contactRule="planar foreign-face exact incidence; seated and joints-on flush visible; approximate gaps never receive a tie exception; native contacts retain unverified native classification",
+            samples, disagreements = failures.Count, unexplained = failures.Count - classified.Count, classes = new { nativeOrderQuirk = orderWitnesses.Count, contactEdges, contactJointSuppressed, tieConvention=0, exactCheckDecided, toleranceArtefact = 0, unclassified = failures.Count - classified.Count }, exactInconclusive, exactContradictions, exactCompletePairs=reference?.CompletePairs??0,exactPointPairs=reference?.ExactPointPairs??0,
             exactEvidenceSha256=Hash(prefix+".exact-witnesses.jsonl"),
             bugs = native.Error is not null || actual.Error is not null || exactContradictions!=0 || !native.RegionAreas.SequenceEqual(actual.RegionAreas) || !native.RegionLoops.SequenceEqual(actual.RegionLoops) ? 1 : failures.Count == classified.Count ? (int?)0 : null, nativeOrderPolicy = VisibilityInputOrder.Policy,
             passed = native.Error is null && actual.Error is null && exactContradictions==0 && failures.Count == classified.Count && native.RegionAreas.SequenceEqual(actual.RegionAreas) && native.RegionLoops.SequenceEqual(actual.RegionLoops),

@@ -413,7 +413,7 @@ frame rectangle and that reaches behind the frame plane (what is in front of the
 | `m2d.beyond` | `auto` · `off` · distance | `default` |
 | `m2d.fade` | `on` · `off` | `default` |
 | `m2d.fade.start` / `m2d.fade.end` / `m2d.fade.limit` | 0–100 % | `default` |
-| `m2d.hidden` · `m2d.tangents` · `m2d.seams` | `on` · `off` | `default` |
+| `m2d.hidden` · `m2d.tangents` · `m2d.seams` · `m2d.joints` | `on` · `off` | `default` |
 | `m2d.engine` | `exact` · `fast` | `default` (inherits; built-in is `exact`) |
 | `m2d.glass` | `opaque` · `clear` | `default` |
 | `m2d.scale` | `1:n` (line weights only) | `default` |
@@ -716,6 +716,12 @@ style; the API suggests they don't).
 ### 3.8 Edges
 
 - **Tangent edges:** off by default. **Seams:** off by default. Both are menu toggles, as in Make2D.
+- **Joints:** on by default. `joints = off` removes certified flush planar joints (coplanar,
+  matching outward faces continuing across the edge). Seated edges, such as a wall on a slab,
+  remain and are occluded normally. Shared edges draw once with stable source ownership.
+  Approximate contacts stay Unresolved; native/freeform contacts retain their disclosed native
+  behaviour. Settings, `m2d.joints` user text and the menu use normal precedence. Joints keys
+  visibility, so changing it re-solves from the kept scene.
 - **Hidden lines:** on by default. Turning it off empties the Hidden output. With `engine = exact` it is a
   presentation choice: the solve keeps hidden lines (also needed by `min visible`), so toggling it reuses visibility.
   With `engine = fast`, native HLD computes hidden curves only when requested; changing hidden re-solves visibility.
@@ -820,7 +826,7 @@ share the Z = 0 line" working.
   content fingerprint of Grasshopper geometry) and the view objects. A Settings, Depth, Target or menu change, or a view
   object's `m2d.*` text or geometry, re-solves from it: **no capture, no normalisation, no preparation**. Presentation-only
   settings (min visible, scale, weights, fade, hatch, tree, placement, plus hidden in exact mode) make no HLD call;
-  visibility settings (depth, far clip, crop, tangents, seams, glass, tolerance, engine, plus hidden in fast mode)
+  visibility settings (depth, far clip, crop, tangents, seams, joints, glass, tolerance, engine, plus hidden in fast mode)
   re-solve from the prepared scene. Only a change to the
   Geometry input or to what the scene read (§5.1a) reads the objects again, and then only the changed objects are
   fingerprinted and normalised (unchanged ones are found by their Rhino serial number).
@@ -1059,6 +1065,7 @@ fade.limit = 25 %
 | `hidden` | `on` · `off` | `on` | — | Show Hidden Lines | view object, menu |
 | `tangents` | `on` · `off` | `off` | — | — (Make2D option) | view object, menu |
 | `seams` | `on` · `off` | `off` | — | — (Make2D option) | view object, menu |
+| `joints` | `on` · `off` | **`on`** | — | — | view object (`m2d.joints`), menu; visibility key |
 | `glass` | `opaque` · `clear` | `opaque` | — | — | view object |
 | `min visible` (`min_visible`) | `off` · length | `off` | 2D length in the drawing | — | view object (`m2d.min_visible`), menu |
 | `scale` | `1:n` · `n` | `1:100` | — (picks the nearest preset band, §3.6) | View Scale (line weights only; the drawing stays 1:1) | view object, menu |
@@ -1100,6 +1107,7 @@ Hidden lines                 ✓        hidden   = on | off
 Engine ▸ Exact ✓ · Fast (Make2D-like)                                engine = exact | fast
 Tangent edges                         tangents = off | on
 Seams                                 seams    = off | on
+Joints                                joints   = on | off
 Min visible ▸ Off ✓ · 1 mm · 2 mm · 5 mm · 10 mm      min_visible = off | <length>   (§3.9)
 Beyond ▸     Auto ✓ · Off · 1 m · 3 m · 10 m          beyond  = auto | off | <distance>
 Far clip ▸   No clip · Clip with line · Clip without line ✓   farclip = none | line | noline
@@ -1443,7 +1451,7 @@ new in revision 3** and follow from the two decisions.
 13. **Unit-aware defaults:** the document tolerance and angle tolerance, and metre defaults (3 m beyond) converted to document units.
 14. **Settings-independent caching:** depth cueing, line weights (`scale`, `weights`), fill colours and the `hatch` override are
     styling only and must not invalidate the drawing cache. Neither does `min visible` (§3.9). Exact also treats
-    `hidden` as presentation. Visibility keys are `depth`, `farclip`, `crop`, `tangents`, `seams`, `glass`, `tolerance`, `cutonly`
+    `hidden` as presentation. Visibility keys are `depth`, `farclip`, `crop`, `tangents`, `seams`, `joints`, `glass`, `tolerance`, `cutonly`
     and `engine` (`Settings.VisibilityKeys`); `EffectiveSettings.VisibilityKey()` additionally includes hidden in
     fast mode. `beyond` and `cuts` are applied over the cached solve too. Engine changes always invalidate
     visibility even if the resulting planar-only drawing is geometrically identical.

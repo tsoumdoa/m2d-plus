@@ -87,12 +87,13 @@ public static class Bench
             catch (OperationCanceledException) { failures.Add("exact oracle exceeded 10 minute guard (gate incomplete)"); }
         }
         // Face permutation and view-coordinate rigid translation must preserve every candidate interval.
-        var permuted = EdgeFaceKernel.Solve(extraction.Faces.AsEnumerable().Reverse().ToArray(), extraction.Edges, new(tolerance, threads));
+        var permutedEdges = extraction.Edges.Select(e => e with { AdjacentFaces=e.AdjacentFaces.Select(i=>extraction.Faces.Count-1-i).ToArray() }).ToArray();
+        var permuted = EdgeFaceKernel.Solve(extraction.Faces.AsEnumerable().Reverse().ToArray(), permutedEdges, new(tolerance, threads));
         CheckIntervals(result, permuted, extraction.Edges, tolerance, failures);
         // Signed coordinate permutation is a rigid transform that does not round the
         // supplied binary64 scene. General rounded translations are a separate stress test.
         Vertex Move(Vertex p) => new(-p.Y, p.X, p.Z);
-        var movedFaces = extraction.Faces.Select(f => new PlanarFace(f.Loops.Select(l => l.Select(Move).ToArray()).ToArray())).ToArray();
+        var movedFaces = extraction.Faces.Select(f => f with { Loops=f.Loops.Select(l => l.Select(Move).ToArray()).ToArray(),OutwardNormal=f.OutwardNormal is {} n?Move(n):null }).ToArray();
         var movedEdges = extraction.Edges.Select(e => e with { A = Move(e.A), B = Move(e.B) }).ToArray();
         var moved = EdgeFaceKernel.Solve(movedFaces, movedEdges, new(tolerance, threads));
         CheckIntervals(result, moved, extraction.Edges, tolerance, failures);

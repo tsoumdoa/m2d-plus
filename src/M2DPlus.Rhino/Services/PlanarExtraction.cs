@@ -54,23 +54,42 @@ public sealed class PlanarExtraction
             p.Transform(transform); var d = p - view.Origin;
             return new(d * view.XAxis, d * view.YAxis, d * view.ZAxis);
         }
-        void Edge(Point3d a, Point3d b, bool profile = false) { edges.Add(new(Project(a), Project(b), source)); profiles.Add(profile); }
+        Vertex World(Point3d p) { p.Transform(transform); return new(p.X,p.Y,p.Z); }
+        Vertex Normal(Plane support, bool reverse = false, bool world = false)
+        {
+            if (!transform.TryGetInverse(out var inverse)) throw new ArithmeticException("Noninvertible planar transform");
+            var normal = reverse ? -support.Normal : support.Normal;
+            // Inverse transpose preserves outward orientation through reflections;
+            // transforming a plane's axes would introduce the determinant sign.
+            var n = new Vector3d(inverse.M00*normal.X+inverse.M10*normal.Y+inverse.M20*normal.Z,
+                inverse.M01*normal.X+inverse.M11*normal.Y+inverse.M21*normal.Z,
+                inverse.M02*normal.X+inverse.M12*normal.Y+inverse.M22*normal.Z);
+            return world ? new(n.X,n.Y,n.Z) : new(n * view.XAxis, n * view.YAxis, n * view.ZAxis);
+        }
+        void Edge(Point3d a, Point3d b, bool profile = false, int[]? adjacent = null)
+        {
+            edges.Add(new(Project(a), Project(b), source) { AdjacentFaces = adjacent?.Select(i => Faces.Count + i).ToArray() ?? [],WorldA=World(a),WorldB=World(b) });
+            profiles.Add(profile);
+        }
         bool BrepShape(Brep b)
         {
             if (b.Faces.Any(f => !f.IsPlanar(tolerance)) || b.Edges.Any(e => !e.IsLinear(tolerance))) return false;
             foreach (var f in b.Faces)
             {
                 token.ThrowIfCancellationRequested();
-                var loops = new List<Vertex[]>();
+                var loops = new List<Vertex[]>(); var worldLoops = new List<Vertex[]>();
                 foreach (var loop in f.Loops)
                 {
                     if (loop.Trims.Any(t => t.Edge is null || t.StartVertex is null)) return false;
                     var points = loop.Trims.Select(t => Project(t.StartVertex.Location)).ToArray();
                     if (points.Length < 3) return false;
                     loops.Add(points);
+                    worldLoops.Add(loop.Trims.Select(t=>World(t.StartVertex.Location)).ToArray());
                 }
                 if (loops.Count == 0) return false;
-                faces.Add(new(loops.ToArray()));
+                if (!f.TryGetPlane(out var facePlane)) return false;
+                faces.Add(new(loops.ToArray()) { Source = source, OutwardNormal = Normal(facePlane, f.OrientationIsReversed),
+                    WorldLoops=worldLoops.ToArray(),WorldOutwardNormal=Normal(facePlane,f.OrientationIsReversed,world:true) });
             }
             foreach (var e in b.Edges)
             {
@@ -84,7 +103,7 @@ public sealed class PlanarExtraction
                     return (face.OrientationIsReversed ? -support.Normal : support.Normal) * view.ZAxis;
                 }
                 bool profile = adj.Length == 1 || adj.Length == 2 && (Facing(adj[0]) > 0) != (Facing(adj[1]) > 0);
-                Edge(e.PointAtStart, e.PointAtEnd, profile);
+                Edge(e.PointAtStart, e.PointAtEnd, profile, adj);
             }
             return true;
         }
@@ -112,7 +131,10 @@ public sealed class PlanarExtraction
                     foreach (var f in mesh.Faces)
                     {
                         token.ThrowIfCancellationRequested();
-                        faces.Add(new([[Project(mesh.Vertices[f.A]), Project(mesh.Vertices[f.B]), Project(mesh.Vertices[f.C])]]));
+                        faces.Add(new([[Project(mesh.Vertices[f.A]), Project(mesh.Vertices[f.B]), Project(mesh.Vertices[f.C])]])
+                        { Source = source, OutwardNormal = Normal(new Plane(Point3d.Origin, new Vector3d(mesh.FaceNormals[faces.Count]))),
+                            WorldLoops=[[World(mesh.Vertices[f.A]),World(mesh.Vertices[f.B]),World(mesh.Vertices[f.C])]],
+                            WorldOutwardNormal=Normal(new Plane(Point3d.Origin,new Vector3d(mesh.FaceNormals[faces.Count])),world:true) });
                     }
                     for (int i = 0; i < mesh.TopologyEdges.Count; i++)
                     {
@@ -139,7 +161,7 @@ public sealed class PlanarExtraction
                             var q = new Plane(Point3d.Origin, new Vector3d(mesh.FaceNormals[adj[1]])); q.Transform(transform);
                             profile |= (p.Normal * view.ZAxis > 0) != (q.Normal * view.ZAxis > 0);
                         }
-                        var line = mesh.TopologyEdges.EdgeLine(i); Edge(line.From, line.To, profile);
+                        var line = mesh.TopologyEdges.EdgeLine(i); Edge(line.From, line.To, profile, adj);
                     }
                 }
                 ok = true; break;

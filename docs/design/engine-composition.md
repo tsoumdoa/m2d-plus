@@ -88,12 +88,41 @@ elapsed native time to stop at 10% would make classification depend on machine
 load. Timing is reported separately in phases, never deterministic diagnostics.
 Fully planar scenes never instantiate the verifier and preserve their output.
 
-The owner-sanctioned `tieConvention` is VISIBLE for zero-depth-gap contact,
-including flush panel joints and coincident blocks. Closed projected polygon
-boundaries occlude only with a STRICT view-depth gap greater than model tolerance.
-A contact whose gap is within model tolerance does not occlude. A native Hidden
-sample may be classified `tieConvention` only with independently checked visible
-coverage and recorded supporting faces and gap values.
+The 2026-11-16 contact decision replaces the planar `tieConvention`. Planar inputs
+carry source identity, adjacent face indices and outward face orientation. Exact
+contact predicates use owned world vertices/normals retained before rounded view
+projection, so changing the camera cannot turn an exact world contact into a
+tolerance tie. Projected broad-phase bounds are conservatively expanded for
+contact candidates. A contact face cannot occlude its own certified contact
+interval; other faces/objects still participate normally. No new drawing-result
+or worker-codec fields are added.
+
+Exact edge/face incidence plus dominant-plane polygon events certifies contact spans,
+including edge-on faces and holes. Matching outward coplanar adjacent faces with
+opposite interior half-neighbourhoods certify a flush continuation; symbolic
+infinitesimal parity decides sides without sampling offsets. Opposed bearing
+faces and folded/same-side faces do not prove flush continuity. Seated contacts
+draw normally. Flush contacts draw with `joints=on` (default); `off` suppresses
+only certified flush spans, before locus reconciliation. Other objects occlude
+retained contacts normally. Coincident blocks retain their exterior outlines.
+
+Filtered predicates fall back to rationals of the supplied binary64 values.
+Nonzero incidence residuals inside the conservative tolerance × L1-normal band,
+or approximate planarity/continuity, produce Unresolved unless an occluder proves
+Hidden. This band contains the Euclidean tolerance neighbourhood and may extend
+to √3 tolerances. Both ends of the straight support must be in the band: a
+transverse crossing has no positive-length contact interval and keeps ordinary
+occlusion. The band is an uncertainty bound, never a contact certificate.
+Endpoints retain the kernel's quarter-tolerance representability budget. Closed
+polygon boundaries otherwise occlude only with a strict view-depth gap above
+tolerance. Self-face tolerance is retained for approximate input geometry.
+
+Native/freeform candidates keep native contact behaviour and the existing audit;
+Info explicitly says that planar joint suppression does not certify them. Fast
+native determinism remains outside the contract. No analytic contact certificate
+is inferred before the analytic engine supplies one. The gate's `contactEdge`
+exception requires independently checked foreign-face incidence and Visible
+coverage; self-faces and merely within-tolerance gaps cannot supply it.
 Holes use even/odd parity across all loops. Curved-native contacts retain native
 visibility; native Unset/non-attributable Duplicate records are uncertainty unless
 an independently retained coincident candidate proves complete coverage.
@@ -123,7 +152,7 @@ Info records route, candidate counts, kernel/native participation and native cal
 per view. Native-only remains an explicit validation adapter. Gate comparisons
 cover complete Visible/Hidden/Unresolved output in both directions (including
 curved loci and points), and section outputs separately. Every disagreement needs
-geometric evidence for native quirk, tie convention or tolerance artefact; bugs
+geometric evidence for a certified contact rule, native quirk or tolerance artefact; bugs
 and unexplained disagreements fail the gate. Archived native timings are context
 only, with absent rows left absent. End-to-end measurements include extraction,
 native work, composition and downstream section/presentation work.
@@ -139,7 +168,8 @@ occluder's conservative bound. A planar Hidden proof decides the occluder union;
 Visible requires a definite curved decision too. Inconclusive checks remain strict.
 Evidence records candidate identity, face IDs, signed gaps, curved-native witnesses
 and complete pair counts. These samples are counted as `exactCheckDecided`, separate
-from `tieConvention`, native-order quirks and remaining unexplained samples.
+from certified contact-edge decisions, native-order quirks and remaining unexplained
+samples. Legacy blanket `tieConvention` evidence is no longer accepted.
 
 
 ## Native order control (perf-E evidence)
