@@ -35,16 +35,27 @@ public static class ViewCommands
     /// <summary>What the view group needs to know: referenced Rhino objects, how many are view boxes, whether V is wired.</summary>
     public sealed record State(int Objects, int ViewBoxes, bool Wired);
 
+    /// <summary>The one-line result of Convert to view boxes, e.g. "Converted 3 to view boxes; refused 1: not planar."
+    /// Already-converted view boxes are counted separately; up to two refusal reasons are quoted.</summary>
+    public static string ConvertSummary(int converted, int already, IReadOnlyList<string> refusals)
+    {
+        var parts = new List<string> { $"Converted {converted} to view box{(converted == 1 ? "" : "es")}" };
+        if (already > 0) parts.Add($"{already} already {(already == 1 ? "was one" : "were")}");
+        if (refusals.Count > 0)
+            parts.Add($"refused {refusals.Count}: " + string.Join("; ", refusals.Take(2)) + (refusals.Count > 2 ? "…" : ""));
+        return string.Join("; ", parts) + ".";
+    }
+
     public static ImmutableArray<MenuNode> Build(State state, bool withSelect)
     {
         const string none = "Reference planar surfaces, rectangles or view boxes in View first (right-click V ▸ Pick views in Rhino…).";
         var items = ImmutableArray.CreateBuilder<MenuNode>();
-        items.Add(new("Validate views", Validate, state.Objects > 0, Tooltip: state.Objects > 0
+        items.Add(new("Convert to view boxes", Validate, state.Objects > 0, Tooltip: state.Objects > 0
             ? "Check each referenced surface or rectangle and turn it into an editable M2D+ view box (keeps the object and its id; one undo)."
             : none));
         items.Add(new("Flip view direction", Flip, state.ViewBoxes > 0, Tooltip: state.ViewBoxes > 0
             ? "Look the other way: the front face stays, the box extends to the other side."
-            : "Only view boxes can be flipped. Validate views first."));
+            : "Only view boxes can be flipped. Convert to view boxes first."));
         items.Add(new("Create view from current viewport", Create, Tooltip: state.Wired
             ? "Bakes a view box matching the active parallel viewport. V is wired, so wire the new box in yourself."
             : "Bakes a view box matching the active parallel viewport (on the $M2D Views layer) and adds it to View."));
@@ -155,7 +166,7 @@ public static class ViewMenu
         return
         [
             new("Pick views in Rhino…", Pick, free, Tooltip: wired ? why
-                : "Select planar surfaces, closed rectangles, view boxes or clipping planes in Rhino. Then Validate views."),
+                : "Select planar surfaces, closed rectangles, view boxes or clipping planes in Rhino. Then Convert to view boxes."),
             .. ViewCommands.Build(views ?? new(0, 0, wired), withSelect: false),
             MenuNode.Separator,
             new("Named views", Enabled: free, Children: List(namedViews, "No named views in this document"), Tooltip: wired ? why : null),

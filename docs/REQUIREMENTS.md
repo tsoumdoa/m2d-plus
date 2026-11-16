@@ -69,13 +69,13 @@ The View Range & Settings editor was rejected: too heavy, and rectangle views st
 See [UX revision 4](design/ux.md) §2.2 and §6.
 
 1. **Views are editable Rhino objects.** A referenced planar surface, closed rectangle or existing M2D+ view box
-   in View is checked by right-click **Validate views** (planar, a rectangular outer boundary with four straight
+   in View is checked by right-click **Convert to view boxes** (named *Validate views* before beta.2): planar, a rectangular outer boundary with four straight
    edges at right angles, trimmed rectangles allowed, not degenerate; a reason per refused object). Valid ones
    are converted **in place** (same object id, one undo) into an **M2D+ view box**: an `Extrusion` whose profile
    is the view frame (and the cut plane where it passes through the model) and whose path runs into the model
    along the look direction (−Z of the frame); its length is the depth, edited by dragging the back face. Default
    depth: to the back of the scene plus a margin. **Flip view direction** reverses it. Per-view settings are
-   Attribute User Text `m2d.*` keys (`m2d.view = 1` marks the object); Validate writes `default` for missing keys
+   Attribute User Text `m2d.*` keys (`m2d.view = 1` marks the object); Convert to view boxes writes `default` for missing keys
    and never overwrites a value. The component reacts to object and attribute changes.
 2. **Create view from current viewport** bakes a view box matching the active parallel viewport, named
    `M2D View 01`…, on an `M2D+::Views` layer (now `$M2D Views`, see 2026-11-15 below), and adds it to View.
@@ -121,14 +121,14 @@ See [UX revision 4](design/ux.md) §2.2 and §6.
 ## View box layer and front-face colour (owner, 2026-11-15)
 
 - **Layer `$M2D Views`:** one top-level layer for view boxes, created only when missing (cobalt `#1F6FD1`, No Print).
-  An existing layer is never restyled. *Create view from current viewport* puts new boxes there, and *Validate views*
-  moves every converted object and every re-validated view box onto it in the same undo, keeping the object id,
+  An existing layer is never restyled. *Create view from current viewport* puts new boxes there, and *Convert to view boxes*
+  moves every converted object and every re-converted view box onto it in the same undo, keeping the object id,
   name and user text. An old `M2D+::Views` layer is not deleted or renamed; drawing bake layers are unchanged.
 - **Front-face fill:** a see-through fill on each visible view box's front face, in every display mode: warm red
   `#D9412B` (25 %) when the front face cuts the model (section, plan), cobalt `#1F6FD1` (22 %) when it doesn't
   (elevation, axo). View boxes stay Wireframe-override `Extrusion`s, so the fill is a display conduit registered when
   the GHA loads. It never hides the model's wires and does not change picking or the selection highlight.
-- **`m2d.color`** (`#RRGGBB` or `#RRGGBBAA`) overrides the fill per view; `default` or blank is by type. Validate
+- **`m2d.color`** (`#RRGGBB` or `#RRGGBBAA`) overrides the fill per view; `default` or blank is by type. Convert to view boxes
   writes `default` when the key is missing. An invalid value falls back to by type with a remark on the component.
 - **Cut detection for colouring** is a cheap, conservative display hint: a visible scene object's bounding box
   straddles the front-face plane and overlaps the frame. It uses an RTree, is cached per view box and is recomputed
@@ -157,3 +157,21 @@ See [UX revision 4](design/ux.md) §2.2 and §6.
   object on the matching layers, including hidden objects and objects on layers that are off (or under a parent that is
   off), like referenced objects. Hiding, showing or switching those layers never re-runs; adding, deleting or editing
   objects there, or moving an object onto or off those layers, does. Block parts are still drawn as Rhino shows them.
+
+## Beta.1 feedback (owner, 2026-11-16)
+
+From the owner's first real use of v0.1.0-beta.1 on a ~6,000-object model.
+
+- **Loading is faster and off the UI thread where it can be.** Content fingerprints are computed once per Rhino object
+  (by its serial number) and, with normalisation and the scene build, on background threads over owned copies; block
+  parts are resolved once per definition; the scene identity is a streamed hash; interactive documents rely on Rhino's
+  events instead of re-snapshotting every object. See the capture profile in [UX](design/ux.md) §5.4.
+- **Changing settings never reloads objects.** Settings, Depth, Target, menu and view-object changes re-solve from the
+  kept scene (no capture, normalisation or preparation); presentation-only settings make no HLD call. See §5.1, §5.1a.
+- **View boxes and M2D+ bakes are never scene geometry**, in every mode, recognised by their user text markers (which
+  move with them) or their layers; explicitly referenced ones are reported in Info. See §3.1.
+- **"Validate views" is renamed "Convert to view boxes"**, with the same behaviour and a one-line result
+  ("Converted 3 to view boxes; refused 1: …").
+- **The footer says what is being processed and how far along** (loading, waiting, preparing, drawing per view and
+  step, workers, output), with a progress bar that only moves forward, a shimmer for stages without sub-progress and a
+  rough estimate when there is enough history. See §5.2.

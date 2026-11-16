@@ -5,9 +5,14 @@ namespace M2DPlus.Grasshopper.UI.Model;
 /// <summary>Job state as the canvas needs it (UX §5.2). The component reports it; the UI never reads job internals.</summary>
 public enum DrawingPhase { Idle, Running, Done, Paused, Cancelled, Error }
 
-/// <summary>Fraction is 0–1 for the progress line, or null for indeterminate (Reading, Queued).</summary>
+/// <summary>Fraction is 0–1 for the progress bar (never decreasing during a job), or null when nothing is known.
+/// <see cref="Indeterminate"/>: the current stage has no sub-progress, so the bar shimmers between Fraction and
+/// <see cref="SpanEnd"/>. <see cref="Status"/> is the footer's status line while a job runs.</summary>
 public readonly record struct DrawingRuntime(DrawingPhase Phase, double? Fraction = null)
 {
+    public StatusLine? Status { get; init; }
+    public bool Indeterminate { get; init; }
+    public double SpanEnd { get; init; }
     public static DrawingRuntime Idle { get; } = new(DrawingPhase.Idle);
 }
 

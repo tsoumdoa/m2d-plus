@@ -42,6 +42,18 @@ public sealed class LeaseEntry<T> : IDisposable where T : class, IDisposable
         private readonly T _value;
         internal Lease(LeaseEntry<T> owner, T value) { _owner = owner; _value = value; }
         public T Value => _owner is null ? throw new ObjectDisposedException(nameof(Lease)) : _value;
+        /// <summary>Another lease on the same value, valid even after the cache retired the entry (this lease keeps the
+        /// value alive while it is shared). Lets an owner hand a retained value to a job without asking the cache again.</summary>
+        public Lease Share()
+        {
+            var owner = _owner ?? throw new ObjectDisposedException(nameof(Lease));
+            lock (owner._sync)
+            {
+                if (owner._leases == 0) throw new ObjectDisposedException(nameof(Lease));
+                owner._leases++;
+                return new(owner, _value);
+            }
+        }
         public void Dispose() => Interlocked.Exchange(ref _owner, null)?.Release();
     }
 }

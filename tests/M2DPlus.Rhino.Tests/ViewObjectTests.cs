@@ -17,7 +17,7 @@ using Font = System.Drawing.Font;
 
 namespace M2DPlus.Rhino.Tests;
 
-/// <summary>UX rev. 4 view objects: Validate → view box, user text, Flip, Create from viewport, the Depth input and
+/// <summary>UX rev. 4 view objects: Convert to view boxes → view box, user text, Flip, Create from viewport, the Depth input and
 /// the settings precedence, in a real headless Rhino and Grasshopper. Expectations come from the input geometry.</summary>
 [Collection("Rhino")]
 [Trait("Category", "RhinoIntegration")]
@@ -274,7 +274,7 @@ public sealed partial class ViewObjectTests(RhinoHost host, ITestOutputHelper ou
         AssertVector(before.Direction, ViewRequest.Parse(id, doc).Direction);
         // Only view boxes flip; the reason says what to do.
         var surface = doc.Objects.AddSurface(FrontSurface());
-        Assert.Contains("Validate views first", ViewBoxes.Flip(doc, [surface]).Single().Message);
+        Assert.Contains("Convert to view boxes first", ViewBoxes.Flip(doc, [surface]).Single().Message);
     });
 
     [RhinoFact] public void CreateViewFromAParallelViewportBakesANamedBoxOnTheViewsLayer() => host.Run(() =>

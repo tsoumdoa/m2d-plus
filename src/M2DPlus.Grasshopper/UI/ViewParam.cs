@@ -11,7 +11,7 @@ namespace M2DPlus.Grasshopper.UI;
 /// <summary>The View input (UX rev. 4 §2.1): a generic parameter whose right-click menu picks view objects in Rhino,
 /// validates them into view boxes, flips or creates them, and chooses named views, clipping planes and directions.
 /// Text choices are persistent text and picked objects persistent references, so both save with the .gh.
-/// Choosing is greyed while a wire is connected; Validate, Flip and Create also work on wired references.</summary>
+/// Choosing is greyed while a wire is connected; Convert to view boxes, Flip and Create also work on wired references.</summary>
 public sealed class ViewParam : Param_GenericObject
 {
     // Generated once for the View input parameter. Never change.

@@ -18,16 +18,20 @@ public sealed class WatchScope
     public WatchScope(WatchMode mode, IEnumerable<string>? layerPatterns = null, IEnumerable<Guid>? views = null, bool textViews = false)
     {
         Mode = mode; LayerPatterns = (layerPatterns ?? []).ToArray();
-        Views = (views ?? []).Where(id => id != Guid.Empty).ToHashSet(); TextViews = textViews;
+        _views = (views ?? []).Where(id => id != Guid.Empty).ToHashSet(); TextViews = textViews;
     }
     public WatchMode Mode { get; }
     /// <summary>Layer-name Geometry items (<c>Walls</c>, <c>Structure::*</c>). They select every object on matching layers,
     /// whatever its or the layers' visibility, so only layer names and membership matter.</summary>
     public IReadOnlyList<string> LayerPatterns { get; }
     /// <summary>View objects the View input references (view boxes, frame surfaces, clipping planes).</summary>
-    public IReadOnlySet<Guid> Views { get; }
+    public IReadOnlySet<Guid> Views => _views;
+    private HashSet<Guid> _views;
+    /// <summary>The View input changed while the captured scene is reused: watch the new view objects.</summary>
+    public void SetViews(IEnumerable<Guid> views, bool textViews)
+    { _views = views.Where(id => id != Guid.Empty).ToHashSet(); TextViews = textViews; }
     /// <summary>A View item is text (a named view, clipping plane name or direction): clipping planes and named views matter.</summary>
-    public bool TextViews { get; }
+    public bool TextViews { get; private set; }
     internal HashSet<Guid> Objects { get; } = new();
     /// <summary>Drawn only while visible: block parts and objects a layer name selects.</summary>
     internal HashSet<Guid> Gated { get; } = new();
@@ -79,6 +83,12 @@ public sealed class DocumentWatch : IDisposable
     public bool IsClosed => Volatile.Read(ref _closed) != 0;
     /// <summary>Raised (host thread) for a change that must re-run the drawing.</summary>
     public event Action? Changed;
+    /// <summary>Raised (host thread) for a change to view objects only: re-run the drawing, keep the captured scene.</summary>
+    public event Action? ViewsChanged;
+    private long _viewGeneration;
+    /// <summary>Counts view-only changes; <see cref="Generation"/> counts changes to the scene.</summary>
+    public long ViewGeneration => Interlocked.Read(ref _viewGeneration);
+    public int ViewReruns { get; private set; }
     /// <summary>Changes that re-ran / were ignored, and the last re-run's reason (diagnostics and tests).</summary>
     public int Reruns { get; private set; }
     public int Ignored { get; private set; }
@@ -91,10 +101,29 @@ public sealed class DocumentWatch : IDisposable
         set { _scope = value; _rebase = true; }
     }
 
+    /// <summary>Host-thread time spent taking document snapshots (construction and verification), for profiling.</summary>
+    public double SnapshotMilliseconds { get; private set; }
+    public int Snapshots { get; private set; }
+    private Snapshot Take(RhinoDoc document, WatchScope? scope)
+    {
+        var since = Stopwatch.GetTimestamp();
+        try { return Snapshot.Take(document, scope); }
+        finally { SnapshotMilliseconds += Stopwatch.GetElapsedTime(since).TotalMilliseconds; Snapshots++; }
+    }
+
+    /// <summary>Interactive Rhino raises an event for every change the policy reads, so there the watch compares only
+    /// a light snapshot (tolerance, units, named views: changes with no event of their own). Headless documents can omit
+    /// notifications, so they also compare every object's and layer's facets. Tests may force the full comparison.</summary>
+    internal static bool ForceSnapshots { get; set; }
+    /// <summary>Profiling only: treat a headless document as interactive (events authoritative).</summary>
+    internal static bool SimulateInteractive { get; set; }
+    public bool UsesSnapshots { get; }
+
     public DocumentWatch(RhinoDoc document)
     {
         DocumentSerial = document.RuntimeSerialNumber;
-        _snapshot = Snapshot.Take(document, null);
+        UsesSnapshots = ForceSnapshots || document.IsHeadless && !SimulateInteractive;
+        _snapshot = UsesSnapshots ? Take(document, null) : Snapshot.Light(document);
         RhinoDoc.AddRhinoObject += Added; RhinoDoc.DeleteRhinoObject += Deleted; RhinoDoc.UndeleteRhinoObject += Added;
         RhinoDoc.ModifyObjectAttributes += AttributesChanged;
         RhinoDoc.LayerTableEvent += LayerChanged; RhinoDoc.HatchPatternTableEvent += HatchChanged;
@@ -254,9 +283,14 @@ public sealed class DocumentWatch : IDisposable
         Interlocked.Exchange(ref _closed, 1); Touch("document closed");
     }
 
+    /// <summary>A change to view objects only (their geometry, name or m2d.* text; clipping planes and named views for
+    /// text views). It re-runs the drawing but never touches the captured scene: view objects are never scene geometry.</summary>
+    private static bool ViewsOnly(string reason) => reason.EndsWith("(View)", StringComparison.Ordinal) || reason == "named views";
+
     private void Touch(string reason)
     {
         Reruns++; LastReason = reason;
+        if (ViewsOnly(reason)) { ViewReruns++; Interlocked.Increment(ref _viewGeneration); ViewsChanged?.Invoke(); return; }
         Interlocked.Increment(ref _generation); Changed?.Invoke();
     }
 
@@ -276,7 +310,7 @@ public sealed class DocumentWatch : IDisposable
         var now = Stopwatch.GetTimestamp();
         if (throttle && !_rebase && Stopwatch.GetElapsedTime(_verifiedAt, now) < TimeSpan.FromMilliseconds(200)) return;
         _verifiedAt = now;
-        var current = Snapshot.Take(document, _scope);
+        var current = UsesSnapshots ? Take(document, _scope) : Snapshot.Light(document);
         if (_rebase) { _snapshot = current; _rebase = false; return; }
         var reason = Compare(document, _snapshot, current);
         _snapshot = current;
@@ -310,7 +344,7 @@ public sealed class DocumentWatch : IDisposable
                 if (RerunPolicy.Object(mode, role, change)) return $"object {id} {change} ({role})";
                 Ignored++;
             }
-            else if (RerunPolicy.Object(mode, RoleOf(id), ObjectChange.Deleted)) return $"object {id} deleted";
+            else if (RoleOf(id) is var gone && RerunPolicy.Object(mode, gone, ObjectChange.Deleted)) return $"object {id} deleted ({gone})";
         }
         foreach (var (id, _) in after.Objects)
         {
@@ -409,6 +443,10 @@ public sealed class DocumentWatch : IDisposable
     private sealed record Snapshot(IReadOnlyDictionary<Guid, ObjectFacets> Objects, IReadOnlyDictionary<int, LayerFacets> Layers,
         IReadOnlyDictionary<Guid, string> Definitions, string DocumentProperties, string NamedViews, string HatchPatterns)
     {
+        /// <summary>Only what changes without an event of its own: tolerance, units and named views.</summary>
+        internal static Snapshot Light(RhinoDoc document) => new(new Dictionary<Guid, ObjectFacets>(), new Dictionary<int, LayerFacets>(),
+            new Dictionary<Guid, string>(), Properties(document), string.Join("|", document.NamedViews.Select(v => ViewRequest.Parse(v).Revision)), "");
+
         internal static string Properties(RhinoDoc document) => FormattableString.Invariant(
             $"{document.ModelAbsoluteTolerance:R}:{document.ModelAngleToleranceRadians:R}:{document.ModelUnitSystem}");
 

@@ -17,10 +17,10 @@ public sealed record ViewRequest(string Name, Vector3d Direction, string? Error 
     public ViewSourceKind Kind { get; init; } = ViewSourceKind.Direction;
     /// <summary>The referenced Rhino object (view box, frame surface/curve, clipping plane), else empty.</summary>
     public Guid ObjectId { get; init; }
-    /// <summary>A remark about how the source was read, e.g. a frame surface that is not validated yet.</summary>
+    /// <summary>A remark about how the source was read, e.g. a frame surface that is not converted yet.</summary>
     public string? Note { get; init; }
     public string Revision => $"{Name}/{Error}/{Direction.X:R},{Direction.Y:R},{Direction.Z:R}/{Named?.Revision}/{Cut?.Revision}";
-    /// <param name="scene">Scene bounds used to face a not-yet-validated frame surface at the model; computed from the
+    /// <param name="scene">Scene bounds used to face a not-yet-converted frame surface at the model; computed from the
     /// document when needed and not given.</param>
     public static ViewRequest Parse(object? value, RhinoDoc? document = null, BoundingBox? scene = null)
     {
@@ -72,7 +72,7 @@ public sealed record ViewRequest(string Name, Vector3d Direction, string? Error 
         direction.Unitize(); return new(name, direction);
     }
     /// <summary>A referenced Rhino object: an M2D+ view box (resolves exactly like a Box: cut at the front face,
-    /// crop to the profile, far limit at the back), or a planar rectangle surface/curve that is not validated yet
+    /// crop to the profile, far limit at the back), or a planar rectangle surface/curve that is not converted yet
     /// (resolves like a Rectangle, faced at the model, with a remark).</summary>
     private static ViewRequest FromViewObject(RhinoObject obj, RhinoDoc? document, BoundingBox? scene)
     {
@@ -82,18 +82,18 @@ public sealed record ViewRequest(string Name, Vector3d Direction, string? Error 
         if (ViewBoxes.IsViewBox(obj))
         {
             if (obj.Geometry is not Extrusion extrusion)
-                return new(name, default, $"View '{name}' is no longer a view box: Rhino turned it into a polysurface. Undo that edit, or reference a planar surface and use Validate views.") { ObjectId = obj.Id };
+                return new(name, default, $"View '{name}' is no longer a view box: Rhino turned it into a polysurface. Undo that edit, or reference a planar surface and use Convert to view boxes.") { ObjectId = obj.Id };
             var box = ViewBoxes.ReadBox(extrusion, tolerance, angle);
             return box.IsValid ? FromBox(box.Frame!.Value, box.Depth!.Value, name) with { ObjectId = obj.Id }
                 : new(name, default, $"View box '{name}': {box.Reason}") { ObjectId = obj.Id };
         }
         if (obj.Geometry is Extrusion)
-            return new(name, default, $"View '{name}' is an extrusion, not an M2D+ view box. Reference a planar surface or a closed rectangle and use Validate views.") { ObjectId = obj.Id };
+            return new(name, default, $"View '{name}' is an extrusion, not an M2D+ view box. Reference a planar surface or a closed rectangle and use Convert to view boxes.") { ObjectId = obj.Id };
         var check = ViewBoxes.Establish(obj.Geometry, tolerance, angle);
         if (!check.IsValid) return new(name, default, $"View '{name}' can't frame a view: {check.Reason}") { ObjectId = obj.Id };
         var frame = Faced(check.Frame!.Value, document, scene, [obj.Id]);
         return FromPlane(frame.Plane, name, frame) with { Kind = ViewSourceKind.Rectangle, ObjectId = obj.Id,
-            Note = $"'{name}' is drawn as a rectangle view. Right-click View > Validate views to make it an editable view box (depth, look direction, settings)." };
+            Note = $"'{name}' is drawn as a rectangle view. Right-click View > Convert to view boxes to make it an editable view box (depth, look direction, settings)." };
     }
     private static Rectangle3d Faced(Rectangle3d frame, RhinoDoc? document, BoundingBox? scene, Guid[] excluded) =>
         ViewBoxes.Face(frame, scene ?? (document is null ? BoundingBox.Empty : ViewBoxes.SceneBounds(document, excluded)), document?.ModelAbsoluteTolerance ?? .001);

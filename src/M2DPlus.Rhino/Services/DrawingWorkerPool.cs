@@ -74,6 +74,7 @@ public sealed class DrawingWorkerPool : IDisposable
             var keys=views.Select(v=>WorkerCodec.Hash(WorkerCodec.Encode(new WorkerCodec.Request(default,0,v,settings.NativeOnly)))).ToArray();
             var order=Enumerable.Range(0,views.Count).OrderByDescending(i=>_viewSeconds.GetValueOrDefault(keys[i])).ThenBy(i=>i).ToArray();
             var pending=new System.Collections.Concurrent.ConcurrentQueue<int>(order);var seconds=new double[views.Count];
+            progress?.Report(new(JobPhase.Drawing,0,views.Count){Workers=plan.Count,Step="starting workers"});
             var retry=new bool[views.Count];var done=0;
             var unavailable=new System.Collections.Concurrent.ConcurrentDictionary<Slot,byte>();
             WorkerUnavailableException? startupFailure=null;
@@ -156,7 +157,7 @@ public sealed class DrawingWorkerPool : IDisposable
                             Failure(i,retry[i]?MemoryFailure(plan.CapBytes,"Queued for an isolated retry."):"Worker failed for this view (crash, timeout or invalid reply): "+ex.Message);
                             slot.Client?.Dispose();slot.Client=null;
                         }
-                        progress?.Report(new(JobPhase.Drawing,Interlocked.Increment(ref done),views.Count));
+                        progress?.Report(new(JobPhase.Drawing,Interlocked.Increment(ref done),views.Count){Workers=plan.Count});
                     }
                 }
                 finally
@@ -170,10 +171,12 @@ public sealed class DrawingWorkerPool : IDisposable
                 slot.Client??=await WorkerClient.StartAsync(_options with{MemoryBytes=cap,ProcessorLimit=isolatedRetry?WorkerMemoryPolicy.CpuLimit(Environment.ProcessorCount):processors},fingerprint,token).ConfigureAwait(false);
                 if(slot.Client.SceneRevision!=identity.SceneRevision)
                 {
+                    progress?.Report(new(JobPhase.Drawing,Volatile.Read(ref done),views.Count){Workers=plan.Count,Step="sending scene"});
                     await slot.Client.CallAsync("scene",payload.Value,_options.SolveTimeout,token,bytes=>bytes,_replies,replyLimit).ConfigureAwait(false);
                     slot.Client.SceneRevision=identity.SceneRevision;
                 }
                 AttemptingView?.Invoke(index,cap,isolatedRetry);
+                progress?.Report(new(JobPhase.Drawing,Volatile.Read(ref done),views.Count){Workers=plan.Count});
                 slot.Client.NativeStarted=()=>SolvingView?.Invoke(slot.Client.ProcessId,index);
                 var clock=System.Diagnostics.Stopwatch.StartNew();
                 var drawing=await slot.Client.CallAsync("solve",EncodedRequest?.Invoke(index)??WorkerCodec.Encode(new WorkerCodec.Request(identity,index,views[index],settings.NativeOnly)),_options.SolveTimeout,token,bytes=>

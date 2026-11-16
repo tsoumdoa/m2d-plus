@@ -78,7 +78,7 @@ public sealed class GrasshopperUiTests(RhinoHost host)
             ui.AppendMenuItems(menu);
             var items = menu.Items.OfType<ToolStripMenuItem>().ToArray();
             Assert.DoesNotContain(items, i => i.Text!.Contains("settings…", StringComparison.Ordinal));
-            Assert.Contains(items, i => i.Text == "Validate views");
+            Assert.Contains(items, i => i.Text == "Convert to view boxes");
             var hidden = items.Single(i => i.Text == "Hidden lines");
             Assert.False(hidden.Checked);
             var far = items.Single(i => i.Text == "Far clip");

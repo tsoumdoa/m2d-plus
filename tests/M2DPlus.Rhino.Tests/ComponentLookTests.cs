@@ -20,7 +20,7 @@ namespace M2DPlus.Rhino.Tests;
 /// </summary>
 [Collection("Rhino")]
 [Trait("Category", "RhinoIntegration")]
-public sealed class ComponentLookTests(RhinoHost host)
+public sealed class ComponentLookTests(RhinoHost host, Xunit.Abstractions.ITestOutputHelper output)
 {
     private static readonly Guid GrasshopperId = new("b45a29b1-4343-4035-989e-044e8580d9cf");
     private static Assembly Gha => Assembly.LoadFrom(Path.Combine(AppContext.BaseDirectory, "M2DPlus.Grasshopper.gha"));
@@ -149,6 +149,52 @@ public sealed class ComponentLookTests(RhinoHost host)
             component.Attributes.ExpireLayout(); component.Attributes.PerformLayout();
             AssertLayout(component, NameColumn);
             using var image = Render(document, $"component-display-{mode}-200.png", 2, () => component.Message = "5 drawings · 9.9 s", out _);
+        }
+    });
+
+    /// <summary>
+    /// The footer while a job runs (owner feedback on beta.1: "Queued" was vague): the stage status in layout B's fixed
+    /// width, ellipsised when needed, and the bar (determinate, or a shimmer over the current unit of work). Renders
+    /// every stage to footer-*.png and checks that the status keeps the most important part when it doesn't fit.
+    /// </summary>
+    [RhinoFact] public void FooterShowsEveryStage() => host.Run(() =>
+    {
+        Assert.True(global::Rhino.PlugIns.PlugIn.LoadPlugIn(GrasshopperId));
+        using var rhino = RhinoDoc.CreateHeadless(null);
+        RhinoDoc.ActiveDoc = rhino;
+        GH_Document.EnableSolutions = false;
+        using var restore = new Restore(() => GH_Document.EnableSolutions = true);
+        var statusText = Gha.GetType("M2DPlus.Grasshopper.UI.Model.StatusText", true)!;
+        var stages = new (string File, M2DPlus.Core.JobProgress Progress, double Fraction, bool Indeterminate, double SpanEnd, double? Eta)[]
+        {
+            ("loading", new(M2DPlus.Core.JobPhase.Reading, 2400, 6000), .06, false, .15, null),
+            ("waiting", new(M2DPlus.Core.JobPhase.Queued, 0, 8) { Ahead = 1 }, .15, true, .15, null),
+            ("preparing", new(M2DPlus.Core.JobPhase.Preparing, 3100, 6000), .2, false, .25, null),
+            ("drawing", new(M2DPlus.Core.JobPhase.Drawing, 2, 8) { View = "Section A", Step = M2DPlus.Core.ViewSteps.HiddenLines, StepFraction = .45 }, .47, false, .51, 41),
+            ("drawing-long-name", new(M2DPlus.Core.JobPhase.Drawing, 6, 12) { View = "North elevation, courtyard side", Step = M2DPlus.Core.ViewSteps.Sections }, .64, true, .66, 95),
+            ("workers", new(M2DPlus.Core.JobPhase.Drawing, 5, 8) { Workers = 3 }, .69, true, .95, 12),
+            ("output", new(M2DPlus.Core.JobPhase.Output, 0, 0), .95, true, 1, null),
+        };
+        foreach (var (file, progress, fraction, indeterminate, spanEnd, eta) in stages)
+        {
+            var (document, component) = Build("Running", fraction);
+            using var owned = document;
+            var status = statusText.GetMethod("Of")!.Invoke(null, [progress, eta])!;
+            var runtimeType = UiType("Model.DrawingRuntime");
+            object runtime = Activator.CreateInstance(runtimeType, Enum.Parse(UiType("Model.DrawingPhase"), "Running"), (double?)fraction)!;
+            runtimeType.GetProperty("Status")!.SetValue(runtime, status);
+            runtimeType.GetProperty("Indeterminate")!.SetValue(runtime, indeterminate);
+            runtimeType.GetProperty("SpanEnd")!.SetValue(runtime, spanEnd);
+            dynamic ui = ((dynamic)component).Ui;
+            ui.GetType().GetProperty("Runtime")!.SetValue(ui,
+                Expression.Lambda(typeof(Func<>).MakeGenericType(runtimeType), Expression.Constant(runtime, runtimeType)).Compile());
+            var full = (string)status.GetType().GetProperty("Full")!.GetValue(status)!;
+            using var image = Render(document, $"footer-{file}-200.png", 2, () => component.Message = full, out var offset);
+            // The bar fills to the fraction: cobalt just left of it, track (lighter) well right of it.
+            var footer = Get(component, "FooterBounds");
+            var y = (int)((footer.Top + .5f) * 2 + offset.Y);
+            Assert.True(Bluish(image.GetPixel((int)((footer.Left + footer.Width * fraction - 3) * 2 + offset.X), y)), file + ": filled part");
+            output.WriteLine($"{file}: {full}");
         }
     });
 

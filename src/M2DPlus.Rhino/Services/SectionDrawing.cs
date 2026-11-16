@@ -203,7 +203,7 @@ internal static class SectionDrawing
             {
                 NativeDrawing.CountHld(); result.NativeCalls++;
                 phase.Next("native solve");
-                using var drawing = HiddenLineDrawing.Compute(parameters, settings.MultipleThreads, NativeDrawing.NativeProgress, token);
+                using var drawing = HiddenLineDrawing.Compute(parameters, settings.MultipleThreads, NativeDrawing.HldProgress, token);
                 phase.Next("section output construction");
                 if (drawing is null || !drawing.WorldToHiddenLine.TryGetInverse(out var inverse)) throw new InvalidOperationException("Route C HLD failed.");
                 var project = Transform.PlanarProjection(cut.Plane) * inverse;

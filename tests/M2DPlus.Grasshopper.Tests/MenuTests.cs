@@ -16,7 +16,7 @@ public sealed class MenuTests
     public void ItemsFollowUxRevisionFourSectionSevenOrderAndTheEditorIsGone()
     {
         var labels = Menu(ComponentUiState.Default, DrawingPhase.Running).Where(n => !n.IsSeparator).Select(n => n.Label).ToArray();
-        Assert.Equal(["Validate views", "Flip view direction", "Create view from current viewport", "Select view objects",
+        Assert.Equal(["Convert to view boxes", "Flip view direction", "Create view from current viewport", "Select view objects",
             "Bake drawing", "Bake one", "Run automatically", "Run now", "Cancel",
             "Hidden lines", "Tangent edges", "Seams", "Min visible", "Beyond", "Far clip", "Depth cueing", "Cuts", "Hatch", "Scale", "Line weights",
             "Reset menu defaults", "Preview", "Output tree", "Copy info", "Copy settings as text", "Clear drawing cache"], labels);
@@ -37,7 +37,7 @@ public sealed class MenuTests
         Assert.Contains("Pick views in Rhino", none[0].Tooltip);
         var surfaces = ViewCommands.Build(new(2, 0, false), withSelect: true);
         Assert.Equal([true, false, true, true], surfaces.Select(n => n.Enabled));
-        Assert.Contains("Validate views first", surfaces[1].Tooltip);
+        Assert.Contains("Convert to view boxes first", surfaces[1].Tooltip);
         var boxes = ViewCommands.Build(new(2, 2, true), withSelect: false);
         Assert.Equal([ViewCommands.Validate, ViewCommands.Flip, ViewCommands.Create], boxes.Select(n => n.Command));
         Assert.All(boxes, n => Assert.True(n.Enabled));
@@ -179,7 +179,7 @@ public sealed class MenuTests
         Assert.Equal(11, directions.Length);
         Assert.True(directions[6].IsSeparator);
 
-        Assert.Equal(["Pick views in Rhino…", "Validate views", "Flip view direction", "Create view from current viewport"],
+        Assert.Equal(["Pick views in Rhino…", "Convert to view boxes", "Flip view direction", "Create view from current viewport"],
             menu.TakeWhile(n => !n.IsSeparator).Select(n => n.Label));
         Assert.DoesNotContain(menu, n => n.Label.StartsWith("Capture", StringComparison.Ordinal));
 

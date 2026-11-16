@@ -189,7 +189,7 @@ public sealed class DrawingAttributes : GH_ComponentAttributes
             var clip = graphics.Clip;
             graphics.SetClip(shape, CombineMode.Intersect);
             using (var band = new SolidBrush(style.Edge)) graphics.FillRectangle(band, _footer);
-            if (runtime.Phase == DrawingPhase.Running) RenderProgress(graphics, runtime.Fraction);
+            if (runtime.Phase == DrawingPhase.Running) RenderProgress(graphics, runtime);
             graphics.Clip = clip;
             using var edge = new Pen(style.Edge);
             graphics.DrawPath(edge, shape);
@@ -223,9 +223,11 @@ public sealed class DrawingAttributes : GH_ComponentAttributes
             using var label = new SolidBrush(Fade(primary ? Color.White : ink, alpha));
             graphics.DrawString(RuntimeModel.Label(button), BoldFont, label, _button, GH_TextRenderingConstants.CenterCenter);
         }
-        if (string.IsNullOrWhiteSpace(message)) return;
         var area = RectangleF.FromLTRB(_footer.Left + 2 * Margin, _footer.Top, statusRight, _footer.Bottom);
         if (area.Width <= 4) return;
+        // While a job runs: the longest form of the status that fits (detail, then view, then estimate go first).
+        if (runtime.Status is { } line) message = line.Fit(t => TextWidth(t, LabelFont), area.Width);
+        if (string.IsNullOrWhiteSpace(message)) return;
         var ratio = area.Width / Math.Max(1, TextWidth(message, LabelFont));
         using var shrunk = ratio < 1 ? new Font(LabelFont.FontFamily, LabelFont.Size * Math.Max(.85f, ratio), LabelFont.Style, LabelFont.Unit) : null;
         using var format = new StringFormat(GH_TextRenderingConstants.NearCenter) { Trimming = StringTrimming.EllipsisCharacter, FormatFlags = StringFormatFlags.NoWrap };
@@ -233,25 +235,35 @@ public sealed class DrawingAttributes : GH_ComponentAttributes
         graphics.DrawString(message, shrunk ?? LabelFont, status, area, format);
     }
 
-    /// <summary>Along the footer's top edge, full width (clipped to the capsule by the caller).</summary>
-    private void RenderProgress(Graphics graphics, double? fraction)
+    /// <summary>Along the footer's top edge, full width (clipped to the capsule by the caller). The bar fills to the
+    /// job's fraction, which never moves back; a stage without sub-progress shimmers over the part it will fill, so the
+    /// bar is never frozen. With nothing known yet, one segment sweeps the whole width.</summary>
+    private void RenderProgress(Graphics graphics, DrawingRuntime runtime)
     {
         var track = new RectangleF(_footer.Left, _footer.Top, _footer.Width, Progress);
         using (var faint = new SolidBrush(Color.FromArgb(70, Cobalt))) graphics.FillRectangle(faint, track);
-        RectangleF bar;
-        if (fraction is double f)
-            bar = track with { Width = (float)(track.Width * Math.Clamp(f, 0, 1)) };
-        else
-        {
-            // Indeterminate: a quarter-width segment sweeping once every 1.2 s.
-            var width = track.Width * .25f;
-            var phase = Environment.TickCount64 % 1200 / 1200f;
-            var x = track.Left - width + (track.Width + width) * phase;
-            bar = RectangleF.FromLTRB(Math.Max(track.Left, x), track.Top, Math.Min(track.Right, x + width), track.Bottom);
-        }
-        if (bar.Width <= 0) return;
         using var ink = new SolidBrush(Cobalt);
-        graphics.FillRectangle(ink, bar);
+        var phase = Environment.TickCount64 % 1200 / 1200f;
+        if (runtime.Fraction is not double f)
+        {
+            var width = track.Width * .25f;
+            var x = track.Left - width + (track.Width + width) * phase;
+            var sweep = RectangleF.FromLTRB(Math.Max(track.Left, x), track.Top, Math.Min(track.Right, x + width), track.Bottom);
+            if (sweep.Width > 0) graphics.FillRectangle(ink, sweep);
+            return;
+        }
+        var filled = (float)(track.Width * Math.Clamp(f, 0, 1));
+        if (filled > 0) graphics.FillRectangle(ink, track with { Width = filled });
+        if (!runtime.Indeterminate) return;
+        // The shimmer runs over the current unit of work (at least 24 units wide, so it is visible).
+        var left = track.Left + filled;
+        var right = Math.Min(track.Right, Math.Max(track.Left + (float)(track.Width * Math.Clamp(runtime.SpanEnd, 0, 1)), left + 24));
+        if (right - left < 1) return;
+        var segment = Math.Max(8, (right - left) * .4f);
+        var at = left - segment + (right - left + segment) * phase;
+        var glint = RectangleF.FromLTRB(Math.Max(left, at), track.Top, Math.Min(right, at + segment), track.Bottom);
+        using var light = new SolidBrush(Color.FromArgb(150, Cobalt));
+        if (glint.Width > 0) graphics.FillRectangle(light, glint);
     }
 
     private static Color Fade(Color colour, int alpha) => Color.FromArgb(colour.A * alpha / 255, colour);
@@ -306,6 +318,14 @@ public sealed class DrawingAttributes : GH_ComponentAttributes
             e.Description = "";
             return;
         }
+        // Over the footer: the full status (what is being processed, how far along) and the stage timings.
+        if (_footer.Contains(point) && Ui.Detail?.Invoke() is { } detail)
+        {
+            e.Title = Owner.Name;
+            e.Text = detail;
+            e.Description = "";
+            return;
+        }
         base.SetupTooltip(point, e);
     }
 
@@ -325,7 +345,8 @@ public sealed class DrawingAttributes : GH_ComponentAttributes
         var runtime = Ui.CurrentRuntime;
         // Repaint for an indeterminate sweep, a moved fraction, or once more to clear the bar when the job ends.
         if (runtime.Phase != DrawingPhase.Running) StopTimer();
-        if (runtime == _painted && runtime.Fraction is not null) return;
+        // Repaint the canvas only when the footer changes, or to animate a shimmer: never Rhino's viewports.
+        if (runtime == _painted && runtime.Fraction is not null && !runtime.Indeterminate) return;
         var visible = Bounds;
         if (_canvas.Document == Owner.OnPingDocument() && _canvas.Viewport.IsVisible(ref visible, 10)) _canvas.Invalidate();
     }

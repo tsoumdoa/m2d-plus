@@ -6,6 +6,32 @@ using Rhino.Geometry;
 
 namespace M2DPlus.Rhino.Services;
 
+/// <summary>SHA-256 over a stream of typed, length-prefixed fields: a cache identity without building one huge string.</summary>
+internal sealed class SceneHash : IDisposable
+{
+    private readonly IncrementalHash _hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+    private readonly byte[] _buffer = new byte[16];
+    private void Bytes(ReadOnlySpan<byte> bytes) => _hash.AppendData(bytes);
+    public void Add(string? text)
+    {
+        text ??= "\0null";
+        BitConverter.TryWriteBytes(_buffer, text.Length); Bytes(_buffer.AsSpan(0, 4));
+        Bytes(Encoding.UTF8.GetBytes(text));
+    }
+    public void Add(int value) { BitConverter.TryWriteBytes(_buffer, value); Bytes(_buffer.AsSpan(0, 4)); }
+    public void Add(bool value) => Add(value ? 1 : 0);
+    public void Add(double value) { BitConverter.TryWriteBytes(_buffer, value); Bytes(_buffer.AsSpan(0, 8)); }
+    public void Add(int[] values) { Add(values.Length); foreach (var v in values) Add(v); }
+    public void Add(Guid[] values) { Add(values.Length); foreach (var v in values) { v.TryWriteBytes(_buffer); Bytes(_buffer); } }
+    public void Add(Transform[] chain)
+    {
+        Add(chain.Length);
+        foreach (var t in chain) for (var r = 0; r < 4; r++) for (var c = 0; c < 4; c++) Add(t[r, c]);
+    }
+    public string Finish() => Convert.ToHexString(_hash.GetHashAndReset());
+    public void Dispose() => _hash.Dispose();
+}
+
 internal sealed class OwnedGeometry : IDisposable
 {
     private readonly GeometryBase _geometry;
@@ -74,11 +100,19 @@ public sealed class PreparedScene : IDisposable
     internal PreparedScene(string revision, List<SceneLeaf> leaves, Dictionary<string, int> unsupported, double tolerance)
     {
         SourceMetadata = new ReadOnlyDictionary<string, SourceSection>(leaves.ToDictionary(l => l.Identity, l => l.Section, StringComparer.Ordinal));
-        VisibilityRevision = SceneCache.Hash(System.Text.Json.JsonSerializer.Serialize(new {
-            leaves = leaves.Select(l => new { l.Identity, l.Key, l.Path, l.SourceItem,
-                chain = l.Chain.Select(t => new[] { t.M00,t.M01,t.M02,t.M03,t.M10,t.M11,t.M12,t.M13,t.M20,t.M21,t.M22,t.M23,t.M30,t.M31,t.M32,t.M33 }),
-                l.Section.Transparent, l.Section.ObjectIds, l.Section.LayerIds }),
-            unsupported = unsupported.OrderBy(p => p.Key, StringComparer.Ordinal), tolerance }));
+        // Streamed, not one giant JSON string: the same fields, hashed in order.
+        using (var hash = new SceneHash())
+        {
+            hash.Add("visibility-v2");
+            foreach (var l in leaves)
+            {
+                hash.Add(l.Identity); hash.Add(l.Key); hash.Add(l.Path); hash.Add(l.SourceItem); hash.Add(l.Chain);
+                hash.Add(l.Section.Transparent); hash.Add(l.Section.ObjectIds); hash.Add(l.Section.LayerIds);
+            }
+            foreach (var pair in unsupported.OrderBy(p => p.Key, StringComparer.Ordinal)) { hash.Add(pair.Key); hash.Add(pair.Value); }
+            hash.Add(tolerance);
+            VisibilityRevision = hash.Finish();
+        }
         Revision = revision; _leaves = leaves; Unsupported = new ReadOnlyDictionary<string, int>(unsupported); Tolerance = tolerance;
         Conversions = Array.AsReadOnly(leaves.Where(l => l.Geometry.Value.Conversion is not null)
             .Select(l => $"{l.Identity}: {l.Geometry.Value.Conversion}")
@@ -103,7 +137,8 @@ public sealed class PreparedScene : IDisposable
         foreach (var transform in chain) result *= transform;
         return result;
     }
-    internal IReadOnlyList<PreparedLeaf> Prepare(CancellationToken token)
+    /// <param name="progress">Called with (prepared, total) every 128 leaves and at the end.</param>
+    internal IReadOnlyList<PreparedLeaf> Prepare(CancellationToken token, Action<int, int>? progress = null)
     {
         if (_prepared is not null) return _prepared;
         var prepared = new List<PreparedLeaf>();
@@ -112,6 +147,7 @@ public sealed class PreparedScene : IDisposable
             foreach (var leaf in _leaves)
             {
                 token.ThrowIfCancellationRequested();
+                if ((prepared.Count & 127) == 0) progress?.Invoke(prepared.Count, _leaves.Count);
                 var geometry = leaf.Geometry.Value.Copy();
                 try
                 {
@@ -172,6 +208,43 @@ public sealed class SceneCache : IDisposable
     public int GeometryHits { get; private set; }
     public int SceneHits { get; private set; }
     internal static string Hash(string text) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(text)));
+
+    private readonly Dictionary<(uint Document, uint Object), string> _fingerprints = new();
+    private const int MaximumFingerprints = 1_000_000;
+    public int FingerprintsComputed { get; private set; }
+    /// <summary>The content fingerprint of a document object's geometry, computed once per object instance. Rhino gives
+    /// a replaced object (modified, moved, transformed) a new runtime serial number, so serial → content is stable; the
+    /// fingerprint itself stays the cache identity (PLAN: content fingerprints plus stable identity).</summary>
+    internal bool TryFingerprint(uint document, uint serial, out string fingerprint)
+    { lock (_sync) return _fingerprints.TryGetValue((document, serial), out fingerprint!); }
+    internal void RememberFingerprint(uint document, uint serial, string fingerprint)
+    {
+        lock (_sync)
+        {
+            if (_fingerprints.Count >= MaximumFingerprints) _fingerprints.Clear();
+            if (_fingerprints.TryAdd((document, serial), fingerprint)) FingerprintsComputed++;
+        }
+    }
+    /// <summary>A lease on cached normalised geometry, if present (no creation).</summary>
+    internal LeaseEntry<OwnedGeometry>.Lease? TryGeometry(string key)
+    {
+        lock (_sync)
+        {
+            if (!_geometry.TryGetValue(key, out var found)) return null;
+            GeometryHits++; _retention.Touch("g/" + key); return found.Acquire();
+        }
+    }
+    internal string Fingerprint(uint document, uint serial, GeometryBase geometry)
+    {
+        lock (_sync) if (_fingerprints.TryGetValue((document, serial), out var known)) return known;
+        var computed = GeometryFingerprint.Compute(geometry);
+        lock (_sync)
+        {
+            if (_fingerprints.Count >= MaximumFingerprints) _fingerprints.Clear();
+            _fingerprints[(document, serial)] = computed; FingerprintsComputed++;
+        }
+        return computed;
+    }
     internal LeaseEntry<OwnedGeometry>.Lease Geometry(string key, Func<OwnedGeometry> create)
     {
         lock (_sync)
@@ -205,6 +278,7 @@ public sealed class SceneCache : IDisposable
         lock (_sync)
         {
             _retention.Dispose();
+            _fingerprints.Clear();
         }
     }
     public void Dispose() => Clear();
