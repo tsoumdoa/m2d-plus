@@ -809,8 +809,8 @@ While a job runs the footer (§1) shows two rows saying **what is being processe
 | Loading objects (host capture) | `Loading objects 2,400 / 6,000` | · estimate | determinate (objects read / known); skipped when the scene is reused |
 | Waiting | `Waiting for another drawing (1 ahead)` | | shimmer: only shown when the global scheduler is busy |
 | Preparing geometry | `Preparing geometry 3,100 / 6,000` | · `~20 s left` | determinate |
-| Drawing, in process | `Drawing 3 / 8 · Section A` | `hidden lines 45 %` · `~40 s left` (steps: exact lines, hidden lines, sections, checking, output) | determinate within a view; Rhino's own hidden-line progress moves it |
-| Drawing, on workers | `Drawing 5 / 8 · 3 workers` | `starting workers`, `sending scene` · estimate | per finished view, with a shimmer over the views in flight |
+| Drawing, in process | `Drawing 3 / 8 · Section A` | `hidden lines 45 %` · `~40 s left` (steps: exact lines, hidden lines, sections, checking, output; exact lines, hidden lines and checking carry a percentage) | determinate within a view; the planar kernel, Rhino's own hidden-line progress and ray checking move it |
+| Drawing, on workers | `Drawing 5 / 8 · 3 workers · Section A` | `starting workers`, `sending scene`, then a worker's own step, e.g. `exact lines 37 %` · estimate | per finished view, with a shimmer over the views in flight; one view's step is shown at a time (it keeps the row until it finishes or goes quiet); with one worker, determinate within the view as in process |
 | Building output | `Building output` | | shimmer over the last share |
 
 - **The bar only moves forward.** Each stage has a share: the time it took in the previous run of the same inputs, views and

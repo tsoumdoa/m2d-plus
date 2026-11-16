@@ -76,11 +76,13 @@ public sealed class JobProgressModel
             case JobPhase.Drawing when report.Total > 0:
             {
                 var view = Math.Clamp(report.Done, 0, report.Total);
-                // Workers report whole views only; in process the step (and hidden lines' own fraction) moves within one.
-                var within = report.Workers > 0 || view == report.Total ? 0
+                // Parallel workers count whole views. In process, or with one worker (its one view in flight forwards its
+                // steps), the step and that step's own fraction (hidden lines, exact lines, checking) move within the view.
+                var whole = report.Workers > 1;
+                var within = whole || view == report.Total ? 0
                     : StepStart(report.Step) + (StepEnd(report.Step) - StepStart(report.Step)) * Math.Clamp(report.StepFraction ?? 0, 0, 1);
                 sub = (view + within) / report.Total;
-                indeterminate = report.Workers > 0 || report.StepFraction is null;
+                indeterminate = whole || report.StepFraction is null;
                 spanEnd = start + weight * Math.Min(1, (view + (report.Workers > 0 ? Math.Min(report.Workers, report.Total - view) : 1d)) / report.Total);
                 break;
             }

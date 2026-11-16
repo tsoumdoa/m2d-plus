@@ -63,8 +63,16 @@ internal static class ComposedVisibility
             settings.ObservePlanarScene?.Invoke(extraction, plane);
             settings.ObserveKernelSources?.Invoke(edgeInputs.Select(i => i.Source.Identity).Distinct(StringComparer.Ordinal).ToArray());
             phase.Next("kernel solve");
-            var kernel = EdgeFaceKernel.Solve(extraction.Faces, extraction.Edges, new(tol, Math.Min(System.Environment.ProcessorCount, 8)), token);
+            var kernel = EdgeFaceKernel.Solve(extraction.Faces, extraction.Edges, new(tol, Math.Min(System.Environment.ProcessorCount, 8))
+            {
+                Progress = (done, total) => NativeDrawing.ReportStep(ViewSteps.ExactLines, done, total),
+                ObserveWork = work => {
+                    output.Phases.Add("kernel exact fallback CPU work",work.ExactSeconds);
+                    output._diagnostics.Add($"Kernel certificates: exact prepared faces={work.ExactFaces}; budget-limited candidates={work.BudgetEdges}.");
+                }
+            }, token);
             phase.Next("composition setup");
+            output._diagnostics.Add($"Kernel predicates: face tests={kernel.FaceTests}; exact fallbacks={kernel.ExactFallbacks}.");
             output._diagnostics.AddRange(kernel.Diagnostics);
             EdgeFaceKernel.PointQuery? query = null;
             try { if (curved.Count != 0 || points.Count != 0) query = new(extraction.Faces, tol, token); }
@@ -102,11 +110,7 @@ internal static class ComposedVisibility
                 using var viewport = new ViewportInfo();
                 var bounds = sceneBounds ?? BoundingBox.Empty;
                 if (sceneBounds is null) foreach (var i in inputs) bounds.Union(i.Geometry.GetBoundingBox(true));
-                double radius = Math.Max(1, bounds.IsValid ? bounds.Diagonal.Length : 1);
-                viewport.IsParallelProjection = true;
-                viewport.SetCameraLocation(plane.Origin + plane.ZAxis * (radius * 4 + 10));
-                viewport.SetCameraDirection(view.Direction); viewport.SetCameraUp(plane.YAxis);
-                viewport.SetFrustum(output.Frame.X.Min, output.Frame.X.Max, output.Frame.Y.Min, output.Frame.Y.Max, .001, radius * 10 + 100);
+                NativeViewport.Configure(viewport,output.Frame,view.Direction,bounds,tol);
                 var parameters = new HiddenLineDrawingParameters { AbsoluteTolerance = tol, Flatten = false, IncludeHiddenCurves = true,
                     IncludeTangentEdges = view.Settings?.Tangents ?? false, IncludeTangentSeams = view.Settings?.Seams ?? false };
                 parameters.SetViewport(viewport);
@@ -169,9 +173,10 @@ internal static class ComposedVisibility
                 if (settings.Verification.MaxSamples != 0)
                 using (var verifier = new NativeVisibilityVerifier(curved, output, settings.Verification, token, new PlanarExtraction()))
                 {
-                    var verified = new List<NativeRecord>();
+                    var verified = new List<NativeRecord>(); var checkedRecords = 0;
                     foreach (var record in records)
                     {
+                        NativeDrawing.ReportStep(ViewSteps.Checking, checkedRecords++, records.Count);
                         var spans = verifier.Verify(record.World, record.Class, record.Tag.Input.Source.Identity, token);
                         if (spans.Length == 1 && spans[0].Class == record.Class) { verified.Add(record); continue; }
                         foreach (var span in spans)
@@ -214,7 +219,8 @@ internal static class ComposedVisibility
                         retained.Add(new(world,new(edgeInputs[support.Edge],support.Edge),LineClass.Hidden,extraction.Profiles[support.Edge],false));
                     }
                 }
-                foreach (var record in extraction.Edges.Count == 0 && extraction.Faces.Count == 0 ? records : ResolveDuplicates(records, plane, tol, owned, token,retained))
+                foreach (var record in extraction.Edges.Count == 0 && extraction.Faces.Count == 0 ? records : ResolveDuplicates(records, plane, tol, owned, token,retained,
+                    () => output._diagnostics.Add("Duplicate certificate witness budget exceeded; candidate retained as Unresolved.")))
                 {
                     var tag = record.Tag; var world = record.World;
                     if (tag.Edge >= 0)
@@ -291,7 +297,8 @@ internal static class ComposedVisibility
                 if (c.Class == LineClass.Hidden || extraction.Faces.Count == 0)
                 { Add(c.Curve.DuplicateCurve(), c.Tag.Input, c.Class, c.Profile, output); continue; }
                 phase.Next("curve-plane events");
-                var parts = ClipCurve(c.Curve, extraction.Faces, query, plane, tol, token).ToArray();
+                var parts = ClipCurve(c.Curve, extraction.Faces, query, plane, tol, token,
+                    () => output._diagnostics.Add("Curve/plane certificate work budget exceeded; candidate retained as Unresolved.")).ToArray();
                 phase.Next("output construction");
                 foreach (var part in parts)
                     // A complete planar-hidden interval decides the union even when
@@ -324,7 +331,7 @@ internal static class ComposedVisibility
     }
 
     internal static IEnumerable<NativeRecord> ResolveDuplicates(List<NativeRecord> records, Plane plane, double tolerance,
-        List<GeometryBase> owned, CancellationToken token, IReadOnlyList<NativeRecord>? independent = null)
+        List<GeometryBase> owned, CancellationToken token, IReadOnlyList<NativeRecord>? independent = null, Action? budgetExceeded = null)
     {
         int candidateCount = records.Count;
         if (independent is not null) records = records.Concat(independent).ToList();
@@ -346,6 +353,8 @@ internal static class ComposedVisibility
                 token.ThrowIfCancellationRequested(); var record = records[i];
                 if (!record.Duplicate) { yield return record; continue; }
                 var nearby = new List<int>(); tree.Search(projected[i].GetBoundingBox(true), (_, a) => nearby.Add(a.Id));
+                if (nearby.Count > 4096)
+                { budgetExceeded?.Invoke(); yield return record with { Class = LineClass.Unresolved }; continue; }
                 var references = new List<Curve>(); var certified = new List<Interval>();
                 try
                 {
@@ -360,7 +369,7 @@ internal static class ComposedVisibility
                         {
                             using var candidate = CurveIntervals.Trim(record.World,ca);
                             using var witness = CurveIntervals.Trim(records[j].World,cb);
-                            if (candidate is not null && witness is not null && FrontWitness(candidate,witness,plane,tolerance)) certified.Add(ca);
+                            if (candidate is not null && witness is not null && FrontWitness(candidate,witness,plane,tolerance,token)) certified.Add(ca);
                             continue;
                         }
                         // A complete closer-depth envelope proves that a retained native
@@ -376,7 +385,7 @@ internal static class ComposedVisibility
                                 if (!overlap.IsOverlap) continue;
                                 using var a = CurveIntervals.Trim(record.World, overlap.OverlapA);
                                 using var b = CurveIntervals.Trim(records[j].World, overlap.OverlapB);
-                                if (a is null || b is null || !FrontWitness(a, b, plane, tolerance)) continue;
+                                if (a is null || b is null || !FrontWitness(a, b, plane, tolerance,token)) continue;
                                 var reference = CurveIntervals.Trim(projected[j], overlap.OverlapB);
                                 if (reference is not null) references.Add(reference);
                             }
@@ -387,7 +396,7 @@ internal static class ComposedVisibility
                             if (!hit.IsOverlap) continue;
                             using var candidate = CurveIntervals.Trim(record.World,hit.OverlapA);
                             using var witness = CurveIntervals.Trim(records[j].World,hit.OverlapB);
-                            if (candidate is null || witness is null || !FrontWitness(candidate,witness,plane,tolerance)) continue;
+                            if (candidate is null || witness is null || !FrontWitness(candidate,witness,plane,tolerance,token)) continue;
                             var reference = witness.DuplicateCurve();
                             reference.Transform(projection); references.Add(reference);
                         }
@@ -449,10 +458,12 @@ internal static class ComposedVisibility
         return true;
     }
 
-    internal static bool FrontWitness(Curve candidate, Curve witness, Plane plane, double tolerance)
+    internal static bool FrontWitness(Curve candidate, Curve witness, Plane plane, double tolerance, CancellationToken token = default)
     {
+        token.ThrowIfCancellationRequested();
         var transform = Transform.PlaneToPlane(plane, Plane.WorldXY);
         using var a = candidate.ToNurbsCurve(); using var b = witness.ToNurbsCurve();
+        if (a.Points.Count > 4096 || b.Points.Count > 4096) return false;
         a.Transform(transform); b.Transform(transform);
         double DistanceXY(Point3d p, Point3d q) => Math.Sqrt((p.X-q.X)*(p.X-q.X)+(p.Y-q.Y)*(p.Y-q.Y));
         if (DistanceXY(a.PointAtStart, b.PointAtEnd) < DistanceXY(a.PointAtStart, b.PointAtStart)) b.Reverse();
@@ -477,17 +488,18 @@ internal static class ComposedVisibility
             if (a.Points.All(p => OnSupport(p,false)) && b.Points.All(p => OnSupport(p,true))) return true;
         }
         if (a.Degree != b.Degree || a.Points.Count != b.Points.Count || a.Knots.Count != b.Knots.Count)
-            return RationalDepthCertificate.Front(a, b, tolerance, roundoff);
+            return RationalDepthCertificate.Front(a, b, tolerance, roundoff,token);
         a.Domain = new(0,1); b.Domain = new(0,1);
-        for (int i=0; i<a.Knots.Count; i++) if (a.Knots[i] != b.Knots[i]) return RationalDepthCertificate.Front(a, b, tolerance, roundoff);
+        for (int i=0; i<a.Knots.Count; i++) if (a.Knots[i] != b.Knots[i]) return RationalDepthCertificate.Front(a, b, tolerance, roundoff,token);
         double ratio = a.Points[0].Weight / b.Points[0].Weight;
         for (int i=0; i<a.Points.Count; i++)
         {
+            if ((i & 63) == 0) token.ThrowIfCancellationRequested();
             var p = a.Points[i]; var q = b.Points[i];
             if (p.Weight <= 0 || q.Weight <= 0 || p.Weight != q.Weight * ratio ||
                 DistanceXY(p.Location,q.Location) > tolerance / 16 || q.Location.Z < p.Location.Z -
                     Math.Min(tolerance / 64, 128 * 2.220446049250313e-16 * Math.Max(1,Math.Max(Math.Abs(p.Location.Z),Math.Abs(q.Location.Z)))))
-                return RationalDepthCertificate.Front(a, b, tolerance, roundoff);
+                return RationalDepthCertificate.Front(a, b, tolerance, roundoff,token);
         }
         // Matching rational basis with positive weights: the depth difference is
         // bounded by its control coefficients throughout the complete overlap.
@@ -558,13 +570,15 @@ internal static class ComposedVisibility
     }
 
     private static IEnumerable<(Curve Curve, LineClass Class)> ClipCurve(Curve world, IReadOnlyList<PlanarFace> faces,
-        EdgeFaceKernel.PointQuery? query, Plane plane, double tolerance, CancellationToken token)
+        EdgeFaceKernel.PointQuery? query, Plane plane, double tolerance, CancellationToken token, Action? budgetExceeded = null)
     {
         var ends = new SortedSet<double> { world.Domain.Min, world.Domain.Max };
         var transform = Transform.PlaneToPlane(plane, Plane.WorldXY);
         var bounds = world.GetBoundingBox(transform); bool failed = query is null;
         using var local = world.DuplicateCurve(); local.Transform(transform);
         var ids = query?.OverlappingFaces(bounds.Min.X, bounds.Min.Y, bounds.Max.X, bounds.Max.Y) ?? Enumerable.Range(0, faces.Count).ToArray();
+        if (ids.Count > 4096) { budgetExceeded?.Invoke(); yield return (world.DuplicateCurve(),LineClass.Unresolved); yield break; }
+        int work = 0; bool exhausted = false;
         foreach (int fi in ids)
         {
             var face = faces[fi];
@@ -579,6 +593,7 @@ internal static class ComposedVisibility
             void Events(Plane boundary)
             {
                 token.ThrowIfCancellationRequested();
+                if (++work > 8192 || ends.Count > 16384) { exhausted = true; return; }
                 if (!boundary.IsValid) { failed = true; return; }
                 using var hits = Intersection.CurvePlane(local, boundary, tolerance);
                 if (hits is null) return; // RhinoCommon contract: no intersections recorded.
@@ -590,11 +605,14 @@ internal static class ComposedVisibility
             foreach (var loop in face.Loops)
                 for (int i = 0; i < loop.Length; i++)
                 {
+                    if (exhausted) break;
                     var p = loop[i]; var q = loop[(i + 1) % loop.Length];
                     var n = new Vector3d(q.Y - p.Y, p.X - q.X, 0);
                     if (!n.IsZero) Events(new Plane(new Point3d(p.X, p.Y, 0), n));
                 }
+            if (exhausted) break;
         }
+        if (exhausted) { budgetExceeded?.Invoke(); yield return (world.DuplicateCurve(),LineClass.Unresolved); yield break; }
         var cuts = ends.Where(t => t >= world.Domain.Min && t <= world.Domain.Max).ToArray();
         double start = cuts[0]; LineClass? previous = null;
         for (int i = 1; i < cuts.Length; i++)

@@ -115,6 +115,7 @@ internal sealed class WorkerClient : IDisposable
                 {
                     var reply=await WorkerPackets.ReadFrameAsync(_pipe,length,expandedLimit,deadline.Token).ConfigureAwait(false);
                     if(reply.Kind=="started"){NativeStarted?.Invoke();continue;}
+                    if(reply.Kind=="progress"){Progress?.Report(WorkerCodec.Decode<JobProgress>(reply.Payload));continue;}
                     if(reply.Kind=="memory")throw new WorkerMemoryException(System.Text.Encoding.UTF8.GetString(reply.Payload));
                     if(reply.Kind=="error")throw new IOException(System.Text.Encoding.UTF8.GetString(reply.Payload));
                     if(reply.Kind!=kind)throw new InvalidDataException("Unexpected worker response.");
@@ -133,6 +134,8 @@ internal sealed class WorkerClient : IDisposable
         }
     }
     internal void Kill() { lock(_sync){if(!_disposed)_job.Kill();} }
+    /// <summary>The current call's inner progress from the child (its step and fraction), for the host's status.</summary>
+    internal IProgress<JobProgress>? Progress { get; set; }
     public void Dispose()
     {
         lock(_sync)

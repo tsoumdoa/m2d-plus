@@ -76,6 +76,7 @@ public sealed class DrawingWorkerPool : IDisposable
             var pending=new System.Collections.Concurrent.ConcurrentQueue<int>(order);var seconds=new double[views.Count];
             progress?.Report(new(JobPhase.Drawing,0,views.Count){Workers=plan.Count,Step="starting workers"});
             var retry=new bool[views.Count];var done=0;
+            var shownSync=new object();var shown=-1;long shownAt=0; // the view whose inner step the status shows
             var unavailable=new System.Collections.Concurrent.ConcurrentDictionary<Slot,byte>();
             WorkerUnavailableException? startupFailure=null;
             // A healthy shard may finish before a slower startup fails and requeues
@@ -178,6 +179,18 @@ public sealed class DrawingWorkerPool : IDisposable
                 AttemptingView?.Invoke(index,cap,isolatedRetry);
                 progress?.Report(new(JobPhase.Drawing,Volatile.Read(ref done),views.Count){Workers=plan.Count});
                 slot.Client.NativeStarted=()=>SolvingView?.Invoke(slot.Client.ProcessId,index);
+                slot.Client.Progress=progress is null?null:new ProgressSink(p=>
+                {
+                    // One view's inner step at a time: the view shown keeps the status until it finishes or goes quiet,
+                    // so parallel workers don't alternate the footer. The host owns the view counts and completion.
+                    var now=Environment.TickCount64;
+                    lock(shownSync)
+                    {
+                        if(shown!=index && shown>=0 && results[shown] is null && now-shownAt<1500)return;
+                        shown=index;shownAt=now;
+                    }
+                    progress.Report(new(JobPhase.Drawing,Volatile.Read(ref done),views.Count){Workers=plan.Count,View=views[index].Name,Step=p.Step,StepFraction=p.StepFraction});
+                });
                 var clock=System.Diagnostics.Stopwatch.StartNew();
                 var drawing=await slot.Client.CallAsync("solve",EncodedRequest?.Invoke(index)??WorkerCodec.Encode(new WorkerCodec.Request(identity,index,views[index],settings.NativeOnly)),_options.SolveTimeout,token,bytes=>
                 {
@@ -215,6 +228,8 @@ public sealed class DrawingWorkerPool : IDisposable
         }
     }
     private static bool IsMemoryFailure(string? error)=>error is not null && (error.Contains("memory",StringComparison.OrdinalIgnoreCase) || error.Contains("bad_alloc",StringComparison.OrdinalIgnoreCase));
+    private sealed class ProgressSink(Action<JobProgress> report) : IProgress<JobProgress>
+    { public void Report(JobProgress value) => report(value); }
     private static string MemoryFailure(long cap,string reason)=>$"Worker memory cap ({cap/(double)WorkerMemoryPolicy.GiB:F1} GiB) exceeded for this view. {reason} Close other applications or reduce this scene/view's complexity and run again; no heavy in-process fallback was used.";
     private void ExpireIdle()
     {

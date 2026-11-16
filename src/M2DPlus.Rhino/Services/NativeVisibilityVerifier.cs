@@ -85,7 +85,7 @@ internal sealed class NativeVisibilityVerifier : IDisposable
             token.ThrowIfCancellationRequested(); var body = _bodies[id];
             if (body.Bounds.Max.Z <= p.Z + _tol) continue;
             if (_tests + 5 > _options.MaxRayTests) { _skipped++; witness = "ray budget"; return VisibilityClass.Unresolved; }
-            double length = body.Bounds.Max.Z - p.Z + Math.Max(1, 8 * _tol);
+            double length = body.Bounds.Max.Z - p.Z + 8 * _tol;
             var central = Cast(body.Geometry,point,length,out double gap);
             // HLD curves and native intersections are tolerance approximations.
             // A grazing ray (including an endpoint on a silhouette) is not a
@@ -180,9 +180,11 @@ internal sealed class NativeVisibilityVerifier : IDisposable
         if (settings.Verification.MaxSamples == 0)
         { output._diagnostics.Add("Native ray verifier disabled by sample budget; native confidence unverified."); return; }
         using var verifier = new NativeVisibilityVerifier(inputs, output, settings.Verification, token);
-        foreach (var piece in output.Pieces.ToArray())
+        var pieces = output.Pieces.ToArray();
+        for (var index = 0; index < pieces.Length; index++)
         {
-            token.ThrowIfCancellationRequested();
+            token.ThrowIfCancellationRequested(); var piece = pieces[index];
+            NativeDrawing.ReportStep(ViewSteps.Checking, index, pieces.Length);
             if (piece.KernelOwned || piece.DepthGeometry is not Curve world || piece.Class is not (LineClass.Visible or LineClass.Hidden)) continue;
             var spans = verifier.Verify(world, piece.Class, piece.SourceIdentity, token);
             if (spans.Length == 1 && spans[0].Class == piece.Class) continue;

@@ -8,6 +8,10 @@ public static class DrawingWorkerServer
 {
     public static void Run(Stream pipe)
     {
+        var writeGate = new object();
+        void Send(string kind, byte[] data)
+        { lock(writeGate) WorkerFrames.WriteAsync(pipe,WorkerPackets.Encode(kind,data),default).GetAwaiter().GetResult(); }
+        var progress = new ProgressRelay(writeGate,data=>WorkerFrames.WriteAsync(pipe,WorkerPackets.Encode("progress",data),default).GetAwaiter().GetResult());
         var own=WorkerCodec.Fingerprint();
         WorkerFrames.WriteAsync(pipe,WorkerCodec.Encode(own),default).GetAwaiter().GetResult();
         var expected=WorkerCodec.Decode<WorkerFingerprint>(WorkerFrames.ReadAsync(pipe,default).GetAwaiter().GetResult());
@@ -36,7 +40,7 @@ public static class DrawingWorkerServer
                             NativeDrawing.NativeStarting=()=>
                             {
                                 if(signalled)return;signalled=true;
-                                WorkerFrames.WriteAsync(pipe,WorkerPackets.Encode("started",[]),default).GetAwaiter().GetResult();
+                                Send("started",[]);
                                 // Internal licensed fault injection, never exposed in GH or settings.
                                 switch(Environment.GetEnvironmentVariable("M2DPLUS_WORKER_TEST_FAULT"))
                                 {
@@ -48,20 +52,56 @@ public static class DrawingWorkerServer
                                         System.Runtime.InteropServices.Marshal.FreeHGlobal(allocation);throw new InvalidOperationException("Memory cap failed to refuse allocation.");
                                 }
                             };
-                            using(var result=NativeDrawing.SolveBorrowedAsync(scene,solve.Identity,[solve.View],
-                                new NativeSettings(false,solve.NativeOnly){Scheduler=scheduler,IsWorker=true},default,null).GetAwaiter().GetResult())
+                            progress.Begin();
+                            try
+                            {
+                                using var result=NativeDrawing.SolveBorrowedAsync(scene,solve.Identity,[solve.View],
+                                    new NativeSettings(false,solve.NativeOnly){Scheduler=scheduler,IsWorker=true},default,progress).GetAwaiter().GetResult();
                                 payload=WorkerCodec.Encode(new WorkerCodec.Reply(solve.Identity,solve.ViewIndex,WorkerCodec.CaptureDrawing(result.Views[0])));
+                            }
+                            finally{progress.End();}
                             break;
                         default:throw new InvalidDataException("Unknown worker operation.");
                     }
-                    WorkerFrames.WriteAsync(pipe,WorkerPackets.Encode(request.Kind,payload),default).GetAwaiter().GetResult();
+                    Send(request.Kind,payload);
                 }
                 catch(Exception ex)
                 {
-                    WorkerFrames.WriteAsync(pipe,WorkerPackets.Encode(ex is OutOfMemoryException ? "memory" : "error",Encoding.UTF8.GetBytes(ex.Message)),default).GetAwaiter().GetResult();
+                    Send(ex is OutOfMemoryException ? "memory" : "error",Encoding.UTF8.GetBytes(ex.Message));
                 }
             }
         }
         finally{scene?.Dispose();}
+    }
+    /// <summary>
+    /// The solve's inner progress for the host's status (UX §5.2): only preparing and the view's step with its fraction
+    /// (the host owns view counts and completion). A new step goes out at once, a fraction at most every 100 ms, never
+    /// after the reply, and never blocking a native or kernel thread behind another write.
+    /// </summary>
+    private sealed class ProgressRelay(object writeGate, Action<byte[]> write) : IProgress<JobProgress>
+    {
+        private bool _active;
+        private string? _step;
+        private long _last;
+        internal void Begin() { lock(writeGate){_active=true;_step=null;_last=0;} }
+        internal void End() { lock(writeGate)_active=false; }
+        public void Report(JobProgress value)
+        {
+            JobProgress forward;
+            if(value.Phase==JobPhase.Preparing)
+                forward=new(JobPhase.Preparing,value.Done,value.Total){Step="preparing",StepFraction=value.Total>0?Math.Clamp((double)value.Done/value.Total,0,1):null};
+            else if(value.Phase==JobPhase.Drawing && value.Step is not null)
+                forward=new(JobPhase.Drawing,value.Done,value.Total){View=value.View,Step=value.Step,StepFraction=value.StepFraction};
+            else return;
+            if(!Monitor.TryEnter(writeGate))return; // a reply or another report is being written: skip this one
+            try
+            {
+                var now=System.Diagnostics.Stopwatch.GetTimestamp();
+                if(!_active || forward.Step==_step && System.Diagnostics.Stopwatch.GetElapsedTime(_last,now).TotalMilliseconds<100)return;
+                _step=forward.Step;_last=now;
+                write(WorkerCodec.Encode(forward));
+            }
+            finally{Monitor.Exit(writeGate);}
+        }
     }
 }

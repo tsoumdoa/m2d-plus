@@ -21,6 +21,11 @@ public sealed class StatusTextTests
         Assert.Equal("Drawing 3 / 8 · Section A · hidden lines 45 % · ~40 s left", drawing.Full);
         var workers = StatusText.Of(new(JobPhase.Drawing, 5, 8) { Workers = 3, Step = "sending scene" });
         Assert.Equal(("Drawing 5 / 8 · 3 workers", "sending scene"), (workers.Core, workers.Detail));
+        // A worker's inner step comes with its view, like in process.
+        var child = StatusText.Of(new(JobPhase.Drawing, 5, 8) { Workers = 3, View = "Section A", Step = ViewSteps.ExactLines, StepFraction = .37 });
+        Assert.Equal(("Drawing 5 / 8 · 3 workers", "Section A", "exact lines 37 %"), (child.Core, child.View, child.Detail));
+        var checking = StatusText.Of(new(JobPhase.Drawing, 0, 1) { View = "Plan", Step = ViewSteps.Checking, StepFraction = .999 });
+        Assert.Equal("checking 99 %", checking.Detail);
         Assert.Equal("Building output", StatusText.Of(new(JobPhase.Output, 0, 0)).Core);
         Assert.Equal("Drawing 8 / 8", StatusText.Of(new(JobPhase.Drawing, 8, 8)).Core);
         Assert.Null(StatusText.Of(new(JobPhase.Drawing, 2, 8)).Eta);
