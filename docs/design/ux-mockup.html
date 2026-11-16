@@ -399,7 +399,7 @@ footer { margin-top: 48px; color: var(--muted); font-size: 13px; border-top: 1px
 <header>
   <div>
     <h1>M2D+ Drawing: Grasshopper UX mockup</h1>
-    <p class="lede">One component and five inputs, of which only View is required. Revision 4 applies the owner’s decision on views: a referenced planar surface becomes an editable <b>M2D+ view box</b> in Rhino (right-click <b>Validate views</b>), per-view settings are <code>m2d.*</code> Attribute User Text on it, and a new <b>Depth</b> input drives plane and rectangle views. The settings editor is gone. Revision 3 still holds: cut fill from Rhino 8 section styles, else the object’s colour; <b>scale</b> picks line weights only.</p>
+    <p class="lede">One component and five inputs, of which only View is required. Revision 4 applies the owner’s decision on views: a referenced planar surface becomes an editable <b>M2D+ view box</b> in Rhino (right-click <b>Convert to view boxes</b>), per-view settings are <code>m2d.*</code> Attribute User Text on it, and a new <b>Depth</b> input drives plane and rectangle views. The settings editor is gone. Revision 3 still holds: cut fill from Rhino 8 section styles, else the object’s colour; <b>scale</b> picks line weights only.</p>
   </div>
   <div class="theme" role="group" aria-label="Theme">
     <button type="button" data-t="auto" aria-pressed="true">Auto</button>
@@ -428,7 +428,7 @@ footer { margin-top: 48px; color: var(--muted); font-size: 13px; border-top: 1px
         <div class="menu" role="menu" aria-label="Component menu">
           <div class="mi dim"><span></span><span>Preview · Enabled · Bake… · Help</span><span class="k">GH</span></div>
           <div class="sep"></div>
-          <div class="mi hot"><span></span><span><b>Validate views</b></span><span class="k">surface → view box</span></div>
+          <div class="mi hot"><span></span><span><b>Convert to view boxes</b></span><span class="k">surface → view box</span></div>
           <div class="mi"><span></span><span>Flip view direction</span><span></span></div>
           <div class="mi"><span></span><span>Create view from current viewport</span><span></span></div>
           <div class="mi"><span></span><span>Select view objects</span><span class="k">Double-click</span></div>
@@ -470,7 +470,7 @@ footer { margin-top: 48px; color: var(--muted); font-size: 13px; border-top: 1px
         <p class="menu-label">Right-click the View input</p>
         <div class="menu" role="menu" aria-label="View input menu">
           <div class="mi"><span></span><span>Pick views in Rhino…</span><span></span></div>
-          <div class="mi hot"><span></span><span><b>Validate views</b></span><span></span></div>
+          <div class="mi hot"><span></span><span><b>Convert to view boxes</b></span><span></span></div>
           <div class="mi"><span></span><span>Flip view direction</span><span></span></div>
           <div class="mi"><span></span><span>Create view from current viewport</span><span></span></div>
           <div class="sep"></div>
@@ -494,27 +494,27 @@ footer { margin-top: 48px; color: var(--muted); font-size: 13px; border-top: 1px
 <!-- ======================= 2. View objects ======================= -->
 <section>
   <h2>2 · View objects: a surface becomes a view box <span class="new">new</span></h2>
-  <p class="sub">The view is a Rhino object you edit. Reference a planar surface (or a closed rectangle) in <b>View</b>, right-click <b>Validate views</b>, and M2D+ converts it in place into an <b>M2D+ view box</b>: an extrusion whose front face is the view frame (and the cut plane) and whose length is the depth. Same object, same id, one undo. Drag its back face with the gumball to change the depth; its per-view settings are <code>m2d.*</code> keys in Rhino’s <i>Properties ▸ Attribute User Text</i>. Try the controls: they drive the view-range diagrams in section 3.</p>
+  <p class="sub">The view is a Rhino object you edit. Reference a planar surface (or a closed rectangle) in <b>View</b>, right-click <b>Convert to view boxes</b>, and M2D+ converts it in place into an <b>M2D+ view box</b>: an extrusion whose front face is the view frame (and the cut plane) and whose length is the depth. Same object, same id, one undo. Drag its back face with the gumball to change the depth; its per-view settings are <code>m2d.*</code> keys in Rhino’s <i>Properties ▸ Attribute User Text</i>. Try the controls: they drive the view-range diagrams in section 3.</p>
 
   <div class="steps">
     <div class="fig"><svg id="vb1" viewBox="0 0 360 250" role="img" aria-label="A planar surface standing in a building, referenced in View"></svg>
       <div class="fig-cap"><b>1 · Reference a planar surface.</b> Right-click V ▸ <i>Pick views in Rhino…</i> Any planar rectangle works, trimmed or not.</div></div>
     <div class="fig">
       <div class="step-menu">
-        <div class="menu" role="menu" aria-label="View input menu, Validate views">
+        <div class="menu" role="menu" aria-label="View input menu, Convert to view boxes">
           <div class="mi"><span></span><span>Pick views in Rhino…</span><span></span></div>
-          <div class="mi hot"><span></span><span><b>Validate views</b></span><span></span></div>
+          <div class="mi hot"><span></span><span><b>Convert to view boxes</b></span><span></span></div>
           <div class="mi"><span></span><span>Flip view direction</span><span></span></div>
           <div class="mi"><span></span><span>Create view from current viewport</span><span></span></div>
         </div>
-        <div class="refuse" aria-label="Validate report">
+        <div class="refuse" aria-label="Convert to view boxes report">
           <span><span class="ok">✓</span> <b style="color:var(--text)">M2D View 01</b> converted to a view box, looking north, depth 18.2 m (auto)</span>
           <span><b>✕ Slab edge</b> the surface is not planar.</span>
           <span><b>✕ Skew panel</b> its corners are not right angles (78.7°).</span>
           <span><b>✕ Façade</b> a polysurface with 6 faces. Reference one planar surface.</span>
         </div>
       </div>
-      <div class="fig-cap"><b>2 · Validate views.</b> Planar, a rectangle (4 straight edges at right angles), not degenerate. Each refusal says why; nothing is converted silently. One undo for the run.</div></div>
+      <div class="fig-cap"><b>2 · Convert to view boxes.</b> Planar, a rectangle (4 straight edges at right angles), not degenerate. Each refusal says why; nothing is converted silently. One undo for the run.</div></div>
     <div class="fig"><svg id="vb3" viewBox="0 0 360 250" role="img" aria-label="The view box: frame, look arrow and depth volume"></svg>
       <div class="fig-cap"><b>3 · An M2D+ view box.</b> Front face = frame and cut plane (solid cobalt), arrow = look direction, dotted = depth volume to the back face. Drawn in cobalt while the component is selected.</div></div>
   </div>
@@ -888,7 +888,7 @@ function vbIso(svg, opts) {
   if (!opts.box) {
     poly(front, { style: 'fill:var(--ink);stroke:var(--ink)', 'fill-opacity': .12, 'stroke-width': 1.4 });
     E('text', { x: 12, y: 232, 'class': 'dl' }, svg, 'planar surface through the building');
-    E('text', { x: 12, y: 245, 'class': 'dlm' }, svg, 'referenced in V; its normal is a guess until validated');
+    E('text', { x: 12, y: 245, 'class': 'dlm' }, svg, 'referenced in V; its normal is a guess until converted');
     return;
   }
   var dot2 = { style: 'stroke:var(--accent)', 'stroke-dasharray': '3 3', 'stroke-width': 1.1, opacity: .9 };

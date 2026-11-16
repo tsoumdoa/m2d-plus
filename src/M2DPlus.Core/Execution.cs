@@ -1,8 +1,21 @@
 namespace M2DPlus.Core;
 
 public readonly record struct RequestIdentity(string SceneRevision, string ViewRevision, string SettingsRevision, long Generation);
-public enum JobPhase { Reading, Preparing, Queued, Drawing, Complete, Cancelled, Failed }
-public readonly record struct JobProgress(JobPhase Phase, int Done, int Total);
+/// <summary>Job stages (UX §5.2). Append only. <see cref="Queued"/> means waiting for the global scheduler (another
+/// drawing holds it); <see cref="Output"/> is building the presented output after the solve.</summary>
+public enum JobPhase { Reading, Preparing, Queued, Drawing, Complete, Cancelled, Failed, Output }
+
+/// <summary>One progress report. <paramref name="Done"/> / <paramref name="Total"/> count objects (Reading, Preparing)
+/// or views (Drawing). The optional details say what is being processed: the view, its step ("hidden lines") and that
+/// step's fraction, the number of workers, and how many jobs are ahead in the queue.</summary>
+public readonly record struct JobProgress(JobPhase Phase, int Done, int Total)
+{
+    public string? View { get; init; }
+    public string? Step { get; init; }
+    public double? StepFraction { get; init; }
+    public int Workers { get; init; }
+    public int? Ahead { get; init; }
+}
 
 /// <summary>Cancellation rejects publication immediately; it does not release native resources.</summary>
 public sealed class RequestGate : IDisposable
@@ -64,11 +77,19 @@ public sealed class NativeScheduler
         if (budgetBytes <= 0) throw new ArgumentOutOfRangeException(nameof(budgetBytes));
         BudgetBytes = budgetBytes;
     }
-    public async Task<T> RunAsync<T>(long estimatedBytes, Func<CancellationToken, T> native, CancellationToken token)
+    private int _waiting;
+    /// <param name="waiting">Called once, before waiting, when another job holds the slot: the number ahead.</param>
+    public async Task<T> RunAsync<T>(long estimatedBytes, Func<CancellationToken, T> native, CancellationToken token, Action<int>? waiting = null)
     {
         if (estimatedBytes < 0 || estimatedBytes > BudgetBytes)
             throw new InvalidOperationException("Worker unavailable: scene exceeds the in-process budget.");
-        await _slot.WaitAsync(token).ConfigureAwait(false);
+        if (!_slot.Wait(0))
+        {
+            // Another drawing holds the slot: say so, with how many are ahead (the running one plus earlier waiters).
+            var ahead = Interlocked.Increment(ref _waiting);
+            try { waiting?.Invoke(ahead); await _slot.WaitAsync(token).ConfigureAwait(false); }
+            finally { Interlocked.Decrement(ref _waiting); }
+        }
         try
         {
             token.ThrowIfCancellationRequested();

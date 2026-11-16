@@ -238,6 +238,72 @@ public sealed class RerunTests(RhinoHost host, ITestOutputHelper output)
         Assert.Equal(hld, NativeDrawing.HldCalls);
     });
 
+    /// <summary>
+    /// Owner feedback on beta.1: "changing settings should not trigger reloading objects". Every settings-like change
+    /// (Settings input, Depth, Target, a menu default, a view object's m2d.* text) re-solves from the captured scene:
+    /// no capture, no normalisation, no preparation; only settings that affect visibility make HLD calls. A change to
+    /// the Geometry input or to a drawn object reads the objects again.
+    /// </summary>
+    [RhinoFact] public void SettingsChangesReuseTheCapturedScene() => host.Run(() =>
+    {
+        Assert.True(global::Rhino.PlugIns.PlugIn.LoadPlugIn(GrasshopperId));
+        foreach (var documentMode in new[] { false, true })
+        {
+            using var rig = Build(documentMode);
+            var doc = rig.Rhino;
+            var c = rig.Component;
+            void Rerun(string what, Action edit, bool capture, bool? solved)
+            {
+                var solves = rig.Solves; var captures = SceneCapture.Captures; var normalised = SceneCapture.Normalisations;
+                var prepared = PreparedScene.TotalPreparations; var hld = NativeDrawing.HldCalls;
+                edit();
+                rig.Watch.VerifyHostState();
+                if (rig.Gh.ScheduleDelay < 0) c.ExpireSolution(true);
+                Pump(rig, () => rig.Solves >= solves + 2 && rig.Infos == 1 && c.Message.Contains("drawing", StringComparison.Ordinal));
+                var row = $"{(documentMode ? "document" : "referenced")} | {what} | captures +{SceneCapture.Captures - captures} | normalised +{SceneCapture.Normalisations - normalised} | " +
+                    $"prepared +{PreparedScene.TotalPreparations - prepared} | HLD +{NativeDrawing.HldCalls - hld}";
+                output.WriteLine(row);
+                Assert.True((SceneCapture.Captures - captures) == (capture ? 1 : 0), row);
+                if (!capture)
+                {
+                    Assert.True(SceneCapture.Normalisations == normalised, row);
+                    Assert.True(PreparedScene.TotalPreparations == prepared, row);
+                }
+                if (solved is { } s) Assert.True(s ? NativeDrawing.HldCalls > hld : NativeDrawing.HldCalls == hld, row);
+            }
+            void Text(int input, string? text)
+            {
+                var param = (Grasshopper.Kernel.IGH_Param)c.Params.Input[input];
+                dynamic persistent = param.GetType().GetProperty("PersistentData")!.GetValue(param)!;
+                persistent.Clear();
+                if (text is not null) persistent.Append(new GH_String(text));
+                param.ExpireSolution(true);
+            }
+            Rerun("Settings: hidden = off (presentation)", () => Text(3, "hidden = off"), capture: false, solved: false);
+            Rerun("Settings: tangents = on (visibility)", () => Text(3, "tangents = on"), capture: false, solved: true);
+            Rerun("Settings: min visible = 0.1 (presentation)", () => Text(3, "tangents = on\nmin visible = 0.1"), capture: false, solved: false);
+            Rerun("Depth: 8 (a view box keeps its own)", () => Text(4, "8"), capture: false, solved: false);
+            Rerun("Target: a plane", () =>
+            {
+                var target = (Param_Plane)c.Params.Input[2];
+                target.PersistentData.Clear(); target.PersistentData.Append(new GH_Plane(new Plane(new Point3d(50, 0, 0), Vector3d.ZAxis)));
+                target.ExpireSolution(true);
+            }, capture: false, solved: false);
+            Rerun("Menu: scale 1:50", () => ((dynamic)c).Ui.Execute("set:scale=1:50", false), capture: false, solved: false);
+            Rerun("Menu: seams on (visibility)", () => ((dynamic)c).Ui.Execute("set:seams=on", false), capture: false, solved: true);
+            Rerun("View box: m2d.fade = on", () => Attributes(doc, rig.ViewBox, a => a.SetUserString("m2d.fade", "on")), capture: false, solved: false);
+            Rerun("View box: moved (its view changes)", () => doc.Objects.Transform(rig.ViewBox, Transform.Translation(0, 0, .25), true), capture: false, solved: true);
+            Rerun("Drawn object moved", () => doc.Objects.Transform(rig.Drawn, Transform.Translation(0, .5, 0), true), capture: true, solved: true);
+            if (!documentMode)
+                Rerun("Geometry input: another object", () =>
+                {
+                    var geometry = (Param_GenericObject)c.Params.Input[0];
+                    var reference = new GH_Brep(); reference.ReferenceID = rig.Other;
+                    geometry.PersistentData.Append(reference); geometry.ExpireSolution(true);
+                }, capture: true, solved: true);
+        }
+    });
+
     private static IReadOnlyDictionary<string, uint>? Colours(Rig rig)
     {
         var sources = rig.Component.GetType().GetField("_drawingSources", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(rig.Component);

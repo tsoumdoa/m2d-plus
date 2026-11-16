@@ -19,7 +19,7 @@ to cut, the crop, the tolerance, the hatches and the line weights. The Frame2D p
 inputs to say these things. Here they are inferred or given a sensible default.
 
 **Views are Rhino objects you can edit.** Reference a planar surface (or a closed rectangle) as the View and
-right-click **Validate views**: M2D+ turns it, in place, into an **M2D+ view box**, a box whose front face is the
+right-click **Convert to view boxes**: M2D+ turns it, in place, into an **M2D+ view box**, a box whose front face is the
 view frame and whose length is the view depth. You move it, resize it and drag its back face with the gumball
 like any Rhino object, and its per-view settings are Attribute User Text keys (`m2d.hidden = off`) in Rhino's
 Properties panel (§2.2). Global defaults are right-click menu toggles. The optional **Settings** input takes the
@@ -30,7 +30,7 @@ from a slider or a number (§6).
 
 | Area | Change | Why |
 |---|---|---|
-| Views | **Validate views** converts a referenced planar rectangle into an editable **view box** (an `Extrusion`, same object id, one undo). **Create view from current viewport** bakes one. **Flip view direction** reverses it. The component previews each view's frame, look arrow and depth volume (§2.2). | Owner: rectangle views had no proper depth input, and views should be editable Rhino objects. |
+| Views | **Convert to view boxes** (named *Validate views* before beta.2) turns a referenced planar rectangle into an editable **view box** (an `Extrusion`, same object id, one undo). **Create view from current viewport** bakes one. **Flip view direction** reverses it. The component previews each view's frame, look arrow and depth volume (§2.2). | Owner: rectangle views had no proper depth input, and views should be editable Rhino objects. |
 | Per-view settings | Live on the view object as Attribute User Text `m2d.*` keys (§2.2). | Edited where the view is, in Rhino's own Properties panel. No dialog to learn. |
 | Inputs | New fifth input **Depth (D)**, appended after Settings: depth of Plane/Rectangle/clipping-plane views from a number or `8 m`. Boxes and view boxes take depth from their geometry (§1.1, §6). | A slider-driven depth was not possible without it. |
 | Editor | The **View Range & Settings editor is removed**, with its double-click, its stored per-view rows and the S dot. Double-click now selects the view objects in Rhino (§1, §10). | Owner: too heavy. |
@@ -63,9 +63,9 @@ from a slider or a number (§6).
 | Name | **M2D+ Drawing** |
 | Nickname | **M2D+** |
 | Tab / panel | **Params ▸ Util**, beside the owner's Panel+ and HopperFormat (owner decision 2026-11-15). Its own group (`GH_Exposure.quarternary`) after GH's canvas helpers (primary: Panel, Scribble, Panel+, HopperFormat), data-flow tools (secondary) and cluster hooks (tertiary). There is **no M2D+ tab** (no category icon is registered). GH finds saved components by GUID, so moving it never breaks a definition. |
-| Description | "Hidden-line plans, sections, elevations and axonometrics from your model and a view. Runs in the background. Reference a planar surface as View and right-click Validate views to get an editable view box; click Bake on the component to bake to tidy layers." |
+| Description | "Hidden-line plans, sections, elevations and axonometrics from your model and a view. Runs in the background. Reference a planar surface as View and right-click Convert to view boxes to get an editable view box; click Bake on the component to bake to tidy layers." |
 | Icon | Uses the dark rounded tile that Panel+, HopperFormat and Conduit+ share (tile `#181E1A`, white glyph, 24-unit grid), drawn in code the same way as `ConduitIcons.cs`. **Glyph:** a cube in axonometric with its near corner cut away. The cut face is a solid white poché, the visible edges are white strokes and one hidden edge is a soft (50 % white) dash. It reads as "section + hidden line" at 24 px. **Plug-in logo:** "M+" drawn in the same way as the C+ / P+ marks. |
-| Look (layout B, owner choice 2026-11-16) | Chosen from rendered mockups (A–D). **One grid:** every row is 20 units, every inset is one 4-unit margin. **Outputs** fill the eleven rows. **Inputs** use GH's even spacing snapped to the grid: G, V, T, S and D sit on rows 1, 3, 5, 7 and 9 (beside H, Fc, Ha, F and Ig), so every input label shares a row with an output; labels and graft / flatten state tags are GH's own, laid out by GH. **Centre:** a slim name strip (14 units, the nickname in small bold, inset one margin top and bottom) by default. No icon in the body. An explicit right-click *Display ▸ Name* or *Display ▸ Icon* works the GH way (the full nickname capsule, or the icon) on the same grid; GH's default "application" display shows the strip. **Footer:** a full-width band inside the body, 24 units tall, in the capsule's edge colour (dark, dark brown when orange, dark red when red), clipped to its rounded corners. The status sits left-aligned two margins in; the **Bake / Cancel / Run** button sits flush right, inset one margin on the top, bottom and right (16 units tall), with **one width for all three labels** so it never changes between states. Bake and Run are cobalt; Cancel is an outline in the footer's ink. The **progress bar** (2 units, cobalt, indeterminate sweep while reading) runs along the footer's top edge, full width. The component is wide enough for `88 drawings · 88.8 s` beside the button, so the width never jumps while a job reports progress; a longer status shrinks to 85 % at most, then ends in an ellipsis. Text is measured with GH's zoom-independent metrics, so sizes and padding match at every canvas zoom. The pivot stays the centre of the name box (GH's convention), so saved definitions keep their place. `ComponentLookTests` asserts all of this on the real attributes and renders the done, running, remark, warning and paused states at 100 % and 200 % (`artifacts/ui/after/`). |
+| Look (layout B, owner choice 2026-11-16) | Chosen from rendered mockups (A–D). **One grid:** every row is 20 units, every inset is one 4-unit margin. **Outputs** fill the eleven rows. **Inputs** use GH's even spacing snapped to the grid: G, V, T, S and D sit on rows 1, 3, 5, 7 and 9 (beside H, Fc, Ha, F and Ig), so every input label shares a row with an output; labels and graft / flatten state tags are GH's own, laid out by GH. **Centre:** a slim name strip (14 units, the nickname in small bold, inset one margin top and bottom) by default. No icon in the body. An explicit right-click *Display ▸ Name* or *Display ▸ Icon* works the GH way (the full nickname capsule, or the icon) on the same grid; GH's default "application" display shows the strip. **Footer:** a full-width band inside the body, 24 units tall, in the capsule's edge colour (dark, dark brown when orange, dark red when red), clipped to its rounded corners. The status sits left-aligned two margins in; the **Bake / Cancel / Run** button sits flush right, inset one margin on the top, bottom and right (16 units tall), with **one width for all three labels** so it never changes between states. Bake and Run are cobalt; Cancel is an outline in the footer's ink. The **progress bar** (2 units, cobalt) runs along the footer's top edge, full width. **While a job runs the footer has two rows** (beta.1 review, 2026-11-16): it grows downwards by one 20-unit row, so the rows above and every grip and wire stay exactly where they are (only the body's bottom edge moves; chosen over reserving the height permanently, which left an empty band under every idle component). Row 1 (20 units) says **what** is being processed, the stage with its full counts and the view; row 2 is the idle footer's 24-unit band and says **how far**: the step and its percentage on the left, the estimate right-aligned before **Cancel**, which sits where Bake sits when idle (same size, same inset). All status text uses **one font size** (GH's standard), never shrunk. The component is wide enough for the widest row-1 text with its counts (`Waiting for another drawing (99 ahead)`, `Preparing geometry 99,999 / 99,999`): 236 units instead of 177, so counts are never cut; the width never changes between states. Only the view name, then the step, are shortened with an ellipsis, and the tooltip over the footer shows everything (§5.2). Text is measured with GH's zoom-independent metrics, so sizes and padding match at every canvas zoom. The pivot stays the centre of the name box (GH's convention), so saved definitions keep their place. `ComponentLookTests` asserts all of this on the real attributes and renders the done, running, remark, warning and paused states at 100 % and 200 % (`artifacts/ui/after/`). |
 | Custom attributes | The layout and footer above, plus **double-click selects the referenced view objects in Rhino**, so their `m2d.*` user text is right there in Properties (with no view objects, double-click does nothing special). The button's tooltip names the action. Nothing else is custom. Revision 3's cobalt dot beside **S** is gone: it meant "the editor holds values", and there is no editor. Menu defaults show as check marks in the menu, view-object values in Rhino's Properties, and Info lists every effective value with its origin. |
 
 ### 1.1 Inputs (5)
@@ -86,7 +86,7 @@ Description text shown in GH (keep these short, as Conduit+ does):
   objects, or switching those layers on or off, never re-runs the drawing; adding, deleting or editing objects on them,
   or moving an object onto or off them, does (§5.1a). Referenced objects and Grasshopper geometry are likewise drawn
   whatever their visibility. Parts inside a drawn block are still drawn as Rhino shows them.
-- **View**: "What to draw. A referenced planar surface, rectangle or M2D+ view box (right-click Validate views to make one), a named view, clipping plane name or direction (Top, Front, SW…), a referenced clipping plane, a Plane, a Rectangle (its plane is the view plane and it crops; if it cuts the model you get a section), a Box (cut, crop and depth) or a Vector (look along it). A list gives one drawing per view."
+- **View**: "What to draw. A referenced planar surface, rectangle or M2D+ view box (right-click Convert to view boxes to make one), a named view, clipping plane name or direction (Top, Front, SW…), a referenced clipping plane, a Plane, a Rectangle (its plane is the view plane and it crops; if it cuts the model you get a section), a Box (cut, crop and depth) or a Vector (look along it). A list gives one drawing per view."
 - **Target**: "Optional plane per view. The view's own plane is moved onto it 1:1 (View[i] → Target[i]). One plane for several views lays them out in a row. Leave empty to show each drawing in place."
 - **Settings**: "Optional `key = value` lines, for example `hidden = off` or `farclip = line`. They override view-object user text (`m2d.*`) and the right-click menu. One branch applies to all views; one branch per view, or `[View name]` headers, set views separately."
 - **Depth**: "Optional view depth for Plane, Rectangle and clipping-plane views: a number in document units or text such as `8 m`. One value for all views, or one per view. Beats `depth` in Settings. Boxes and view boxes take their depth from their geometry."
@@ -204,7 +204,7 @@ get a section or a plan. If it doesn't, nothing is cut and you get an elevation.
 | You wire / choose | View plane | Cut? | Crop (extent) | Far limit when `depth = auto` |
 |---|---|---|---|---|
 | **M2D+ view box** (referenced, §2.2) | its **front face** (the frame) | if the front face passes through geometry | **the frame** | **its back face** (the box length; always, §6) |
-| **Planar surface or closed rectangle** (referenced, not validated yet) | the rectangle, faced at the model (§2.2) | as Rectangle | **the rectangle** | scene extent; Info suggests Validate views |
+| **Planar surface or closed rectangle** (referenced, not converted yet) | the rectangle, faced at the model (§2.2) | as Rectangle | **the rectangle** | scene extent; Info suggests Convert to view boxes |
 | **Rectangle** | the rectangle's plane | if it passes through geometry | **the rectangle** | scene extent behind the plane |
 | **Plane** | the plane | if it passes through geometry | none (scene bounds) | scene extent behind the plane |
 | **Box** | its **+Z face** | if that face passes through geometry | the box's XY | **the box's −Z face** (its height) |
@@ -233,7 +233,7 @@ greyed out while a wire is connected. The three view-object commands also act on
 
 ```
 Pick views in Rhino…                 (planar surfaces, rectangles, view boxes, clipping planes)
-Validate views                       (§2.2; also on the component menu)
+Convert to view boxes                (§2.2; also on the component menu)
 Flip view direction                  (view boxes only)
 Create view from current viewport    (bakes "M2D View 01" on the $M2D Views layer and adds it)
 ───────────────
@@ -249,7 +249,7 @@ Clear
 The active viewport is never tracked live, because orbiting would re-run the job. **Create view from current
 viewport** freezes it into a view box instead (revision 3's "Capture active view as named view" is replaced: a named
 view has no depth and no settings of its own). Picked objects are stored as references to the object id, in a form
-that survives Validate; picked clipping planes are stored as their name text, as before.
+that survives Convert to view boxes; picked clipping planes are stored as their name text, as before.
 
 ### 2.2 View objects: view boxes
 
@@ -276,7 +276,7 @@ A **view box** is the view as a Rhino object. It is an `Extrusion`:
 - **Layer `$M2D Views`.** View boxes live on one top-level layer, `$M2D Views` (the `$` sorts it to the top of the
   layer panel). M2D+ creates it only when it is missing: cobalt `#1F6FD1`, **No Print** (plot weight −1), so view
   boxes never print. An existing `$M2D Views` layer is used as it is: the user's later colour or print edits are never
-  overwritten. Validate and Create put view boxes there (below); an old `M2D+::Views` layer from earlier builds is
+  overwritten. Convert to view boxes and Create put view boxes there (below); an old `M2D+::Views` layer from earlier builds is
   neither deleted nor renamed. Drawing bake layers (§8.1) are unchanged.
 - **Front-face fill.** M2D+ draws a see-through fill on each view box's **front face** (the frame, view plane and cut
   plane) in every display mode, so the type of view shows at a glance:
@@ -312,9 +312,9 @@ A **view box** is the view as a Rhino object. It is an `Extrusion`:
   object; a referenced surface that is not yet a view box counts as scene. A real cut inside the frame always shows
   red. Curves and points never make a face red (the component does not cut them).
 - If Rhino turns a view box into a polysurface (some sub-object edits do), the view reports it with the fix:
-  undo the edit, or reference a planar surface and validate again. It never guesses the orientation back.
+  undo the edit, or reference a planar surface and convert it again. It never guesses the orientation back.
 
-**Validate views** (right-click on V or on the component), one Rhino undo record for the whole run:
+**Convert to view boxes** (right-click on V or on the component), one Rhino undo record for the whole run:
 
 1. Checks every referenced object can frame a view: **planar**, an outer boundary that is a **rectangle** (4 straight
    edges at right angles within the document angle tolerance; a split edge is still one edge), **not degenerate**
@@ -332,7 +332,7 @@ A **view box** is the view as a Rhino object. It is an `Extrusion`:
 4. **Depth: auto**, to the back of the scene's bounding box along the look direction plus 1 % of its diagonal
    (with nothing behind the frame: the frame's longer side). Edit it by dragging the back face.
 5. Names unnamed objects `M2D View 01`, `M2D View 02`… and writes the user-text keys below. **Missing keys get
-   `default`; an existing value is never overwritten.** Validating a view box again only re-adds deleted keys, and
+   `default`; an existing value is never overwritten.** Converting a view box again only re-adds deleted keys, and
    moves it back onto `$M2D Views` if it was put on another layer.
 6. Reports each object on the Rhino command line and on the component (remarks; refusals stay as warnings until
    the next view command or a change to V).
@@ -340,7 +340,7 @@ A **view box** is the view as a Rhino object. It is an `Extrusion`:
 **Per-view settings: Attribute User Text.** Edit them in Rhino's *Properties ▸ Attribute User Text*. `default`
 (or blank) means "not set here": the menu default, then the built-in default, applies (§6).
 
-| Key | Values | Written by Validate |
+| Key | Values | Written by Convert to view boxes |
 |---|---|---|
 | `m2d.view` | `1` (marker and format version) | `1` |
 | `m2d.name` | drawing name (bake layer); `default` = the object's name | `default` |
@@ -385,8 +385,23 @@ direction views show once the scene is read. Toggle: *Preview ▸ View frames*.
 
 - **Included:** normal and locked objects on visible layers. Block instances are kept as instances, nested and mirrored ones too.
 - **Ignored without a warning:** hidden objects, objects on hidden layers, lights, clipping planes, named-view
-  widgets, cameras, and **anything M2D+ baked before**. Baked objects are recognised by their `m2d.*` user
-  strings or by sitting on an `M2D+` layer, so an in-place bake is never drawn again.
+  widgets, cameras, and anything excluded by the hard rule below.
+- **Never scene geometry, in every mode (owner decision 2026-11-16, beta.1 feedback):** view boxes and M2D+ bakes are
+  never drawn and never hide anything, whether they come from document mode, referenced Geometry (select-all, or one
+  picked by mistake), a layer-name item (`*`, `M2D+*`, `$M2D Views`, a parent layer) or a block definition.
+
+  | Excluded | Recognised by (attributes or geometry user text, or layer) |
+  |---|---|
+  | View boxes | `m2d.view` user text; anything on the `$M2D Views` layer or a sublayer; any object the View input references (view boxes and not-yet-converted frame surfaces) |
+  | M2D+ bakes | the bake markers every baked line, cut and hatch carries (`m2d.bake`, `m2d.class`, which stay with the object when it is moved to another layer); anything on a layer under an `M2D+` bake layer |
+  | Other M2D+ objects (document mode and layer names) | any other `m2d.*` user text |
+
+  An object the Geometry input names explicitly (an id, a reference, a Model Object) that the rule drops is reported in
+  Info and as a remark: `Left out of Geometry: 2 view boxes (M2D View 02, M2D View 03) and 14 baked M2D+ objects (…).
+  View boxes and M2D+ bakes are never drawn or used to hide anything.` Block parts and layer-name matches are dropped
+  silently. `ExclusionTests` checks that a drawing is hash-identical with and without the other view boxes (document,
+  select-all, `*` and `$M2D Views` layer names, a view box inside a block) and with and without a previous bake (also
+  after baked curves were moved to a normal layer).
 - **Reported:** objects that could be drawn but aren't supported, such as text in v1 or point clouds. They appear in Info
   with counts by type: a remark for objects that hide nothing (text, dots, point clouds), a warning for objects that could
   hide others (§5.2).
@@ -716,6 +731,14 @@ share the Z = 0 line" working.
   with the cached result, and either publishes the cached result or starts or restarts a job.
 - **Changing an input, a menu setting, or a view object in Rhino cancels a stale job at once.** The new job starts after 250 ms
   without further changes, so slider drags don't queue work.
+- **The captured scene is kept (beta.1 feedback: "changing settings should not reload objects").** The component keeps
+  the scene it read, keyed by what it read: the document, its tolerance, every Geometry item (an id, a layer name, or the
+  content fingerprint of Grasshopper geometry) and the view objects. A Settings, Depth, Target or menu change, or a view
+  object's `m2d.*` text or geometry, re-solves from it: **no capture, no normalisation, no preparation**. Presentation-only
+  settings (hidden, min visible, scale, weights, fade, hatch, tree, placement) make no HLD call; visibility settings
+  (depth, far clip, crop, tangents, seams, glass, tolerance) re-solve from the prepared scene. Only a change to the
+  Geometry input or to what the scene read (§5.1a) reads the objects again, and then only the changed objects are
+  fingerprinted and normalised (unchanged ones are found by their Rhino serial number).
 - The outputs only ever hold a **complete result for the current inputs**. While a job runs, the outputs are
   empty and the preview shows the previous result greyed, labelled *Stale*. Draft results are **preview only**.
 - **All views publish together**, in one downstream solve. The preview fills in view by view as each finishes (Q5).
@@ -765,18 +788,50 @@ layer names, Grasshopper geometry) is drawn whatever its visibility.
   the same facets under the same policy (at most every 200 ms while reading the scene, and before publishing).
 - Tested by `RerunTests` (solves and HLD calls counted per change, both modes) and `RerunPolicyTests` (the table).
 
+**What a re-run costs** (`RerunTests.SettingsChangesReuseTheCapturedScene`, both modes; spheres force native HLD):
+
+| Change | Objects read again (captures) | Normalised | Prepared | HLD calls |
+|---|---|---|---|---|
+| Settings `hidden = off`, `min visible`, menu `scale`, Target, Depth on a view box | 0 | 0 | 0 | 0 |
+| Settings `tangents = on`, menu `seams` (visibility keys) | 0 | 0 | 0 | re-solve |
+| View object `m2d.*` text (e.g. `m2d.fade`) | 0 | 0 | 0 | 0 |
+| View box moved (its view changes) | 0 | 0 | 0 | re-solve |
+| A drawn object moved | 1 | only that object | 1 | re-solve |
+| Geometry input changed | 1 | only new objects | 1 | re-solve |
+
 ### 5.2 Phases and the message line
 
-The footer (§1) shows one short status line. The progress bar along the footer's top edge shows the whole job
-fraction.
+While a job runs the footer (§1) shows two rows saying **what is being processed and how far along** (owner feedback on beta.1:
+"Queued" was vague). The progress bar along the footer's top edge shows the whole job.
+
+| Stage | Row 1: what (full counts) | Row 2: how far (left · right) | Progress bar |
+|---|---|---|---|
+| Loading objects (host capture) | `Loading objects 2,400 / 6,000` | · estimate | determinate (objects read / known); skipped when the scene is reused |
+| Waiting | `Waiting for another drawing (1 ahead)` | | shimmer: only shown when the global scheduler is busy |
+| Preparing geometry | `Preparing geometry 3,100 / 6,000` | · `~20 s left` | determinate |
+| Drawing, in process | `Drawing 3 / 8 · Section A` | `hidden lines 45 %` · `~40 s left` (steps: exact lines, hidden lines, sections, checking, output) | determinate within a view; Rhino's own hidden-line progress moves it |
+| Drawing, on workers | `Drawing 5 / 8 · 3 workers` | `starting workers`, `sending scene` · estimate | per finished view, with a shimmer over the views in flight |
+| Building output | `Building output` | | shimmer over the last share |
+
+- **The bar only moves forward.** Each stage has a share: the time it took in the previous run of the same inputs, views and
+  settings, else 15 % loading, 10 % preparing, 70 % drawing, 5 % output. A stage with no reliable sub-progress shows an
+  indeterminate shimmer over its share instead of a frozen bar (`JobProgressModel`, Core).
+- **A rough estimate**, `· ~40 s left` (seconds to the nearest 5 above 20 s, minutes above 90 s), only when there is enough
+  history: from 5 % with timings of a previous identical run, otherwise from 25 % and 4 s; never under 2 s.
+- **Two rows, one font, counts whole.** Counts are always shown in full (from 100,000 on compactly, `123.5k`); the width is
+  reserved for them. When a row is still too long, the view name is shortened first (`Drawing 7 / 12 · North elevation,
+  courtyar…`), then the step, each ending in `…`; the estimate is never cut. The tooltip over the footer shows the full
+  status, the fraction, the time so far and when each stage started; Info's timing line has the finished job. Renders:
+  `artifacts/ui/after/footer-*-200.png` and `component-{done,running}-{100,200}.png` (`ComponentLookTests`).
+- **Never blocks, never storms.** Reports from the job are only stored; a 100 ms timer folds the latest into the model
+  and the canvas repaints the footer at most 10 times a second (for the shimmer). Nothing during a job redraws Rhino's
+  viewports. Object loading runs in 16 ms slices on the UI thread; fingerprinting, normalisation and the scene build run
+  on background threads (§5.4 timing).
 
 | State | Message | Progress line | Outputs | Preview | Balloon |
 |---|---|---|---|---|---|
 | No view | `Pick a view` | — | empty | — | Remark: "Right-click View to choose a named view, clipping plane or direction, or wire one." |
-| Reading | `Reading 50,210 objects` | indeterminate | empty | stale, grey | — |
-| Preparing | `Preparing 38 %` | 0–40 % | empty | stale / draft | — |
-| Draft | `Draft · refining 61 %` | continues | empty | draft at 60 % opacity | — |
-| Drawing | `Drawing 3/6 · 72 %` | 40–100 % | empty | finished views + draft for the rest | — |
+| Running | the stage status above | stage progress | empty | stale, grey | — |
 | Done | `Section A · 2.1 s` or `6 drawings · 41 s` | hidden | **complete** | full style | — |
 | Done, unresolved | `6 drawings · 41 s` | hidden | complete | unresolved in orange | **Remark** per view: "Section A: 12 unresolved pieces in the Unresolved output (orange in the preview, own layer when baked). Check them before issuing." |
 | Not drawn, harmless | (as Done) | | complete | | **Remark**: "Section A: 4 objects not drawn (3 TextDot, 1 PointCloud). They hide nothing. See Info." |
@@ -795,7 +850,7 @@ orange in the preview, on their own bake layer, counted in Info and named in a r
 | Level | When |
 |---|---|
 | **Error** (red) | A view failed (no such named view or clipping plane, perspective view, extraction failure); Target count mismatch. |
-| **Warning** (orange) | A quarantined view; objects not drawn that **could hide** other geometry; a layer-name item that matches no layer; the effective tolerance **too coarse** for the scale (§3.4); unknown settings keys and bad values (§5.3); Validate views refusals. |
+| **Warning** (orange) | A quarantined view; objects not drawn that **could hide** other geometry; a layer-name item that matches no layer; the effective tolerance **too coarse** for the scale (§3.4); unknown settings keys and bad values (§5.3); Convert to view boxes refusals. |
 | **Remark** (grey) | Unresolved pieces in a normal view; objects not drawn that hide nothing (text, dots, hatches, point clouds); the tolerance detail-risk census (short source edges, close gaps, uncertain section components, which are drawn Unresolved); ignored Depth, bad `m2d.color`, and other notes. |
 
 The message line stays the plain progress or result (`5 drawings · 9.9 s`); a remark never turns the component orange.
@@ -817,7 +872,9 @@ Ignored (min visible 0.002): 14 objects, 31 pieces. Their lines are in the Ignor
 Styles: "Concrete" (layer Structure::Core) 212 · "Brick" (object) 18 · object colour 976 (hatch = styles)
 Unresolved: 12 pieces on 3 objects (orange) · Not drawn: 3 Text, 1 Point cloud
 Tolerance 0.001 m (document) · 41 short pieces dropped
-2.1 s for this view · preparation 22.4 s shared by 6 views (cached)
+Timing: loading 0.42 s · preparing 0.21 s · drawing 6.12 s · output 0.35 s · total 7.20 s; UI thread busy 0.31 s.
+Objects read: 6,332 in 27 slices, longest 16 ms; Enumerate 33 ms, Objects 120 ms, Sections 45 ms, … Fingerprint 119 ms (background), …
+Left out of Geometry: 2 view boxes (M2D View 02, M2D View 03). View boxes and M2D+ bakes are never drawn or used to hide anything.
 ```
 
 ---
@@ -913,7 +970,7 @@ These items come after GH's standard items (Preview, Enabled, Bake…, Help). Ev
 greyed and shows "(set by input)", and one some view objects override says "(set on 1 of 3 view objects)".
 
 ```
-Validate views                    (§2.2)
+Convert to view boxes             (§2.2)
 Flip view direction               (view boxes)
 Create view from current viewport
 Select view objects               Double-click
@@ -1029,7 +1086,7 @@ M2D+
 
 ```
   Rhino: draw a vertical planar surface through the building (PlaneSrf / Rectangle + PlanarSrf)
-  GH:    right-click V ▸ Pick views in Rhino… ▸ pick it ▸ right-click V ▸ Validate views
+  GH:    right-click V ▸ Pick views in Rhino… ▸ pick it ▸ right-click V ▸ Convert to view boxes
   → "M2D View 01": a view box looking at the model, depth to the back of the scene, arrow + depth volume in preview
   Rhino: gumball-drag its back face to 12 m; Properties ▸ Attribute User Text: m2d.farclip = line, m2d.fade = on
   Double-click the component to select it in Rhino again. Flip view direction to look the other way.

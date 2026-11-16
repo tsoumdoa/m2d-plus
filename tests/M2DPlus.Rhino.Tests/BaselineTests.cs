@@ -163,8 +163,9 @@ public sealed class BaselineTests(RhinoHost host, ITestOutputHelper output)
         using var perspective = new ViewportInfo(viewport); perspective.IsParallelProjection = false;
         using var partial = Solve(Capture(document, cache), ViewRequest.Parse(perspective), ViewRequest.Parse("Front"));
         Assert.Contains("Set the named view to Parallel", partial.Views[0].Error); Assert.Empty(partial.Views[0].Items); Assert.Null(partial.Views[1].Error);
-        using var watch = new DocumentWatch(document); var generation = watch.Generation;
-        document.NamedViews.Rename(0, "Changed"); watch.VerifyHostState(); Assert.True(watch.Generation > generation);
+        using var watch = new DocumentWatch(document); var generation = watch.ViewGeneration;
+        // A named view is a view, not scene geometry: it re-runs the drawing (views generation) and keeps the scene.
+        document.NamedViews.Rename(0, "Changed"); watch.VerifyHostState(); Assert.True(watch.ViewGeneration > generation); Assert.Equal(0, watch.Generation);
     });
 
     [RhinoFact] public void StableOutputOrderSurvivesPermutationCacheRetirementAndRecompute() => host.Run(() =>

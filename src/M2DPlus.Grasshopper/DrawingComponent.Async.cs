@@ -26,8 +26,31 @@ public sealed partial class DrawingComponent
     private TreeSources? _drawingSources;
     /// <summary>A View item is text (a named view, clipping plane name or direction), so clipping planes may matter.</summary>
     private bool _textViews;
-    /// <summary>SolveInstance calls, for the re-run tests.</summary>
-    private int _solveCount;
+    /// <summary>SolveInstance calls and scene captures, for the re-run and capture-count tests.</summary>
+    private int _solveCount, _captureCount;
+    /// <summary>The captured scene, kept across runs (owner feedback on beta.1): a Settings, Depth, Target, menu or
+    /// view-object change re-solves from it, and only a change to what it read (the capture key, or a scene change in the
+    /// document) reads the objects again. The component holds one lease; each job gets its own share.</summary>
+    private LeaseEntry<PreparedScene>.Lease? _scene;
+    private string? _sceneKey, _captureKey;
+    private long _sceneGeneration, _captureGeneration;
+    private TreeSources? _sceneSources;
+    private string _sceneInfo = "";
+    private string? _sceneDropped;
+    private Task<LeaseEntry<PreparedScene>.Lease>? _accepting;
+    private TreeSources? _acceptingSources;
+    // Progress (UX §5.2): the latest report, the job's stage model and clock, first-seen stage times and the result.
+    private JobProgressModel? _model;
+    private readonly System.Diagnostics.Stopwatch _jobClock = new();
+    private ProgressState _state;
+    private StatusLine? _status;
+    private readonly double?[] _stageSeen = new double?[5]; // loading, waiting, preparing, drawing, output (s since start)
+    private double _loadingEnd, _uiSeconds;
+    private int _readCount;
+    private bool _reused;
+    private string? _historyKey;
+    private readonly Dictionary<string, StageTimes> _history = new(StringComparer.Ordinal);
+    private string _timing = "";
     private GeometryInputKind _inputKind = GeometryInputKind.Document;
     private sealed record TreeSources(GeometryInputKind Kind, IReadOnlyDictionary<string, SourceGroupInfo> Groups, IReadOnlyDictionary<string, uint> Colours);
     private readonly DrawingCache _drawingCache = new();
@@ -46,8 +69,7 @@ public sealed partial class DrawingComponent
     private bool _removed;
     private bool _started;
     private string? _error;
-    private string _captureInfo = "";
-    private double _captureActiveSeconds;
+
     private JobProgress? _progress;
     private readonly object _progressSync = new();
     private readonly object _completionSync = new();
@@ -70,6 +92,12 @@ public sealed partial class DrawingComponent
     private void SolveDrawing(IGH_DataAccess da)
     {
         _solveCount++;
+        var uiSince = System.Diagnostics.Stopwatch.GetTimestamp();
+        try { SolveDrawingCore(da); }
+        finally { _uiSeconds += System.Diagnostics.Stopwatch.GetElapsedTime(uiSince).TotalSeconds; }
+    }
+    private void SolveDrawingCore(IGH_DataAccess da)
+    {
         foreach (var (level, text) in Ui.Notes) AddRuntimeMessage(level, text);
         if (_drawing is not null) { Emit(da, _drawing, _drawingSources!); return; }
         if (_error is not null) { Message = "Error"; AddRuntimeMessage(GH_RuntimeMessageLevel.Error, _error); return; }
@@ -82,10 +110,10 @@ public sealed partial class DrawingComponent
         if (document is null) { Message = "Error"; AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "No Rhino document is open."); return; }
         if (_watch is null || _watch.DocumentSerial != document.RuntimeSerialNumber)
         {
-            DetachWatch(); _watch = new(document); _watch.Changed += DocumentChanged;
+            DetachWatch(); _watch = new(document); _watch.Changed += DocumentChanged; _watch.ViewsChanged += ViewsChanged;
         }
         _tolerance = document.ModelAbsoluteTolerance;
-        // Not-yet-validated frame surfaces face the model; their scene bounds exclude every referenced view object.
+        // Not-yet-converted frame surfaces face the model; their scene bounds exclude every referenced view object.
         var referenced = inputViews.Select(ViewObjects.IdOf).OfType<Guid>().ToArray();
         BoundingBox? frameScene = referenced.Any(id => document.Objects.FindId(id) is { } o && !ViewBoxes.IsViewBox(o) && o is not global::Rhino.DocObjects.ClippingPlaneObject)
             ? ViewBoxes.SceneBounds(document, referenced) : null;
@@ -108,6 +136,9 @@ public sealed partial class DrawingComponent
                         $"input/{geometry.Paths[branch]}/{index}/{(value is Guid objectId ? objectId.ToString() : "local")}") { SourceItem = index });
                 }
         }
+        // What a capture would read (UX §5.1a): equal keys and no scene change reuse the captured scene.
+        _captureKey = SceneCapture.InputKey(document, _inputs, _excluded);
+        _historyKey = null;
         // tree = auto (UX §1.3): ids and layer names select Rhino objects; anything else is Grasshopper geometry.
         _inputKind = OutputTree.Classify(_inputs is null, (_inputs ?? []).Select(i => i.Value is Guid or string));
         var targets = new List<Plane>(); da.GetDataList(2, targets); _targets = targets.ToArray();
@@ -154,7 +185,11 @@ public sealed partial class DrawingComponent
         _context = new UiContext(contexts, branches, DrawingUi.Units(document)) { ViewRows = rows, Depth = depth.Select(d => d?.Value).ToArray() };
         Ui.Context = () => _context;
         Previews(BoundingBox.Empty);
-        _started = true; Message = "Reading";
+        // The progress weights of the next run come from this one when the inputs, views and settings are the same.
+        _historyKey = _captureKey + "|" + string.Join("|", _views.Select(v => v.Revision)) + "|" + string.Join("\n", branches.SelectMany(b => b)) +
+            "|" + string.Join(",", depth.Select(d => d?.Value)) + "|" + Ui.State + "|" + string.Join(",", _targets);
+        _started = true; _uiSeconds = 0; _jobClock.Restart(); Array.Clear(_stageSeen); _reused = false; _loadingEnd = 0;
+        _model = null; _state = default; _status = new("Starting…"); Message = _status.Full;
         _timer ??= CreateTimer(); _timer.Interval = 250; _timer.Start();
     }
     private System.Windows.Forms.Timer CreateTimer()
@@ -162,6 +197,12 @@ public sealed partial class DrawingComponent
         var timer = new System.Windows.Forms.Timer(); timer.Tick += CaptureTick; return timer;
     }
     private void CaptureTick(object? sender, EventArgs args)
+    {
+        var uiSince = System.Diagnostics.Stopwatch.GetTimestamp();
+        try { CaptureTickCore(); }
+        finally { _uiSeconds += System.Diagnostics.Stopwatch.GetElapsedTime(uiSince).TotalSeconds; }
+    }
+    private void CaptureTickCore()
     {
         if (_removed || _watch is null || _watch.IsClosed) { Invalidate(); return; }
         try
@@ -174,50 +215,118 @@ public sealed partial class DrawingComponent
                 if (completed.Epoch != _epoch || _watch.IsClosed || _watch.Generation != completed.DocumentGeneration)
                 { completed.Batch?.Dispose(); return; }
                 if (completed.Batch is { } batch && _requests.TryPublish(completed.Identity, batch.Complete, () => { _drawing = batch; _drawingSources = completed.Sources; }))
-                { _timer?.Stop(); Refresh(true); return; }
+                { Finish(); _timer?.Stop(); Refresh(true); return; }
                 completed.Batch?.Dispose();
                 if (_requests.IsCurrent(completed.Identity)) { _timer?.Stop(); _error = completed.Error ?? "Cancelled"; Refresh(true); }
                 return;
             }
+            if (_accepting is { } accepting)
+            {
+                if (!accepting.IsCompleted) { Status(new(JobPhase.Reading, _readCount, _readCount)); return; }
+                _accepting = null;
+                var captured = accepting.GetAwaiter().GetResult(); // rethrows a background failure
+                if (_watch.Generation != _captureGeneration) { captured.Dispose(); throw new OperationCanceledException("The document changed while reading it."); }
+                DropScene();
+                _scene = captured; _sceneKey = _captureKey; _sceneGeneration = _captureGeneration; _sceneSources = _acceptingSources;
+                _loadingEnd = _jobClock.Elapsed.TotalSeconds;
+                StartJob();
+                return;
+            }
+            if (_capture is null && _model is not null)
+            {
+                lock (_progressSync) if (_progress is { } progress) Status(progress);
+                return;
+            }
             if (_capture is null)
             {
-                lock (_progressSync)
-                {
-                    if (_progress is { } progress)
-                    {
-                        Message = progress.Phase switch
-                        {
-                            JobPhase.Queued => "Queued", JobPhase.Preparing => "Preparing",
-                            JobPhase.Drawing => $"Drawing {progress.Done + 1}/{progress.Total}", _ => Message
-                        };
-                        OnDisplayExpired(true); return;
-                    }
-                }
                 var document = RhinoDoc.FromRuntimeSerialNumber(_watch.DocumentSerial);
                 if (document is null) { Invalidate(); return; }
+                // Headless documents raise no events: compare now, before deciding whether the scene can be reused.
+                _watch.VerifyHostState();
+                if (!_started) return;
+                var reuse = _scene is not null && _sceneKey == _captureKey && _sceneGeneration == _watch.Generation;
+                // One stage model per job, weighted by the previous run of the same inputs when there was one.
+                _model = new JobProgressModel(_historyKey is null ? null : _history.GetValueOrDefault(_historyKey), loading: !reuse);
+                if (reuse)
+                {
+                    _reused = true;
+                    _watch.Scope?.SetViews(_views.Select(v => v.ObjectId), _textViews);
+                    StartJob();
+                    return;
+                }
+                DropScene();
                 // What the drawing reads, so the watch re-runs only for changes to it (UX §5.1).
                 var scope = new WatchScope(_inputs is null ? M2DPlus.Core.Watch.WatchMode.Document : M2DPlus.Core.Watch.WatchMode.Referenced,
                     _inputs?.Select(i => i.Value).OfType<string>(), _views.Select(v => v.ObjectId), _textViews);
                 _capture = new(document, _watch, _inputs, excluded: _excluded, scope: scope);
-                _timer!.Interval = 10;
+                _captureGeneration = _watch.Generation; _captureCount++;
+                _stageSeen[0] = _jobClock.Elapsed.TotalSeconds;
+                // About 16 ms of work per tick (the UI stays responsive); the timer's own granularity sets the gaps.
+                _timer!.Interval = 1;
             }
-            if (!_capture.Step(TimeSpan.FromMilliseconds(12))) { Message = $"Reading {_capture.CapturedCount} objects"; OnDisplayExpired(true); return; }
-            var scene = _capture.Accept();
-            var sources = new TreeSources(_inputKind, new Dictionary<string, SourceGroupInfo>(_capture.Groups, StringComparer.Ordinal),
+            var done = _capture.Step(TimeSpan.FromMilliseconds(16));
+            Status(new(JobPhase.Reading, _capture.CapturedCount, _capture.CapturedCount + _capture.PendingCount));
+            if (!done) return;
+            _acceptingSources = new TreeSources(_inputKind, new Dictionary<string, SourceGroupInfo>(_capture.Groups, StringComparer.Ordinal),
                 new Dictionary<string, uint>(_capture.Colours, StringComparer.Ordinal));
-            _captureActiveSeconds = _capture.ActiveSeconds;
-            _captureInfo = $"Capture active {_captureActiveSeconds:F4} s; initial enumeration {_capture.InitialEnumerationMilliseconds:F2} ms; maximum slice {_capture.MaximumSliceMilliseconds:F2} ms (12 ms target; individual copies may overrun).";
+            _sceneDropped = _capture.DroppedSummary; _readCount = _capture.CapturedCount;
+            var profile = string.Join(", ", _capture.Profile.Where(p => p.Milliseconds >= .5)
+                .Select(p => $"{p.Phase} {p.Milliseconds:F0} ms{(SceneCapture.OnHostThread(p.Phase) ? "" : " (background)")}"));
+            _sceneInfo = $"Objects read: {_capture.CapturedCount:N0} in {_capture.Slices} slices, longest {_capture.MaximumSliceMilliseconds:F0} ms; {profile}.";
+            _accepting = _capture.AcceptAsync();
             _capture.Dispose(); _capture = null; _inputs = null;
-            ResolveSettings(scene.Value.Bounds);
-            var request = _requests.Begin(scene.Value.Revision, string.Join("|", _views.Select(v => v.Revision)), _settings.ToString());
-            var epoch = _epoch; var documentGeneration = _watch.Generation;
-            lock (_progressSync) _progress = new(JobPhase.Queued, 0, _views.Length);
-            _timer!.Interval = 100;
-            _ = RunDrawing(scene, request.Identity, request.Token, epoch, documentGeneration, _views, _settings, sources);
+            _timer!.Interval = 15;
         }
         catch (OperationCanceledException) { Invalidate(); Refresh(false); }
         catch (Exception ex) { _timer?.Stop(); _capture?.Dispose(); _capture = null; _error = ex.Message; Refresh(true); }
     }
+
+    /// <summary>Starts the drawing job from the retained scene (a new share of its lease).</summary>
+    private void StartJob()
+    {
+        var scene = _scene!.Share();
+        ResolveSettings(scene.Value.Bounds);
+        var request = _requests.Begin(scene.Value.Revision, string.Join("|", _views.Select(v => v.Revision)), _settings.ToString());
+        var epoch = _epoch; var documentGeneration = _watch!.Generation;
+        lock (_progressSync) _progress = new(JobPhase.Preparing, 0, 0);
+        Status(new(JobPhase.Preparing, 0, 0));
+        _timer!.Interval = 100;
+        _ = RunDrawing(scene, request.Identity, request.Token, epoch, documentGeneration, _views, _settings, _sceneSources!);
+    }
+
+    /// <summary>Folds a report into the stage model and the status line. UI thread only; never redraws Rhino's viewports
+    /// (the canvas footer repaints itself at most every 100 ms while a job runs).</summary>
+    private void Status(JobProgress progress)
+    {
+        var elapsed = _jobClock.Elapsed.TotalSeconds;
+        var stage = progress.Phase switch { JobPhase.Reading => 0, JobPhase.Queued => 1, JobPhase.Preparing => 2, JobPhase.Drawing => 3, JobPhase.Output or JobPhase.Complete => 4, _ => -1 };
+        if (stage >= 0) _stageSeen[stage] ??= elapsed;
+        _model ??= new JobProgressModel(null);
+        _state = _model.Update(progress, elapsed);
+        _status = StatusText.Of(progress, _state.RemainingSeconds);
+        if (Message != _status.Full) Message = _status.Full;
+    }
+
+    /// <summary>Stage times of the finished job: Info's timing line and the next run's progress weights.</summary>
+    private void Finish()
+    {
+        var total = _jobClock.Elapsed.TotalSeconds;
+        double At(int i, double fallback) => _stageSeen[i] ?? fallback;
+        var output = At(4, total); var drawing = At(3, output); var preparing = At(2, drawing); var waiting = At(1, preparing);
+        var loading = _reused ? 0 : Math.Max(0, _loadingEnd - At(0, 0));
+        var times = new StageTimes(loading, Math.Max(0, drawing - preparing), Math.Max(0, output - drawing), Math.Max(0, total - output));
+        if (_historyKey is not null)
+        {
+            if (_history.Count > 16) _history.Clear();
+            _history[_historyKey] = times;
+        }
+        var wait = Math.Max(0, preparing - waiting);
+        _timing = $"Timing: loading {(_reused ? "skipped (objects reused)" : $"{loading:F2} s")} · " +
+            (wait >= .01 ? $"waiting {wait:F2} s · " : "") +
+            $"preparing {times.Preparing:F2} s · drawing {times.Drawing:F2} s · output {times.Output:F2} s · total {total:F2} s; " +
+            $"UI thread busy {_uiSeconds:F2} s.";
+    }
+
     /// <summary>Resolve every key on the host; the engine receives immutable values only.</summary>
     private void ResolveSettings(BoundingBox bounds)
     {
@@ -243,6 +352,9 @@ public sealed partial class DrawingComponent
         return Math.Max(0, -bounds.GetCorners().Min(plane.DistanceTo)) + _tolerance * 10;
     }
 
+    /// <summary>Keeps the view's name across step reports that don't repeat it.</summary>
+    private static JobProgress MergeProgress(JobProgress? previous, JobProgress next) =>
+        next.View is null && previous is { } p && p.Phase == next.Phase && p.Done == next.Done && next.Phase == JobPhase.Drawing ? next with { View = p.View } : next;
     private sealed class ProgressSink(Action<JobProgress> report) : IProgress<JobProgress>
     { public void Report(JobProgress value) => report(value); }
     private async Task RunDrawing(LeaseEntry<PreparedScene>.Lease scene, RequestIdentity identity, CancellationToken token,
@@ -253,7 +365,7 @@ public sealed partial class DrawingComponent
         try
         {
             batch = await _drawingCache.SolveAsync(scene, identity, views, settings, _targets, token,
-                new ProgressSink(p => _requests.TryUpdate(identity, () => { lock (_progressSync) _progress = p; }))).ConfigureAwait(false);
+                new ProgressSink(p => _requests.TryUpdate(identity, () => { lock (_progressSync) _progress = MergeProgress(_progress, p); }))).ConfigureAwait(false);
         }
         catch (OperationCanceledException) { }
         catch (Exception ex) { error = ex.Message; }
@@ -281,7 +393,8 @@ public sealed partial class DrawingComponent
             var treeSetting = view.Settings?.Tree ?? OutputTreeMode.Auto;
             var layout = new OutputTreeLayout(OutputTree.Effective(treeSetting, sources.Kind), sources.Groups);
             var tree = "Output tree: " + OutputTree.Describe(treeSetting, sources.Kind) + "\n";
-            string Info() => view.Info + "\n" + tree + effective + _captureInfo + "\n" + string.Join("\n", _settingsWarnings.Select(w => w.Text));
+            string Info() => view.Info + "\n" + tree + effective + _timing + "\n" + _sceneInfo + "\n" +
+                (_sceneDropped is { } dropped ? dropped + "\n" : "") + string.Join("\n", _settingsWarnings.Select(w => w.Text));
             GH_Path Group(IEnumerable<int> group) => new(new[] { index }.Concat(group).ToArray());
             if (view.Error is not null) { AddRuntimeMessage(GH_RuntimeMessageLevel.Error, view.Error); info.Append(new(Info()), viewPath); continue; }
             frames.Append(new(view.Frame), viewPath);
@@ -326,6 +439,7 @@ public sealed partial class DrawingComponent
             foreach (var notice in ViewNotices.For(view)) AddRuntimeMessage(Level(notice.Level), notice.Text);
         }
         foreach (var (level, text) in _settingsWarnings) AddRuntimeMessage(level, text);
+        if (_sceneDropped is { } droppedNote) AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, droppedNote);
         var good = batch.Views.Count(v => v.Error is null);
         Message = good == batch.Views.Count ? $"{good} drawings · {batch.Views.Sum(v => v.Seconds):F1} s" : $"Partial · {good}/{batch.Views.Count} drawings";
         da.SetDataTree(0, visible); da.SetDataTree(1, hidden); da.SetDataTree(2, beyond); da.SetDataTree(3, farClip); da.SetDataTree(4, cut); da.SetDataTree(5, hatch); da.SetDataTree(6, unresolved); da.SetDataTree(7, frames); da.SetDataTree(8, info);
@@ -348,17 +462,28 @@ public sealed partial class DrawingComponent
             try { ExpireSolution(false); } finally { _internalRefresh = false; }
         });
     }
-    private void DocumentChanged() { Invalidate(); Refresh(false); }
+    /// <summary>A change to what the scene read: read the objects again on the next run.</summary>
+    private void DocumentChanged() { DropScene(); Invalidate(); Refresh(false); }
+    /// <summary>A change to view objects only: re-run from the captured scene.</summary>
+    private void ViewsChanged() { Invalidate(); Refresh(false); }
+    private void DropScene() { _scene?.Dispose(); _scene = null; _sceneKey = null; _sceneSources = null; }
+    private void AbandonAccept()
+    {
+        if (_accepting is not { } accepting) return;
+        _accepting = null;
+        accepting.ContinueWith(t => { if (t.IsCompletedSuccessfully) t.Result.Dispose(); }, TaskScheduler.Default);
+    }
     private void Invalidate()
     {
-        Interlocked.Increment(ref _epoch); _requests.Cancel(); _timer?.Stop(); _capture?.Dispose(); _capture = null;
+        Interlocked.Increment(ref _epoch); _requests.Cancel(); _timer?.Stop(); _capture?.Dispose(); _capture = null; AbandonAccept();
+        _model = null; _status = null; _state = default;
         lock (_completionSync) { _completion?.Batch?.Dispose(); _completion = null; }
         _drawing?.Dispose(); _drawing = null; _drawingSources = null; _inputs = null; _started = false; _error = null;
         lock (_progressSync) _progress = null;
         Message = "Cancelled";
     }
     private void DetachWatch()
-    { if (_watch is not null) { _watch.Changed -= DocumentChanged; _watch.Dispose(); _watch = null; } }
+    { DropScene(); if (_watch is not null) { _watch.Changed -= DocumentChanged; _watch.ViewsChanged -= ViewsChanged; _watch.Dispose(); _watch = null; } }
     public override void ClearData()
     {
         if (!_internalRefresh)

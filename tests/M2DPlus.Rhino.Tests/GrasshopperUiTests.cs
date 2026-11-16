@@ -78,7 +78,7 @@ public sealed class GrasshopperUiTests(RhinoHost host)
             ui.AppendMenuItems(menu);
             var items = menu.Items.OfType<ToolStripMenuItem>().ToArray();
             Assert.DoesNotContain(items, i => i.Text!.Contains("settings…", StringComparison.Ordinal));
-            Assert.Contains(items, i => i.Text == "Validate views");
+            Assert.Contains(items, i => i.Text == "Convert to view boxes");
             var hidden = items.Single(i => i.Text == "Hidden lines");
             Assert.False(hidden.Checked);
             var far = items.Single(i => i.Text == "Far clip");
@@ -222,7 +222,7 @@ public sealed class GrasshopperUiTests(RhinoHost host)
         for (var i = 0; i < states.Length; i++)
         {
             var (caption, message, phase, fraction) = states[i];
-            var x = 140 + i % 3 * 240f; var y = 100 + i / 3 * 300f; // room for layout B (UX §1) and its caption
+            var x = 160 + i % 3 * 290f; var y = 100 + i / 3 * 320f; // room for layout B (UX §1), its running footer and caption
             var component = NewComponent(document, x, y);
             Assert.Equal(5, component.Params.Input.Count);
             dynamic ui = ((dynamic)component).Ui;

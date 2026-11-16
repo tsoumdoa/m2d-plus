@@ -9,7 +9,7 @@ using Rhino.Geometry;
 namespace M2DPlus.Grasshopper.UI;
 
 /// <summary>The GH side of view objects (UX rev. 4 §2.2): finds the Rhino objects the View input references, runs
-/// Validate views / Flip view direction / Create view from current viewport / Select view objects through
+/// Convert to view boxes / Flip view direction / Create view from current viewport / Select view objects through
 /// <see cref="ViewBoxes"/>, and keeps the GH references valid when a surface or curve becomes a view box.</summary>
 public static class ViewObjects
 {
@@ -32,7 +32,7 @@ public static class ViewObjects
     }
 
     /// <summary>A persistent reference that survives the surface → view box conversion: Brep (it loads extrusions
-    /// too) for surfaces, polysurfaces and boxes, Curve for not-yet-validated rectangle curves.</summary>
+    /// too) for surfaces, polysurfaces and boxes, Curve for not-yet-converted rectangle curves.</summary>
     public static IGH_Goo Reference(RhinoObject obj) => obj.Geometry is Curve ? new GH_Curve(obj.Id) : new GH_Brep(obj.Id);
 
     private static bool CanHoldViewBox(IGH_Goo goo) => goo is GH_Brep or GH_Guid or GH_String or GH_ObjectWrapper
@@ -76,18 +76,23 @@ public static class ViewObjects
         };
         var title = command switch
         {
-            ViewCommands.Validate => "Validate views", ViewCommands.Flip => "Flip view direction",
+            ViewCommands.Validate => "Convert to view boxes", ViewCommands.Flip => "Flip view direction",
             ViewCommands.Create => "Create view", _ => "Select view objects"
         };
         if (results.Count == 0 && command != ViewCommands.Select)
             results = [new(Guid.Empty, title, false, false, "the View input references no Rhino objects. Right-click V ▸ Pick views in Rhino… first.")];
+        var summary = command == ViewCommands.Validate && results.Any(r => r.Id != Guid.Empty)
+            ? ViewCommands.ConvertSummary(results.Count(r => r.Ok && r.Changed), results.Count(r => r.Ok && !r.Changed),
+                results.Where(r => !r.Ok).Select(r => r.ToString()).ToArray())
+            : null;
+        if (summary is not null) RhinoApp.WriteLine("M2D+ " + summary);
         foreach (var result in results) RhinoApp.WriteLine($"M2D+ {title}: {result}");
-        if (command != ViewCommands.Select) ui?.Report(title, results);
+        if (command != ViewCommands.Select) ui?.Report(title, results, summary);
         if (results.Any(r => r.Changed)) document.Views.Redraw();
         return results;
     }
 
-    /// <summary>Validate views. References that come through a wire whose type can't hold a view box (a Surface or
+    /// <summary>Convert to view boxes. References that come through a wire whose type can't hold a view box (a Surface or
     /// Curve parameter) are refused, so the wire never breaks; references stored on V are re-typed to Brep.</summary>
     public static IReadOnlyList<ViewObjectResult> Validate(ViewParam param, RhinoDoc document)
     {
@@ -103,7 +108,7 @@ public static class ViewObjects
             var texts = param.CurrentTexts;
             var others = param.PersistentData.AllData(true).Where(g => g is not GH_String)
                 .Select(g => IdOf(g) is { } id && converted.Contains(id) && g is not GH_Brep ? new GH_Brep(id) : g).ToArray();
-            param.SetValues(texts, others, "M2D+ validate views");
+            param.SetValues(texts, others, "M2D+ convert to view boxes");
         }
         else if (converted.Count > 0) param.ExpireSolution(true);
         return results.OrderBy(r => references.ToList().FindIndex(x => x.Id == r.Id)).ToArray();

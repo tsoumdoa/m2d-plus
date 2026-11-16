@@ -34,6 +34,8 @@ public sealed class DrawingUi
 
     /// <summary>Supplied by the component: the job state for the progress line and the tab button.</summary>
     public Func<DrawingRuntime>? Runtime { get; set; }
+    /// <summary>Supplied by the component: the full status and stage timings for the component tooltip, or null.</summary>
+    public Func<string?>? Detail { get; set; }
     /// <summary>Supplied by the component once it resolves views: real identities, names, sources and view-object rows.
     /// Until then a fallback derived from the View and Settings inputs is used.</summary>
     public Func<UiContext>? Context { get; set; }
@@ -52,7 +54,7 @@ public sealed class DrawingUi
     public UiContext CurrentContext => Context?.Invoke() ?? FallbackContext(_owner);
     public ViewParam? ViewInput => _owner.Params.Input.Count > 1 ? _owner.Params.Input[1] as ViewParam : null;
 
-    /// <summary>Refusals from the last view command (Validate, Flip, Create), shown as warnings until View changes.</summary>
+    /// <summary>Refusals from the last view command (Convert to view boxes, Flip, Create), shown as warnings until View changes.</summary>
     public IReadOnlyList<(GH_RuntimeMessageLevel Level, string Text)> Notes => _notes;
 
     /// <summary>The component's start gate: true with Run automatically on, or once after Run now.</summary>
@@ -125,9 +127,10 @@ public sealed class DrawingUi
 
     /// <summary>Shows a view command's outcome on the component: successes as one-off remarks, refusals as warnings
     /// that stay (re-added on every solve) until the next view command or a change to the View input.</summary>
-    public void Report(string title, IReadOnlyList<ViewObjectResult> results)
+    public void Report(string title, IReadOnlyList<ViewObjectResult> results, string? summary = null)
     {
         _notes.Clear();
+        if (summary is not null) _owner.AddRuntimeMessage(results.Any(r => !r.Ok) ? GH_RuntimeMessageLevel.Warning : GH_RuntimeMessageLevel.Remark, summary);
         foreach (var result in results)
         {
             var level = result.Ok ? GH_RuntimeMessageLevel.Remark : GH_RuntimeMessageLevel.Warning;

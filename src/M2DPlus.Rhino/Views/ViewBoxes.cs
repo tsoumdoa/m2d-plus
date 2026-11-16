@@ -15,7 +15,7 @@ public sealed record ViewFrameCheck(Rectangle3d? Frame, double? Depth, string? R
     public static ViewFrameCheck Fail(string reason) => new(null, null, reason);
 }
 
-/// <summary>One object's outcome for Validate views, Flip view direction or Create view.</summary>
+/// <summary>One object's outcome for Convert to view boxes, Flip view direction or Create view.</summary>
 public sealed record ViewObjectResult(Guid Id, string Label, bool Ok, bool Changed, string Message)
 {
     public override string ToString() => $"{Label}: {Message}";
@@ -254,7 +254,7 @@ public static class ViewBoxes
 
     // ---------------------------------------------------------------- document commands (one undo record each)
 
-    /// <summary>Validate views: converts each referenced planar rectangle (surface or curve) in place into a view box,
+    /// <summary>Convert to view boxes: converts each referenced planar rectangle (surface or curve) in place into a view box,
     /// keeping its id, writes default user text to every view box and moves every view box onto <see cref="LayerName"/>.
     /// One undo record for the whole call.</summary>
     public static IReadOnlyList<ViewObjectResult> Validate(RhinoDoc document, IEnumerable<Guid> ids, BoundingBox? scene = null)
@@ -262,7 +262,7 @@ public static class ViewBoxes
         var results = new List<ViewObjectResult>();
         var list = ids.Distinct().ToArray();
         var bounds = scene ?? SceneBounds(document, list);
-        var record = document.BeginUndoRecord("M2D+ Validate views");
+        var record = document.BeginUndoRecord("M2D+ Convert to view boxes");
         try
         {
             foreach (var id in list) results.Add(ValidateOne(document, id, bounds));
@@ -281,7 +281,7 @@ public static class ViewBoxes
         if (IsViewBox(obj))
         {
             if (obj.Geometry is not Extrusion box)
-                return new(id, label, false, false, $"is no longer a view box: Rhino turned it into a {Describe(obj.Geometry)}. Undo that edit, or reference a planar surface and validate again.");
+                return new(id, label, false, false, $"is no longer a view box: Rhino turned it into a {Describe(obj.Geometry)}. Undo that edit, or reference a planar surface and convert it again.");
             var check = ReadBox(box, tolerance, angle);
             if (!check.IsValid) return new(id, label, false, false, check.Reason!);
             var attributes = obj.Attributes.Duplicate();
@@ -327,7 +327,7 @@ public static class ViewBoxes
                 if (!IsViewBox(obj) || obj.Geometry is not Extrusion box)
                 {
                     results.Add(new(id, Label(obj), false, false, obj is ClippingPlaneObject
-                        ? "flip a clipping plane in Rhino (Flip command)." : "not a view box yet. Validate views first."));
+                        ? "flip a clipping plane in Rhino (Flip command)." : "not a view box yet. Convert to view boxes first."));
                     continue;
                 }
                 var check = ReadBox(box, document.ModelAbsoluteTolerance, document.ModelAngleToleranceRadians);

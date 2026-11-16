@@ -56,7 +56,12 @@ public sealed class DrawingCache : IDisposable
                         else owner.Dispose();
                     }
                 }
-                using (lease) { token.ThrowIfCancellationRequested(); return DrawingPresentation.ApplySnapshot(lease.Value, identity, views, targets, scene.Value.SourceMetadata); }
+                using (lease)
+                {
+                    token.ThrowIfCancellationRequested();
+                    progress?.Report(new(JobPhase.Output, 0, 0));
+                    return DrawingPresentation.ApplySnapshot(lease.Value, identity, views, targets, scene.Value.SourceMetadata);
+                }
             }
             finally { _solve.Release(); }
         }

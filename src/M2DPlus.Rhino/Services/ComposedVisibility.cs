@@ -117,7 +117,7 @@ internal static class ComposedVisibility
                 }
                 NativeDrawing.CountHld(); output.NativeCalls++;
                 phase.Next("native solve");
-                using var drawing = HiddenLineDrawing.Compute(parameters, settings.MultipleThreads, NativeDrawing.NativeProgress, token);
+                using var drawing = HiddenLineDrawing.Compute(parameters, settings.MultipleThreads, NativeDrawing.HldProgress, token);
                 phase.Next("native extraction and duplicates");
                 token.ThrowIfCancellationRequested();
                 if (drawing is null || !drawing.WorldToHiddenLine.TryGetInverse(out var inverse)) throw new InvalidOperationException("Composition HLD failed");

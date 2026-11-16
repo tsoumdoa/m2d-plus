@@ -46,26 +46,50 @@ public sealed class SceneCapture : IDisposable
     private readonly Queue<Pending> _pending = new();
     private readonly List<SceneLeaf> _leaves = new();
     private readonly Dictionary<string, int> _unsupported = new(StringComparer.Ordinal);
-    private readonly Dictionary<uint, string> _fingerprints = new();
+    private readonly SectionMemo _sections;
+    /// <summary>Objects the View input references (view boxes and not-yet-converted frame surfaces): never scene geometry.</summary>
+    private readonly IReadOnlySet<Guid>? _viewObjects;
+    /// <summary>Block definitions expanded once per capture: their sorted members and which are drawable.</summary>
+    private readonly Dictionary<Guid, (RhinoObject Leaf, bool Drawable)[]> _definitions = new();
     private readonly double _tolerance;
     private bool _accepted;
-    public int CapturedCount => _leaves.Count;
+    /// <summary>Leaves whose owned copy is fingerprinted and normalised in the background; joined by <see cref="AcceptAsync"/>.</summary>
+    private readonly List<Task<SceneLeaf>> _inflight = new();
+    public int CapturedCount => _leaves.Count + _inflight.Count;
+    /// <summary>Objects still to read (an estimate: block instances expand as they are read).</summary>
+    public int PendingCount => _pending.Count;
+    /// <summary>Where capture time goes, on the host thread (Info's timing section and the profile tests).</summary>
+    /// <remarks>Enumerate…Record run on the host (UI) thread; Fingerprint, Normalise, Sort, Signature and Scene run on
+    /// background threads on owned copies (summed over threads).</remarks>
+    public enum CapturePhase { Enumerate, Verify, Objects, Sections, Blocks, Copy, Record, Fingerprint, Normalise, Sort, Signature, Scene }
+    public static bool OnHostThread(CapturePhase phase) => phase <= CapturePhase.Record;
+    private readonly long[] _ticks = new long[Enum.GetValues<CapturePhase>().Length];
+    private long Mark() => Stopwatch.GetTimestamp();
+    private void Add(CapturePhase phase, long since) => Interlocked.Add(ref _ticks[(int)phase], Stopwatch.GetTimestamp() - since);
+    /// <summary>Milliseconds spent per phase so far.</summary>
+    public IReadOnlyList<(CapturePhase Phase, double Milliseconds)> Profile =>
+        Enum.GetValues<CapturePhase>().Select(p => (p, _ticks[(int)p] * 1000d / Stopwatch.Frequency)).ToArray();
+    /// <summary>Capture slices run so far (each one blocks the UI thread for about the slice budget).</summary>
+    public int Slices { get; private set; }
     public double MaximumSliceMilliseconds { get; private set; }
     public double InitialEnumerationMilliseconds { get; }
     public double ActiveSeconds { get; private set; }
-    /// <param name="excluded">Document mode only: objects never drawn, such as the view objects (view boxes and
-    /// not-yet-validated frame surfaces) that the View input references.</param>
+    /// <param name="excluded">Objects never drawn in any mode: the view objects (view boxes and not-yet-converted frame
+    /// surfaces) that the View input references.</param>
     /// <param name="scope">What the drawing will read; the capture fills it and sets it on the watch. Default: document
     /// mode without input, else referenced mode with the input's layer names.</param>
     public SceneCapture(RhinoDoc document, DocumentWatch watch, IEnumerable<CaptureInput>? input = null, SceneCache? cache = null,
         IReadOnlySet<Guid>? excluded = null, WatchScope? scope = null)
     {
         var timer = Stopwatch.StartNew();
+        Interlocked.Increment(ref _captures);
         var items = input?.ToArray();
         _scope = scope ?? new WatchScope(items is null ? M2DPlus.Core.Watch.WatchMode.Document : M2DPlus.Core.Watch.WatchMode.Referenced,
             items?.Select(i => i.Value).OfType<string>(), excluded);
         watch.Scope = _scope;
         _document = document; _watch = watch; _generation = watch.Generation; _cache = cache ?? SceneCache.Shared;
+        _sections = new SectionMemo(document);
+        _viewObjects = excluded;
         _tolerance = document.ModelAbsoluteTolerance;
         if (items is null)
         {
@@ -77,8 +101,43 @@ public sealed class SceneCapture : IDisposable
         }
         else foreach (var item in items) _pending.Enqueue(new(item.Value, (int[])item.Path.Clone(), item.Identity, Array.Empty<Transform>(), Array.Empty<Guid>()) { SourceItem = item.SourceItem });
         InitialEnumerationMilliseconds = timer.Elapsed.TotalMilliseconds;
+        _ticks[(int)CapturePhase.Enumerate] += (long)(timer.Elapsed.TotalSeconds * Stopwatch.Frequency);
         ActiveSeconds = timer.Elapsed.TotalSeconds;
     }
+    /// <summary>
+    /// What a capture would read, as one key (UX §5.1a): the document, its tolerance, the mode and every Geometry item
+    /// (path, item, identity, and its value: an object id, a layer name, or the content fingerprint of Grasshopper
+    /// geometry), plus the view objects that are never scene geometry. Two equal keys with no scene change in the
+    /// document between them read the same scene, so a Settings, Depth, Target, menu or view-object change reuses the
+    /// captured scene instead of reading the objects again.
+    /// </summary>
+    public static string InputKey(RhinoDoc document, IReadOnlyList<CaptureInput>? inputs, IEnumerable<Guid> viewObjects)
+    {
+        using var key = new SceneHash();
+        key.Add("capture-v1"); key.Add((int)document.RuntimeSerialNumber); key.Add(document.ModelAbsoluteTolerance);
+        key.Add(inputs is null);
+        foreach (var input in inputs ?? [])
+        {
+            key.Add(input.Path); key.Add(input.SourceItem); key.Add(input.Identity);
+            key.Add(input.Value switch
+            {
+                Guid id => "id:" + id.ToString("D"),
+                string text => "layer:" + text,
+                GeometryBase geometry => "geometry:" + GeometryFingerprint.Compute(geometry),
+                null => "null",
+                var other => other.GetType().FullName + ":" + Json(other),
+            });
+        }
+        key.Add(viewObjects.Order().ToArray());
+        return key.Finish();
+        // Primitive values (Point3d, Line, Box…): their public state, else no reuse.
+        static string Json(object value)
+        {
+            try { return System.Text.Json.JsonSerializer.Serialize(value, value.GetType()); }
+            catch (Exception e) when (e is NotSupportedException or InvalidOperationException or ArgumentException) { return Guid.NewGuid().ToString(); }
+        }
+    }
+
     /// <summary>Document mode's scene rule (UX §3.1): visible (not hidden, layer and parents on) and selectable.</summary>
     internal static bool IsDrawable(RhinoDoc document, RhinoObject obj) => IsDrawable(document, obj, obj.Attributes);
 
@@ -97,19 +156,65 @@ public sealed class SceneCapture : IDisposable
         return true;
     }
 
-    /// <summary>Whatever its visibility, an object M2D+ may draw: not deleted, not a clipping plane or light, not on an
-    /// M2D+ bake layer and not tagged with m2d.* user text (bakes and view boxes). Layer-name Geometry items select these
-    /// (owner decision 2026-11-15): hidden objects and objects on layers that are off, or under a parent that is off,
-    /// are drawn too, exactly like referenced objects.</summary>
+    /// <summary>Why an object is never scene geometry, whatever the mode or how it reached the input.</summary>
+    public enum Exclusion { None, ViewBox, Baked }
+
+    /// <summary>
+    /// The hard rule (owner decision 2026-11-16, UX §3.1): view boxes and M2D+ bakes are never scene geometry, in document
+    /// mode, referenced Geometry (select-all or a pick by mistake), layer-name items (<c>*</c>, <c>M2D+*</c>, parents) and
+    /// block definitions. A view box is an object with <c>m2d.view</c> user text, or anything on the <c>$M2D Views</c>
+    /// layer or a sublayer. A bake is an object with the bake markers every baked line, cut and hatch carries
+    /// (<c>m2d.bake</c>, <c>m2d.class</c>; they stay when the user moves it to another layer), or anything on a layer
+    /// under an <c>M2D+</c> bake layer. Markers are read on the object's attributes and its geometry.
+    /// </summary>
+    internal static Exclusion Excluded(RhinoDoc document, RhinoObject obj, ObjectAttributes attributes)
+    {
+        bool Has(string key) => attributes.GetUserString(key) is not null || obj.Geometry?.GetUserString(key) is not null;
+        if (Has(M2DPlus.Rhino.Views.ViewBoxes.Marker)) return Exclusion.ViewBox;
+        if (Has(M2DPlus.Core.Bake.BakeTags.Bake) || Has(M2DPlus.Core.Bake.BakeTags.Class)) return Exclusion.Baked;
+        if (attributes.LayerIndex >= 0 && attributes.LayerIndex < document.Layers.Count)
+        {
+            var path = document.Layers[attributes.LayerIndex].FullPath.Split(new[] { "::" }, StringSplitOptions.None);
+            if (path[0].Equals(M2DPlus.Rhino.Views.ViewBoxes.LayerName, StringComparison.OrdinalIgnoreCase)) return Exclusion.ViewBox;
+            if (path.Contains("M2D+")) return Exclusion.Baked;
+        }
+        return Exclusion.None;
+    }
+
+    /// <summary>Whatever its visibility, an object M2D+ may draw: not deleted, not a clipping plane or light, not
+    /// excluded by the hard rule (<see cref="Excluded"/>) and not tagged with any other m2d.* user text. Layer-name
+    /// Geometry items select these (owner decision 2026-11-15): hidden objects and objects on layers that are off, or
+    /// under a parent that is off, are drawn too, exactly like referenced objects.</summary>
     internal static bool IsSelectable(RhinoDoc document, RhinoObject obj, ObjectAttributes attributes)
     {
         if (obj.IsDeleted || obj.Geometry is ClippingPlaneSurface or Light) return false;
         if (attributes.LayerIndex < 0 || attributes.LayerIndex >= document.Layers.Count) return false;
-        var layer = document.Layers[attributes.LayerIndex];
-        if (layer.FullPath.Split(new[] { "::" }, StringSplitOptions.None).Contains("M2D+")) return false;
+        if (Excluded(document, obj, attributes) != Exclusion.None) return false;
         var strings = attributes.GetUserStrings();
         return strings.AllKeys.Concat(obj.Geometry.GetUserStrings().AllKeys)
             .All(key => key is null || !key.StartsWith("m2d.", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private readonly List<(Exclusion Why, string Label)> _dropped = new();
+    /// <summary>Objects the Geometry input referenced explicitly that the hard rule left out (Info reports them).</summary>
+    public IReadOnlyList<(Exclusion Why, string Label)> Dropped => _dropped;
+    /// <summary>One Info line for <see cref="Dropped"/>, or null.</summary>
+    public string? DroppedSummary
+    {
+        get
+        {
+            if (_dropped.Count == 0) return null;
+            string Part(Exclusion why, string one, string many)
+            {
+                var labels = _dropped.Where(d => d.Why == why).Select(d => d.Label).ToArray();
+                if (labels.Length == 0) return "";
+                var list = string.Join(", ", labels.Take(5)) + (labels.Length > 5 ? $", and {labels.Length - 5} more" : "");
+                return $"{labels.Length} {(labels.Length == 1 ? one : many)} ({list})";
+            }
+            var parts = new[] { Part(Exclusion.ViewBox, "view box", "view boxes"), Part(Exclusion.Baked, "baked M2D+ object", "baked M2D+ objects") }
+                .Where(p => p.Length > 0);
+            return $"Left out of Geometry: {string.Join(" and ", parts)}. View boxes and M2D+ bakes are never drawn or used to hide anything.";
+        }
     }
 
     /// <summary>A bare leaf name matches that layer's name; a full path or wildcard matches FullPath.</summary>
@@ -124,6 +229,11 @@ public sealed class SceneCapture : IDisposable
     private void Verify(bool final = false)
     {
         if (_thread != Environment.CurrentManagedThreadId) throw new InvalidOperationException("Capture must run on its host thread.");
+        var since = Mark();
+        try { VerifyCore(final); } finally { Add(CapturePhase.Verify, since); }
+    }
+    private void VerifyCore(bool final)
+    {
         // The document can't change inside a slice (this is the UI thread): interactive Rhino reports changes between
         // slices as events, and the snapshot comparison (for headless documents) runs at most every 200 ms, plus at the end.
         _watch.VerifyHostState(throttle: !final);
@@ -131,7 +241,7 @@ public sealed class SceneCapture : IDisposable
     }
     public bool Step(TimeSpan budget, CancellationToken token = default)
     {
-        var timer = Stopwatch.StartNew();
+        var timer = Stopwatch.StartNew(); Slices++;
         Verify(); token.ThrowIfCancellationRequested();
         if (budget <= TimeSpan.Zero) throw new ArgumentOutOfRangeException(nameof(budget));
         do
@@ -158,6 +268,7 @@ public sealed class SceneCapture : IDisposable
             foreach (var match in matches) _pending.Enqueue(item with { Value = match.Id, Identity = item.Identity + "/" + match.Id, LayerPattern = item.LayerPattern ?? layerPattern });
             return;
         }
+        var objectsSince = Mark();
         if (value is Guid id)
         {
             var obj = _document.Objects.FindId(id);
@@ -167,36 +278,64 @@ public sealed class SceneCapture : IDisposable
         uint? sourceSerial = null;
         if (value is RhinoObject source)
         {
+            // The hard rule also covers explicit references: report them, since the user picked them.
+            var exclusion = _viewObjects?.Contains(source.Id) == true ? Exclusion.ViewBox : Excluded(_document, source, source.Attributes);
+            if (exclusion != Exclusion.None)
+            {
+                if (item.Definitions.Length == 0 && item.LayerPattern is null)
+                    _dropped.Add((exclusion, string.IsNullOrWhiteSpace(source.Attributes.Name) ? source.Id.ToString("D")[..8] : source.Attributes.Name));
+                Add(CapturePhase.Objects, objectsSince);
+                return;
+            }
             sourceSerial = source.RuntimeSerialNumber;
             // Only block parts are drawn as Rhino shows them; a top-level object (an id, a reference or a layer-name
             // match) is drawn whatever its visibility.
             _scope.Read(_document, source, gated: item.Definitions.Length > 0);
             // A nested object keeps its own layer (Rhino has no layer By Parent).
             var layer = _document.Layers[source.Attributes.LayerIndex];
-            item = item with { Section = SectionCapture.Capture(_document, source, item.Section), LayerIndex = layer.Index, LayerPath = layer.FullPath,
+            Add(CapturePhase.Objects, objectsSince);
+            var sectionsSince = Mark();
+            var section = _sections.Capture(source, item.Section);
+            Add(CapturePhase.Sections, sectionsSince);
+            objectsSince = Mark();
+            item = item with { Section = section, LayerIndex = layer.Index, LayerPath = layer.FullPath,
                 // Only a top-level item is "the object"; parts of a Grasshopper-made instance stay Grasshopper sources.
                 Top = item.Top ?? (item.Definitions.Length == 0 ? new(source.Id, string.IsNullOrWhiteSpace(source.Attributes.Name) ? null : source.Attributes.Name) : null) };
             value = source.Geometry;
         }
+        Add(CapturePhase.Objects, objectsSince);
         if (value is InstanceReferenceGeometry instance)
         {
+            var blocksSince = Mark();
+            try { Expand(item, instance); } finally { Add(CapturePhase.Blocks, blocksSince); }
+            return;
+        }
+        Leaf(item, value, sourceSerial);
+    }
+    private void Expand(Pending item, InstanceReferenceGeometry instance)
+    {
             var definition = _document.InstanceDefinitions.FindId(instance.ParentIdefId);
             if (definition is null || item.Definitions.Contains(instance.ParentIdefId) || item.Definitions.Length >= 256)
             { Unsupported("Invalid/cyclic block"); return; }
             _scope.Definitions.Add(definition.Id);
-            var members = definition.GetObjects();
-            if (members.Length == 0) { Unsupported("Empty/unavailable block definition " + definition.Name); return; }
-            foreach (var leaf in members.OrderBy(o => o.Id))
+            if (!_definitions.TryGetValue(definition.Id, out var members))
             {
+                members = definition.GetObjects().OrderBy(o => o.Id).Select(o => (o, IsDrawable(_document, o))).ToArray();
+                _definitions[definition.Id] = members;
                 // Parts are drawn as Rhino shows them: their own and their layers' visibility decide, so both are watched.
-                _scope.Gated.Add(leaf.Id); _scope.GateLayers.Add(leaf.Attributes.LayerIndex);
-                if (!IsDrawable(_document, leaf)) continue;
+                foreach (var (part, _) in members) { _scope.Gated.Add(part.Id); _scope.GateLayers.Add(part.Attributes.LayerIndex); }
+            }
+            if (members.Length == 0) { Unsupported("Empty/unavailable block definition " + definition.Name); return; }
+            foreach (var (leaf, drawable) in members)
+            {
+                if (!drawable) continue;
                 _pending.Enqueue(new(leaf.Id, item.Path, item.Identity + "/" + definition.Id + "/" + leaf.Id,
                     item.Chain.Append(instance.Xform).ToArray(), item.Definitions.Append(definition.Id).ToArray(), item.Section)
                     { SourceItem = item.SourceItem, Top = item.Top, LayerPattern = item.LayerPattern, LayerIndex = item.LayerIndex, LayerPath = item.LayerPath });
             }
-            return;
-        }
+    }
+    private void Leaf(Pending item, object value, uint? sourceSerial)
+    {
         GeometryBase? geometry = value switch
         {
             GeometryBase g => g,
@@ -213,29 +352,68 @@ public sealed class SceneCapture : IDisposable
             { Unsupported(PreparedScene.NonOccludingPrefix + geometry.GetType().Name); return; }
             if (geometry is not (Brep or Mesh or Curve or Surface or Extrusion or SubD or Point) || geometry is ClippingPlaneSurface)
             { Unsupported(geometry?.GetType().Name ?? value.GetType().Name); return; }
-            // Each document leaf is content-hashed once per coherent capture, including repeated definitions.
-            var fingerprint = sourceSerial is { } serial && _fingerprints.TryGetValue(serial, out var reused)
-                ? reused : GeometryFingerprint.Compute(geometry);
-            if (sourceSerial is { } capturedSerial) _fingerprints[capturedSerial] = fingerprint;
             var localId = item.Definitions.Length == 0 ? item.Identity : item.Definitions[^1] + "/" + item.Identity.Split('/')[^1];
-            var normalisationType = temporary ? value.GetType().Name : geometry.GetType().Name;
-            var key = $"{_watch.DocumentSerial}/{localId}/{fingerprint}/normalise-v2/{normalisationType}";
-            var lease = _cache.Geometry(key, () => Normalise(geometry, temporary ? value.GetType().Name : null));
-            _leaves.Add(new(item.Identity, key, item.Path, item.Chain, lease, item.Section ?? SourceSection.Plain) { SourceItem = item.SourceItem });
-            if (item.Section is { } section && sourceSerial is not null)
+            var primitive = temporary ? value.GetType().Name : null;
+            var normalisationType = primitive ?? geometry.GetType().Name;
+            var documentSerial = _watch.DocumentSerial;
+            string Key(string fingerprint) => $"{documentSerial}/{localId}/{fingerprint}/normalise-v2/{normalisationType}";
+            var section = item.Section ?? SourceSection.Plain;
+            // Document objects are fingerprinted once per object instance (serial), across captures; a known object with
+            // cached normalised geometry costs nothing more here.
+            string? known = sourceSerial is { } serial && _cache.TryFingerprint(documentSerial, serial, out var remembered) ? remembered : null;
+            if (known is not null && _cache.TryGeometry(Key(known)) is { } hit)
+                _leaves.Add(new(item.Identity, Key(known), item.Path, item.Chain, hit, section) { SourceItem = item.SourceItem });
+            else
             {
-                _colours[item.Identity] = section.Style.ObjectColour;
-                if (section.Style.Pattern is not null) _scope.UsesHatchPatterns = true;
+                // An owned copy now (the live object never leaves this thread); content fingerprint and normalisation on
+                // a background thread, joined when the scene is accepted.
+                var copySince = Mark();
+                var copy = temporary ? geometry : geometry.Duplicate();
+                if (temporary) temporary = false; // ownership moves to the background work
+                copy.EnsurePrivateCopy();
+                Add(CapturePhase.Copy, copySince);
+                var cache = _cache; var identity = item.Identity; var path = item.Path; var chain = item.Chain; var sourceItem = item.SourceItem;
+                _inflight.Add(Task.Run(() =>
+                {
+                    var owned = false;
+                    try
+                    {
+                        var since = Mark();
+                        var fingerprint = known ?? GeometryFingerprint.Compute(copy);
+                        if (sourceSerial is { } s) cache.RememberFingerprint(documentSerial, s, fingerprint);
+                        Add(CapturePhase.Fingerprint, since);
+                        since = Mark();
+                        var lease = cache.Geometry(Key(fingerprint), () => { owned = true; return NormaliseOwned(copy, primitive); });
+                        Add(CapturePhase.Normalise, since);
+                        return new SceneLeaf(identity, Key(fingerprint), path, chain, lease, section) { SourceItem = sourceItem };
+                    }
+                    finally { if (!owned) copy.Dispose(); }
+                }));
+            }
+            var recordSince = Mark();
+            if (item.Section is { } captured && sourceSerial is not null)
+            {
+                _colours[item.Identity] = captured.Style.ObjectColour;
+                if (captured.Style.Pattern is not null) _scope.UsesHatchPatterns = true;
             }
             _groups[item.Identity] = item.Top is { } top
                 ? new((int[])item.Path.Clone(), item.SourceItem, true, item.LayerIndex, item.LayerPath, top.Id, top.Name, item.LayerPattern)
                 : new((int[])item.Path.Clone(), item.SourceItem, false, item.LayerIndex, item.LayerPath, Guid.Empty, null);
+            Add(CapturePhase.Record, recordSince);
         }
         finally { if (temporary) geometry?.Dispose(); }
     }
-    private static OwnedGeometry Normalise(GeometryBase geometry, string? primitive = null)
+    private static long _normalisations;
+    /// <summary>Geometry normalised (not found in the cache) since the process started: the capture-count tests.</summary>
+    public static long Normalisations => Interlocked.Read(ref _normalisations);
+    /// <summary>Scene captures started since the process started.</summary>
+    public static long Captures => Interlocked.Read(ref _captures);
+    private static long _captures;
+
+    /// <summary>Normalises an owned copy, taking ownership of it.</summary>
+    private static OwnedGeometry NormaliseOwned(GeometryBase owned, string? primitive = null)
     {
-        var owned = geometry.Duplicate();
+        Interlocked.Increment(ref _normalisations);
         GeometryBase? converted = null;
         try
         {
@@ -256,14 +434,43 @@ public sealed class SceneCapture : IDisposable
         }
         catch { if (!ReferenceEquals(owned, converted)) converted?.Dispose(); owned.Dispose(); throw; }
     }
-    public LeaseEntry<PreparedScene>.Lease Accept()
+    /// <summary>Synchronous <see cref="AcceptAsync"/>, for tools and tests.</summary>
+    public LeaseEntry<PreparedScene>.Lease Accept() => AcceptAsync().GetAwaiter().GetResult();
+
+    /// <summary>
+    /// Checks coherence on the host thread, then joins the background fingerprints and normalisations and builds the
+    /// scene (sort, identity hash, bounds) on a background thread, so the UI thread is not blocked for it. The result
+    /// was coherent with the document at the final check; the caller still rejects it if the watch generation moved.
+    /// </summary>
+    public Task<LeaseEntry<PreparedScene>.Lease> AcceptAsync()
     {
-        var timer = Stopwatch.StartNew();
         Verify(final: true);
         if (_accepted || _pending.Count != 0) throw new InvalidOperationException("Capture is not ready for acceptance.");
+        _accepted = true;
+        var leaves = _leaves.ToList(); var inflight = _inflight.ToArray();
+        var unsupported = new Dictionary<string, int>(_unsupported, StringComparer.Ordinal);
+        var tolerance = _tolerance; var cache = _cache;
+        return Task.Run(async () =>
+        {
+            try { await Task.WhenAll(inflight).ConfigureAwait(false); }
+            catch
+            {
+                foreach (var leaf in leaves) leaf.Geometry.Dispose();
+                foreach (var task in inflight) if (task.IsCompletedSuccessfully) task.Result.Geometry.Dispose();
+                throw;
+            }
+            leaves.AddRange(inflight.Select(t => t.Result));
+            try { return Build(leaves, unsupported, tolerance, cache); }
+            catch { foreach (var leaf in leaves) leaf.Geometry.Dispose(); throw; }
+        });
+    }
+
+    private LeaseEntry<PreparedScene>.Lease Build(List<SceneLeaf> leaves, Dictionary<string, int> unsupported, double tolerance, SceneCache cache)
+    {
+        var sortSince = Mark();
         // Native coincident-edge attribution depends on insertion order. Stabilise sources as
         // well as extracted pieces, and give a permuted but identical scene the same revision.
-        _leaves.Sort((a, b) =>
+        leaves.Sort((a, b) =>
         {
             for (var i = 0; i < Math.Min(a.Path.Length, b.Path.Length); i++)
             { var order = a.Path[i].CompareTo(b.Path[i]); if (order != 0) return order; }
@@ -272,13 +479,38 @@ public sealed class SceneCapture : IDisposable
             if (result == 0) result = StringComparer.Ordinal.Compare(a.Key, b.Key);
             return result;
         });
-        static string Matrix(Transform t) => string.Join(",", Enumerable.Range(0, 4)
-            .SelectMany(r => Enumerable.Range(0, 4).Select(c => t[r, c].ToString("R", CultureInfo.InvariantCulture))));
-        var signature = string.Join("|", _leaves.Select(l => l.SourceItem + ":" + l.Identity + ":" + l.Key + ":" + l.Section.Revision + ":" + string.Join(",", l.Path) + ":" + string.Join(";", l.Chain.Select(Matrix))));
-        signature += string.Join("|", _unsupported.OrderBy(p => p.Key)) + _tolerance.ToString("R", CultureInfo.InvariantCulture);
-        var lease = _cache.Scene(SceneCache.Hash(signature), _leaves, _unsupported, _tolerance);
-        ActiveSeconds += timer.Elapsed.TotalSeconds;
-        _accepted = true; return lease;
+        Add(CapturePhase.Sort, sortSince);
+        var signatureSince = Mark();
+        // The scene identity: every leaf's item, identity, geometry key, section revision, path and instance chain,
+        // streamed into one hash (section revisions are shared between the instances of a block part).
+        string hash;
+        using (var signature = new SceneHash())
+        {
+            signature.Add("scene-v3");
+            var revisions = new Dictionary<SourceSection, string>(ReferenceEqualityComparer.Instance);
+            foreach (var l in leaves)
+            {
+                if (!revisions.TryGetValue(l.Section, out var revision)) revisions[l.Section] = revision = l.Section.Revision;
+                signature.Add(l.SourceItem); signature.Add(l.Identity); signature.Add(l.Key); signature.Add(revision);
+                signature.Add(l.Path); signature.Add(l.Chain);
+            }
+            foreach (var pair in unsupported.OrderBy(p => p.Key, StringComparer.Ordinal)) { signature.Add(pair.Key); signature.Add(pair.Value); }
+            signature.Add(tolerance);
+            hash = signature.Finish();
+        }
+        Add(CapturePhase.Signature, signatureSince);
+        var sceneSince = Mark();
+        var lease = cache.Scene(hash, leaves, unsupported, tolerance);
+        Add(CapturePhase.Scene, sceneSince);
+        return lease;
     }
-    public void Dispose() { if (!_accepted) foreach (var leaf in _leaves) leaf.Geometry.Dispose(); }
+
+    public void Dispose()
+    {
+        if (_accepted) return;
+        _accepted = true;
+        foreach (var leaf in _leaves) leaf.Geometry.Dispose();
+        foreach (var task in _inflight)
+            task.ContinueWith(t => { if (t.IsCompletedSuccessfully) t.Result.Geometry.Dispose(); }, TaskScheduler.Default);
+    }
 }

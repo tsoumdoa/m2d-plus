@@ -14,7 +14,54 @@ internal sealed record SourceSection(SectionStyleSnapshot Style, bool FromSectio
     public bool Transparent { get; init; }
     internal static SourceSection Plain { get; } = new(SectionStyleSnapshot.Default(), false,
         Array.Empty<Guid>(), Array.Empty<Guid>(), "GH geometry: ink fallback");
-    internal string Revision => System.Text.Json.JsonSerializer.Serialize(this);
+    /// <summary>Every field, for the scene identity. The style part is serialised once per distinct style value.</summary>
+    internal string Revision => StyleRevision(Style) + "|" + System.Text.Json.JsonSerializer.Serialize(this with { Style = StyleKey });
+    private static readonly SectionStyleSnapshot StyleKey = SectionStyleSnapshot.Default(0, 0);
+    private static readonly Dictionary<SectionStyleSnapshot, string> StyleRevisions = new();
+    private static string StyleRevision(SectionStyleSnapshot style)
+    {
+        lock (StyleRevisions)
+        {
+            if (StyleRevisions.TryGetValue(style, out var known)) return known;
+            if (StyleRevisions.Count > 4096) StyleRevisions.Clear();
+            return StyleRevisions[style] = System.Text.Json.JsonSerializer.Serialize(style);
+        }
+    }
+}
+
+/// <summary>
+/// Per-capture memo of <see cref="SectionCapture.Capture"/>: a part shared by many block instances is resolved once per
+/// (object, parent style) instead of once per instance (colour, print colour, section style, material and layer
+/// reads). Only the instance path (object and layer ids) differs between the instances, and that is appended here.
+/// A capture is coherent (the document can't change during it without cancelling it), so the memo lives only as long
+/// as one capture.
+/// </summary>
+internal sealed class SectionMemo(RhinoDoc document)
+{
+    private readonly Dictionary<SourceSection, int> _shapeOf = new(ReferenceEqualityComparer.Instance);
+    private readonly Dictionary<(uint Serial, int Parent), (SourceSection Shape, Guid Layer, int Id)> _shapes = new();
+    public int Hits { get; private set; }
+
+    internal SourceSection Capture(RhinoObject obj, SourceSection? parent)
+    {
+        var parentShape = parent is null ? 0 : _shapeOf.GetValueOrDefault(parent, -1);
+        if (parentShape < 0) return SectionCapture.Capture(document, obj, parent);
+        var key = (obj.RuntimeSerialNumber, parentShape);
+        if (_shapes.TryGetValue(key, out var entry)) Hits++;
+        else
+        {
+            var full = SectionCapture.Capture(document, obj, parent);
+            entry = (full with { ObjectIds = [], LayerIds = [] }, full.LayerIds[^1], _shapes.Count + 1);
+            _shapes[key] = entry;
+        }
+        var result = entry.Shape with
+        {
+            ObjectIds = (parent?.ObjectIds ?? []).Append(obj.Id).ToArray(),
+            LayerIds = (parent?.LayerIds ?? []).Append(entry.Layer).ToArray(),
+        };
+        _shapeOf[result] = entry.Id;
+        return result;
+    }
 }
 
 internal static class SectionCapture

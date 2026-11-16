@@ -125,6 +125,22 @@ public static class NativeDrawing
 {
     // Internal deterministic lifecycle instrumentation; never exposed through the product UI.
     internal static IProgress<double>? NativeProgress { get; set; }
+
+    /// <summary>The view being drawn on this flow reports its user-facing step here (UX §5.2 status).</summary>
+    private static readonly AsyncLocal<Action<string, double?>?> StepSink = new();
+    private static readonly AsyncLocal<string?> CurrentStep = new();
+    /// <summary>An engine phase started (PhaseTimings): report its step once when it changes.</summary>
+    internal static void ReportPhase(string phase)
+    {
+        if (StepSink.Value is not { } sink || ViewSteps.Of(phase) is not { } step || step == CurrentStep.Value) return;
+        CurrentStep.Value = step; sink(step, null);
+    }
+    private sealed class StepProgress(Action<string, double?> sink) : IProgress<double>
+    {
+        public void Report(double value) { NativeProgress?.Report(value); sink(ViewSteps.HiddenLines, value); }
+    }
+    /// <summary>Rhino's own HLD progress: the test hook, and the hidden-lines fraction of the current view.</summary>
+    internal static IProgress<double>? HldProgress => StepSink.Value is { } sink ? new StepProgress(sink) : NativeProgress;
     internal static Action? BeforeCompletion { get; set; }
     private static long _hldCalls;
     private static long _visibilitySolves;
@@ -146,7 +162,6 @@ public static class NativeDrawing
             views = views.ToArray();
             if (settings.IsWorker ? scene.Cost.Estimate(views.Count) > settings.Scheduler.BudgetBytes : !scene.Cost.Admitted(views.Count, settings.Scheduler.BudgetBytes))
                 throw new InvalidOperationException($"{SceneCost.Refusal} (estimate {scene.Cost.Estimate(views.Count):N0} bytes; {scene.Cost.BrepFaces} Brep faces; {scene.Cost.MeshTriangles} triangles; {views.Count} views).");
-            progress?.Report(new(JobPhase.Queued, 0, views.Count));
             return await settings.Scheduler.RunAsync(scene.Cost.Estimate(views.Count), ct =>
             {
                 var results = new List<ViewDrawing>();
@@ -154,13 +169,20 @@ public static class NativeDrawing
                 {
                     progress?.Report(new(JobPhase.Preparing, 0, scene.SourceCount));
                     var prepareTimer = Stopwatch.StartNew();
-                    var prepared = scene.Prepare(ct);
+                    var prepared = scene.Prepare(ct, (done, total) => progress?.Report(new(JobPhase.Preparing, done, total)));
+                    progress?.Report(new(JobPhase.Preparing, scene.SourceCount, scene.SourceCount));
                     double preparationSeconds = prepareTimer.Elapsed.TotalSeconds;
                     var edgeCensus = new Dictionary<double, int>(); // per distinct drawing tolerance (overrides may differ per view)
                     for (var index = 0; index < views.Count; index++)
                     {
-                        ct.ThrowIfCancellationRequested(); progress?.Report(new(JobPhase.Drawing, index, views.Count));
-                        var drawing = SolveView(scene, prepared, views[index], settings, ct);
+                        ct.ThrowIfCancellationRequested();
+                        var name = views[index].Name; var at = index;
+                        progress?.Report(new(JobPhase.Drawing, index, views.Count) { View = name });
+                        StepSink.Value = progress is null ? null : (step, fraction) => progress.Report(new(JobPhase.Drawing, at, views.Count) { View = name, Step = step, StepFraction = fraction });
+                        CurrentStep.Value = null;
+                        ViewDrawing drawing;
+                        try { drawing = SolveView(scene, prepared, views[index], settings, ct); }
+                        finally { StepSink.Value = null; CurrentStep.Value = null; }
                         drawing.Phases.Add("normalisation", preparationSeconds / views.Count);
                         results.Add(drawing);
                         if (!edgeCensus.TryGetValue(drawing.Tolerance, out var census))
@@ -172,7 +194,7 @@ public static class NativeDrawing
                     return new DrawingBatch(identity, results);
                 }
                 catch { foreach (var result in results) result.Dispose(); throw; }
-            }, token).ConfigureAwait(false);
+            }, token, ahead => progress?.Report(new(JobPhase.Queued, 0, views.Count) { Ahead = ahead })).ConfigureAwait(false);
     }
     private static ViewDrawing SolveView(PreparedScene scene, IReadOnlyList<PreparedLeaf> sources, ViewRequest view, NativeSettings settings, CancellationToken token)
     {
@@ -251,7 +273,7 @@ public static class NativeDrawing
             }
             CountHld(); result.NativeCalls++;
             phase.Next("native solve");
-            using var drawing = HiddenLineDrawing.Compute(parameters, settings.MultipleThreads, NativeProgress, token);
+            using var drawing = HiddenLineDrawing.Compute(parameters, settings.MultipleThreads, HldProgress, token);
             phase.Next("output construction");
             token.ThrowIfCancellationRequested();
             if (drawing is null) throw new InvalidOperationException("Native HLD returned null without cancellation.");
