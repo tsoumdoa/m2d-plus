@@ -1,5 +1,26 @@
 # Worker benchmark
 
+Curved native HLD investigation: see `docs/research/native-curved-hld.md`.
+`hld <resolver> <model.3dm> <output-folder> <variant[,variant...]>` records a
+parallel North view with raw HLD parameters, progress, counts, exact curve
+archives and sampled loci. `command-owned` runs the actual scripted Make2D
+command in an isolated hidden UI host; `command-headless` records why the
+NoWindow/headless route fails. `HLD_COMMAND_SCRIPT` overrides the complete
+command script. `export-command` exports an already archived command result,
+undoing only its known viewport placement. `audit` compares alternating old/new
+independent ray audits on identical drawing bytes. No flag changes production
+defaults. Keep at most two owned Rhino hosts running. `HLD_SKIP_TESSELLATION=1`
+retains native timings/counts and exact curves without expensive diagnostic
+polyline export; such rows cannot enter sampled comparisons. Compute timing is
+flushed before extraction so an export failure cannot erase it.
+
+`hld-report.py <evidence-root> --scene mm-steel` checks both directions by class,
+using NumPy and Shapely 2. For `mm-curved-M`, add `--skip-vertices` to use arc
+samples without every polyline vertex. These are sampled regressions, not
+certificates. `--tables-only` refreshes `measurements.md` and `phases.csv` without
+repeating locus queries. A tenfold tolerance, mesh or compound-Brep probe is an
+explicit geometry/output experiment, never an equivalence claim.
+
 Unit/offset investigation: see `docs/research/units-and-solve-latency.md`.
 `scale <resolver> <model.3dm> <new-output-folder> [indices=5]` records capture,
 production/local/native timings, complete Info and all eight worker requests.

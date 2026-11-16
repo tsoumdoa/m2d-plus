@@ -16,6 +16,47 @@ public sealed class NativeVisibilityVerifierTests(RhinoHost host)
     };
     private static VisibilityInput Input(GeometryBase g, int i = 0) => new(g,new(i.ToString(),[i],g));
 
+    [RhinoFact] public void EarlyOffsetRejectionPreservesDecisionsWitnessesAndOriginalBudgetCoverage() => host.Run(() =>
+    {
+        using var body=new BoundingBox(new Point3d(-1,-1,-1),new Point3d(1,1,1)).ToBrep();
+        using var a=Output();using var b=Output();
+        using var exhaustive=new NativeVisibilityVerifier([Input(body)],a,new(MaxRayTests:15){ExhaustiveOffsets=true},default,new PlanarExtraction());
+        using var shortcut=new NativeVisibilityVerifier([Input(body)],b,new(MaxRayTests:15),default,new PlanarExtraction());
+        foreach(var point in new[]{new Point3d(0,0,1-2e-6),new Point3d(0,0,0),new Point3d(1-2e-6,0,0),new Point3d(0,0,0)})
+        {
+            Assert.Equal(exhaustive.Check(point,default,out var expected),shortcut.Check(point,default,out var actual));
+            Assert.Equal(expected,actual);
+        }
+        Assert.True(shortcut.NativeCasts<exhaustive.NativeCasts);
+        exhaustive.Report();shortcut.Report();
+        // Coverage and all logical work caps remain identical, including the
+        // fourth sample that is rejected by the original 15-ray budget.
+        Assert.Equal(a.Diagnostics.Single().Split("; native casts=")[0],b.Diagnostics.Single().Split("; native casts=")[0]);
+    });
+
+    [RhinoTheory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void CurvedAuditEarlyExitKeepsCompleteDrawingBytesAndUnsampledWarnings(bool freeform) => host.Run(() =>
+    {
+        var points=Enumerable.Range(0,4).SelectMany(i=>Enumerable.Range(0,4).Select(j=>
+        {
+            double x=-1+2*i/3d,y=-1+2*j/3d;
+            return new Point3d(x,y,.3*x*y+.1*x*x*y*y);
+        }));
+        using var surface=NurbsSurface.CreateFromPoints(points,4,4,3,3);
+        using var body=freeform?surface.ToBrep():new Sphere(Point3d.Origin,1).ToBrep();
+        using var curve=new LineCurve(new Point3d(-1.1,0,-2),new Point3d(1.1,0,-2));
+        using var initial=Output();
+        initial.Pieces.Add(new(curve.DuplicateCurve(),Input(curve,1).Source,LineClass.Visible,curve.DuplicateCurve()));
+        var bytes=WorkerCodec.CaptureDrawing(initial);
+        using var exhaustive=WorkerCodec.RestoreDrawing(bytes);using var shortcut=WorkerCodec.RestoreDrawing(bytes);
+        NativeVisibilityVerifier.Apply([Input(body),Input(curve,1)],exhaustive,new(){Verification=new(MaxRayTests:100){ExhaustiveOffsets=true}},default);
+        NativeVisibilityVerifier.Apply([Input(body),Input(curve,1)],shortcut,new(){Verification=new(MaxRayTests:100)},default);
+        Assert.Equal(WorkerCodec.CaptureDrawing(exhaustive,true),WorkerCodec.CaptureDrawing(shortcut,true));
+        Assert.Contains(shortcut.Diagnostics,d=>d.Contains("unsampled interiors retain native confidence",StringComparison.Ordinal));
+    });
+
     [RhinoFact] public void CurvedRayContradictionsSplitOnlyTheNeighbourhoodAndNeverFlipConfidence() => host.Run(() =>
     {
         using var sphere = new Sphere(Point3d.Origin,1).ToBrep();
