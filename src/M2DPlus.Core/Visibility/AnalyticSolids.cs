@@ -394,8 +394,10 @@ public sealed class AnalyticOccluders
         {
             if (id == except) continue;
             bool own = id == candidate.Solid; var solid = _solids[id];
-            var k = solid.Occlusion(p, tolerance, own ? candidate.OnSurface : 0, own && candidate.Tangent);
-            for (int side = 0; slack > 0 && side < 4 && k != VisibilityClass.Unresolved; side++)
+            var k = solid is AnalyticCsg csg && slack > 0
+                ? csg.Evaluate(p, slack, p.Z, p.Z, tolerance, own ? candidate.OnSurface : 0, own && candidate.Tangent)
+                : solid.Occlusion(p, tolerance, own ? candidate.OnSurface : 0, own && candidate.Tangent);
+            for (int side = 0; slack > 0 && solid is not AnalyticCsg && side < 4 && k != VisibilityClass.Unresolved; side++)
             {
                 double dx = side == 0 ? slack : side == 1 ? -slack : 0, dy = side == 2 ? slack : side == 3 ? -slack : 0;
                 if (solid.Occlusion(new(p.X + dx, p.Y + dy, p.Z), tolerance) != k) k = VisibilityClass.Unresolved;
@@ -426,15 +428,29 @@ public sealed class AnalyticOccluders
         Near(Math.Min(a.X, b.X) - slack, Math.Min(a.Y, b.Y) - slack, Math.Max(a.X, b.X) + slack, Math.Max(a.Y, b.Y) + slack, Math.Min(a.Z, Math.Min(b.Z, candidate.M.Z)), tolerance, near);
         if (except >= 0) near.Remove(except);
         if (near.Count == 0 || length == 0) { output.Add(new(0, 1, near.Count == 0 ? VisibilityClass.Visible : Classify(candidate, candidate.M, near, tolerance, slack, except))); return output; }
-        var ts = new List<double> { 0, 1 };
-        foreach (int id in near) _solids[id].Events(a, d, tolerance, ts);
-        ts.Sort();
         if (absorb < 0) absorb = tolerance;
         double step = tolerance / 4 / length;
-        for (int i = 0; i + 1 < ts.Count; i++)
+        // Solids with closed-form change points are solved between their events. Cut solids (AnalyticCsg) have change
+        // points that are not closed-form: they are solved by bisection with a certificate for each piece. The two
+        // results are then united.
+        var cut = near.Where(id => _solids[id] is AnalyticCsg).ToList();
+        if (cut.Count != 0) near = near.Where(id => _solids[id] is not AnalyticCsg).ToList();
+        if (near.Count != 0 || cut.Count == 0)
         {
-            token.ThrowIfCancellationRequested();
-            if (ts[i + 1] - ts[i] > 0) Refine(candidate, ts[i], ts[i + 1], step, near, tolerance, slack, except, output, 0);
+            var ts = new List<double> { 0, 1 };
+            foreach (int id in near) _solids[id].Events(a, d, tolerance, ts);
+            ts.Sort();
+            for (int i = 0; i + 1 < ts.Count; i++)
+            {
+                token.ThrowIfCancellationRequested();
+                if (ts[i + 1] - ts[i] > 0) Refine(candidate, ts[i], ts[i + 1], step, near, tolerance, slack, except, output, 0);
+            }
+        }
+        if (cut.Count != 0)
+        {
+            var certified = new List<AnalyticInterval>();
+            Certify(candidate, 0, 1, step, cut, tolerance, slack, certified, 0, token);
+            output = output.Count == 0 ? certified : Unite(output, certified);
         }
         // Join equal neighbours, then share short undecided runs.
         var joined = new List<AnalyticInterval>();
@@ -468,6 +484,64 @@ public sealed class AnalyticOccluders
         double tm = (t0 + t1) / 2;
         Refine(candidate, t0, tm, step, near, tolerance, slack, except, output, depth + 1);
         Refine(candidate, tm, t1, step, near, tolerance, slack, except, output, depth + 1);
+    }
+
+    /// <summary>
+    /// Bisection with a certificate. A piece [t0, t1] of the candidate lies within a sideways radius and a depth range
+    /// of its middle; when every cut solid gives one answer for all rays in that set, the whole piece has it. A piece
+    /// no longer than a quarter of a tolerance that still has no certificate is decided at its middle, as the
+    /// closed-form route decides its shortest pieces.
+    /// </summary>
+    private void Certify(in AnalyticCandidate candidate, double t0, double t1, double step, List<int> cut, double tolerance, double slack, List<AnalyticInterval> output, int depth, CancellationToken token)
+    {
+        token.ThrowIfCancellationRequested();
+        var p0 = candidate.At(t0); var p1 = candidate.At(t1); var pm = candidate.At((t0 + t1) / 2);
+        // A parabola piece stays within the larger end distance plus twice its sag about the middle.
+        double sagX = (p0.X + p1.X) / 2 - pm.X, sagY = (p0.Y + p1.Y) / 2 - pm.Y, sagZ = Math.Abs((p0.Z + p1.Z) / 2 - pm.Z);
+        double lateral = Math.Max(Math.Sqrt((p0.X - pm.X) * (p0.X - pm.X) + (p0.Y - pm.Y) * (p0.Y - pm.Y)), Math.Sqrt((p1.X - pm.X) * (p1.X - pm.X) + (p1.Y - pm.Y) * (p1.Y - pm.Y)))
+            + 2 * Math.Sqrt(sagX * sagX + sagY * sagY);
+        lateral = lateral * (1 + 1e-12) + slack;
+        double zLow = Math.Min(pm.Z, Math.Min(p0.Z, p1.Z)) - 2 * sagZ, zHigh = Math.Max(pm.Z, Math.Max(p0.Z, p1.Z)) + 2 * sagZ;
+        var result = Cut(candidate, pm, lateral, zLow, zHigh, cut, tolerance);
+        if (result == VisibilityClass.Unresolved && t1 - t0 > step && depth < 60)
+        {
+            double tm = (t0 + t1) / 2;
+            Certify(candidate, t0, tm, step, cut, tolerance, slack, output, depth + 1, token);
+            Certify(candidate, tm, t1, step, cut, tolerance, slack, output, depth + 1, token);
+            return;
+        }
+        if (result == VisibilityClass.Unresolved) result = Cut(candidate, pm, slack, pm.Z, pm.Z, cut, tolerance);
+        output.Add(new(t0, t1, result));
+    }
+
+    private VisibilityClass Cut(in AnalyticCandidate candidate, Vertex p, double lateral, double zLow, double zHigh, List<int> cut, double tolerance)
+    {
+        var result = VisibilityClass.Visible;
+        foreach (int id in cut)
+        {
+            bool own = id == candidate.Solid;
+            var k = ((AnalyticCsg)_solids[id]).Evaluate(p, lateral, zLow, zHigh, tolerance, own ? candidate.OnSurface : 0, own && candidate.Tangent);
+            if (k == VisibilityClass.Hidden) return VisibilityClass.Hidden;
+            if (k == VisibilityClass.Unresolved) result = VisibilityClass.Unresolved;
+        }
+        return result;
+    }
+
+    /// <summary>The union of two interval lists over [0, 1]: Hidden if either is, else Unresolved if either is.</summary>
+    private static List<AnalyticInterval> Unite(List<AnalyticInterval> first, List<AnalyticInterval> second)
+    {
+        static VisibilityClass Both(VisibilityClass x, VisibilityClass y) =>
+            x == VisibilityClass.Hidden || y == VisibilityClass.Hidden ? VisibilityClass.Hidden : x == VisibilityClass.Unresolved || y == VisibilityClass.Unresolved ? VisibilityClass.Unresolved : VisibilityClass.Visible;
+        var united = new List<AnalyticInterval>(first.Count + second.Count); int i = 0, j = 0; double at = 0;
+        while (i < first.Count && j < second.Count)
+        {
+            double end = Math.Min(first[i].End, second[j].End);
+            if (end > at) united.Add(new(at, end, Both(first[i].Class, second[j].Class)));
+            at = Math.Max(at, end);
+            if (first[i].End <= end) i++;
+            if (j < second.Count && second[j].End <= end) j++;
+        }
+        return united;
     }
 
     private static Vertex Sub(Vertex a, Vertex b) => new(a.X - b.X, a.Y - b.Y, a.Z - b.Z);

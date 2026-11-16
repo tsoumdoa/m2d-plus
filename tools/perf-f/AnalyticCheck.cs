@@ -86,6 +86,84 @@ internal static class AnalyticCheck
                     Console.WriteLine($"        face {face.FaceIndex}: {kind}; loops {face.Loops.Count}; edges {face.AdjacentEdges().Length}; area {AreaMassProperties.Compute(face)?.Area:F3}");
                 }
             }
+        if (variants.Contains("fit"))
+        {   // Stage 2 probe: every face against every exact cylinder and plane found anywhere in the scene.
+            var cylinders = new List<(Line Axis, double R, string From)>(); var planes = new List<(Plane P, string From)>();
+            foreach (var leaf in prepared)
+                if (leaf.Geometry is Brep b)
+                    foreach (var face in b.Faces)
+                    {
+                        if (face.TryGetPlane(out var pl, tol)) { if (!planes.Any(k => Math.Abs(k.P.DistanceTo(pl.Origin)) < tol && k.P.Normal.IsParallelTo(pl.Normal, 1e-9) != 0)) planes.Add((pl, $"{leaf.Identity[^12..]}/{face.FaceIndex}")); }
+                        else if (face.TryGetCylinder(out var cy, tol))
+                        {
+                            var u = cy.Axis; u.Unitize(); var axis = new Line(cy.Center, cy.Center + u);
+                            if (!cylinders.Any(k => Math.Abs(k.R - cy.Radius) < tol && k.Axis.Direction.IsParallelTo(u, 1e-9) != 0 && k.Axis.DistanceTo(cy.Center, false) < tol)) cylinders.Add((axis, cy.Radius, $"{leaf.Identity[^12..]}/{face.FaceIndex}"));
+                        }
+                    }
+            // Each tube's other radius on the same axis too (a bore that is only a NURBS face).
+            foreach (var c in cylinders.ToArray())
+                foreach (double r in cylinders.Select(k => k.R).Distinct().ToArray())
+                    if (!cylinders.Any(k => Math.Abs(k.R - r) < tol && k.Axis.Direction.IsParallelTo(c.Axis.Direction, 1e-9) != 0 && k.Axis.DistanceTo(c.Axis.From, false) < tol)) cylinders.Add((c.Axis, r, c.From + "*"));
+            Console.WriteLine($"    FIT pool: {cylinders.Count} cylinders, {planes.Count} planes");
+            foreach (var leaf in prepared)
+            {
+                if (leaf.Geometry is not Brep brep) continue;
+                Console.WriteLine($"    FIT BODY {leaf.Identity[^12..]} faces {brep.Faces.Count} max edge tolerance {brep.Edges.Max(e => e.Tolerance):R} max vertex tolerance {brep.Vertices.Max(v => v.Tolerance):R}");
+                var match = new string[brep.Faces.Count];
+                foreach (var face in brep.Faces)
+                {
+                    var points = new List<Point3d>(); var du = face.Domain(0); var dv = face.Domain(1);
+                    for (int i = 0; i <= 40; i++)
+                        for (int j = 0; j <= 40; j++)
+                        {
+                            double u = du.ParameterAt(i / 40.0), v = dv.ParameterAt(j / 40.0);
+                            if (face.IsPointOnFace(u, v) != PointFaceRelation.Exterior) points.Add(face.PointAt(u, v));
+                        }
+                    foreach (var loop in face.Loops) foreach (var trim in loop.Trims) if (trim.Edge is { } trimEdge) for (int k = 0; k <= 16; k++) points.Add(trimEdge.PointAt(trimEdge.Domain.ParameterAt(k / 16.0)));
+                    var best = cylinders.Select(c => (Name: $"cylinder r={c.R:F4} of {c.From}", Dev: points.Max(q => Math.Abs(c.Axis.DistanceTo(q, false) - c.R))))
+                        .Concat(planes.Select(p => (Name: $"plane of {p.From}", Dev: points.Max(q => Math.Abs(p.P.DistanceTo(q))))))
+                        .OrderBy(x => x.Dev).First();
+                    var nurbs = face.UnderlyingSurface() as NurbsSurface;
+                    bool isExact = face.TryGetPlane(out _, tol) || face.TryGetCylinder(out _, tol);
+                    match[face.FaceIndex] = best.Name;
+                    if (!isExact && best.Dev > 1e-2 && nurbs is not null)
+                    {   // Rulings of a degree-1 direction, in the frame of the body's own tube: where do the two ends of
+                        // each ruling sit (radius, height, angle), and which pool surfaces do the two boundary curves lie on?
+                        var own = cylinders.Where(k => k.From.StartsWith(leaf.Identity[^12..], StringComparison.Ordinal) && !k.From.EndsWith('*')).OrderByDescending(k => k.R).First();
+                        var u = own.Axis.Direction; u.Unitize(); var frame = new Plane(own.Axis.From, u);
+                        int ruled = nurbs.Degree(0) == 1 ? 0 : nurbs.Degree(1) == 1 ? 1 : -1; if (ruled < 0) { Console.WriteLine("            not ruled"); continue; }
+                        var dr = nurbs.Domain(ruled); var dc = nurbs.Domain(1 - ruled); double worstH = 0, worstA = 0, worstStraight = 0; var ends = new[] { new List<Point3d>(), new List<Point3d>() };
+                        for (int k = 0; k <= 64; k++)
+                        {
+                            double c = dc.ParameterAt(k / 64.0);
+                            Point3d At(double r) => ruled == 0 ? nurbs.PointAt(r, c) : nurbs.PointAt(c, r);
+                            var a = At(dr.Min); var b = At(dr.Max); var mid = At(dr.Mid); ends[0].Add(a); ends[1].Add(b);
+                            (double H, double Angle, double Rho) Polar(Point3d q) { var d = q - own.Axis.From; double x = d * frame.XAxis, y = d * frame.YAxis; return (d * u, Math.Atan2(y, x), Math.Sqrt(x * x + y * y)); }
+                            var pa = Polar(a); var pb = Polar(b); double da = Math.Abs(pa.Angle - pb.Angle); if (da > Math.PI) da = 2 * Math.PI - da;
+                            worstH = Math.Max(worstH, Math.Abs(pa.H - pb.H)); worstA = Math.Max(worstA, da * own.R); worstStraight = Math.Max(worstStraight, new Line(a, b).DistanceTo(mid, false));
+                        }
+                        for (int row = 0; row < 2; row++)
+                        {   // Each end of the ruled surface as a curve: circle, ellipse, or neither.
+                            using var iso = nurbs.IsoCurve(1 - ruled, row == 0 ? dr.Min : dr.Max);
+                            string what = iso.TryGetCircle(out var circle, 1e-6) ? $"circle r={circle.Radius:F6} centre {circle.Center} normal ({circle.Normal.X:F7}, {circle.Normal.Y:F7}, {circle.Normal.Z:F7})"
+                                : iso.TryGetEllipse(out var ellipse, 1e-6) ? $"ellipse {ellipse.Radius1:F6} x {ellipse.Radius2:F6} centre {ellipse.Plane.Origin} normal ({ellipse.Plane.Normal.X:F7}, {ellipse.Plane.Normal.Y:F7}, {ellipse.Plane.Normal.Z:F7})"
+                                : iso.TryGetArc(out var arcIso, 1e-6) ? $"arc r={arcIso.Radius:F6} angle {arcIso.Angle:F4} centre {arcIso.Center}" : "neither circle nor ellipse; planar " + iso.IsPlanar(1e-6);
+                            Console.WriteLine($"            end {row}: {what}; closed {iso.IsClosed}");
+                        }
+                        Console.WriteLine($"            ruling direction at start ({(nurbs.PointAt(ruled == 0 ? dr.Max : dc.Min, ruled == 0 ? dc.Min : dr.Max) - nurbs.PointAt(ruled == 0 ? dr.Min : dc.Min, ruled == 0 ? dc.Min : dr.Min))}); own axis ({u.X:F7}, {u.Y:F7}, {u.Z:F7})");
+                        Console.WriteLine($"            rulings in own tube frame: height change across a ruling up to {worstH:E3}, sideways shift up to {worstA:E3}, straightness {worstStraight:E3}");
+                        for (int side = 0; side < 2; side++)
+                        {
+                            var fits = cylinders.Select(c => (Name: $"cylinder r={c.R:F4} of {c.From}", Dev: ends[side].Max(q => Math.Abs(c.Axis.DistanceTo(q, false) - c.R))))
+                                .Concat(planes.Select(p => (Name: $"plane of {p.From}", Dev: ends[side].Max(q => Math.Abs(p.P.DistanceTo(q))))))
+                                .OrderBy(x => x.Dev).Take(3).ToArray();
+                            Console.WriteLine($"            boundary {side}: " + string.Join("; ", fits.Select(f => $"{f.Name} dev {f.Dev:E2}")));
+                        }
+                    }
+                }
+            }
+            return;
+        }
         var off = new NativeSettings { Analytic = false }; var on = new NativeSettings();
         using (var cold = SolveView(scene, prepared, view, off, timeout)) { }
         (ViewDrawing Drawing, double Wall, string Busy) Timed(NativeSettings settings)
