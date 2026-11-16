@@ -222,7 +222,7 @@ public sealed class GrasshopperUiTests(RhinoHost host)
         for (var i = 0; i < states.Length; i++)
         {
             var (caption, message, phase, fraction) = states[i];
-            var x = 140 + i % 3 * 240f; var y = 100 + i / 3 * 300f; // room for layout B (UX §1) and its caption
+            var x = 160 + i % 3 * 290f; var y = 100 + i / 3 * 320f; // room for layout B (UX §1), its running footer and caption
             var component = NewComponent(document, x, y);
             Assert.Equal(5, component.Params.Input.Count);
             dynamic ui = ((dynamic)component).Ui;

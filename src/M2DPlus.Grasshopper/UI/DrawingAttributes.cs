@@ -33,8 +33,14 @@ public sealed class DrawingAttributes : GH_ComponentAttributes
     /// <summary>The footer is laid out for this status, so the width never jumps while a job reports progress; a longer
     /// message shrinks to 85 %, then ends in an ellipsis.</summary>
     public const string ReferenceStatus = "88 drawings · 88.8 s";
+    /// <summary>Row 2 is laid out for a typical step and estimate side by side (longer steps are shortened).</summary>
+    public const string ReferenceStep = "hidden lines 100 %", ReferenceEta = "~55 s left";
     private readonly Func<DrawingUi> _ui;
     private RectangleF _footer, _button, _centre;
+    /// <summary>The layout was made for a running job: the footer has its second row.</summary>
+    private bool _layoutRunning;
+    /// <summary>For tests: what the footer last drew in each place (row 1; row 2 left; row 2 right).</summary>
+    public (string? Row1, string? Row2, string? Eta) LastRows { get; private set; }
     private FooterButton _shown;
     private bool _pressed;
     private GH_Canvas? _canvas;
@@ -87,7 +93,11 @@ public sealed class DrawingAttributes : GH_ComponentAttributes
         var centre = CentreWidth + 2 * Margin;
         var content = inColumn + centre + outColumn;
         var footerWidth = 2 * Margin + TextWidth(ReferenceStatus, LabelFont) + Margin + ButtonWidth + Margin;
-        var width = (float)Math.Ceiling(Math.Max(content, footerWidth));
+        // While running, row 1 shows every stage's full counts, and row 2 a step, its percentage and the estimate
+        // beside the button: the width is reserved for the widest of them, so nothing jumps while a job runs.
+        var runningWidth = Math.Max(4 * Margin + TextWidth(StatusText.WidestCore, LabelFont),
+            2 * Margin + TextWidth(ReferenceStep, LabelFont) + 2 * Margin + TextWidth(ReferenceEta, LabelFont) + Margin + ButtonWidth + Margin);
+        var width = (float)Math.Ceiling(Math.Max(content, Math.Max(footerWidth, runningWidth)));
         var extra = (width - content) / 2;
         inColumn += extra; outColumn += extra;
         // GH's convention: the pivot is the centre of the name/icon box, so saved definitions keep their place.
@@ -114,15 +124,22 @@ public sealed class DrawingAttributes : GH_ComponentAttributes
             var b = output.Attributes.Bounds;
             output.Attributes.Bounds = RectangleF.FromLTRB(b.Left, b.Top, left + width, b.Bottom);
         }
-        _footer = new RectangleF(left, top + height, width, Footer);
-        _button = new RectangleF(_footer.Right - Margin - ButtonWidth, _footer.Top + Margin, ButtonWidth, Footer - 2 * Margin);
-        Bounds = new RectangleF(left, top, width, height + Footer);
+        // While a job runs the footer grows downwards by one row (UX §1): the rows above, and so every grip and wire,
+        // stay where they are. Row 1 is one 20-unit row; row 2 is the idle footer's band, so the button keeps its size
+        // and inset in every state.
+        _layoutRunning = Ui.CurrentRuntime.Phase == DrawingPhase.Running;
+        var footerHeight = _layoutRunning ? Footer + Row : Footer;
+        _footer = new RectangleF(left, top + height, width, footerHeight);
+        _button = new RectangleF(_footer.Right - Margin - ButtonWidth, _footer.Bottom - Footer + Margin, ButtonWidth, Footer - 2 * Margin);
+        Bounds = new RectangleF(left, top, width, height + footerHeight);
     }
 
     protected override void Render(GH_Canvas canvas, Graphics graphics, GH_CanvasChannel channel)
     {
         if (channel != GH_CanvasChannel.Objects) { base.Render(canvas, graphics, channel); return; }
         if (canvas.DrawingMode == GH_CanvasMode.Control) _canvas = canvas;
+        // A job started or ended: the footer gains or loses its second row (only the body's bottom edge moves).
+        if ((Ui.CurrentRuntime.Phase == DrawingPhase.Running) != _layoutRunning) { ExpireLayout(); PerformLayout(); }
         var visible = Bounds;
         // Off-screen: nothing to draw or click; the last painted button stays as it was.
         if (!canvas.Viewport.IsVisible(ref visible, 10)) return;
@@ -182,7 +199,6 @@ public sealed class DrawingAttributes : GH_ComponentAttributes
 
     private void RenderFooter(Graphics graphics, string? message, DrawingRuntime runtime, GH_PaletteStyle style)
     {
-        _shown = FooterButton.None;
         // The band is the capsule's own edge colour, clipped to the capsule's rounded bottom corners.
         using (var shape = Rounded(Bounds, Radius))
         {
@@ -195,7 +211,9 @@ public sealed class DrawingAttributes : GH_ComponentAttributes
             graphics.DrawPath(edge, shape);
         }
         var alpha = GH_Canvas.ZoomFadeMedium;
+        // Zoomed too far out to show text: nothing new is drawn, so the last drawn button stays as it was.
         if (alpha < 5) return;
+        _shown = FooterButton.None;
         var ink = GH_GraphicsUtil.ForegroundColour(style.Edge, 230);
         var button = RuntimeModel.Button(runtime);
         var statusRight = _footer.Right - Margin;
@@ -223,16 +241,33 @@ public sealed class DrawingAttributes : GH_ComponentAttributes
             using var label = new SolidBrush(Fade(primary ? Color.White : ink, alpha));
             graphics.DrawString(RuntimeModel.Label(button), BoldFont, label, _button, GH_TextRenderingConstants.CenterCenter);
         }
-        var area = RectangleF.FromLTRB(_footer.Left + 2 * Margin, _footer.Top, statusRight, _footer.Bottom);
-        if (area.Width <= 4) return;
-        // While a job runs: the longest form of the status that fits (detail, then view, then estimate go first).
-        if (runtime.Status is { } line) message = line.Fit(t => TextWidth(t, LabelFont), area.Width);
-        if (string.IsNullOrWhiteSpace(message)) return;
-        var ratio = area.Width / Math.Max(1, TextWidth(message, LabelFont));
-        using var shrunk = ratio < 1 ? new Font(LabelFont.FontFamily, LabelFont.Size * Math.Max(.85f, ratio), LabelFont.Style, LabelFont.Unit) : null;
-        using var format = new StringFormat(GH_TextRenderingConstants.NearCenter) { Trimming = StringTrimming.EllipsisCharacter, FormatFlags = StringFormatFlags.NoWrap };
         using var status = new SolidBrush(Fade(Color.FromArgb(215, ink), alpha));
-        graphics.DrawString(message, shrunk ?? LabelFont, status, area, format);
+        using var format = new StringFormat(GH_TextRenderingConstants.NearCenter) { Trimming = StringTrimming.EllipsisCharacter, FormatFlags = StringFormatFlags.NoWrap };
+        float Measure(string text) => TextWidth(text, LabelFont);
+        if (runtime.Status is { } line && _layoutRunning)
+        {
+            // Row 1: what is being processed (the stage with its full counts, and the view). Row 2: how far (the step
+            // and its percentage on the left, the estimate right-aligned before the button). One font size throughout.
+            var row1 = RectangleF.FromLTRB(_footer.Left + 2 * Margin, _footer.Top + Progress, _footer.Right - 2 * Margin, _footer.Top + Row);
+            var row2 = RectangleF.FromLTRB(_footer.Left + 2 * Margin, _footer.Bottom - Footer, statusRight, _footer.Bottom);
+            var first = line.Row1(Measure, row1.Width);
+            graphics.DrawString(first, LabelFont, status, row1, format);
+            var etaWidth = line.Eta is { } eta ? Measure(eta) : 0;
+            if (line.Eta is not null)
+            {
+                using var right = new StringFormat(GH_TextRenderingConstants.FarCenter) { FormatFlags = StringFormatFlags.NoWrap };
+                graphics.DrawString(line.Eta, LabelFont, status, row2, right);
+            }
+            var second = line.Row2(Measure, row2.Width - (etaWidth > 0 ? etaWidth + 2 * Margin : 0));
+            if (second is not null) graphics.DrawString(second, LabelFont, status, row2, format);
+            LastRows = (first, second, line.Eta);
+            return;
+        }
+        var area = RectangleF.FromLTRB(_footer.Left + 2 * Margin, _footer.Top, statusRight, _footer.Bottom);
+        if (area.Width <= 4 || string.IsNullOrWhiteSpace(message)) { LastRows = (null, null, null); return; }
+        // One row when idle or done, in the same font size (an ellipsis only as a last resort).
+        graphics.DrawString(message, LabelFont, status, area, format);
+        LastRows = (message, null, null);
     }
 
     /// <summary>Along the footer's top edge, full width (clipped to the capsule by the caller). The bar fills to the

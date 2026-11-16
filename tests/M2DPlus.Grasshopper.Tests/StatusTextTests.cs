@@ -4,56 +4,64 @@ using Xunit;
 
 namespace M2DPlus.Grasshopper.Tests;
 
-/// <summary>The footer status line for every job stage (owner feedback on beta.1, UX §5.2) and how it fits layout B's
-/// fixed width.</summary>
+/// <summary>The running footer's two rows for every job stage (owner feedback on beta.1, UX §5.2): row 1 says what is
+/// being processed, row 2 how far along; counts are never shortened.</summary>
 public sealed class StatusTextTests
 {
     [Fact]
-    public void EveryStageSaysWhatIsBeingProcessed()
+    public void RowOneSaysWhatWithFullCounts()
     {
-        Assert.Equal("Loading objects 2,400 / 6,000", StatusText.Of(new(JobPhase.Reading, 2400, 6000)).Full);
-        Assert.Equal("Loading objects 120…", StatusText.Of(new(JobPhase.Reading, 120, 0)).Full);
-        Assert.Equal("Waiting for another drawing (2 ahead)…", StatusText.Of(new(JobPhase.Queued, 0, 8) { Ahead = 2 }).Full);
-        Assert.Equal("Waiting for another drawing…", StatusText.Of(new(JobPhase.Queued, 0, 8)).Full);
-        Assert.Equal("Preparing geometry 3,100 / 6,000", StatusText.Of(new(JobPhase.Preparing, 3100, 6000)).Full);
-        Assert.Equal("Drawing 3 / 8 · Section A · hidden lines 45 %",
-            StatusText.Of(new(JobPhase.Drawing, 2, 8) { View = "Section A", Step = ViewSteps.HiddenLines, StepFraction = .456 }).Full);
-        Assert.Equal("Drawing 3 / 8 · Section A · sections", StatusText.Of(new(JobPhase.Drawing, 2, 8) { View = "Section A", Step = ViewSteps.Sections }).Full);
-        Assert.Equal("Drawing 5 / 8 on 3 workers", StatusText.Of(new(JobPhase.Drawing, 5, 8) { Workers = 3 }).Full);
-        Assert.Equal("Drawing 0 / 8 on 3 workers · sending scene", StatusText.Of(new(JobPhase.Drawing, 0, 8) { Workers = 3, Step = "sending scene" }).Full);
-        Assert.Equal("Building output…", StatusText.Of(new(JobPhase.Output, 0, 0)).Full);
+        Assert.Equal("Loading objects 2,400 / 6,000", StatusText.Of(new(JobPhase.Reading, 2400, 6000)).Core);
+        Assert.Equal("Loading objects 120", StatusText.Of(new(JobPhase.Reading, 120, 0)).Core);
+        Assert.Equal("Waiting for another drawing (1 ahead)", StatusText.Of(new(JobPhase.Queued, 0, 8) { Ahead = 1 }).Core);
+        Assert.Equal("Waiting for another drawing", StatusText.Of(new(JobPhase.Queued, 0, 8)).Core);
+        Assert.Equal("Preparing geometry 3,100 / 6,000", StatusText.Of(new(JobPhase.Preparing, 3100, 6000)).Core);
+        var drawing = StatusText.Of(new(JobPhase.Drawing, 2, 8) { View = "Section A", Step = ViewSteps.HiddenLines, StepFraction = .456 }, 41);
+        Assert.Equal(("Drawing 3 / 8", "Section A", "hidden lines 45 %", "~40 s left"), (drawing.Core, drawing.View, drawing.Detail, drawing.Eta));
+        Assert.Equal("Drawing 3 / 8 · Section A · hidden lines 45 % · ~40 s left", drawing.Full);
+        var workers = StatusText.Of(new(JobPhase.Drawing, 5, 8) { Workers = 3, Step = "sending scene" });
+        Assert.Equal(("Drawing 5 / 8 · 3 workers", "sending scene"), (workers.Core, workers.Detail));
+        Assert.Equal("Building output", StatusText.Of(new(JobPhase.Output, 0, 0)).Core);
         Assert.Equal("Drawing 8 / 8", StatusText.Of(new(JobPhase.Drawing, 8, 8)).Core);
-    }
-
-    [Fact]
-    public void TheEstimateIsAppendedWhenKnown()
-    {
-        Assert.Equal("Drawing 3 / 8 · Section A · hidden lines 45 % · ~40 s left",
-            StatusText.Of(new(JobPhase.Drawing, 2, 8) { View = "Section A", Step = ViewSteps.HiddenLines, StepFraction = .45 }, 41).Full);
         Assert.Null(StatusText.Of(new(JobPhase.Drawing, 2, 8)).Eta);
     }
+
+    [Theory]
+    [InlineData(0, "0")]
+    [InlineData(6000, "6,000")]
+    [InlineData(99_999, "99,999")]
+    [InlineData(123_456, "123.5k")]
+    [InlineData(2_400_000, "2400k")]
+    public void CountsAreWholeAndCompactWhenHuge(int value, string text) => Assert.Equal(text, StatusText.Count(value));
 
     /// <summary>Six units per character stands in for the font.</summary>
     private static float Measure(string text) => text.Length * 6;
 
     [Fact]
-    public void FittingDropsDetailThenViewThenEstimate()
+    public void RowOneShortensOnlyTheViewNeverTheCounts()
+    {
+        var line = StatusText.Of(new(JobPhase.Drawing, 2, 8) { View = "North elevation, courtyard side", Step = ViewSteps.Sections });
+        Assert.Equal("Drawing 3 / 8 · North elevation, courtyard side", line.Row1(Measure, 1000));
+        Assert.Equal("Drawing 3 / 8 · North elev…", line.Row1(Measure, Measure("Drawing 3 / 8 · North elev…")));
+        // Not even three characters of the view fit: the counts alone, whole.
+        Assert.Equal("Drawing 3 / 8", line.Row1(Measure, Measure("Drawing 3 / 8 · No…") - 1));
+        Assert.Equal("Drawing 3 / 8", line.Row1(Measure, 10));
+        var loading = StatusText.Of(new(JobPhase.Reading, 2400, 6000));
+        Assert.Equal("Loading objects 2,400 / 6,000", loading.Row1(Measure, 10));
+        // The widest core the layout reserves for is at least as wide as every stage's counts in the 5-digit range.
+        foreach (var core in new[] { StatusText.Of(new(JobPhase.Preparing, 99_999, 99_999)).Core, StatusText.Of(new(JobPhase.Reading, 99_999, 99_999)).Core,
+            StatusText.Of(new(JobPhase.Queued, 0, 8) { Ahead = 99 }).Core, StatusText.Of(new(JobPhase.Drawing, 998, 999) { Workers = 16 }).Core })
+            Assert.True(Measure(core) <= Measure(StatusText.WidestCore), core);
+    }
+
+    [Fact]
+    public void RowTwoShortensTheStepAfterTheView()
     {
         var line = StatusText.Of(new(JobPhase.Drawing, 2, 8) { View = "Section A", Step = ViewSteps.HiddenLines, StepFraction = .45 }, 41);
-        Assert.Equal(line.Full, line.Fit(Measure, 1000));
-        Assert.Equal("Drawing 3 / 8 · Section A · ~40 s left", line.Fit(Measure, Measure("Drawing 3 / 8 · Section A · ~40 s left")));
-        Assert.Equal("Drawing 3 / 8 · ~40 s left", line.Fit(Measure, Measure("Drawing 3 / 8 · ~40 s left") + 5));
-        // Only the core fits whole: as much of the view as fits, ending in an ellipsis.
-        Assert.Equal("Drawing 3 / 8 · Sectio…", line.Fit(Measure, Measure("Drawing 3 / 8 · Sectio…") + 3));
-        Assert.Equal("Drawing 3 / 8", line.Fit(Measure, Measure("Drawing 3 / 8") + 1));
-        // Even the core doesn't fit: the core is returned, and the footer ends it with an ellipsis.
-        Assert.Equal("Drawing 3 / 8", line.Fit(Measure, 20));
-        // Workers: no view, so the step is what gets shortened.
-        var workers = StatusText.Of(new(JobPhase.Drawing, 0, 8) { Workers = 3, Step = "sending scene" });
-        Assert.Equal("Drawing 0 / 8 on 3 workers · sendi…", workers.Fit(Measure, Measure("Drawing 0 / 8 on 3 workers · sendi…")));
-        // A short line is never shortened.
-        var plain = StatusText.Of(new(JobPhase.Output, 0, 0));
-        Assert.Equal("Building output…", plain.Fit(Measure, 200));
+        Assert.Equal("hidden lines 45 %", line.Row2(Measure, 200));
+        Assert.Equal("hidden li…", line.Row2(Measure, Measure("hidden li…")));
+        Assert.Null(line.Row2(Measure, 12));
+        Assert.Null(StatusText.Of(new(JobPhase.Reading, 1, 2)).Row2(Measure, 200));
     }
 
     [Fact]
