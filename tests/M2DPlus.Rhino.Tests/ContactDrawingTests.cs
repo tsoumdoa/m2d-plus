@@ -207,8 +207,11 @@ public sealed class ContactDrawingTests(RhinoHost host)
 
     [RhinoFact] public void NativeOnlyContactsDiscloseTheirUncertifiedTieBehaviour() => host.Run(()=>
     {
-        using var sphere=new Sphere(Point3d.Origin,1).ToBrep();
-        using var drawing=Draw([sphere],false);
+        // An ellipsoid stays on native HLD; a sphere would be an exact analytic solid.
+        using var surface=NurbsSurface.CreateFromSphere(new Sphere(Point3d.Origin,1));
+        Assert.True(surface.Transform(Transform.Scale(Plane.WorldXY,1,1,1.5)));
+        using var ellipsoid=surface.ToBrep();
+        using var drawing=Draw([ellipsoid],false);
         Assert.Contains(drawing.Diagnostics,d=>d.Contains("Native/freeform contact classification is not certified",StringComparison.Ordinal));
     });
 
