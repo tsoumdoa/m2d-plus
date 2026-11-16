@@ -223,13 +223,7 @@ public sealed class ViewBoxFaceIndex : IDisposable
         return _layers[index] = (scene, visible);
     }
 
-    private static FrontFace Front(Rectangle3d frame)
-    {
-        var p = frame.Plane;
-        var origin = frame.Corner(0);
-        return new(new Plane3(new(origin.X, origin.Y, origin.Z), new(p.XAxis.X, p.XAxis.Y, p.XAxis.Z), new(p.YAxis.X, p.YAxis.Y, p.YAxis.Z)),
-            frame.Width, frame.Height);
-    }
+    private static FrontFace Front(Rectangle3d frame) => ViewDepthScene.Front(frame);
 
     private static Bounds3 ToBounds(BoundingBox b) => new(new(b.Min.X, b.Min.Y, b.Min.Z), new(b.Max.X, b.Max.Y, b.Max.Z));
     private static Point3d Point(Vector3 v) => new(v.X, v.Y, v.Z);

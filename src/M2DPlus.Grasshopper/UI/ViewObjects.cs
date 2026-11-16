@@ -1,5 +1,6 @@
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Types;
+using M2DPlus.Core.Views;
 using M2DPlus.Grasshopper.UI.Model;
 using M2DPlus.Rhino.Views;
 using Rhino;
@@ -63,14 +64,17 @@ public static class ViewObjects
         return new(references.Count, boxes, param.SourceCount > 0);
     }
 
-    /// <summary>Runs one view command and reports every object's outcome to Rhino's command line and the component.</summary>
-    public static IReadOnlyList<ViewObjectResult> Execute(string command, ViewParam param, RhinoDoc document, DrawingUi? ui)
+    /// <summary>Runs one view command and reports every object's outcome to Rhino's command line and the component.
+    /// <paramref name="prompt"/> asks for the depth of new view boxes (the menus pass <see cref="DepthDialog.Prompt"/>);
+    /// null never asks and uses Auto, so tests, scripts and headless runs never block. A cancelled prompt changes
+    /// nothing and only writes a line to the command line.</summary>
+    public static IReadOnlyList<ViewObjectResult> Execute(string command, ViewParam param, RhinoDoc document, DrawingUi? ui, DepthPrompt? prompt = null)
     {
         IReadOnlyList<ViewObjectResult> results = command switch
         {
-            ViewCommands.Validate => Validate(param, document),
+            ViewCommands.Validate => Validate(param, document, prompt),
             ViewCommands.Flip => ViewBoxes.Flip(document, References(param, document).Select(r => r.Id)),
-            ViewCommands.Create => Create(param, document),
+            ViewCommands.Create => Create(param, document, prompt),
             ViewCommands.Select => Select(param, document),
             _ => []
         };
@@ -79,6 +83,11 @@ public static class ViewObjects
             ViewCommands.Validate => "Convert to view boxes", ViewCommands.Flip => "Flip view direction",
             ViewCommands.Create => "Create view", _ => "Select view objects"
         };
+        if (results.Any(r => r.Cancelled))
+        {
+            RhinoApp.WriteLine($"M2D+ {title}: cancelled; nothing changed.");
+            return results;
+        }
         if (results.Count == 0 && command != ViewCommands.Select)
             results = [new(Guid.Empty, title, false, false, "the View input references no Rhino objects. Right-click V ▸ Pick views in Rhino… first.")];
         var summary = command == ViewCommands.Validate && results.Any(r => r.Id != Guid.Empty)
@@ -94,14 +103,17 @@ public static class ViewObjects
 
     /// <summary>Convert to view boxes. References that come through a wire whose type can't hold a view box (a Surface or
     /// Curve parameter) are refused, so the wire never breaks; references stored on V are re-typed to Brep.</summary>
-    public static IReadOnlyList<ViewObjectResult> Validate(ViewParam param, RhinoDoc document)
+    public static IReadOnlyList<ViewObjectResult> Validate(ViewParam param, RhinoDoc document, DepthPrompt? prompt = null)
     {
         var references = References(param, document);
         var refused = references.Where(r => !r.Stored && !r.Holds && !ViewBoxes.IsViewBox(document.Objects.FindId(r.Id))
                 && document.Objects.FindId(r.Id) is not ClippingPlaneObject).ToArray();
         var results = refused.Select(r => new ViewObjectResult(r.Id, Label(document, r.Id), false, false,
             $"comes through a {r.Goo.TypeName} wire, which can't hold a view box. Reference it on V instead (right-click V ▸ Pick views in Rhino…), or through a Brep, Geometry or Model Object parameter.")).ToList();
-        results.AddRange(ViewBoxes.Validate(document, references.Except(refused).Select(r => r.Id)));
+        var converting = references.Except(refused).Select(r => r.Id).ToArray();
+        var outcome = prompt is null ? ViewBoxes.Validate(document, converting) : ViewBoxes.Validate(document, converting, prompt);
+        if (outcome.Any(r => r.Cancelled)) return outcome;
+        results.AddRange(outcome);
         var converted = results.Where(r => r.Ok && r.Changed).Select(r => r.Id).ToHashSet();
         if (param.SourceCount == 0 && references.Any(r => converted.Contains(r.Id) && r.Goo is not GH_Brep))
         {
@@ -115,19 +127,20 @@ public static class ViewObjects
     }
 
     /// <summary>Create view from current viewport: needs Rhino's active viewport, so it is a no-op headless.</summary>
-    private static IReadOnlyList<ViewObjectResult> Create(ViewParam param, RhinoDoc document)
+    private static IReadOnlyList<ViewObjectResult> Create(ViewParam param, RhinoDoc document, DepthPrompt? prompt)
     {
         var view = document.Views.ActiveView;
         if (view is null) return [new(Guid.Empty, "Create view", false, false, "there is no active Rhino viewport.")];
         using var viewport = new ViewportInfo(view.ActiveViewport);
-        return [CreateFrom(param, document, viewport)];
+        return [CreateFrom(param, document, viewport, prompt)];
     }
 
-    /// <summary>Bakes a view box for the viewport and adds its reference to V (when V is not wired).</summary>
-    public static ViewObjectResult CreateFrom(ViewParam param, RhinoDoc document, ViewportInfo viewport)
+    /// <summary>Bakes a view box for the viewport and adds its reference to V (when V is not wired). The depth comes
+    /// from <paramref name="prompt"/>, or Auto when it is null.</summary>
+    public static ViewObjectResult CreateFrom(ViewParam param, RhinoDoc document, ViewportInfo viewport, DepthPrompt? prompt = null)
     {
         var excluded = References(param, document).Select(r => r.Id).ToArray();
-        var result = ViewBoxes.Create(document, viewport, ViewBoxes.SceneBounds(document, excluded));
+        var result = prompt is null ? ViewBoxes.Create(document, viewport, excluded) : ViewBoxes.Create(document, viewport, excluded, prompt);
         if (!result.Ok) return result;
         if (param.SourceCount > 0) return result with { Message = result.Message + " V is wired, so wire it in yourself." };
         param.AddReferences([document.Objects.FindId(result.Id)!], "M2D+ create view");

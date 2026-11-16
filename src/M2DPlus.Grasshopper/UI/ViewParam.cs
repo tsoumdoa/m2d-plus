@@ -53,7 +53,7 @@ public sealed class ViewParam : Param_GenericObject
     {
         if (document is not null && command is ViewCommands.Validate or ViewCommands.Flip or ViewCommands.Create or ViewCommands.Select)
         {
-            ViewObjects.Execute(command, this, document, OwnerUi);
+            ViewObjects.Execute(command, this, document, OwnerUi, DepthDialog.Prompt);
             return;
         }
         if (SourceCount > 0) return;

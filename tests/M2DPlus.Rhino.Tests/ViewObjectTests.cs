@@ -98,8 +98,14 @@ public sealed partial class ViewObjectTests(RhinoHost host, ITestOutputHelper ou
         AssertVector(-Vector3d.YAxis, faced.Plane.ZAxis);
         AssertVector(Vector3d.XAxis, faced.Plane.XAxis); // looking north with Z up, right is east
         AssertPoint(new Point3d(-2, -5, 0), faced.Plane.Origin);
-        // Auto depth: the model's back face is at y = 1, 6 behind the frame, plus 1 % of the scene diagonal.
-        var depth = ViewBoxes.AutoDepth(faced, scene, Tol);
+        // Auto depth (an elevation): the model's back face is at y = 1, 6 behind the frame, plus 1 % of its diagonal.
+        using var depthDoc = RhinoDoc.CreateHeadless(null);
+        depthDoc.ModelAbsoluteTolerance = Tol;
+        depthDoc.Objects.AddBrep(ModelBox());
+        using var depthScene = ViewDepthScene.Collect(depthDoc, []);
+        var auto = depthScene.Auto(faced);
+        Assert.Equal(M2DPlus.Core.Views.ViewBoxKind.Elevation, auto.Kind);
+        var depth = auto.Depth;
         Assert.Equal(6 + scene.Diagonal.Length * .01, depth, 9);
 
         using var box = ViewBoxes.Build(faced, depth);
@@ -302,7 +308,7 @@ public sealed partial class ViewObjectTests(RhinoHost host, ITestOutputHelper ou
         using var gh = new GH_Document();
         var component = NewComponent(gh);
         var createFrom = Gha.GetType("M2DPlus.Grasshopper.UI.ViewObjects", true)!.GetMethod("CreateFrom")!;
-        var created = (ViewObjectResult)createFrom.Invoke(null, [component.Params.Input[1], doc, viewport])!;
+        var created = (ViewObjectResult)createFrom.Invoke(null, [component.Params.Input[1], doc, viewport, null])!;
         Assert.True(created.Ok, created.Message);
         var obj = doc.Objects.FindId(created.Id);
         Assert.Equal("M2D View 02", obj.Attributes.Name); // 01 is taken
@@ -481,7 +487,7 @@ public sealed partial class ViewObjectTests(RhinoHost host, ITestOutputHelper ou
     /// <summary>Runs a view command exactly as the menus do (ViewObjects.Execute) and returns every object's outcome.</summary>
     private static ViewObjectResult[] Run(string command, GH_Component component, RhinoDoc doc) =>
         ((IEnumerable<ViewObjectResult>)Gha.GetType("M2DPlus.Grasshopper.UI.ViewObjects", true)!.GetMethod("Execute")!
-            .Invoke(null, [command, component.Params.Input[1], doc, ((dynamic)component).Ui])!).ToArray();
+            .Invoke(null, [command, component.Params.Input[1], doc, ((dynamic)component).Ui, null])!).ToArray();
 
     /// <summary>An offscreen axonometric render of the preview lines exactly as DrawViewportWires draws them (frame,
     /// arrow, dotted depth volume) over the model's edges and the view box itself. Not a Rhino viewport capture.</summary>

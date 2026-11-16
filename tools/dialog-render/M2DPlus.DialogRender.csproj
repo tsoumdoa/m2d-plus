@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Renders the real "View box depth" dialog source to PNGs for review. Not in the solution and never shipped.
+       It compiles the GHA's pure-Eto dialog file. Rhino 8 shows it with Eto's WPF platform; this harness uses Eto's
+       WinForms (GDI) platform because it can be captured anywhere, including sessions where WPF cannot rasterise.
+       Layout and text are the same code; native control chrome differs slightly. -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../src/M2DPlus.Grasshopper/UI/DepthDialog.cs" Link="DepthDialog.cs" />
+    <ProjectReference Include="../../src/M2DPlus.Core/M2DPlus.Core.csproj" />
+    <PackageReference Include="Eto.Forms" Version="2.9.0" />
+    <PackageReference Include="Eto.Platform.Windows" Version="2.9.0" />
+  </ItemGroup>
+</Project>
