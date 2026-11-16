@@ -44,10 +44,17 @@ public sealed class WorkerTests(RhinoHost host)
         using var doc=RhinoDoc.CreateHeadless(null);Populate(doc);using var cache=new SceneCache();using var lease=Capture(doc,cache);
         using var baseline=NativeDrawing.SolveBorrowedAsync(lease.Value,Identity(lease.Value),Views,new(),default,null).GetAwaiter().GetResult();
         using var pool=new DrawingWorkerPool(Options(2));
+        var receiving=0;var replies=0;
+        pool.ObserveReply=reply=>
+        {
+            Assert.Equal(1,Interlocked.Increment(ref receiving));
+            Thread.Sleep(50);Interlocked.Increment(ref replies);Interlocked.Decrement(ref receiving);return reply;
+        };
         using var first=pool.SolveAsync(lease.Value,Identity(lease.Value),Views,new(),default).GetAwaiter().GetResult();
         var pids=pool.ProcessIds;
         using var second=pool.SolveAsync(lease.Value,Identity(lease.Value,2),Views,new(),default).GetAwaiter().GetResult();
         Assert.Equal(pids,pool.ProcessIds);Assert.Equal(2,pids.Length);
+        Assert.Equal(2*Views.Length,replies);
         for(var i=0;i<Views.Length;i++)
         {
             Assert.Null(first.Views[i].Error);Assert.Null(second.Views[i].Error);
@@ -125,7 +132,7 @@ public sealed class WorkerTests(RhinoHost host)
         Assert.True(batch.Complete);Assert.Contains("deadline",batch.Views[0].Error);Assert.True(batch.Views[0].Report.Quarantined);
         Assert.Equal("authored view error",batch.Views[1].Error);
     });
-    [RhinoFact] public void OneStartupTimeoutPreservesMatchingSiblingsAndNextBatchRecovers()=>host.Run(()=>
+    [RhinoFact] public void OneStartupTimeoutRequeuesItsViewEvenAfterHealthySiblingFinishes()=>host.Run(()=>
     {
         using var doc=RhinoDoc.CreateHeadless(null);Populate(doc);using var cache=new SceneCache();using var lease=Capture(doc,cache);
         var marker=Path.Combine(Path.GetTempPath(),"m2d-startup-"+Guid.NewGuid().ToString("N"));
@@ -133,18 +140,41 @@ public sealed class WorkerTests(RhinoHost host)
         {
             using var pool=new DrawingWorkerPool(Options(2,"startup-once|"+marker) with{StartupTimeout=TimeSpan.FromSeconds(5)});
             using var first=pool.SolveAsync(lease.Value,Identity(lease.Value),Views,new(),default).GetAwaiter().GetResult();
-            Assert.True(first.Complete);Assert.Single(first.Views,v=>v.Error is not null);
-            Assert.All(first.Views.Where(v=>v.Error is not null),v=>{Assert.True(v.Report.Quarantined);Assert.Contains("startup unavailable",v.Error);});
+            Assert.True(first.Complete);Assert.All(first.Views,v=>Assert.Null(v.Error));
             Assert.Single(pool.ProcessIds);
             using var next=pool.SolveAsync(lease.Value,Identity(lease.Value,2),Views,new(),default).GetAwaiter().GetResult();
             using var baseline=NativeDrawing.SolveBorrowedAsync(lease.Value,Identity(lease.Value),Views,new(),default,null).GetAwaiter().GetResult();
             for(var i=0;i<Views.Length;i++)
             {
                 Assert.Null(next.Views[i].Error);
+                Assert.Equal(WorkerCodec.CaptureDrawing(baseline.Views[i],true),WorkerCodec.CaptureDrawing(first.Views[i],true));
                 Assert.Equal(WorkerCodec.CaptureDrawing(baseline.Views[i],true),WorkerCodec.CaptureDrawing(next.Views[i],true));
             }
         }
         finally{File.Delete(marker);}
+    });
+    [RhinoFact] public void NoAvailableWorkerReportsWhyQueuedViewsCannotRun()=>host.Run(()=>
+    {
+        using var doc=RhinoDoc.CreateHeadless(null);Populate(doc);using var cache=new SceneCache();using var lease=Capture(doc,cache);
+        using var pool=new DrawingWorkerPool(Options(2) with{Directory=Path.Combine(Path.GetTempPath(),Guid.NewGuid().ToString("N"))});
+        var error=Assert.Throws<WorkerUnavailableException>(()=>pool.SolveAsync(lease.Value,Identity(lease.Value),Views,new(),default).GetAwaiter().GetResult());
+        Assert.Contains("No worker can take the queued views",error.Message);Assert.Empty(pool.ProcessIds);
+    });
+    [RhinoFact] public void ComposedBytesMatchAcrossSingleAndMultipleManagedProcessors()=>host.Run(()=>
+    {
+        using var doc=RhinoDoc.CreateHeadless(null);Populate(doc);using var cache=new SceneCache();using var lease=Capture(doc,cache);
+        var scene=WorkerCodec.Capture(lease.Value,default);var fingerprint=WorkerCodec.Fingerprint();
+        byte[]? stable=null;
+        foreach(var processors in new[]{1,WorkerMemoryPolicy.CpuLimit(Environment.ProcessorCount)})
+        {
+            using var client=WorkerClient.StartAsync(Options() with{MemoryBytes=2*WorkerMemoryPolicy.GiB,ProcessorLimit=processors},fingerprint,default).GetAwaiter().GetResult();
+            client.CallAsync("scene",scene,TimeSpan.FromSeconds(30),default).GetAwaiter().GetResult();
+            var request=WorkerCodec.Encode(new WorkerCodec.Request(Identity(lease.Value),0,Views[0],false));
+            var reply=WorkerCodec.Decode<WorkerCodec.Reply>(client.CallAsync("solve",request,TimeSpan.FromSeconds(30),default).GetAwaiter().GetResult());
+            using var drawing=WorkerCodec.RestoreDrawing(reply.Drawing);Assert.Null(drawing.Error);Assert.True(drawing.KernelEdges>0);Assert.True(drawing.NativeEdges>0);
+            var bytes=WorkerCodec.CaptureDrawing(drawing,true);
+            if(stable is null)stable=bytes;else Assert.Equal(stable,bytes);
+        }
     });
     [RhinoFact] public void StaleReplyIsRejectedAndMemoryCapIsEnforced()=>host.Run(()=>
     {

@@ -16,18 +16,22 @@ public sealed class WorkerMemoryPolicyTests
     }
 
     [Theory]
-    [InlineData(16,8,3,1)] [InlineData(16,16,3,1)] [InlineData(16,32,3,1)]
-    [InlineData(32,8,6,3)] [InlineData(32,16,6,3)] [InlineData(32,32,6,3)]
-    [InlineData(64,8,6,6)] [InlineData(64,16,13,6)] [InlineData(64,32,13,6)]
-    [InlineData(128,8,6,6)] [InlineData(128,16,14,13)] [InlineData(128,32,27,13)]
+    [InlineData(16,8,2,1)] [InlineData(16,16,2,1)] [InlineData(16,32,2,1)]
+    [InlineData(32,8,5,2)] [InlineData(32,16,5,2)] [InlineData(32,32,5,2)]
+    [InlineData(64,8,6,6)] [InlineData(64,16,12,6)] [InlineData(64,32,12,6)]
+    [InlineData(128,8,6,6)] [InlineData(128,16,14,12)] [InlineData(128,32,25,12)]
     public void PolicyTableAtThreeQuartersAvailable(int ram,int cores,int mediumCount,int largeCount)
     {
         var memory=new MachineMemory(ram*G,ram*G/4*3);
         var medium=WorkerMemoryPolicy.Size(new(81535672,29696,0,5000),32,WorkerMemoryPolicy.CpuLimit(cores),memory);
         var large=WorkerMemoryPolicy.Size(Large,32,WorkerMemoryPolicy.CpuLimit(cores),memory);
         Assert.Equal(mediumCount,medium.Count);Assert.Equal(largeCount,large.Count);
-        Assert.True(medium.Count*medium.CapBytes<=medium.BudgetBytes);
-        Assert.True(large.Count*large.CapBytes<=large.BudgetBytes);
+        foreach(var plan in new[]{medium,large})
+        {
+            Assert.True(plan.Count*plan.CapBytes+plan.HostReplyBytes<=plan.BudgetBytes);
+            Assert.True(2*plan.ReplyExpandedLimit+WorkerMemoryPolicy.ReplyStreamAllowance<=plan.HostReplyBytes);
+            Assert.InRange(plan.HostReplyBytes,1,4*G);
+        }
     }
     [Fact] public void VeryLargeSceneHasNoSixteenGiBCapOrFourWorkerCeiling()
     {
@@ -44,7 +48,7 @@ public sealed class WorkerMemoryPolicyTests
         Assert.Equal(6*G,p.RequiredBytes);Assert.Equal(4,p.Count);Assert.Equal(6*G,p.CapBytes);
         Assert.True(p.Count*p.CapBytes<=p.BudgetBytes);Assert.Null(p.Refusal);
     }
-    [Theory] [InlineData(12,1)] [InlineData(8,1)] [InlineData(6,0)]
+    [Theory] [InlineData(12,1)] [InlineData(8,0)] [InlineData(6,0)]
     public void LaptopReducesCountBeforeReducingSceneCap(int available,int count)
     {
         var p=WorkerMemoryPolicy.Size(Large,8,4,new(16*G,available*G));
@@ -55,13 +59,13 @@ public sealed class WorkerMemoryPolicyTests
     [Fact] public void AvailableMemoryAndCpuLimitBothConstrainSmallScene()
     {
         var p=WorkerMemoryPolicy.Size(new(81535672,29696,0,5000),8,4,new(16*G,8*G));
-        Assert.Equal(3*G,p.CapBytes);Assert.Equal(2,p.Count);
+        Assert.Equal(3*G,p.CapBytes);Assert.Equal(1,p.Count);
         Assert.Equal(1,WorkerMemoryPolicy.Size(Large,1,4,new(64*G,40*G)).Count);
         Assert.Equal(2,WorkerMemoryPolicy.Size(Large,8,2,new(64*G,40*G)).Count);
     }
     [Fact] public void RetryAloneCanGrowOnlyWithinFreshBudget()
     {
-        Assert.Equal(9*G,WorkerMemoryPolicy.RetryCap(6*G,new(16*G,12*G)));
+        Assert.Equal(7*G,WorkerMemoryPolicy.RetryCap(6*G,new(16*G,12*G)));
         Assert.Equal(0,WorkerMemoryPolicy.RetryCap(6*G,new(16*G,8*G)));
         Assert.Equal(12*G,WorkerMemoryPolicy.RetryCap(6*G,new(64*G,40*G)));
     }
@@ -69,7 +73,14 @@ public sealed class WorkerMemoryPolicyTests
     {
         Assert.Equal(0,WorkerMemoryPolicy.Size(Large,8,4,new(0,0)).Count);
         var p=WorkerMemoryPolicy.Size(Large,8,4,new(16*G,12*G),4*G);
-        Assert.Equal(2,p.Count);Assert.Equal(4*G,p.CapBytes);
+        Assert.Equal(1,p.Count);Assert.Equal(4*G,p.CapBytes);
         Assert.Equal(0,WorkerMemoryPolicy.Size(Large,8,4,new(16*G,12*G),10*G).Count);
+    }
+    [Theory] [InlineData(16,12)] [InlineData(32,24)] [InlineData(64,48)] [InlineData(128,96)]
+    public void IsolatedRetryAlsoReservesHostReceiveBuffers(int ram,int available)
+    {
+        var memory=new MachineMemory(ram*G,available*G);var budget=WorkerMemoryPolicy.Budget(memory);
+        var cap=WorkerMemoryPolicy.RetryCap(6*G,memory);
+        Assert.True(cap==0 || cap+WorkerMemoryPolicy.HostReplyBytes(budget)<=budget);
     }
 }

@@ -9,6 +9,7 @@ public sealed class DrawingWorkerPool : IDisposable
     private readonly Slot[] _slots;
     private readonly WorkerOptions _options;
     private readonly SemaphoreSlim _batch=new(1);
+    private readonly SemaphoreSlim _replies=new(1);
     private readonly Timer _idle;
     private volatile bool _disposed;
     private readonly CancellationTokenSource _shutdown=new();
@@ -72,18 +73,26 @@ public sealed class DrawingWorkerPool : IDisposable
             if(_historyScene!=identity.SceneRevision){_viewSeconds.Clear();_historyScene=identity.SceneRevision;}
             var keys=views.Select(v=>WorkerCodec.Hash(WorkerCodec.Encode(new WorkerCodec.Request(default,0,v,settings.NativeOnly)))).ToArray();
             var order=Enumerable.Range(0,views.Count).OrderByDescending(i=>_viewSeconds.GetValueOrDefault(keys[i])).ThenBy(i=>i).ToArray();
-            var cursor=-1;var seconds=new double[views.Count];
-            var retry=new bool[views.Count];var unavailable=new bool[views.Count];var done=0;
+            var pending=new System.Collections.Concurrent.ConcurrentQueue<int>(order);var seconds=new double[views.Count];
+            var retry=new bool[views.Count];var done=0;
+            var unavailable=new System.Collections.Concurrent.ConcurrentDictionary<Slot,byte>();
             WorkerUnavailableException? startupFailure=null;
-            await Task.WhenAll(_slots.Take(plan.Count).Select(RunShard)).ConfigureAwait(false);
+            // A healthy shard may finish before a slower startup fails and requeues
+            // its view. Drain again after all shards settle; never retry a failed slot.
+            while(!pending.IsEmpty)
+            {
+                var active=_slots.Take(plan.Count).Where(s=>!unavailable.ContainsKey(s)).ToArray();
+                if(active.Length==0)break;
+                await Task.WhenAll(active.Select(RunShard)).ConfigureAwait(false);
+            }
             token.ThrowIfCancellationRequested();
             // One failed handshake must not discard views completed by matching
             // siblings. If nobody could start, retain the unavailable/fallback contract.
             if(startupFailure is not null)
             {
-                if(!results.Where((r,i)=>r is not null && !unavailable[i]).Any())throw startupFailure;
+                if(!results.Any(r=>r is not null))throw new WorkerUnavailableException("No worker can take the queued views after startup failures: "+startupFailure.Message);
                 for(var i=0;i<results.Length;i++)if(results[i] is null)
-                    Failure(i,"Worker startup unavailable for this view: "+startupFailure.Message);
+                    Failure(i,"No worker can take this queued view after startup failures: "+startupFailure.Message);
             }
             if(retry.Any(r=>r))
             {
@@ -92,14 +101,16 @@ public sealed class DrawingWorkerPool : IDisposable
                 for(var i=0;i<views.Count;i++)
                 {
                     if(!retry[i])continue;token.ThrowIfCancellationRequested();
-                    var cap=WorkerMemoryPolicy.RetryCap(plan.CapBytes,_options.ReadMemory());
+                    var retryMemory=_options.ReadMemory();
+                    var cap=WorkerMemoryPolicy.RetryCap(plan.CapBytes,retryMemory);
                     if(cap==0){Failure(i,MemoryFailure(plan.CapBytes,"No larger isolated cap fits the current memory budget."));continue;}
                     var slot=_slots[0];await slot.Gate.WaitAsync(token).ConfigureAwait(false);
                     try
                     {
                         try
                         {
-                            var drawing=await SolveView(slot,i,cap,true).ConfigureAwait(false);
+                            var limit=WorkerMemoryPolicy.ReplyExpandedLimit(WorkerMemoryPolicy.HostReplyBytes(WorkerMemoryPolicy.Budget(retryMemory)));
+                            var drawing=await SolveView(slot,i,cap,true,limit).ConfigureAwait(false);
                             if(IsMemoryFailure(drawing.Error) || slot.Client!.MemoryLimitHit)
                             {drawing.Dispose();Failure(i,MemoryFailure(cap,"The one isolated retry also exceeded its cap."));}
                             else {results[i]?.Dispose();results[i]=drawing;drawing._diagnostics.Add($"Worker memory recovery: retried once alone at {cap/(double)WorkerMemoryPolicy.GiB:F1} GiB.");}
@@ -123,23 +134,20 @@ public sealed class DrawingWorkerPool : IDisposable
                 await slot.Gate.WaitAsync(token).ConfigureAwait(false);
                 try
                 {
-                    while(true)
+                    while(pending.TryDequeue(out var i))
                     {
-                        var next=Interlocked.Increment(ref cursor);if(next>=order.Length)break;
-                        var i=order[next];
                         token.ThrowIfCancellationRequested();
                         try
                         {
-                            var drawing=await SolveView(slot,i,plan.CapBytes,false).ConfigureAwait(false);
+                            var drawing=await SolveView(slot,i,plan.CapBytes,false,plan.ReplyExpandedLimit).ConfigureAwait(false);
                             if(IsMemoryFailure(drawing.Error) || slot.Client!.MemoryLimitHit)
                             {drawing.Dispose();retry[i]=true;Failure(i,MemoryFailure(plan.CapBytes,"Queued for an isolated retry."));slot.Client?.Dispose();slot.Client=null;}
                             else results[i]=drawing;
                         }
                         catch(WorkerUnavailableException ex)
                         {
-                            unavailable[i]=true;Interlocked.CompareExchange(ref startupFailure,ex,null);
-                            Failure(i,"Worker startup unavailable for this view: "+ex.Message);
-                            progress?.Report(new(JobPhase.Drawing,Interlocked.Increment(ref done),views.Count));
+                            unavailable.TryAdd(slot,0);Interlocked.CompareExchange(ref startupFailure,ex,null);
+                            pending.Enqueue(i);
                             break;
                         }
                         catch(Exception ex) when(ex is not OperationCanceledException)
@@ -157,30 +165,30 @@ public sealed class DrawingWorkerPool : IDisposable
                     slot.LastUsed=DateTime.UtcNow;slot.Gate.Release();
                 }
             }
-            async Task<ViewDrawing> SolveView(Slot slot,int index,long cap,bool isolatedRetry)
+            async Task<ViewDrawing> SolveView(Slot slot,int index,long cap,bool isolatedRetry,long replyLimit)
             {
                 slot.Client??=await WorkerClient.StartAsync(_options with{MemoryBytes=cap,ProcessorLimit=isolatedRetry?WorkerMemoryPolicy.CpuLimit(Environment.ProcessorCount):processors},fingerprint,token).ConfigureAwait(false);
                 if(slot.Client.SceneRevision!=identity.SceneRevision)
                 {
-                    await slot.Client.CallAsync("scene",payload.Value,_options.SolveTimeout,token).ConfigureAwait(false);
+                    await slot.Client.CallAsync("scene",payload.Value,_options.SolveTimeout,token,bytes=>bytes,_replies,replyLimit).ConfigureAwait(false);
                     slot.Client.SceneRevision=identity.SceneRevision;
                 }
                 AttemptingView?.Invoke(index,cap,isolatedRetry);
                 slot.Client.NativeStarted=()=>SolvingView?.Invoke(slot.Client.ProcessId,index);
                 var clock=System.Diagnostics.Stopwatch.StartNew();
-                var reply=WorkerCodec.Decode<WorkerCodec.Reply>(await slot.Client.CallAsync("solve",EncodedRequest?.Invoke(index)??WorkerCodec.Encode(new WorkerCodec.Request(identity,index,views[index],settings.NativeOnly)),_options.SolveTimeout,token).ConfigureAwait(false));
-                reply=ObserveReply?.Invoke(reply)??reply;
-                if(reply.Identity!=identity || reply.ViewIndex!=index)throw new InvalidDataException("Stale worker reply rejected (generation/revisions/view).");
-                token.ThrowIfCancellationRequested();ViewDrawing drawing;
-                if(EncodedDrawing is {} encoded)
+                var drawing=await slot.Client.CallAsync("solve",EncodedRequest?.Invoke(index)??WorkerCodec.Encode(new WorkerCodec.Request(identity,index,views[index],settings.NativeOnly)),_options.SolveTimeout,token,bytes=>
                 {
+                    var reply=WorkerCodec.Decode<WorkerCodec.Reply>(bytes);
+                    reply=ObserveReply?.Invoke(reply)??reply;
+                    if(reply.Identity!=identity || reply.ViewIndex!=index)throw new InvalidDataException("Stale worker reply rejected (generation/revisions/view).");
+                    token.ThrowIfCancellationRequested();
+                    if(EncodedDrawing is not {} encoded)return WorkerCodec.RestoreDrawing(reply.Drawing);
                     encoded(index,reply.Drawing);
                     using var document=System.Text.Json.JsonDocument.Parse(reply.Drawing);var values=document.RootElement.GetProperty("Values");
-                    drawing=new ViewDrawing{Name=values.GetProperty("Name").GetString()!,Error=values.GetProperty("Error").GetString()};
-                }
-                else drawing=WorkerCodec.RestoreDrawing(reply.Drawing);
+                    return new ViewDrawing{Name=values.GetProperty("Name").GetString()!,Error=values.GetProperty("Error").GetString()};
+                },_replies,replyLimit).ConfigureAwait(false);
                 seconds[index]=clock.Elapsed.TotalSeconds;
-                drawing._diagnostics.Add($"Worker: isolated whole-view solve; matching runtime and engine; scene retained per process. Reservation={plan.Count} x {plan.CapBytes/(double)WorkerMemoryPolicy.GiB:F1} GiB; budget={plan.BudgetBytes/(double)WorkerMemoryPolicy.GiB:F1} GiB.");
+                drawing._diagnostics.Add($"Worker: isolated whole-view solve; matching runtime and engine; scene retained per process. Reservation={plan.Count} x {plan.CapBytes/(double)WorkerMemoryPolicy.GiB:F1} GiB + host reply {plan.HostReplyBytes/(double)WorkerMemoryPolicy.GiB:F1} GiB; one receive at a time; budget={plan.BudgetBytes/(double)WorkerMemoryPolicy.GiB:F1} GiB.");
                 return drawing;
             }
             void Failure(int index,string message)

@@ -1,12 +1,23 @@
 namespace M2DPlus.Core;
 
 public readonly record struct MachineMemory(long PhysicalBytes, long AvailableBytes);
-public sealed record WorkerSizing(int Count, long CapBytes, long BudgetBytes, long RequiredBytes, string? Refusal);
+public sealed record WorkerSizing(int Count, long CapBytes, long BudgetBytes, long RequiredBytes, string? Refusal)
+{
+    public long HostReplyBytes { get; init; }
+    public long ReplyExpandedLimit => WorkerMemoryPolicy.ReplyExpandedLimit(HostReplyBytes);
+}
 
 /// <summary>Hard caps, not expected resident usage. Leave room for Rhino, returned drawings and the OS.</summary>
 public static class WorkerMemoryPolicy
 {
     public const long GiB = 1024L * 1024 * 1024;
+    public const long ReplyStreamAllowance = 1024 * 1024;
+    // One streaming receive at a time, including JSON's decoded Drawing byte array.
+    // The raw JSON and its base64-decoded bytes need at most 1.75 * expanded length;
+    // reserve 2 * length plus stream buffers, without a compressed-frame allocation.
+    public static long HostReplyBytes(long budget) => Math.Min(4 * GiB, budget / 4);
+    public static long ReplyExpandedLimit(long reservation) => Math.Max(0,
+        Math.Min(Array.MaxLength, (reservation - ReplyStreamAllowance) / 2));
     public static int CpuLimit(int logicalCores) => Math.Max(1, logicalCores - 2);
     public static long Budget(MachineMemory memory)
     {
@@ -28,14 +39,17 @@ public static class WorkerMemoryPolicy
         var required = Required(scene);
         var cap = overrideCap > 0 ? overrideCap : required;
         var budget = Budget(memory);
-        var count = (int)Math.Min(Math.Min(views, cpuLimit), budget / cap);
+        var reply = HostReplyBytes(budget);
+        var count = (int)Math.Min(Math.Min(views, cpuLimit), (budget - reply) / cap);
         return new(count, cap, budget, required, count == 0 ?
-            "Worker unavailable: available memory cannot fit one view's cap. Close other applications or reduce the scene/view complexity and run again." : null);
+            "Worker unavailable: available memory cannot fit one view's cap plus the host reply reservation. Close other applications or reduce the scene/view complexity and run again." : null)
+            { HostReplyBytes = reply };
     }
     /// <summary>After every original worker has exited, allow one isolated retry, never an identical-cap retry.</summary>
     public static long RetryCap(long previousCap, MachineMemory memory)
     {
-        var cap = Math.Min(checked(previousCap * 2), Budget(memory) / GiB * GiB);
+        var budget = Budget(memory);
+        var cap = Math.Min(checked(previousCap * 2), (budget - HostReplyBytes(budget)) / GiB * GiB);
         return cap > previousCap ? cap : 0;
     }
 }
