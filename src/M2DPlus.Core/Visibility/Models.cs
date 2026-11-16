@@ -8,7 +8,15 @@ public enum VisibilityClass { Visible, Hidden, Unresolved }
 public readonly record struct EdgeInterval(int Edge, double Start, double End, VisibilityClass Class);
 public sealed record VisibilityResult(IReadOnlyList<EdgeInterval> Intervals, long FaceTests, long ExactFallbacks,
     IReadOnlyList<string> Diagnostics);
-public sealed record VisibilityOptions(double DepthTolerance, int Threads = 1, bool UseIndex = true);
+public sealed record VisibilityOptions(double DepthTolerance, int Threads = 1, bool UseIndex = true)
+{
+    // Deterministic per-candidate limits. Exhaustion is uncertainty, never visibility.
+    public int MaxPairOperations { get; init; } = 65536;
+    public int MaxFacesPerEdge { get; init; } = 65536;
+    public Action<int, int>? Progress { get; init; }
+    public Action<VisibilityWork>? ObserveWork { get; init; }
+}
+public sealed record VisibilityWork(long ExactFallbacks, double ExactSeconds, int ExactFaces, int BudgetEdges);
 
 internal readonly record struct P<T>(T X, T Y, T Z) where T : IScalar<T>
 {
@@ -23,10 +31,11 @@ internal sealed class Polygon<T> where T : IScalar<T>
     public P<T>[][] Loops { get; }
     public P<T> Normal { get; }
     public T D { get; }
-    public Polygon(PlanarFace face, P<T> normal, T d)
+    public P<T> Anchor { get; }
+    public Polygon(PlanarFace face, P<T> normal, T d, P<T> anchor)
     {
         Loops = face.Loops.Select(l => l.Select(P<T>.From).ToArray()).ToArray();
-        Normal = normal; D = d;
+        Normal = normal; D = d; Anchor = anchor;
     }
     public Polygon(PlanarFace face)
     {
@@ -37,8 +46,8 @@ internal sealed class Polygon<T> where T : IScalar<T>
             {
                 var n = P<T>.Cross(loop[i] - loop[0], loop[i + 1] - loop[0]);
                 if (T.Compare(n.X, zero) == 0 && T.Compare(n.Y, zero) == 0 && T.Compare(n.Z, zero) == 0) continue;
-                Normal = n; D = P<T>.Dot(n, loop[0]); return;
+                Normal = n; Anchor = loop[0]; D = P<T>.Dot(n, Anchor); return;
             }
-        Normal = new(zero, zero, zero); D = zero;
+        Normal = new(zero, zero, zero); D = zero; Anchor = Loops[0][0];
     }
 }

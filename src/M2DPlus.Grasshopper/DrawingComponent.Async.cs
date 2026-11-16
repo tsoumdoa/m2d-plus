@@ -188,7 +188,7 @@ public sealed partial class DrawingComponent
                         Message = progress.Phase switch
                         {
                             JobPhase.Queued => "Queued", JobPhase.Preparing => "Preparing",
-                            JobPhase.Drawing => $"Drawing {progress.Done + 1}/{progress.Total}", _ => Message
+                            JobPhase.Drawing => progress.Detail ?? $"Drawing {progress.Done + 1}/{progress.Total}", _ => Message
                         };
                         OnDisplayExpired(true); return;
                     }

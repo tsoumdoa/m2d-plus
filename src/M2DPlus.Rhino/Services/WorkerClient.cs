@@ -103,7 +103,12 @@ internal sealed class WorkerClient : IDisposable
         {
             await WorkerFrames.WriteAsync(_pipe,WorkerPackets.Encode(kind,payload),deadline.Token).ConfigureAwait(false);
             var reply=WorkerPackets.Decode(await WorkerFrames.ReadAsync(_pipe,deadline.Token).ConfigureAwait(false));
-            while(reply.Kind=="started") {NativeStarted?.Invoke();reply=WorkerPackets.Decode(await WorkerFrames.ReadAsync(_pipe,deadline.Token).ConfigureAwait(false));}
+            while(reply.Kind is "started" or "progress")
+            {
+                if(reply.Kind=="started") NativeStarted?.Invoke();
+                else Progress?.Report(WorkerCodec.Decode<JobProgress>(reply.Payload));
+                reply=WorkerPackets.Decode(await WorkerFrames.ReadAsync(_pipe,deadline.Token).ConfigureAwait(false));
+            }
             if(reply.Kind=="memory")throw new WorkerMemoryException(System.Text.Encoding.UTF8.GetString(reply.Payload));
             if(reply.Kind=="error")throw new IOException(System.Text.Encoding.UTF8.GetString(reply.Payload));
             if(reply.Kind!=kind)throw new InvalidDataException("Unexpected worker response.");
@@ -119,6 +124,7 @@ internal sealed class WorkerClient : IDisposable
         }
     }
     internal void Kill() { lock(_sync){if(!_disposed)_job.Kill();} }
+    internal IProgress<JobProgress>? Progress { get; set; }
     public void Dispose()
     {
         lock(_sync)

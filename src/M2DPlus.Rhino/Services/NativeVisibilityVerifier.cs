@@ -85,7 +85,7 @@ internal sealed class NativeVisibilityVerifier : IDisposable
             token.ThrowIfCancellationRequested(); var body = _bodies[id];
             if (body.Bounds.Max.Z <= p.Z + _tol) continue;
             if (_tests + 5 > _options.MaxRayTests) { _skipped++; witness = "ray budget"; return VisibilityClass.Unresolved; }
-            double length = body.Bounds.Max.Z - p.Z + Math.Max(1, 8 * _tol);
+            double length = body.Bounds.Max.Z - p.Z + 8 * _tol;
             var central = Cast(body.Geometry,point,length,out double gap);
             // HLD curves and native intersections are tolerance approximations.
             // A grazing ray (including an endpoint on a silhouette) is not a

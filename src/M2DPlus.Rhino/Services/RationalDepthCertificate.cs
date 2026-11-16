@@ -5,8 +5,10 @@ namespace M2DPlus.Rhino.Services;
 /// <summary>Whole-span rational comparison; never infers a bound from sample points.</summary>
 internal static class RationalDepthCertificate
 {
-    internal static bool Front(NurbsCurve candidate, NurbsCurve witness, double tolerance, double roundoff)
+    internal static bool Front(NurbsCurve candidate, NurbsCurve witness, double tolerance, double roundoff, CancellationToken token = default)
     {
+        token.ThrowIfCancellationRequested();
+        if (candidate.Points.Count > 4096 || witness.Points.Count > 4096) return false;
         using var a = candidate.ToNurbsCurve();
         using var b = witness.ToNurbsCurve();
         if (a.Degree > 12 || b.Degree > 12) return false;
@@ -17,6 +19,7 @@ internal static class RationalDepthCertificate
         if (cuts.Length > 256) return false;
         foreach (double t in cuts)
         {
+            token.ThrowIfCancellationRequested();
             if (!a.Knots.Contains(t) && !a.Knots.InsertKnot(t)) return false;
             if (!b.Knots.Contains(t) && !b.Knots.InsertKnot(t)) return false;
         }
@@ -25,6 +28,7 @@ internal static class RationalDepthCertificate
         if (ai.Length != bi.Length || ai.Length == 0) return false;
         for (int k = 0; k < ai.Length; k++)
         {
+            token.ThrowIfCancellationRequested();
             int i = ai[k], j = bi[k];
             if (a.Knots[i + a.Degree - 1] != b.Knots[j + b.Degree - 1] ||
                 a.Knots[i + a.Degree] != b.Knots[j + b.Degree]) return false;

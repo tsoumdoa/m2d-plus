@@ -160,9 +160,11 @@ public static class NativeDrawing
                     for (var index = 0; index < views.Count; index++)
                     {
                         ct.ThrowIfCancellationRequested(); progress?.Report(new(JobPhase.Drawing, index, views.Count));
+                        using var viewProgress = new DrawingProgress(progress,index,views.Count);
                         var drawing = SolveView(scene, prepared, views[index], settings, ct);
                         drawing.Phases.Add("normalisation", preparationSeconds / views.Count);
                         results.Add(drawing);
+                        using var censusPhase = drawing.Phases.Start("tolerance census");
                         if (!edgeCensus.TryGetValue(drawing.Tolerance, out var census))
                             edgeCensus[drawing.Tolerance] = census = ToleranceDiagnostics.SourceEdgeCensus(prepared, drawing.Tolerance, ct);
                         ToleranceDiagnostics.Apply(drawing, prepared, census, ct);
@@ -236,11 +238,8 @@ public static class NativeDrawing
             {
             using var phase = result.Phases.Start("native setup");
             using var viewport = new ViewportInfo();
-            var frame = result.Frame; var radius = scene.Bounds.IsValid ? Math.Max(scene.Bounds.Diagonal.Length, 1) : 1;
-            viewport.IsParallelProjection = true;
-            viewport.SetCameraLocation(frame.Plane.Origin + frame.Plane.ZAxis * (radius * 4 + 10));
-            viewport.SetCameraDirection(view.Direction); viewport.SetCameraUp(frame.Plane.YAxis);
-            viewport.SetFrustum(frame.X.Min, frame.X.Max, frame.Y.Min, frame.Y.Max, .001, radius * 10 + 100);
+            var frame = result.Frame;
+            NativeViewport.Configure(viewport,frame,view.Direction,scene.Bounds,tolerance);
             var parameters = new HiddenLineDrawingParameters { AbsoluteTolerance = tolerance, Flatten = false,
                 IncludeHiddenCurves = true, IncludeTangentEdges = view.Settings?.Tangents ?? false, IncludeTangentSeams = view.Settings?.Seams ?? false };
             parameters.SetViewport(viewport);
@@ -251,7 +250,7 @@ public static class NativeDrawing
             }
             CountHld(); result.NativeCalls++;
             phase.Next("native solve");
-            using var drawing = HiddenLineDrawing.Compute(parameters, settings.MultipleThreads, NativeProgress, token);
+            using var drawing = HiddenLineDrawing.Compute(parameters, settings.MultipleThreads, NativeProgress ?? DrawingProgress.Native, token);
             phase.Next("output construction");
             token.ThrowIfCancellationRequested();
             if (drawing is null) throw new InvalidOperationException("Native HLD returned null without cancellation.");
@@ -333,6 +332,7 @@ public static class NativeDrawing
         catch (Exception ex) { result.Dispose(); result.Error = ex.Message; quarantine = true; }
         finally
         {
+            using var completionPhase = result.Phases.Start("uncertainty and ordering");
             if (quarantine || uncertainSources.Count != 0 || uncertainRegions.Count != 0)
             {
                 try { NativeUncertainty.ApplyFootprints(result, sources, quarantine, uncertainSources, uncertainRegions, tolerance, token, !settings.NativeOnly, localSources); }

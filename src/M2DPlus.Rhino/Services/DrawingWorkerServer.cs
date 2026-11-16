@@ -8,6 +8,10 @@ public static class DrawingWorkerServer
 {
     public static void Run(Stream pipe)
     {
+        var writeGate = new object();
+        void Send(string kind, byte[] data)
+        { lock(writeGate) WorkerFrames.WriteAsync(pipe,WorkerPackets.Encode(kind,data),default).GetAwaiter().GetResult(); }
+        var progress = new ProgressSink(p => Send("progress",WorkerCodec.Encode(p)));
         var own=WorkerCodec.Fingerprint();
         WorkerFrames.WriteAsync(pipe,WorkerCodec.Encode(own),default).GetAwaiter().GetResult();
         var expected=WorkerCodec.Decode<WorkerFingerprint>(WorkerFrames.ReadAsync(pipe,default).GetAwaiter().GetResult());
@@ -36,7 +40,7 @@ public static class DrawingWorkerServer
                             NativeDrawing.NativeStarting=()=>
                             {
                                 if(signalled)return;signalled=true;
-                                WorkerFrames.WriteAsync(pipe,WorkerPackets.Encode("started",[]),default).GetAwaiter().GetResult();
+                                Send("started",[]);
                                 // Internal licensed fault injection, never exposed in GH or settings.
                                 switch(Environment.GetEnvironmentVariable("M2DPLUS_WORKER_TEST_FAULT"))
                                 {
@@ -49,19 +53,21 @@ public static class DrawingWorkerServer
                                 }
                             };
                             using(var result=NativeDrawing.SolveBorrowedAsync(scene,solve.Identity,[solve.View],
-                                new NativeSettings(false,solve.NativeOnly){Scheduler=scheduler,IsWorker=true},default,null).GetAwaiter().GetResult())
+                                new NativeSettings(false,solve.NativeOnly){Scheduler=scheduler,IsWorker=true},default,progress).GetAwaiter().GetResult())
                                 payload=WorkerCodec.Encode(new WorkerCodec.Reply(solve.Identity,solve.ViewIndex,WorkerCodec.CaptureDrawing(result.Views[0])));
                             break;
                         default:throw new InvalidDataException("Unknown worker operation.");
                     }
-                    WorkerFrames.WriteAsync(pipe,WorkerPackets.Encode(request.Kind,payload),default).GetAwaiter().GetResult();
+                    Send(request.Kind,payload);
                 }
                 catch(Exception ex)
                 {
-                    WorkerFrames.WriteAsync(pipe,WorkerPackets.Encode(ex is OutOfMemoryException ? "memory" : "error",Encoding.UTF8.GetBytes(ex.Message)),default).GetAwaiter().GetResult();
+                    Send(ex is OutOfMemoryException ? "memory" : "error",Encoding.UTF8.GetBytes(ex.Message));
                 }
             }
         }
         finally{scene?.Dispose();}
     }
+    private sealed class ProgressSink(Action<JobProgress> report) : IProgress<JobProgress>
+    { public void Report(JobProgress value) => report(value); }
 }

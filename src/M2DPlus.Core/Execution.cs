@@ -2,7 +2,10 @@ namespace M2DPlus.Core;
 
 public readonly record struct RequestIdentity(string SceneRevision, string ViewRevision, string SettingsRevision, long Generation);
 public enum JobPhase { Reading, Preparing, Queued, Drawing, Complete, Cancelled, Failed }
-public readonly record struct JobProgress(JobPhase Phase, int Done, int Total);
+public readonly record struct JobProgress(JobPhase Phase, int Done, int Total)
+{
+    public string? Detail { get; init; }
+}
 
 /// <summary>Cancellation rejects publication immediately; it does not release native resources.</summary>
 public sealed class RequestGate : IDisposable

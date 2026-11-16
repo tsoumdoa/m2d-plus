@@ -56,7 +56,9 @@ public static class EdgeFaceKernel
     {
         var zero = T.From(0); var p = P<T>.From(point);
         if (T.Compare(face.Normal.Z, zero) == 0) return false;
-        var gap = (face.D - P<T>.Dot(face.Normal, p)) / face.Normal.Z;
+        // Equivalent plane equation, subtracting before multiplying avoids
+        // cancellation amplified by survey coordinates. Ties still go to exact.
+        var gap = P<T>.Dot(face.Normal, face.Anchor - p) / face.Normal.Z;
         if (T.Compare(gap, T.From(tolerance)) <= 0) return false;
         bool inside = false, boundary = false;
         foreach (var loop in face.Loops)
@@ -76,7 +78,7 @@ public static class EdgeFaceKernel
     public static VisibilityResult Solve(IReadOnlyList<PlanarFace> faces, IReadOnlyList<CandidateEdge> edges,
         VisibilityOptions options, CancellationToken token = default)
     {
-        if (!double.IsFinite(options.DepthTolerance) || options.DepthTolerance <= 0 || options.Threads < 1)
+        if (!double.IsFinite(options.DepthTolerance) || options.DepthTolerance <= 0 || options.Threads < 1 || options.MaxPairOperations < 1 || options.MaxFacesPerEdge < 1)
             throw new ArgumentOutOfRangeException(nameof(options));
         var prepared = new Face[faces.Count];
         try
@@ -91,7 +93,14 @@ public static class EdgeFaceKernel
                 if (!Finite(p) || size >= 1e150 || Math.BitIncrement(size) - size > options.DepthTolerance / 64)
                     throw new ArithmeticException("Drawing coordinate resolution exceeds tolerance; whole view unresolved");
             }
-            for (int i = 0; i < faces.Count; i++) { token.ThrowIfCancellationRequested(); prepared[i] = new(faces[i], options.DepthTolerance); }
+            for (int i = 0; i < faces.Count; i++)
+            {
+                token.ThrowIfCancellationRequested();
+                if (faces[i].Loops.Sum(l => (long)l.Length) > options.MaxPairOperations)
+                    throw new ArithmeticException("Planar face preparation work budget exceeded; whole view unresolved");
+                prepared[i] = new(faces[i], options.DepthTolerance);
+                if ((i & 255) == 0) options.Progress?.Invoke(i, faces.Count);
+            }
             if (edges.Any(e => !Finite(e.A) || !Finite(e.B))) throw new ArithmeticException("Nonfinite edge");
         }
         catch (ArithmeticException e)
@@ -100,7 +109,7 @@ public static class EdgeFaceKernel
         }
         var tree = options.UseIndex ? new FaceTree(prepared, token) : null;
         var outputs = new EdgeInterval[edges.Count][];
-        long tests = 0, fallback = 0;
+        long tests = 0, fallback = 0, exactTicks = 0; int done = 0, budgetEdges = 0;
         Parallel.For(0, edges.Count, new ParallelOptions { MaxDegreeOfParallelism = options.Threads, CancellationToken = token }, ei =>
         {
             var edge = edges[ei];
@@ -117,23 +126,29 @@ public static class EdgeFaceKernel
             foreach (int fi in ids)
             {
                 if ((localTests++ & 255) == 0) token.ThrowIfCancellationRequested();
+                if (localTests > options.MaxFacesPerEdge) { unresolved = true; Interlocked.Increment(ref budgetEdges); break; }
                 var f = prepared[fi];
                 IReadOnlyList<(double A, double B)> pieces;
                 try
                 {
                     if (f.Filtered is null) throw new IndeterminateException();
-                    pieces = Clip(f.Filtered, edge, options.DepthTolerance, token);
+                    pieces = Clip(f.Filtered, edge, options.DepthTolerance, token, options.MaxPairOperations);
                 }
                 catch (IndeterminateException)
                 {
                     localExact++;
-                    try { pieces = Clip(f.Exact.Value, edge, options.DepthTolerance, token); }
+                    long start = options.ObserveWork is null ? 0 : System.Diagnostics.Stopwatch.GetTimestamp();
+                    try { pieces = Clip(f.Exact.Value, edge, options.DepthTolerance, token, options.MaxPairOperations); }
                     catch (EndpointResolutionException) { unresolved = true; break; }
+                    catch (WorkBudgetException) { unresolved = true; Interlocked.Increment(ref budgetEdges); break; }
+                    finally { if (options.ObserveWork is not null) Interlocked.Add(ref exactTicks, System.Diagnostics.Stopwatch.GetTimestamp() - start); }
                 }
+                catch (WorkBudgetException) { unresolved = true; Interlocked.Increment(ref budgetEdges); break; }
                 for (int pi = 0; pi < pieces.Count; pi++) InsertHidden(hidden, pieces[pi]);
                 if (hidden.Count == 1 && hidden[0].A == 0 && hidden[0].B == 1) break;
             }
             Interlocked.Add(ref tests, localTests); Interlocked.Add(ref fallback, localExact);
+            options.Progress?.Invoke(Interlocked.Increment(ref done), edges.Count);
             if (unresolved) { outputs[ei] = [new(ei, 0, 1, VisibilityClass.Unresolved)]; return; }
             var result = new List<EdgeInterval>(); double cursor = 0;
             foreach (var h in hidden)
@@ -144,16 +159,26 @@ public static class EdgeFaceKernel
             if (cursor < 1) result.Add(new(ei, cursor, 1, VisibilityClass.Visible));
             outputs[ei] = result.ToArray();
         });
-        return new(outputs.SelectMany(x => x).ToArray(), tests, fallback, []);
+        options.ObserveWork?.Invoke(new(fallback, (double)exactTicks / System.Diagnostics.Stopwatch.Frequency, prepared.Count(f => f.Exact.IsValueCreated), budgetEdges));
+        return new(outputs.SelectMany(x => x).ToArray(), tests, fallback,
+            budgetEdges == 0 ? [] : [$"Planar certificate work budget exceeded for {budgetEdges} candidates; their complete spans are Unresolved."]);
     }
 
-    private static IReadOnlyList<(double A, double B)> Clip<T>(Polygon<T> face, CandidateEdge edge, double tolerance, CancellationToken token) where T : IScalar<T>
+    private sealed class WorkBudgetException : Exception;
+
+    private static IReadOnlyList<(double A, double B)> Clip<T>(Polygon<T> face, CandidateEdge edge, double tolerance, CancellationToken token, int operationLimit) where T : IScalar<T>
     {
+        int operations = 0;
+        void Step()
+        {
+            if ((operations++ & 255) == 0) token.ThrowIfCancellationRequested();
+            if (operations > operationLimit) throw new WorkBudgetException();
+        }
         var zero = T.From(0); var one = T.From(1);
         List<(double, double)>? output = null;
         if (T.Compare(face.Normal.Z, zero) == 0) return Array.Empty<(double, double)>();
         var a = P<T>.From(edge.A); var b = P<T>.From(edge.B); var delta = b - a;
-        T Gap(P<T> p) => (face.D - P<T>.Dot(face.Normal, p)) / face.Normal.Z - T.From(tolerance);
+        T Gap(P<T> p) => P<T>.Dot(face.Normal, face.Anchor - p) / face.Normal.Z - T.From(tolerance);
         var g0 = Gap(a); var g1 = Gap(b);
         int s0 = T.Compare(g0, zero), s1 = T.Compare(g1, zero);
         if (s0 <= 0 && s1 <= 0) return Array.Empty<(double, double)>();
@@ -165,7 +190,7 @@ public static class EdgeFaceKernel
         foreach (var loop in face.Loops)
             for (int i = 0; i < loop.Length; i++)
             {
-                if ((i & 255) == 0) token.ThrowIfCancellationRequested();
+                Step();
                 var p = loop[i]; var q = loop[(i + 1) % loop.Length]; var side = q - p; var w = p - a;
                 var den = delta.X * side.Y - delta.Y * side.X;
                 if (T.Compare(den, zero) == 0)
@@ -187,11 +212,12 @@ public static class EdgeFaceKernel
         for (int i = 1; i < events.Count; i++)
         {
             var value = events[i]; int j = i;
-            while (j > 0 && T.Compare(events[j - 1], value) > 0) { events[j] = events[j - 1]; j--; }
+            while (j > 0 && T.Compare(events[j - 1], value) > 0) { Step(); events[j] = events[j - 1]; j--; }
             events[j] = value;
         }
         for (int i = 0; i + 1 < events.Count; i++)
         {
+            Step();
             if (T.Compare(events[i], events[i + 1]) == 0) continue;
             var mid = (events[i] + events[i + 1]) / T.From(2);
             var x = a.X + delta.X * mid; var y = a.Y + delta.Y * mid;
@@ -199,6 +225,7 @@ public static class EdgeFaceKernel
             foreach (var loop in face.Loops)
                 for (int j = 0; j < loop.Length; j++)
                 {
+                    Step();
                     var p = loop[j]; var q = loop[(j + 1) % loop.Length];
                     var cross = (q.X - p.X) * (y - p.Y) - (q.Y - p.Y) * (x - p.X);
                     int sign = T.Compare(cross, zero);
@@ -280,7 +307,7 @@ public static class EdgeFaceKernel
                 var limit = Rational.From(tolerance) * Rational.From(tolerance) * n2;
                 foreach (var p in all)
                 {
-                    var residual = P<Rational>.Dot(exact.Normal, P<Rational>.From(p)) - exact.D;
+                    var residual = P<Rational>.Dot(exact.Normal, P<Rational>.From(p) - exact.Anchor);
                     if (Rational.Compare(residual * residual, limit) > 0) throw new ArithmeticException("Nonplanar face; whole view unresolved");
                 }
             }
@@ -289,7 +316,8 @@ public static class EdgeFaceKernel
                 try
                 {
                     var exact = Exact.Value;
-                    Filtered = new(face, new(Filter.FromExact(exact.Normal.X), Filter.FromExact(exact.Normal.Y), Filter.FromExact(exact.Normal.Z)), Filter.FromExact(exact.D));
+                    Filtered = new(face, new(Filter.FromExact(exact.Normal.X), Filter.FromExact(exact.Normal.Y), Filter.FromExact(exact.Normal.Z)), Filter.FromExact(exact.D),
+                        new(Filter.FromExact(exact.Anchor.X),Filter.FromExact(exact.Anchor.Y),Filter.FromExact(exact.Anchor.Z)));
                 }
                 catch (IndeterminateException) { }
             }
@@ -302,7 +330,7 @@ public static class EdgeFaceKernel
                 var limit = Filter.From(tolerance) * Filter.From(tolerance) * P<Filter>.Dot(polygon.Normal, polygon.Normal);
                 foreach (var p in vertices)
                 {
-                    var residual = P<Filter>.Dot(polygon.Normal, P<Filter>.From(p)) - polygon.D;
+                    var residual = P<Filter>.Dot(polygon.Normal, P<Filter>.From(p) - polygon.Anchor);
                     if (Filter.Compare(residual * residual, limit) > 0) return false;
                 }
                 return true;

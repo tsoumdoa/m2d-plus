@@ -167,6 +167,11 @@ public sealed class DrawingWorkerPool : IDisposable
                 }
                 AttemptingView?.Invoke(index,cap,isolatedRetry);
                 slot.Client.NativeStarted=()=>SolvingView?.Invoke(slot.Client.ProcessId,index);
+                slot.Client.Progress = new ProgressSink(p => {
+                    // A child's completion is not completion of the whole set.
+                    if (p.Detail is not null) progress?.Report(new(JobPhase.Drawing,Volatile.Read(ref done),views.Count)
+                        { Detail = $"{views[index].Name}: {p.Detail}" });
+                });
                 var clock=System.Diagnostics.Stopwatch.StartNew();
                 var reply=WorkerCodec.Decode<WorkerCodec.Reply>(await slot.Client.CallAsync("solve",EncodedRequest?.Invoke(index)??WorkerCodec.Encode(new WorkerCodec.Request(identity,index,views[index],settings.NativeOnly)),_options.SolveTimeout,token).ConfigureAwait(false));
                 reply=ObserveReply?.Invoke(reply)??reply;
@@ -204,6 +209,8 @@ public sealed class DrawingWorkerPool : IDisposable
         }
     }
     private static bool IsMemoryFailure(string? error)=>error is not null && (error.Contains("memory",StringComparison.OrdinalIgnoreCase) || error.Contains("bad_alloc",StringComparison.OrdinalIgnoreCase));
+    private sealed class ProgressSink(Action<JobProgress> report) : IProgress<JobProgress>
+    { public void Report(JobProgress value) => report(value); }
     private static string MemoryFailure(long cap,string reason)=>$"Worker memory cap ({cap/(double)WorkerMemoryPolicy.GiB:F1} GiB) exceeded for this view. {reason} Close other applications or reduce this scene/view's complexity and run again; no heavy in-process fallback was used.";
     private void ExpireIdle()
     {

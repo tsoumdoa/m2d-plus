@@ -26,6 +26,8 @@ internal static class Program
                 if(args[0]=="identity")Inspect(args[1],args.Length>2?args[2]:null).GetAwaiter().GetResult();else Measure(args[1],args[2],int.Parse(args[3]),args.Length>4?int.Parse(args[4]):0).GetAwaiter().GetResult();return 0;
             }
             var resolver=Assembly.LoadFrom(args[1]);resolver.GetType("RhinoInside.Resolver",true)!.GetMethod("Initialize",[typeof(string)])!.Invoke(null,["C:/Program Files/Rhino 8/System"]);
+            if(args[0]=="scale"){ScaleBench.Run(args[2],args[3],args.Length>4?args[4]:"5");return 0;}
+            if(args[0]=="compare-drawings"){ScaleBench.Compare(args[2],args[3],args[4]);return 0;}
             if(args[0]=="dump")DumpFrames(args[2],args[3]);else if(args[0]=="restore")RestoreFrames(args[2]);else Export(args[2],args[3],args[0]!="scene");return 0;
         }
         catch(Exception ex){Console.Error.WriteLine(ex);return 1;}
@@ -143,7 +145,7 @@ internal static class Program
                 File.WriteAllText(Path.Combine(folder,$"reply-hash-{i}.txt"),hash);
                 results.Add(new{i,name=views[i].Name,hash,match,phases,recovered,pieces=node["Pieces"]!.AsArray().Count,regions=node["Regions"]!.AsArray().Count});
                 Console.WriteLine($"pass {pass} {i}: match={match} error=none");
-                if(match==false){File.WriteAllBytes(Path.Combine(folder,$"pool-mismatch-{pass}-{i}.json"),stable);throw new InvalidOperationException("Hash mismatch");}
+                if(match==false){File.WriteAllBytes(Path.Combine(folder,$"pool-mismatch-{pass}-{i}.json"),stable);allSucceeded=false;}
                 returned[i]=[];
             }
             rows.Add(new{pass,seconds,initialMemory=memory,fingerprint=expected,sizing=pool.LastSizing,peakCommitUpperBound=peak,sampledWorkerPeakPrivateBytes=sampled.WorkerPeak,sampledCoordinatorPeakPrivateBytes=sampled.CoordinatorPeak,sampledCombinedPeakPrivateBytes=sampled.CombinedPeak,pids=pool.ProcessIds,views=results});
