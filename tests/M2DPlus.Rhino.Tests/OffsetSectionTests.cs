@@ -63,7 +63,7 @@ public sealed class OffsetSectionTests(RhinoHost host, ITestOutputHelper output)
         }
     });
 
-    [RhinoFact]
+    [RhinoPerformanceFact, Trait("Category", "Performance")]
     public void OffsetValidationMedianStaysWithinOneAndAHalfTimesOrigin() => host.Run(() =>
     {
         // Same exact integer-sized columns, alternating order, fresh owned copies; timer reserve

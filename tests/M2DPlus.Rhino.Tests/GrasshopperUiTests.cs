@@ -200,7 +200,8 @@ public sealed class GrasshopperUiTests(RhinoHost host)
         finally { File.Delete(path); }
     });
 
-    [RhinoFact] public void CanvasRender() => host.Run(() =>
+    [RhinoScreenshotFact, Trait("Category", "Screenshots")]
+    public void CanvasRender() => host.Run(() =>
     {
         Assert.True(global::Rhino.PlugIns.PlugIn.LoadPlugIn(GrasshopperId));
         using var rhino = RhinoDoc.CreateHeadless(null);

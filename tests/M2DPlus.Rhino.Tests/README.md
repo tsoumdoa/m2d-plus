@@ -1,7 +1,7 @@
 # Licensed Rhino integration tests
 
 Plain `dotnet test` discovers skipped integration tests and never initializes Rhino.
-The pre-commit hook and Pack-Yak run Core tests only. Integration tests are serial
+The pre-commit hook runs Core and GH UI-model tests; Pack-Yak runs Core tests. Integration tests are serial
 and share one in-process RhinoCore on one STA host thread; they never attach
 to or terminate an interactive Rhino session. A compatible Windows x64 runtime,
 installed licensed Rhino 8 and McNeel Rhino.Inside resolver are required.
@@ -19,8 +19,8 @@ try {
 
 The existing resolver on the M0 research machine is at
 `C:/Users/tomosandego/.t3/scratch/2026-11-13-i-noticed-that-make2d-in-2f66c87c/.venv/Lib/site-packages/rhinoinside/Rhino.Inside_v8_net8.0.dll`.
-No resolver binary or licence is redistributed. The smoke test constructs a solid
-box, independently checks its volume, and reads the frozen `brep_box.3dm` fixture.
+No resolver binary or licence is redistributed. The actual GHA load-and-solve test
+checks the hosting runtime, shared preparation and independent output copies.
 M1a adds lifecycle races during a real HLD progress callback, independent analytic
 interval/point/mirror oracles, filtering/normalization, shared preparation and live
 GH async publication. See [implementation notes](../../docs/design/m1a-notes.md).
@@ -28,6 +28,35 @@ Section tests use frozen root/S2 fixtures and generated analytic geometry, recta
 areas, circle integrals, loop/hole/region counts, containment and independent volume
 checks. They cover crop, merge, contact, cap/provenance and embedded-pattern hatch
 save/reopen. See [the API and supported-domain notes](../../docs/design/m2-sections.md).
+
+## Optional timing, screenshots and research
+
+Correctness checks (including unit/offset geometry invariance, component layout and
+footer rendering assertions) stay in the ordinary suites. The following checks need
+an additional opt-in, even when licensed integration is enabled:
+
+| Environment variable | Checks | Optional filter |
+|---|---|---|
+| `M2D_PERFORMANCE_TESTS=1` | Core kernel unit-scale timing, Rhino offset-validation timing and 50k-object auto-depth timing | `Category=Performance` |
+| `M2D_UI_SCREENSHOTS=<output folder>` | Canvas screenshot generation; also saves images from the normal UI regression tests | `Category=Screenshots` for just the canvas generator |
+| `M2D_RESEARCH_TESTS=1` | Raw Rhino clipping/Unset characterization (does not exercise the M2D+ engine) | `Category=Research` |
+
+Core timing needs no Rhino licence:
+
+```powershell
+$env:M2D_PERFORMANCE_TESTS = '1'
+try {
+    dotnet test tests/M2DPlus.Core.Tests -c Debug --no-build --filter Category=Performance
+} finally {
+    Remove-Item Env:M2D_PERFORMANCE_TESTS -ErrorAction SilentlyContinue
+}
+```
+
+Rhino checks still require `M2D_RHINO_TESTS=1` and the compatible resolver described
+above. Set the additional variable before the direct test command or the serial
+harness below. Clear it afterwards. The capture profile keeps its existing separate
+`M2D_PROFILE_CAPTURE=1` opt-in. A passing screenshot generator or native research
+experiment is not a drawing-correctness claim.
 
 Run both native hosting runtimes **serially** with:
 

@@ -29,7 +29,9 @@ dotnet test tests/M2DPlus.Core.Tests -c Debug --no-build
 
 Requires the .NET 10 SDK with .NET 8 targeting support; installed Rhino is needed only
 for Yak packaging and [licensed integration tests](tests/M2DPlus.Rhino.Tests/README.md).
-Plain `dotnet test` skips Rhino integration unless explicitly enabled. See
+Plain `dotnet test` skips Rhino integration unless explicitly enabled. Timing benchmarks
+also require `M2D_PERFORMANCE_TESTS=1`; the integration test instructions describe the
+separate screenshot and raw Rhino research opt-ins. See
 [AGENTS.md](AGENTS.md) for the local hook, runtime notes and development contracts,
 [PLAN.md](docs/PLAN.md) for milestones, and [LICENSE](LICENSE) for the MIT licence.
 

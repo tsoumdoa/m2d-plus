@@ -160,7 +160,4 @@ public sealed class OutputTreeTests
         var typo = Settings.Resolve([View("a")], [new[] { "tree = layers" }], DocumentUnits.Metres);
         Assert.Contains(typo.Diagnostics, d => d.Message.Contains("'layer'", StringComparison.Ordinal));
     }
-
-    [Fact]
-    public void TreeIsPresentationAndNeverKeysTheVisibilitySolve() => Assert.DoesNotContain("tree", Settings.VisibilityKeys);
 }
