@@ -527,6 +527,24 @@ public sealed class AnalyticVisibilityTests(RhinoHost host, ITestOutputHelper ou
 
     private static double Total(ViewDrawing view, params LineClass[] kinds) => kinds.Sum(k => Length(view, k));
 
+    /// <summary>Length of the pieces of one class in `first` that do not lie on a piece of that class in `second`
+    /// (judged at five points of each piece, to a tenth of a millimetre).</summary>
+    private static double Uncovered(ViewDrawing first, ViewDrawing second, LineClass kind)
+    {
+        var others = second.Items.Where(p => p.Class == kind).Select(p => p.CopyGeometry()).OfType<Curve>().ToArray(); double total = 0;
+        try
+        {
+            foreach (var piece in first.Items.Where(p => p.Class == kind))
+            {
+                using var g = piece.CopyGeometry(); if (g is not Curve c || c.GetLength() < 1e-3) continue;
+                bool covered = new[] { .1, .3, .5, .7, .9 }.All(f => { var q = c.PointAt(c.Domain.ParameterAt(f)); return others.Any(o => o.ClosestPoint(q, out double t, 1e-4) && o.PointAt(t).DistanceTo(q) <= 1e-4); });
+                if (!covered) total += c.GetLength();
+            }
+        }
+        finally { foreach (var o in others) o.Dispose(); }
+        return total;
+    }
+
     [RhinoFact] public void WholePipelineAgreesWithNativeOnScenesWithoutTies() => host.Run(() =>
     {
         // Nothing touches anything, so the tie convention cannot differ; lengths must agree with the native route.
@@ -550,7 +568,10 @@ public sealed class AnalyticVisibilityTests(RhinoHost host, ITestOutputHelper ou
             // Uncut views are all exact. A cut can leave pieces that are none of the shapes (half a ball): those stay native.
             Assert.True(b.NativeCalls > 0, views[i].Name); Assert.True(i < 3 ? a.NativeCalls == 0 : a.NativeCalls <= b.NativeCalls, views[i].Name);
             Assert.True(i >= 3 || a.Report.UncertainCount == 0, views[i].Name + ": " + a.Info);   // cut views may keep native pieces
-            Assert.Equal(Total(b, LineClass.Visible), Total(a, LineClass.Visible), 2);
+            // The same visible linework, as loci: native draws some lines of a cut piece twice, so lengths can differ.
+            Assert.True(Uncovered(a, b, LineClass.Visible) < .01, $"{views[i].Name}: {Uncovered(a, b, LineClass.Visible):F3} of exact Visible has no native Visible under it");
+            Assert.True(Uncovered(b, a, LineClass.Visible) < .01, $"{views[i].Name}: {Uncovered(b, a, LineClass.Visible):F3} of native Visible has no exact Visible under it");
+            if (i < 3) Assert.Equal(Total(b, LineClass.Visible), Total(a, LineClass.Visible), 2);
             Assert.Equal(b.Regions.Count, a.Regions.Count); Assert.Equal(b.Regions.Sum(r => r.Region.Area), a.Regions.Sum(r => r.Region.Area), 6);
             // Native merges coincident hidden lines; where it reports nothing Unresolved the hidden lengths agree too.
             if (b.Report.UncertainCount == 0) Assert.Equal(Total(b, LineClass.Hidden), Total(a, LineClass.Hidden), 2);
