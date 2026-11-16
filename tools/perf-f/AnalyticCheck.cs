@@ -201,6 +201,40 @@ internal static class AnalyticCheck
                 plane.ClosestParameter(item.Mid, out var ux, out var uy); var depth = item.p.DepthGeometry as Curve; var w = depth?.PointAt(depth.Domain.Mid) ?? Point3d.Unset;
                 var leaf = prepared.First(l => l.Identity == item.p.SourceIdentity);
                 Console.WriteLine($"    UNRESOLVED {item.Length * 1000:F4} mm {(item.Linear ? "line" : "curve")} at ({ux:F3}, {uy:F3}) world {w} source {item.p.SourceIdentity[^12..]} {AnalyticVisibility.Recognise(leaf.Geometry, tol)?.GetType().Name}");
+                // The engine's answer per solid at the exact point behind this piece: the point is put on the two own
+                // surfaces it is nearest to, and every surface of any solid it then lies on (within 1e-7) is taken as known.
+                if (AnalyticVisibility.Recognise(leaf.Geometry, tol) is AnalyticVisibility.CutTubeShape ownTube)
+                {
+                    var two = Enumerable.Range(0, ownTube.Real).OrderBy(i => Math.Abs(CutTubeRecognition.Distance(ownTube.Surfaces[i], w))).Take(2).ToArray();
+                    var exactPoint = CutTubeRecognition.Onto(ownTube.Surfaces[two[0]], ownTube.Surfaces[two[1]], w) ?? w; var ve = AnalyticVisibility.Project(plane, exactPoint);
+                    foreach (var other in prepared)
+                    {
+                        if (AnalyticVisibility.Recognise(other.Geometry, tol) is not { } otherShape) continue;
+                        var solid = AnalyticVisibility.Solid(otherShape, plane); int bits = 0; string lies = "";
+                        if (otherShape is AnalyticVisibility.CutTubeShape ct2)
+                            for (int i = 0; i < ct2.Real; i++) if (Math.Abs(CutTubeRecognition.Distance(ct2.Surfaces[i], exactPoint)) < 1e-7) { bits |= 1 << i; lies += $" {i}"; }
+                        if (otherShape is AnalyticVisibility.CylinderShape pc)
+                        {
+                            var d = exactPoint - pc.Origin; d -= pc.Axis * (d * pc.Axis);
+                            if (Math.Abs(d.Length - pc.Radius) < 1e-7) { bits |= M2DPlus.Core.Visibility.AnalyticSolid.Outer; lies += " outer"; }
+                            if (Math.Abs(d.Length - pc.InnerRadius) < 1e-7) { bits |= M2DPlus.Core.Visibility.AnalyticSolid.Inner; lies += " bore"; }
+                        }
+                        var answer = solid.Occlusion(ve, tol, bits);
+                        if (answer != M2DPlus.Core.Visibility.VisibilityClass.Visible || other.Identity == item.p.SourceIdentity)
+                            Console.WriteLine($"        exact point (moved {exactPoint.DistanceTo(w):E2}): {answer} by {other.Identity[^12..]}{(other.Identity == item.p.SourceIdentity ? " (own)" : "")} on its surfaces [{lies.Trim()}]; with no surface known {solid.Occlusion(ve, tol)}");
+                    }
+                }
+                foreach (var other in prepared)
+                    if (AnalyticVisibility.Recognise(other.Geometry, tol) is AnalyticVisibility.CutTubeShape nearTube)
+                    {
+                        var close = Enumerable.Range(0, nearTube.Surfaces.Count).Where(i => Math.Abs(CutTubeRecognition.Distance(nearTube.Surfaces[i], w)) < .2).ToArray();
+                        if (close.Length != 0) Console.WriteLine($"        within 0.2 of {other.Identity[^12..]}{(other.Identity == item.p.SourceIdentity ? " (own)" : "")}: " + string.Join(", ", close.Select(i => $"{i}:{(nearTube.Surfaces[i].Cylinder ? $"cyl r={nearTube.Surfaces[i].Radius:F2}" : "plane")} {nearTube.Surfaces[i].Role}{(nearTube.Surfaces[i].Virtual ? "*" : "")} at {CutTubeRecognition.Distance(nearTube.Surfaces[i], w):E2}")));
+                    }
+                    else if (AnalyticVisibility.Recognise(other.Geometry, tol) is AnalyticVisibility.CylinderShape plain)
+                    {
+                        var d = w - plain.Origin; d -= plain.Axis * (d * plain.Axis);
+                        if (Math.Abs(d.Length - plain.Radius) < .2 || Math.Abs(d.Length - plain.InnerRadius) < .2) Console.WriteLine($"        within 0.2 of {other.Identity[^12..]} (plain tube): outer at {d.Length - plain.Radius:E2}, bore at {d.Length - plain.InnerRadius:E2}, cap planes at {plain.Cap0.DistanceTo(w):E2} and {plain.Cap1.DistanceTo(w):E2}");
+                    }
                 foreach (var other in prepared)
                     if (AnalyticVisibility.Recognise(other.Geometry, tol) is { } shape && AnalyticVisibility.Solid(shape, plane).Occlusion(AnalyticVisibility.Project(plane, w), tol) is var k && k != M2DPlus.Core.Visibility.VisibilityClass.Visible)
                     {

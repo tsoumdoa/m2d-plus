@@ -475,18 +475,8 @@ internal sealed class AnalyticVisibility
                     // the edge snaps onto it (the surfaces cross cleanly there), that is what is classified, with no
                     // slack; otherwise the stored edge is classified with its measured slack.
                     Func<Point3d, Point3d>? snap = null;
-                    if (pair.Length == 2)
-                    {
-                        Point3d Onto(Point3d q) => CutTubeRecognition.Onto(pair[0], pair[1], q) ?? q;
-                        bool clean = true;
-                        for (int k = 0; k <= 16 && clean; k++)
-                        {
-                            var q = edge.World.PointAt(edge.World.Domain.ParameterAt(k / 16.0));
-                            clean = CutTubeRecognition.Onto(pair[0], pair[1], q) is { } on && on.DistanceTo(q) <= 4 * edge.Slack + _tol;
-                        }
-                        if (clean) snap = Onto;
-                    }
-                    yield return new(edge.World.DuplicateCurve(), input, solid, edge.On, false, Profile, snap is null ? edge.Slack : 0, null, snap);
+                    if (edge.Exact && pair.Length == 2) snap = q => CutTubeRecognition.Onto(pair[0], pair[1], q) ?? q;
+                    yield return new(edge.World.DuplicateCurve(), input, solid, edge.On, false, Profile, edge.Slack, null, snap);
                 }
                 // Outlines of its cylindrical faces, from Rhino's silhouette of the body: each is a ruling of the face's
                 // cylinder, already cut to the face. The ray there touches that cylinder.

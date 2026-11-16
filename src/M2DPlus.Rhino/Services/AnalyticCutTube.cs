@@ -30,7 +30,10 @@ internal static class CutTubeRecognition
     /// <param name="Outward">For an edge's profile test: +1 when the solid's outward normal on this surface's faces is
     /// the surface's own (away from a cylinder's axis, along a plane's normal), -1 when it is the opposite.</param>
     internal sealed record Surface(bool Cylinder, Point3d Origin, Vector3d Direction, double Radius, CsgRole Role, double Slack, bool Virtual, int Outward);
-    internal sealed record Edge(Curve World, int On, double Slack);
+    /// <param name="Exact">The stored edge stands for the exact intersection of its two surfaces: every point of it
+    /// snaps onto that curve (<see cref="Onto"/>), which is what is classified. Otherwise (where the two surfaces meet
+    /// at too flat an angle to snap reliably) the stored curve is classified with its slack.</param>
+    internal sealed record Edge(Curve World, int On, double Slack, bool Exact);
 
     /// <summary>Faces may be this far from their surface, and edges from the surfaces they join: 256 tolerances, and
     /// never more than a sixteenth of the wall thickness or radius. Beyond that the body is not a cut tube here.</summary>
@@ -370,7 +373,25 @@ internal static class CutTubeRecognition
             }
             if (slack > limit) return no($"an edge further than {limit:G3} from the surfaces it joins ({slack:G3})");
             edgeBound = Math.Max(edgeBound, slack);
-            edges.Add(new(edge.DuplicateCurve(), (1 << a) | (1 << b), slack * 1.25));
+            // Where the two surfaces cross cleanly the edge is exact: its points snap onto their intersection, moving
+            // by no more than the limit. Runs of the edge where they do not (two cylinders touching where a cope
+            // pinches out) stay as stored. The edge is cut into such runs.
+            using var whole = edge.DuplicateCurve(); const int parts = 64; var clean = new bool[parts + 1]; double move = 0;
+            for (int k = 0; k <= parts; k++)
+            {
+                var q = whole.PointAt(whole.Domain.ParameterAt((double)k / parts));
+                clean[k] = Onto(surfaces[a], surfaces[b], q) is { } on && on.DistanceTo(q) <= limit;
+                if (clean[k]) move = Math.Max(move, Onto(surfaces[a], surfaces[b], q)!.Value.DistanceTo(q));
+            }
+            edgeBound = Math.Max(edgeBound, move);
+            for (int from = 0; from < parts;)
+            {
+                bool exact = clean[from] && clean[from + 1]; int to = from + 1;
+                while (to < parts && (clean[to] && clean[to + 1]) == exact) to++;
+                var piece = from == 0 && to == parts ? whole.DuplicateCurve() : whole.Trim(whole.Domain.ParameterAt((double)from / parts), whole.Domain.ParameterAt((double)to / parts));
+                if (piece is not null) edges.Add(new(piece, (1 << a) | (1 << b), exact ? 0 : slack * 1.25, exact));
+                from = to;
+            }
         }
         int unknownKinds = count.Keys.Count(k => !inside.Contains(k) && !outside.Contains(k)) + mixed.Count(k => !count.ContainsKey(k));
         return new AnalyticVisibility.CutTubeShape(surfaces, box, edges, faceSurface, real, faceBound, edgeBound, inside, outside)
