@@ -132,14 +132,16 @@ public sealed class WorkerTests(RhinoHost host)
         Assert.True(batch.Complete);Assert.Contains("deadline",batch.Views[0].Error);Assert.True(batch.Views[0].Report.Quarantined);
         Assert.Equal("authored view error",batch.Views[1].Error);
     });
-    [RhinoFact] public void OneStartupTimeoutRequeuesItsViewEvenAfterHealthySiblingFinishes()=>host.Run(()=>
+    [RhinoFact] public void SlowStartupDoesNotClaimAViewOrDelayHealthySiblingCompletion()=>host.Run(()=>
     {
         using var doc=RhinoDoc.CreateHeadless(null);Populate(doc);using var cache=new SceneCache();using var lease=Capture(doc,cache);
         var marker=Path.Combine(Path.GetTempPath(),"m2d-startup-"+Guid.NewGuid().ToString("N"));
         try
         {
-            using var pool=new DrawingWorkerPool(Options(2,"startup-once|"+marker) with{StartupTimeout=TimeSpan.FromSeconds(5)});
+            using var pool=new DrawingWorkerPool(Options(2,"startup-once|"+marker) with{StartupTimeout=TimeSpan.FromSeconds(60)});
+            var clock=System.Diagnostics.Stopwatch.StartNew();
             using var first=pool.SolveAsync(lease.Value,Identity(lease.Value),Views,new(),default).GetAwaiter().GetResult();
+            Assert.True(clock.Elapsed<TimeSpan.FromSeconds(30),"A slow unused startup held the batch until its deadline: "+clock.Elapsed);
             Assert.True(first.Complete);Assert.All(first.Views,v=>Assert.Null(v.Error));
             Assert.Single(pool.ProcessIds);
             using var next=pool.SolveAsync(lease.Value,Identity(lease.Value,2),Views,new(),default).GetAwaiter().GetResult();

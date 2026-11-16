@@ -54,6 +54,10 @@ public static class SectionRegionEngine
     /// <param name="verdicts">The scene's validation verdicts; null shares verdicts within this call only.</param>
     internal static SectionResult Compute(IEnumerable<SectionSource> sources, SectionRequest request, SectionVerdictCache? verdicts,
         CancellationToken cancellationToken, bool prepareVisibility = false, Plane? farPlane = null, M2DPlus.Rhino.Services.PhaseTimings? phases = null)
+        => SectionCoordinates.Compute(sources, request, verdicts, cancellationToken, prepareVisibility, farPlane, phases);
+
+    internal static SectionResult ComputeLocal(IEnumerable<SectionSource> sources, SectionRequest request, SectionVerdictCache? verdicts,
+        CancellationToken cancellationToken, bool prepareVisibility, Plane? farPlane, M2DPlus.Rhino.Services.PhaseTimings? phases)
     {
         SectionGeometry.Validate(request);
         var ordered = sources.OrderBy(s => s.Id, StringComparer.Ordinal).ToArray();
@@ -67,11 +71,13 @@ public static class SectionRegionEngine
             // Validation verdicts are settled first, one at a time on this thread, so no verdict can depend on
             // which worker asked first or on what other workers were doing at the time.
             var verdict = new string[ordered.Length];
+            var validationTimer = System.Diagnostics.Stopwatch.StartNew();
             for (var i = 0; i < ordered.Length; i++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 verdict[i] = SectionGeometry.Verdict(ordered[i], request.Tolerance, verdicts ?? transient!);
             }
+            phases?.Add("section validation", validationTimer.Elapsed.TotalSeconds); // Nested in sections.
             // Pure geometry on separately owned copies: no document, live object, scheduler or native visibility call.
             SourceOutcome Process(int index)
             {

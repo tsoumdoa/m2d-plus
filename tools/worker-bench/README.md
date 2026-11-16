@@ -32,6 +32,17 @@ samples without every polyline vertex. These are sampled regressions, not
 certificates. `--tables-only` refreshes `measurements.md` and `phases.csv` without
 repeating locus queries. A tenfold tolerance, mesh or compound-Brep probe is an
 explicit geometry/output experiment, never an equivalence claim.
+Offset plan investigation: `offset <resolver> <new-output-folder> <offset-mm>:10`
+generates/replays a 1,700-element mm building under `~/.t3/m2d-plus-models/offset/`
+(v2: real stepped stairs, round columns, door/window blocks, three rational ellipsoids),
+then solves ten plans 3,200 mm apart. Run offset 0 first; 100000 and 1000000 are
+translated copies of that saved origin model. Models and generation sidecars are never
+overwritten. `probe` measures primitive validation/sections; `profile:<model.3dm>`
+records every source validation verdict/time. The ordinary `pool` command replays
+the captured ten-view requests and checks strict local hashes. `offset.json` includes
+every phase/Info record, exact fallbacks, certificate patch/coverage work, budget hits,
+Unresolved counts, canonical/local validation counts and an independently timed raw
+`Intersection.BrepPlane` yardstick (not Rhino's interactive Section command).
 
 Unit/offset investigation: see `docs/research/units-and-solve-latency.md`.
 `scale <resolver> <model.3dm> <new-output-folder> [indices=5]` records capture,

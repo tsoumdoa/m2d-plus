@@ -23,6 +23,7 @@ internal static class SectionDrawing
     internal static ViewDrawing Solve(PreparedScene scene, IReadOnlyList<PreparedLeaf> sources,
         ViewRequest view, NativeSettings settings, CancellationToken token)
     {
+        using var work = new SectionWork();
         var timer = Stopwatch.StartNew(); var invalid = 0; var quarantine = scene.HasPotentialOccluderUnsupported;
         var uncertainSources = new HashSet<string>(StringComparer.Ordinal); var uncertainRegions = new List<BoundingBox>();
         var localSources = new HashSet<string>(StringComparer.Ordinal);
@@ -43,6 +44,13 @@ internal static class SectionDrawing
         var suppression = new List<Curve>(); var cutLoci = new List<Curve>(); var farLoci = new List<Curve>();
         var sourceTrim = new Dictionary<string, List<Curve>>(StringComparer.Ordinal);
         var sourceFar = new Dictionary<string, List<Curve>>(StringComparer.Ordinal);
+        using var cutIndex = new RTree();
+        IEnumerable<Curve> NearbyCuts(Curve curve)
+        {
+            var bounds = curve.GetBoundingBox(true); bounds.Inflate(2 * tol);
+            var hits = new List<int>(); cutIndex.Search(bounds, (_, e) => hits.Add(e.Id)); hits.Sort();
+            return hits.Select(i => cutLoci[i]); // Same reference order as the full scan.
+        }
         var registered = new List<(GeometryBase Geometry, Candidate Tag)>();
         string route = "native HLD (in process)";
         try
@@ -74,7 +82,11 @@ internal static class SectionDrawing
                 // when its projected footprint is disjoint; ambiguous presentation is explicitly unresolved.
                 var blocked = sources.Where(s => !cut.Participates(s) && !(view.Settings?.Glass == GlassMode.Clear && s.Section.Transparent) && s.Geometry is Brep or Mesh)
                     .Any(s => ProjectedOverlap(s.Geometry, region, cut.Plane, tol));
-                foreach (var loop in region.Loops) cutLoci.Add(loop.Curve.DuplicateCurve());
+                foreach (var loop in region.Loops)
+                {
+                    var locus = loop.Curve.DuplicateCurve();
+                    cutIndex.Insert(locus.GetBoundingBox(true), cutLoci.Count); cutLoci.Add(locus);
+                }
                 if (blocked)
                 {
                     foreach (var loop in region.Loops) result.Pieces.Add(new(loop.Curve.DuplicateCurve(), source, LineClass.Unresolved));
@@ -170,7 +182,8 @@ internal static class SectionDrawing
                             if (item.FarCandidate && !isFar) continue;
                             if (isFar && (!range.GenerateFarClipLines || item.Class != LineClass.Visible)) continue;
                             var kind = isFar ? LineClass.FarClip : item.Class;
-                            IEnumerable<Curve> references = isFar ? cutLoci : cutLoci.Concat(sourceTrim.GetValueOrDefault(source.Identity) ?? Enumerable.Empty<Curve>());
+                            var nearby = NearbyCuts(farPart.Curve);
+                            IEnumerable<Curve> references = isFar ? nearby : nearby.Concat(sourceTrim.GetValueOrDefault(source.Identity) ?? Enumerable.Empty<Curve>());
                             foreach (var part in Subtract(farPart.Curve, references, tol))
                             {
                                 using (part)
@@ -209,8 +222,6 @@ internal static class SectionDrawing
                 var project = Transform.PlanarProjection(cut.Plane) * inverse;
                 var nativeParents = new HashSet<int>(); int nativeFragments = 0;
                 // Only cut loops near a segment can overlap it. Split still applies its own exact bounds test.
-                using var cutIndex = new RTree();
-                for (var i = 0; i < cutLoci.Count; i++) cutIndex.Insert(cutLoci[i].GetBoundingBox(true), i);
                 foreach (var segment in drawing.Segments)
                 {
                     token.ThrowIfCancellationRequested(); var visibility = segment.SegmentVisibility;
@@ -254,9 +265,7 @@ internal static class SectionDrawing
                             if (candidate.Far && !isFar) continue;
                             if (isFar && (!range.GenerateFarClipLines || visibility != HiddenLineDrawingSegment.Visibility.Visible)) continue;
                             var kind = isFar ? LineClass.FarClip : classification;
-                            var search = farPart.Curve.GetBoundingBox(true); search.Inflate(2 * tol); var hits = new List<int>();
-                            cutIndex.Search(search, (_, e) => hits.Add(e.Id)); hits.Sort(); // Original cut-loop order.
-                            var nearby = hits.Select(i => cutLoci[i]).ToArray();
+                            var nearby = NearbyCuts(farPart.Curve);
                             IEnumerable<Curve> references = isFar ? nearby : nearby.Concat(sourceTrim.GetValueOrDefault(candidate.Source.Identity) ?? Enumerable.Empty<Curve>());
                             foreach (var part in Subtract(farPart.Curve, references, tol))
                             {
@@ -288,6 +297,7 @@ internal static class SectionDrawing
         catch (Exception ex) { result.Dispose(); result.Error = ex.Message; quarantine = true; }
         finally
         {
+            result._diagnostics.Add(work.Diagnostic);
             foreach (var geometry in owned) geometry.Dispose();
             foreach (var curve in suppression.Concat(cutLoci).Concat(farLoci)) curve.Dispose();
             if (quarantine || uncertainSources.Count != 0 || uncertainRegions.Count != 0)

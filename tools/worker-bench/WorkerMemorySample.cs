@@ -16,7 +16,11 @@ internal sealed class WorkerMemorySample : IDisposable
     {
         _timer=new System.Threading.Timer(_=>
         {
-            lock(_sync)
+            // Process queries can exceed the sample period. Never queue blocked timer
+            // callbacks: they starve the coordinator's pipe continuations and make
+            // synchronous worker progress writes look like slow native HLD.
+            if(!Monitor.TryEnter(_sync))return;
+            try
             {
                 if(_stopped)return;
                 long workers=0;
@@ -28,6 +32,7 @@ internal sealed class WorkerMemorySample : IDisposable
                 _parent.Refresh();var parent=_parent.PrivateMemorySize64;
                 WorkerPeak=Math.Max(WorkerPeak,workers);CoordinatorPeak=Math.Max(CoordinatorPeak,parent);CombinedPeak=Math.Max(CombinedPeak,workers+parent);
             }
+            finally{Monitor.Exit(_sync);}
         },null,0,25);
     }
     public void Dispose()

@@ -66,7 +66,7 @@ internal static class SectionGeometry
     }
 
     /// <summary>The self-intersection verdict of a definition-local shape, at its instance scale. "" means valid.</summary>
-    internal static string CanonicalVerdict(SectionCanonical canonical, double tolerance)
+    internal static string CanonicalVerdict(SectionCanonical canonical, double tolerance, SectionVerdictCache? verdicts = null)
     {
         try
         {
@@ -74,13 +74,31 @@ internal static class SectionGeometry
             if (canonical.Scale != 1 && !local.Transform(Transform.Scale(Point3d.Origin, canonical.Scale)))
                 throw new SectionFailure("Definition geometry could not be scaled for validation.");
             using var brep = Convert(local, tolerance, validate: false);
-            ValidateFaceIntersections(brep, tolerance);
+            ValidateFaceIntersections(brep, tolerance, verdicts);
             return "";
         }
         catch (SectionFailure ex) { return ex.Message; }
     }
 
-    internal static void ValidateFaceIntersections(Brep brep, double tolerance)
+    internal static void ValidateFaceIntersections(Brep brep, double tolerance, SectionVerdictCache? verdicts = null)
+    {
+        // Native face/edge intersections lose shared-edge overlaps at survey coordinates.
+        // Their continuous topology fallback then subdivides a long edge down to tolerance.
+        // Validate an owned rigid translation instead; never move published/trim geometry.
+        using var local = SectionCoordinates.ValidationCopy(brep, tolerance);
+        if (verdicts is null) ValidateLocalFaceIntersections(local, tolerance);
+        else
+        {
+            var verdict = verdicts.LocalVerdict(local, tolerance, () =>
+            {
+                try { ValidateLocalFaceIntersections(local, tolerance); return ""; }
+                catch (SectionFailure ex) { return ex.Message; }
+            });
+            if (verdict.Length != 0) throw new SectionFailure(verdict);
+        }
+    }
+
+    private static void ValidateLocalFaceIntersections(Brep brep, double tolerance)
     {
         for (var i = 0; i < brep.Faces.Count; i++)
         for (var j = i + 1; j < brep.Faces.Count; j++)
@@ -154,7 +172,8 @@ internal static class SectionGeometry
             using var right = piece.Trim(middle, piece.Domain.Max);
             return left is not null && right is not null && Cover(left, depth + 1) && Cover(right, depth + 1);
         }
-        return Cover(curve, 0);
+        try { return Cover(curve, 0); }
+        finally { SectionWork.Coverage(262144 - budget, budget < 0); }
     }
 
     // Keep enclosing void shells together. Disjoint material shells are classified separately.
