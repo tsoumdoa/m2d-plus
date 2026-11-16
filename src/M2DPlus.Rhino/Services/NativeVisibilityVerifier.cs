@@ -7,7 +7,12 @@ using Rhino.Geometry.Intersect;
 namespace M2DPlus.Rhino.Services;
 
 /// <summary>A deterministic work cap, not a wall-clock cutoff (which would change output between runs).</summary>
-public sealed record NativeVerificationOptions(int MaxRayTests = 4096, int MaxSamples = 16384, double ViewSpacingFraction = 1.0 / 128);
+public sealed record NativeVerificationOptions(int MaxRayTests = 4096, int MaxSamples = 16384, double ViewSpacingFraction = 1.0 / 128)
+{
+    // Regression/measurement control only; never a product setting. Both paths
+    // charge the original five-ray budget and audit exactly the same samples.
+    internal bool ExhaustiveOffsets { get; init; }
+}
 
 /// <summary>
 /// Independent ray audit of native confidence. Samples can veto confidence, never prove a whole span.
@@ -24,9 +29,11 @@ internal sealed class NativeVisibilityVerifier : IDisposable
     private readonly Plane _plane;
     private readonly double _tol, _spacing;
     private readonly NativeVerificationOptions _options;
+    private readonly Vector3d[] _offsets;
     private readonly ViewDrawing _output;
     private readonly Stopwatch _clock = new();
     private int _tests, _samples, _skipped, _unknown, _visible, _hidden, _pieces, _spans;
+    internal int NativeCasts { get; private set; }
 
     internal NativeVisibilityVerifier(IReadOnlyList<VisibilityInput> inputs, ViewDrawing output,
         NativeVerificationOptions options, CancellationToken token, PlanarExtraction? extraction = null)
@@ -34,6 +41,7 @@ internal sealed class NativeVisibilityVerifier : IDisposable
         if (options.MaxRayTests < 0 || options.MaxSamples < 0 || !double.IsFinite(options.ViewSpacingFraction) || options.ViewSpacingFraction <= 0)
             throw new ArgumentOutOfRangeException(nameof(options));
         _output = output; _plane = output.Frame.Plane; _tol = output.Tolerance; _options = options;
+        _offsets = [_plane.XAxis*(4*_tol), _plane.XAxis*(-4*_tol), _plane.YAxis*(4*_tol), _plane.YAxis*(-4*_tol)];
         _spacing = Math.Max(8 * _tol, output.Frame.BoundingBox.Diagonal.Length * options.ViewSpacingFraction);
         _clock.Start();
         try
@@ -92,10 +100,19 @@ internal sealed class NativeVisibilityVerifier : IDisposable
             // definite contradiction. Require the same result on a cross of
             // rays outside the fitting tolerance before vetoing confidence.
             bool stable = central != VisibilityClass.Unresolved;
-            foreach (var offset in new[] {_plane.XAxis * (4*_tol), _plane.XAxis * (-4*_tol), _plane.YAxis * (4*_tol), _plane.YAxis * (-4*_tol)})
+            for (int i = 0; i < _offsets.Length; i++)
             {
                 token.ThrowIfCancellationRequested();
-                if (Cast(body.Geometry,point+offset,length,out _) != central) stable = false;
+                // A failed central ray or one disagreeing offset has already
+                // disproved five-ray agreement. Remaining offsets cannot restore
+                // it. Still reserve their budget so later audit coverage and all
+                // visibility decisions remain identical to the exhaustive path.
+                if (!stable && !_options.ExhaustiveOffsets)
+                {
+                    _tests += _offsets.Length-i;
+                    break;
+                }
+                if (Cast(body.Geometry,point+_offsets[i],length,out _) != central) stable = false;
             }
             if (stable && central == VisibilityClass.Hidden)
             { witness = FormattableString.Invariant($"body={body.Source}; gap={gap:R}; tolerance-offset rays agree"); return VisibilityClass.Hidden; }
@@ -107,7 +124,7 @@ internal sealed class NativeVisibilityVerifier : IDisposable
 
     private VisibilityClass Cast(GeometryBase geometry, Point3d point, double length, out double gap)
     {
-        _tests++; gap = 0;
+        _tests++; NativeCasts++; gap = 0;
         if (geometry is Mesh mesh)
         {
             double distance = Intersection.MeshRay(mesh,new Ray3d(point+_plane.ZAxis*_tol,_plane.ZAxis));
@@ -171,7 +188,7 @@ internal sealed class NativeVisibilityVerifier : IDisposable
         // Keep timing out of deterministic diagnostics / output signatures.
         _output.Phases.Add("native ray audit work",_clock.Elapsed.TotalSeconds);
         _output._diagnostics.Add(FormattableString.Invariant(
-            $"Native ray verifier: wrong-visible samples={_visible}; false-hidden samples={_hidden}; contradicted pieces={_pieces}; unresolved spans={_spans}; samples={_samples}; ray tests={_tests}/{_options.MaxRayTests}; skipped={_skipped}; uncertain samples={_unknown}; spacing<={_spacing:R}. Sampling is an audit, not a visibility certificate; skipped/uncertain and unsampled interiors retain native confidence with this Info warning."));
+            $"Native ray verifier: wrong-visible samples={_visible}; false-hidden samples={_hidden}; contradicted pieces={_pieces}; unresolved spans={_spans}; samples={_samples}; ray tests={_tests}/{_options.MaxRayTests}; skipped={_skipped}; uncertain samples={_unknown}; spacing<={_spacing:R}; native casts={NativeCasts}; unused offset budget={_tests-NativeCasts}. Ray tests reserve five budget units per body; early rejection never reallocates audit coverage. Sampling is an audit, not a visibility certificate; skipped/uncertain and unsampled interiors retain native confidence with this Info warning."));
     }
 
     internal static void Apply(IReadOnlyList<VisibilityInput> inputs, ViewDrawing output, NativeSettings settings, CancellationToken token)
