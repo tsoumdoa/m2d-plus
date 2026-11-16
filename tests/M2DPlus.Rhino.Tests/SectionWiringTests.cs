@@ -186,7 +186,15 @@ public sealed class SectionWiringTests(RhinoHost host, ITestOutputHelper output)
             using var batch = BaselineTests.Solve(BaselineTests.Capture(document, cache), request); var view = batch.Views[0];
             Assert.Null(view.Error); Assert.DoesNotContain(view.Items, p => p.Class is LineClass.Visible or LineClass.Hidden or LineClass.FarClip);
             if (depth == 0) { Assert.Single(view.Regions); Assert.False(view.Report.Quarantined); }
-            else { Assert.True(view.Report.UncertainCount > 0); Assert.Contains("within tolerance", view.Info); }
+            else
+            {
+                // Thin background depth is ambiguous, but the independently
+                // certified square at the near plane is still exact material.
+                var region = Assert.Single(view.Regions).Region;
+                Assert.Equal(4,region.Area,8);Assert.Single(region.Loops);Assert.NotNull(region.Hatch);
+                Assert.Equal(0, view.Report.UncertainCount);
+                Assert.Contains("within tolerance", view.Info);
+            }
         }
     });
 

@@ -13,6 +13,27 @@ public sealed class CurvedSectionRegressionTests(RhinoHost host)
     private const double Tol = .0001;
 
     [RhinoTheory]
+    [InlineData("diagrid-iso-1-0")]
+    [InlineData("diagrid-iso-1-3")]
+    public void PlanTrimRetainsCertifiedOriginalRimsWithoutUnattributedEdges(string name) => host.Run(() =>
+    {
+        using var file = global::Rhino.FileIO.File3dm.Read(Path.Combine(AppContext.BaseDirectory,"fixtures","features","diagrid-shell.3dm"));
+        var bounds = BoundingBox.Empty;
+        foreach(var obj in file.Objects) bounds.Union(obj.Geometry.GetBoundingBox(true));
+        var plane = new Plane(new Point3d(0,0,bounds.Min.Z+Math.Min(1.2,bounds.Diagonal.Z*.4)),Vector3d.ZAxis);
+        var shape = file.Objects.Single(o=>o.Attributes.Name==name).Geometry;
+        using var clip = PhysicalSectionClipper.Clip(new(name,shape,SectionStyleSnapshot.Default()),new(plane,Tol,.001));
+        Assert.True(clip.Succeeded,string.Join("; ",clip.Diagnostics.Select(d=>d.Message)));
+        Assert.NotEmpty(clip.Pieces);
+        Assert.All(clip.Pieces,p=>
+        {
+            Assert.True(p.Geometry.IsSolid && p.Geometry.IsValid);
+            Assert.All(p.Edges,e=>Assert.NotEqual(EdgeOrigin.None,e.Origin));
+            Assert.True(p.Geometry.GetBoundingBox(Transform.PlaneToPlane(plane,Plane.WorldXY)).Max.Z<=Tol);
+        });
+    });
+
+    [RhinoTheory]
     [InlineData("S-split-rim-local")]
     [InlineData("M-partial-rim-world")]
     public void OriginalCurvedPerfRimsPassTheTopologyGuard(string name) => host.Run(() =>

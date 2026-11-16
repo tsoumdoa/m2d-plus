@@ -62,6 +62,8 @@ def classified(entry):
                     cause = 'section-certificate footprint quarantine'
                 elif unsupported:
                     cause = 'unsupported-source footprint quarantine'
+                elif any(s.startswith('Section recovery visibility proofs:') for s in dump['diagnostics']):
+                    cause = 'section recovery continuous-proof refusal'
                 else:
                     cause = 'other footprint quarantine'
             result[cause] += length
@@ -78,8 +80,10 @@ def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('root', type=Path)
     p.add_argument('--final-folder', default='final')
+    p.add_argument('--before-folder', default='before')
+    p.add_argument('--direct-baseline', action='store_true', help='Baseline already includes the cause ledger; no legacy cause replay is needed')
     a = p.parse_args()
-    before, replay, final = (load(a.root / name) for name in ('before','before-causes',a.final_folder))
+    before, replay, final = (load(a.root / name) for name in (a.before_folder,a.before_folder if a.direct_baseline else 'before-causes',a.final_folder))
     assert len(before) == len(replay) == len(final) == 50
     assert before.keys() == replay.keys() == final.keys()
     rows, bc, fc = [], Counter(), Counter()
@@ -95,12 +99,14 @@ def main():
             piece_length=sum(p['length'] for p in d['pieces'])
             region_length=sum(loop['length'] for region in d['regions'] for loop in region['loops'])
             length=piece_length+region_length; unresolved=sum(p['length'] for p in d['pieces'] if p['c']=='Unresolved')
-            displayed=[p for p in d['pieces'] if p['solved']!='Hidden']
+            # A static final-class view of the census, not a second Hidden-off
+            # solve. In particular, a Hidden veto remains Unresolved drawing ink.
+            displayed=[p for p in d['pieces'] if p['c']!='Hidden']
             displayed_length=region_length+sum(p['length'] for p in displayed)
             displayed_unresolved=sum(p['length'] for p in displayed if p['c']=='Unresolved')
             return dict(length=length,unresolved=unresolved,share=unresolved/length if length else 0,
                         visibilityCurveShare=unresolved/piece_length if piece_length else 0,regionBoundaryLength=region_length,
-                        hiddenOffPresentation=dict(length=displayed_length,unresolved=displayed_unresolved,
+                        excludingFinalHiddenPieces=dict(length=displayed_length,unresolved=displayed_unresolved,
                             share=displayed_unresolved/displayed_length if displayed_length else 0),
                         quarantinedView=d['quarantined'],wholeQuarantinedSources=len((u-l)|ref|unsupported),
                         wholeQuarantineByCause={'native Unset':len(u-l),'section refusal':len(ref),
@@ -129,6 +135,36 @@ def main():
         'viewSourcePairs':sum(r[phase]['wholeQuarantineByCause'][cause] for r in rows)}
         for cause in ('native Unset','section refusal','unsupported section/source')}
         for phase in ('before','after')}
+    def hidden_audit(folder):
+        files=sorted(folder.glob('*/*-hidden-audit.json'))
+        if not files:return None
+        assert len(files)==50, 'Incomplete Hidden-direction audit'
+        audits=[read(f) for f in files]
+        assert all(a['bodyRayPairs']==a['expectedPairs'] for a in audits)
+        assert all('capContainmentTests' in a and a['capContainmentHits']<=a['capContainmentTests'] for a in audits)
+        harnesses={read(f.parent/'receipt.json')['harnessSha256'] for f in files}
+        assert len(harnesses)==1, 'Mixed Hidden-audit observers'
+        return dict(cases=50,harnessSha256=next(iter(harnesses)),samples=sum(a['samples'] for a in audits),bodyRayPairs=sum(a['bodyRayPairs'] for a in audits),
+                    blocked=sum(a['blockedSamples'] for a in audits),margin=sum(a['marginSamples'] for a in audits),
+                    wrongHidden=sum(a['wrongHidden'] for a in audits),unchangedHiddenCurves=sum(a['unchangedHiddenCurves'] for a in audits),
+                    uncastableRays=sum(a.get('uncastableRays',0) for a in audits),
+                    capContainmentTests=sum(a['capContainmentTests'] for a in audits),
+                    capContainmentHits=sum(a['capContainmentHits'] for a in audits),
+                    capContactMargins=sum(a.get('capContactMargins',0) for a in audits),
+                    roundoffUnchangedHiddenLines=sum(a.get('roundoffUnchangedHiddenLines',0) for a in audits),
+                    files=[dict(path=str(f.resolve()),sha256=digest(f)) for f in files])
+    summary['hiddenAuditBefore']=hidden_audit(a.root/a.before_folder)
+    summary['hiddenAuditAfter']=hidden_audit(a.root/a.final_folder)
+    if summary['hiddenAuditAfter']:assert summary['hiddenAuditAfter']['wrongHidden']==0
+    if summary['hiddenAuditBefore'] and summary['hiddenAuditAfter']:
+        assert summary['hiddenAuditBefore']['harnessSha256']==summary['hiddenAuditAfter']['harnessSha256']
+    visits=Counter()
+    for row in final.values():
+        for diagnostic in row['dump']['diagnostics']:
+            match=re.match(r'Restored Hidden ray audit: intervals=(\d+); before length=([^;]+); kept length=([^;]+); veto length=([^;]+)\.',diagnostic)
+            if match:
+                visits['intervals']+=int(match[1]);visits['beforeLength']+=float(match[2]);visits['keptLength']+=float(match[3]);visits['vetoLength']+=float(match[4])
+    summary['restoredHiddenVerificationVisits']=dict(visits)
     (a.root/'summary.json').write_text(json.dumps(summary,indent=2))
     lines=['| Model / view | Unresolved length before → after | Share before → after | Whole-source quarantines before → after |',
            '|---|---:|---:|---:|']
@@ -138,12 +174,14 @@ def main():
     (a.root/'census-table.md').write_text('\n'.join(lines)+'\n',encoding='utf-8')
     stagefile=a.root/'after-fix-1-summary.json'
     stage=read(stagefile)['afterCauses'] if stagefile.exists() else {}
-    cause_lines=['| Cause (ranked by baseline affected length) | Before | After fix 1 | Final |', '|---|---:|---:|---:|']
+    cause_lines=(['| Cause (ranked by baseline affected length) | Before | Final |', '|---|---:|---:|'] if a.direct_baseline else
+                 ['| Cause (ranked by baseline affected length) | Before | After fix 1 | Final |', '|---|---:|---:|---:|'])
     for cause in sorted(bc.keys()|fc.keys(),key=lambda c:(-bc[c],c)):
-        cause_lines.append(f'| {cause} | {bc[cause]:.6f} | {stage.get(cause,0):.6f} | {fc[cause]:.6f} |')
-    cause_lines.extend(['| Unsupported-source whole-view quarantine | 0 | 0 | 0 |',
-                        '| Verifier budget skips (Unresolved length) | 0 | 0 | 0 |',
-                        '| Tie rule (Unresolved length) | 0 | 0 | 0 |'])
+        middle='' if a.direct_baseline else f' {stage.get(cause,0):.6f} |'
+        cause_lines.append(f'| {cause} | {bc[cause]:.6f} |{middle} {fc[cause]:.6f} |')
+    zero=' 0 | 0 |' if a.direct_baseline else ' 0 | 0 | 0 |'
+    cause_lines.extend([f'| {label} |{zero}' for label in ('Unsupported-source whole-view quarantine',
+                        'Verifier budget skips (Unresolved length)','Tie rule (Unresolved length)')])
     (a.root/'cause-table.md').write_text('\n'.join(cause_lines)+'\n',encoding='utf-8')
     print(json.dumps({k:summary[k] for k in ('cases','beforeUnresolved','afterUnresolved','newVisibleContradictions','independentlyAuditedSamples','allBodyRayPairs')},indent=2))
 

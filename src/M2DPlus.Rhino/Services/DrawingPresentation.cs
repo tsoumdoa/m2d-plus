@@ -219,6 +219,25 @@ public static class DrawingPresentation
                 {
                     var entry = original.Regions.Where(r => r.Region.SourceIds.Any(region.SourceIds.Contains))
                         .OrderBy(r => r.SourcePath, Comparer<int[]>.Create((a,b) => { for(var k=0;k<Math.Min(a.Length,b.Length);k++){var c=a[k].CompareTo(b[k]);if(c!=0)return c;}return a.Length.CompareTo(b.Length); })).First();
+                    if (region.Status == M2DPlus.Core.Sections.SectionStatus.Uncertain)
+                    {
+                        foreach (var loop in region.Loops)
+                        {
+                            var curve = Move(loop.Curve);
+                            Curve? depth = null;
+                            try
+                            {
+                                depth = loop.Curve.DuplicateCurve();
+                                result.Pieces.Add(new(curve, new PreparedLeaf(region.SourceIds[0], entry.SourcePath, curve)
+                                    { Section = metadata?.GetValueOrDefault(region.SourceIds[0]) ?? entry.Source, SourceItem = entry.SourceItem },
+                                    LineClass.Unresolved, depth));
+                            }
+                            catch { curve.Dispose(); depth?.Dispose(); throw; }
+                        }
+                        result.Report = result.Report with { UncertainCount = result.Report.UncertainCount + region.Loops.Count };
+                        result.UncertainSectionComponents++;
+                        continue;
+                    }
                     var loops = region.Loops.Select(l => new SectionLoop(Move(l.Curve), l.IsHole,
                         l.Edges.Select(e => new SectionEdge(Move(e.Curve), e.Origin)).ToArray())).ToArray();
                     var hatch = (Hatch?)region.Hatch?.Duplicate(); hatch?.Transform(transform);

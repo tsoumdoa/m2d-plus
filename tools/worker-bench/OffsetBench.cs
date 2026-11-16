@@ -90,6 +90,14 @@ internal static class OffsetBench
         // Replay the saved model, including its stable source/definition ids. Never benchmark
         // fresh random identities against an earlier archive of an otherwise identical model.
         using var savedDocument=RhinoDoc.OpenHeadless(model);
+        var recovery = mode.Split(':').Contains("recovery");
+        if (recovery)
+        {
+            var centre = new Point3d(shift+16000,shift+10000,shift+1500);
+            using var sphere = new Sphere(centre,500).ToBrep();
+            sphere.Transform(Transform.Rotation(Math.PI/2,Vector3d.YAxis,centre)); // Plan meridian crosses the parameter poles.
+            savedDocument.Objects.AddBrep(sphere);
+        }
         using var watch=new DocumentWatch(savedDocument);using var cache=new SceneCache();
         var clock=Stopwatch.StartNew();using var capture=new SceneCapture(savedDocument,watch,null,cache);while(!capture.Step(TimeSpan.FromSeconds(1))){}
         using var lease=capture.Accept();var scene=lease.Value;var captureSeconds=clock.Elapsed.TotalSeconds;
@@ -115,7 +123,7 @@ internal static class OffsetBench
             var nativeSectionSeconds=sectionClock.Elapsed.TotalSeconds;
             var stable=WorkerCodec.CaptureDrawing(view,true);File.WriteAllBytes(Path.Combine(output,$"drawing-{i}.json"),stable);File.WriteAllText(Path.Combine(output,$"hash-{i}.txt"),WorkerCodec.Hash(stable));
             timings.Add(new{i,seconds,nativeSectionSeconds,nativeSectionCurves,view.Error,pieces=view.Items.Count,unresolved=view.Items.Count(p=>p.Class==LineClass.Unresolved),regions=view.Regions.Count,phases=view.Phases.Seconds,info=view.Info,verdicts=scene.SectionVerdicts.Computations,localValidations=scene.SectionVerdicts.LocalComputations});
-            File.WriteAllBytes(Path.Combine(output,"offset.json"),WorkerCodec.Encode(new{model,shift,captureSeconds,fingerprint=WorkerCodec.Fingerprint(),scene.SourceCount,scene.Cost,timings}));
+            File.WriteAllBytes(Path.Combine(output,"offset.json"),WorkerCodec.Encode(new{model,shift,recovery,captureSeconds,fingerprint=WorkerCodec.Fingerprint(),scene.SourceCount,scene.Cost,timings}));
             Console.WriteLine($"Plan {i}: {seconds:F3}s; {view.Error}; {string.Join(", ",view.Phases.Seconds.Select(p=>$"{p.Key}={p.Value:F3}"))}");
         }
     }

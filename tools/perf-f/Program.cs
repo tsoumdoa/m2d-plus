@@ -40,6 +40,7 @@ internal static class Program
     private static int Run(string[] args)
     {
         using var core = new RhinoCore(new[] { "/nosplash", "/notemplate" }, WindowStyle.NoWindow);
+        if (args[1] == "native-point-witness") { NativePointWitnesses.Run(args[2]); return 0; }
         var file = args[1]; var output = Path.GetFullPath(args[2]); Directory.CreateDirectory(output);
         var viewName = args[3]; var variants = args.Skip(4).ToArray();
         var timeout = double.Parse(Environment.GetEnvironmentVariable("PERFF_TIMEOUT") ?? "1500");
@@ -73,6 +74,7 @@ internal static class Program
         if (curved) { Curved.Run(scene, prepared, view, stem, output, variants, timeout); return 0; }
         if (spike) { Spike.Run(scene, prepared, view, stem, output, variants, timeout); return 0; }
 #if !PERFF_BASELINE
+        if (variants.Contains("section-probe")) { SectionProbe.Run(prepared, view, scene.Tolerance, Path.Combine(output, stem + "-section-probe.json")); return 0; }
         if (variants.Contains("audit-verdicts")) { Verdicts.Audit(scene, prepared, stem, output); return 0; }
         if (variants.Contains("stress-parallel")) { Verdicts.Stress(scene, prepared, stem, output); return 0; }
 #endif
@@ -113,6 +115,8 @@ internal static class Program
 #endif
                 var drawn = (ViewDrawing)solve.Invoke(null, new object[] { scene, prepared, view, nativeSettings, limit.Token })!;
 #if !PERFF_BASELINE
+                if(variant=="census" && Environment.GetEnvironmentVariable("PERFF_HIDDEN_BASELINE") is { } hiddenBaseline)
+                    HiddenAudit.Run(drawn,hiddenBaseline,Path.Combine(output,stem+"-hidden-audit.json"),scene.Bounds,prepared,view.Cut?.Plane);
                 if (variant == "census") File.WriteAllText(Path.Combine(output,stem+"-causes.json"),JsonSerializer.Serialize(census.Measure(drawn)));
                 if (variant == "census" && Environment.GetEnvironmentVariable("PERFF_UNCERTAINTY_BASELINE") is { } baseline)
                     rayEvidence.AuditRestored(drawn,baseline,Path.Combine(output,stem+"-restored-audit.json"),scene.Bounds);

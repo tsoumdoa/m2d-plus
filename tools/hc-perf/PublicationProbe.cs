@@ -31,13 +31,13 @@ public sealed class PublicationProbe
             ((OutputAccess)_access).Component = _component;
         }
     }
-    public void Publish(DrawingBatch batch, IReadOnlyDictionary<string, SourceGroupInfo> groups)
+    public void Publish(DrawingBatch batch, IReadOnlyDictionary<string, SourceGroupInfo> groups, IReadOnlyDictionary<string,uint> colours)
     {
         double before = batch.Views.Sum(v => v.Phases.Seconds.GetValueOrDefault("GH publication"));
         var timer = Stopwatch.StartNew();
         var sources = Activator.CreateInstance(_emit.GetParameters()[2].ParameterType,
             BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null,
-            [GeometryInputKind.Document, groups], null)!;
+            [GeometryInputKind.Document, groups, colours], null)!;
         _emit.Invoke(_component,[_access,batch,sources]);
         double measured = batch.Views.Sum(v => v.Phases.Seconds.GetValueOrDefault("GH publication")) - before;
         foreach (var view in batch.Views) view.Phases.Add("GH publication",(timer.Elapsed.TotalSeconds-measured)/batch.Views.Count);

@@ -282,8 +282,6 @@ public static class NativeDrawing
                 uncertainSources.UnionWith(result.UncertainRoutingSources);
                 foreach (var piece in result.Pieces.ToArray())
                 {
-                    if (piece.Class == LineClass.Hidden && view.Settings?.Hidden == false)
-                    { result.Pieces.Remove(piece); piece.Dispose(); continue; }
                     if (view.Named is not { Crop: true }) continue;
                     using var geometry = piece.CopyGeometry();
                     result.Pieces.Remove(piece);
@@ -347,7 +345,6 @@ public static class NativeDrawing
                     }
                     continue;
                 }
-                if (visibility == HiddenLineDrawingSegment.Visibility.Hidden && view.Settings?.Hidden == false) continue;
                 var parent = segment.ParentCurve;
                 if (parent?.SourceObject?.Tag is not PreparedLeaf source)
                 { invalid++; quarantine = true; result._diagnostics.Add($"Parentless/source-less segment {segment.Index}"); continue; }
@@ -406,6 +403,9 @@ public static class NativeDrawing
                 catch { result.Dispose(); throw; }
             }
             if (result.EmptyNativeSlots + result.ZeroLengthNativeSegments != 0) result._diagnostics.Add($"Benign native records dropped: {result.EmptyNativeSlots} empty slots (index -1, no parent); {result.ZeroLengthNativeSegments} exactly zero-length point curves. No nonzero Unset was promoted.");
+            if(view.Settings?.Hidden==false)
+                foreach(var piece in result.Pieces.Where(p=>p.Class==LineClass.Hidden).ToArray())
+                { result.Pieces.Remove(piece);piece.Dispose(); }
             result.Pieces.Sort(ComparePieces);
             result.Report = new(route, result.Pieces.Count(p => p.Class == LineClass.Unresolved), invalid,
                 scene.Unsupported, scene.Conversions, quarantine) { ValidationDomain = settings.NativeOnly ? "native parallel baseline; analytic properties" : "exact planar kernel; mixed composition gate pending; general freeform visibility unknown; sections not evaluated (M2)" };

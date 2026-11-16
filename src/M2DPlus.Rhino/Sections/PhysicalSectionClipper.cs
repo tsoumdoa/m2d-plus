@@ -6,6 +6,7 @@ namespace M2DPlus.Rhino.Sections;
 /// <summary>Route C preparation. Near normal points toward removed space; far is opposite and parallel.</summary>
 public static class PhysicalSectionClipper
 {
+    internal const string RecoveredEdges = "Continuous original trim-edge recovery";
     public static PhysicalClipResult Clip(SectionSource source, SectionRequest request, Plane? farPlane = null)
     {
         using var shared = new SharedSource(source, request, null);
@@ -69,7 +70,18 @@ public static class PhysicalSectionClipper
                                             farPlane is { } fp && edge.IsInPlane(fp, request.Tolerance) ? EdgeOrigin.FarTrim : EdgeOrigin.None;
                                         edges.AddRange(EdgeProvenance.Split(edge, original.Select(c => (c, EdgeOrigin.Original)), request.Tolerance, kind));
                                     }
-                                    if (edges.Any(e => e.Origin == EdgeOrigin.None)) throw new SectionFailure("Unattributed visibility trim edge; source quarantined.");
+                                    // Native overlap attribution can omit a rim or a tiny
+                                    // interval at a split seam. Only a continuous enclosing
+                                    // box proof against the original edges can recover it.
+                                    var recoveredEdges = false;
+                                    for (var e = 0; e < edges.Count; e++)
+                                        if (edges[e].Origin == EdgeOrigin.None &&
+                                            SectionGeometry.CoveredBySharedTopology(edges[e].Curve, original, request.Tolerance))
+                                        { edges[e] = edges[e] with { Origin = EdgeOrigin.Original }; recoveredEdges = true; }
+                                    if (recoveredEdges && !result.Diagnostics.Any(d => d.Message.StartsWith(RecoveredEdges, StringComparison.Ordinal)))
+                                        result.Diagnostics.Add(new(source.Id, SectionStatus.Crossing, $"{RecoveredEdges}; native line confidence requires a separate proof."));
+                                    if (edges.FirstOrDefault(e => e.Origin == EdgeOrigin.None) is { } missing)
+                                        throw new SectionFailure($"Unattributed visibility trim edge; source quarantined. start={missing.Curve.PointAtStart}; end={missing.Curve.PointAtEnd}; length={missing.Curve.GetLength():R}.");
                                     result.Pieces.Add(new(source.Id, piece, edges));
                                     current.Remove(piece); // Ownership transferred to result.
                                 }

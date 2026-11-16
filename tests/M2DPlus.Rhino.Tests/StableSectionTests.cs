@@ -12,6 +12,43 @@ public sealed class StableSectionTests(RhinoHost host)
     private static SectionSource Source(Brep b) => new("curved", b, SectionStyleSnapshot.Default());
 
     [RhinoFact, Trait("Category", "RhinoIntegration")]
+    public void SphereMeridianThroughNurbsPolesHasAnalyticAreaAndClosedClip() => host.Run(() =>
+    {
+        using var sphere = new Sphere(new Point3d(3,2,5), .1).ToBrep();
+        foreach (var normal in new[] { Vector3d.XAxis, Vector3d.YAxis, Vector3d.ZAxis })
+        {
+            var request = new SectionRequest(new Plane(new Point3d(3,2,5),normal),Tol,.001);
+            using var result = SectionRegionEngine.Compute([Source(sphere)],request,prepareVisibility:true);
+            Assert.False(result.RequiresQuarantine,string.Join("; ",result.Diagnostics.Select(d=>d.Message)));
+            var region = Assert.Single(result.Regions);
+            Assert.InRange(Math.Abs(region.Area-Math.PI*.01),0,1e-7);
+            Assert.Single(region.Loops);Assert.NotNull(region.Hatch);
+            var retained = Assert.Single(result.Visibility["curved"].Pieces).Geometry;
+            Assert.True(retained.IsValid && retained.IsSolid);
+            Assert.InRange(Math.Abs(retained.GetVolume()-2*Math.PI*.001/3),0,1e-7);
+        }
+    });
+
+    [RhinoFact, Trait("Category", "RhinoIntegration")]
+    public void CurvedRetainedSideCapContactIsNotACutOrAToleranceSnap() => host.Run(() =>
+    {
+        using var tube = new Cylinder(new Circle(new Plane(new Point3d(0,0,-1),Vector3d.ZAxis),.1),1).ToBrep(true,true);
+        using var exact = PhysicalSectionClipper.Clip(Source(tube),new(Plane.WorldXY,Tol,.001));
+        Assert.True(exact.Succeeded);Assert.Single(exact.Pieces);
+        using var region = SectionRegionEngine.Compute([Source(tube)],new(Plane.WorldXY,Tol,.001));
+        Assert.Empty(region.Regions);
+        using var forward = tube.DuplicateBrep();forward.Transform(Transform.Translation(0,0,1));
+        using var frontClip = PhysicalSectionClipper.Clip(Source(forward),new(Plane.WorldXY,Tol,.001));
+        Assert.True(frontClip.Succeeded);
+        Assert.All(frontClip.Pieces,p=>Assert.All(p.Geometry.Faces,f=>Assert.True(f.IsPlanar(Tol))));
+        using var frontRegion = SectionRegionEngine.Compute([Source(forward)],new(Plane.WorldXY,Tol,.001));
+        Assert.Empty(frontRegion.Regions);
+        tube.Transform(Transform.Translation(0,0,2*Tol));
+        using var near = SectionRegionEngine.Compute([Source(tube)],new(Plane.WorldXY,Tol,.001));
+        Assert.DoesNotContain(near.Components,c=>c.Status==SectionStatus.Contact);
+    });
+
+    [RhinoFact, Trait("Category", "RhinoIntegration")]
     public void SphereEquatorNeedsNoOffPlaneVerticesAndHasAnalyticArea() => host.Run(() => {
         using var sphere = new Sphere(Point3d.Origin, 1).ToBrep();
         using var result = SectionRegionEngine.Compute(new[] { Source(sphere) }, new(Plane.WorldXY, Tol, .001));

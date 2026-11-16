@@ -324,7 +324,7 @@ internal static class ComposedVisibility
                 if (output.RoutingQuarantine || output.UncertainRoutingSources.Contains(piece.SourceIdentity)) piece.Class = LineClass.Unresolved;
             if (localUnsetSources.Count != 0)
                 NativeUncertainty.ApplyFootprints(output, inputs.Select(i => i.Source).ToArray(), false, [], localUnsetRegions, tol, token,
-                    localSources: localUnsetSources);
+                    localSources: localUnsetSources, verificationInputs: inputs);
             phase.Next("interval union");
             if (extraction.Edges.Count != 0 || extraction.Faces.Count != 0) Reconcile(output, inputs, token);
             return $"{(curved.Count == 0 ? "Planar kernel" : "Planar kernel + curved native HLD")}; kernel edges={output.KernelEdges}; native candidates={output.NativeEdges}; planar edges submitted={nativeEdges.Count}; curved candidate edges={output.CurvedCandidateEdges}; native fragments={output.NativeFragments}; native calls={output.NativeCalls}";

@@ -12,6 +12,9 @@ public sealed record NativeVerificationOptions(int MaxRayTests = 4096, int MaxSa
     // Regression/measurement control only; never a product setting. Both paths
     // charge the original five-ray budget and audit exactly the same samples.
     internal bool ExhaustiveOffsets { get; init; }
+    // Restoring confidence after quarantine is stricter than auditing an
+    // existing native label: no unaudited remainder may regain Hidden.
+    internal bool RefuseUnaudited { get; init; }
 }
 
 /// <summary>
@@ -153,7 +156,7 @@ internal sealed class NativeVisibilityVerifier : IDisposable
         {
             double required = Math.Max(4, Math.Ceiling(world.GetLength() / _spacing));
             if (!double.IsFinite(required) || required + 1 > _options.MaxSamples - _samples)
-            { _skipped++; return [new(world.Domain.Min, world.Domain.Max, native)]; }
+            { _skipped++; return [new(world.Domain.Min, world.Domain.Max, _options.RefuseUnaudited ? LineClass.Unresolved : native)]; }
             var ts = world.DivideByCount((int)required, true);
             if (ts is null || ts.Length < 2) { _unknown++; return [new(world.Domain.Min, world.Domain.Max, LineClass.Unresolved)]; }
             var veto = new bool[ts.Length];
@@ -161,6 +164,7 @@ internal sealed class NativeVisibilityVerifier : IDisposable
             {
                 var point = world.PointAt(ts[i]); var truth = Check(point, token, out string witness);
                 bool contradiction = native == LineClass.Visible && truth == VisibilityClass.Hidden || native == LineClass.Hidden && truth == VisibilityClass.Visible;
+                if (_options.RefuseUnaudited && truth == VisibilityClass.Unresolved) { veto[i] = true; continue; }
                 if (!contradiction) continue;
                 veto[i] = true;
                 if (native == LineClass.Visible) _visible++; else _hidden++;
@@ -187,8 +191,10 @@ internal sealed class NativeVisibilityVerifier : IDisposable
     {
         // Keep timing out of deterministic diagnostics / output signatures.
         _output.Phases.Add("native ray audit work",_clock.Elapsed.TotalSeconds);
+        var coverage = _options.RefuseUnaudited ? "skipped/uncertain audit neighbourhoods remain Unresolved; unsampled interiors have no continuous certificate." :
+            "skipped/uncertain and unsampled interiors retain native confidence with this Info warning.";
         _output._diagnostics.Add(FormattableString.Invariant(
-            $"Native ray verifier: wrong-visible samples={_visible}; false-hidden samples={_hidden}; contradicted pieces={_pieces}; unresolved spans={_spans}; samples={_samples}; ray tests={_tests}/{_options.MaxRayTests}; skipped={_skipped}; uncertain samples={_unknown}; spacing<={_spacing:R}; native casts={NativeCasts}; unused offset budget={_tests-NativeCasts}. Ray tests reserve five budget units per body; early rejection never reallocates audit coverage. Sampling is an audit, not a visibility certificate; skipped/uncertain and unsampled interiors retain native confidence with this Info warning."));
+            $"Native ray verifier: wrong-visible samples={_visible}; false-hidden samples={_hidden}; contradicted pieces={_pieces}; unresolved spans={_spans}; samples={_samples}; ray tests={_tests}/{_options.MaxRayTests}; skipped={_skipped}; uncertain samples={_unknown}; spacing<={_spacing:R}; native casts={NativeCasts}; unused offset budget={_tests-NativeCasts}. Ray tests reserve five budget units per body; early rejection never reallocates audit coverage. Sampling is an audit, not a visibility certificate; {coverage}"));
     }
 
     internal static void Apply(IReadOnlyList<VisibilityInput> inputs, ViewDrawing output, NativeSettings settings, CancellationToken token)

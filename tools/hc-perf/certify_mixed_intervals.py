@@ -46,7 +46,7 @@ def certify(gatefile,resolver,prepare_only=False):
         assert result['inputSha256'].lower()==digest(inputfile) and result['coreSha256'].lower()==gate['coreSha256'].lower()
         assert result['FaceTests']==result['completePairs']
         return result
-    reference=oracle(); proofs=[]; points=[]; world=[]
+    reference=oracle(); proofs=[]; points=[]; world=[]; native_points=[]
     x,y=scene['x'],scene['y']
     z=[x[1]*y[2]-x[2]*y[1],x[2]*y[0]-x[0]*y[2],x[0]*y[1]-x[1]*y[0]]
     size=math.sqrt(sum(v*v for v in z));z=[v/size for v in z]
@@ -67,13 +67,39 @@ def certify(gatefile,resolver,prepare_only=False):
             t=max(lo,min(hi,((xy[0]-a['X'])*dx+(xy[1]-a['Y'])*dy)/square))
             distance=math.hypot(a['X']+t*dx-xy[0],a['Y']+t*dy-xy[1])
             if distance<=gate['tolerance']/2:choices.append((distance,i,t))
-        assert choices,'No independently Visible planar interval near disputed sample'
+        if not choices:
+            # Native-derived curves need witnesses on their own saved world
+            # support, rather than an unrelated extracted planar edge.
+            assert not f['KernelOwned'], 'No independently Visible planar interval near disputed sample'
+            native_points.append(r['sample']);continue
         distance,i,t=min(choices);a,b=edges[i]['A'],edges[i]['B']
         v=[a[k]+t*(b[k]-a[k]) for k in ('X','Y','Z')]
         p=[scene['origin'][k]+x[k]*v[0]+y[k]*v[1]+z[k]*v[2] for k in range(3)]
         world.append(p);points.append(dict(Edge=i,Parameter=t))
         proofs.append(dict(sample=r['sample'],classification='toleranceArtefact',distance=distance,
                            edge=ids[i],parameter=t,source=edges[i]['Source'],world=p))
+    native_suffixes=[]
+    if native_points:
+        write(path('.native-point-requests.json'),native_points)
+        helper=ROOT/'tools/perf-f/bin/Release/net8.0-windows/M2DPlus.PerfF.dll'
+        with SerialRhino(wait_seconds=None):
+            watch=run(['dotnet',str(helper),str(resolver.resolve()),'native-point-witness',prefix],path('.native-point-run.log'),180,8)
+        write(path('.native-point-watch.json'),watch)
+        assert watch['status']=='exited' and watch['exitCode']==0
+        shutil.copyfile(helper,path('.native-point-helper.dll'))
+        shutil.copyfile(ROOT/'tools/perf-f/NativePointWitnesses.cs',path('.native-point-source.cs'))
+        candidates=read(path('.native-point-candidates.json'))
+        for sample in native_points:
+            choices=[c for c in candidates if c['sample']==sample and c['check']['Class']==0 and c['distance']<=gate['tolerance']/2]
+            assert choices, 'No independently Visible point on the actual native-derived output curve'
+            candidate=min(choices,key=lambda c:c['distance']);local=candidate['local'];i=len(edges)
+            # A degenerate edge is only an exact point-query carrier. It creates
+            # no interval or geometry and contributes no interval face pairs.
+            edges.append(dict(A=local,B=local,Source=candidate['source']))
+            points.append(dict(Edge=i,Parameter=0));world.append(candidate['world'])
+            proofs.append(dict(sample=sample,classification='toleranceArtefact',distance=candidate['distance'],
+                nativeOutputPiece=candidate['piece'],nativeParameter=candidate['parameter'],source=candidate['source'],world=candidate['world']))
+        native_suffixes=['.native-point-requests.json','.native-point-candidates.json','.native-point-watch.json','.native-point-helper.dll','.native-point-source.cs']
     data['Points']=points;reference=oracle()
     assert all(c['check']['Class']==0 for c in reference['checks'])
     rays=path('.mixed-ray-points.json');write(rays,world)
@@ -114,8 +140,8 @@ def certify(gatefile,resolver,prepare_only=False):
     shutil.copyfile(folder/(stem+'-ray-evidence.json'),path('.mixed-curved-rays.json'))
     capture=dict(timings=timings,inputs=native,bodies=evidence['bodies'],planarSceneSha256=digest(folder/(stem+'-planar-scene.json')))
     write(path('.mixed-capture.json'),capture)
-    suffixes=('.gate.json','.failures.json','.planar-scene.json','.sources.json','.routed-order.json','.kernel-output.json','.native-output.json','.exact-witnesses.jsonl','.mixed-reference-input.json','.mixed-reference.json','.mixed-ray-points.json','.mixed-curved-rays.json','.mixed-capture.json','.mixed-trace-watch.json','.foreign-records.json')
-    write(path('.interval-witnesses.json'),dict(accepted=True,scope='disputed planar candidate intervals and interior points; complete curved-body point rays; no full-view certificate',
+    suffixes=('.gate.json','.failures.json','.planar-scene.json','.sources.json','.routed-order.json','.kernel-output.json','.native-output.json','.exact-witnesses.jsonl','.mixed-reference-input.json','.mixed-reference.json','.mixed-ray-points.json','.mixed-curved-rays.json','.mixed-capture.json','.mixed-trace-watch.json','.foreign-records.json',*native_suffixes)
+    write(path('.interval-witnesses.json'),dict(accepted=True,scope='disputed planar intervals or points on actual native-output curves; complete curved-body point rays; no full-view certificate',
         FaceTests=reference['FaceTests'],completePairs=reference['completePairs'],coreSha256=gate['coreSha256'],generatorSha256=digest(Path(__file__)),proofs=proofs,inputs={s:digest(path(s)) for s in suffixes}))
     print(Path(prefix).name,len(proofs),'mixed interval / complete curved-ray witnesses',flush=True)
 
