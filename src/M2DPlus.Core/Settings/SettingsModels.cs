@@ -12,6 +12,7 @@ public enum DiagnosticSeverity { Remark, Warning, Error }
 public enum FarClipMode { None, Line, NoLine }
 public enum CropMode { Auto, Off }
 public enum GlassMode { Opaque, Clear }
+public enum EngineMode { Exact, Fast }
 public enum WeightMode { Auto, Layers }
 /// <summary>How outputs are split into branches (UX §1.3). Auto is by layer for document mode or an all-referenced
 /// Geometry input, else by object; see <see cref="Output.OutputTree.Effective"/>.</summary>
@@ -90,6 +91,9 @@ public sealed class EffectiveSettings
     public double FadeLimit => Get<double>("fade.limit");
     public bool Crop => Get<bool>("crop");
     public bool Hidden => Get<bool>("hidden");
+    /// <summary>The effective authored hidden flag, preserved when the solve normalizes Hidden to true.</summary>
+    public bool RequestedHidden => (bool)Values["hidden"].AuthoredValue;
+    public EngineMode Engine => Get<EngineMode>("engine");
     public bool Tangents => Get<bool>("tangents");
     public bool Seams => Get<bool>("seams");
     public GlassMode Glass => Get<GlassMode>("glass");
@@ -103,11 +107,12 @@ public sealed class EffectiveSettings
     public double Tolerance => Get<double>("tolerance");
     /// <summary>The <c>min visible</c> threshold in document units; 0 = off (REQUIREMENTS, "small gaps").</summary>
     public double MinVisible => Get<double>("min_visible");
-    /// <summary>The settings the visibility solve receives: the same, except that hidden lines are always kept.
-    /// Hidden and min visible are presentation choices over one cached solve, and the min visible rule needs the
-    /// hidden pieces to tell a partly hidden object from a fully visible one.</summary>
+    /// <summary>Every kernel retains hidden evidence for reuse/min-visible. Only fast native HLD reads
+    /// <see cref="RequestedHidden"/> instead; that flag survives normalization and worker transport.</summary>
     public EffectiveSettings ForVisibilitySolve() => Hidden ? this
         : new(View, Values.SetItem("hidden", Values["hidden"] with { Value = true }));
+    public string VisibilityKey() => string.Join(";", Settings.VisibilityKeys.Select(k =>
+        k + "=" + Settings.FormatEffective(k, Values[k].Value))) + (Engine == EngineMode.Fast ? ";hidden=" + RequestedHidden : "");
     public string Describe() => string.Join(Environment.NewLine, Settings.Keys.Select(k =>
         $"{k} = {Settings.FormatEffective(k, Values[k].Value)} ({Values[k].SourceDescription})"));
 }

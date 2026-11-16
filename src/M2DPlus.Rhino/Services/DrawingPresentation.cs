@@ -37,16 +37,17 @@ public sealed class DrawingCache : IDisposable
             await _solve.WaitAsync(token).ConfigureAwait(false);
             try
             {
-                // Only visibility keys reach the solve's cache key; hidden, min visible and styling are presentation.
+                // Exact reuses hidden-on visibility. Fast native hidden generation follows the view setting.
                 var key = scene.Value.VisibilityRevision + "/" + settings + "/" + string.Join("|", views.Select(v => (v with { Cut = v.Cut is { } cut ? cut with { SectionerStyle = null } : null }).Revision + "/" +
-                    string.Join(";", Settings.VisibilityKeys.Select(k => v.Settings?[k].Value?.ToString()))));
+                    v.Settings?.VisibilityKey()));
                 LeaseEntry<DrawingBatch>.Lease? lease;
                 long generation;
                 lock (_sync) { generation = _generation; lease = key == _key ? _entry?.Acquire() : null; }
                 if (lease is null)
                 {
                     // The supplied scene lease stays alive throughout native work.
-// The solve always keeps hidden pieces; presentation drops them for hidden = off.
+                    // Every kernel keeps hidden-on evidence. Fast native reads
+                    // RequestedHidden, preserved in the entry's authored value.
                     var solveViews = views.Select(v => v.Settings is { } s ? v with { Settings = s.ForVisibilitySolve() } : v).ToArray();
                     var raw = await DrawingExecution.SolveBorrowedAsync(scene.Value, identity, solveViews, settings, token, progress).ConfigureAwait(false);
                     var owner = new LeaseEntry<DrawingBatch>(raw); lease = owner.Acquire();
@@ -102,6 +103,7 @@ public static class DrawingPresentation
                 var result = new ViewDrawing { Name = original.Name, Error = original.Error, Frame = original.Frame,
                     Report = original.Report, Settings = settings, Seconds = original.Seconds, Tolerance = original.Tolerance,
                     KernelEdges = original.KernelEdges, NativeEdges = original.NativeEdges, NativeCalls = original.NativeCalls,
+                    FastNativeSources = original.FastNativeSources,
                     CurvedCandidateEdges = original.CurvedCandidateEdges, PlanarNativeEdges = original.PlanarNativeEdges, NativeFragments = original.NativeFragments,
                     MultipleThreads = original.MultipleThreads, HiddenPoints = original.HiddenPoints, DuplicateSegments = original.DuplicateSegments,
                     ProjectingSegments = original.ProjectingSegments, EmptyNativeSlots = original.EmptyNativeSlots, ZeroLengthNativeSegments = original.ZeroLengthNativeSegments,
@@ -121,7 +123,9 @@ public static class DrawingPresentation
                 foreach (var item in original.Items)
                 {
                     phase.Next("Beyond/fade splitting");
-                    // hidden = off is presentation only (the solve keeps hidden pieces), so min visible still sees them.
+                    // Keep all available solved-hidden evidence for min visible.
+                    // Exact kernels retain it in both modes; fast native may omit
+                    // unrequested hidden curves, as its Info disclosure states.
                     if (item.SolvedClass == LineClass.Hidden && settings?.Hidden == false)
                     {
                         if (item.Class == LineClass.Unresolved) droppedUnresolved++;

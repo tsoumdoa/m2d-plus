@@ -35,7 +35,7 @@ public sealed class WorkerTests(RhinoHost host)
         {
             ViewRequest[] views=[ViewRequest.Parse("Top"),ViewRequest.Parse("Front"),ViewRequest.Parse(new Plane(new Point3d(0,0,1),Vector3d.ZAxis))];
             var settings=Settings.Resolve(views.Select((v,i)=>new ViewSettingsContext(i.ToString(),v.Name,v.Kind,v.Cut is not null,30,.001)).ToArray(),
-                new[]{new[]{"depth = 20 m","hidden = on","tangents = on","scale = 1:50","hatch = black","gap = 5 m"}},DocumentUnits.Metres);
+                new[]{new[]{"depth = 20 m","hidden = on","tangents = on","scale = 1:50","hatch = black","gap = 5 m","engine = exact"}},DocumentUnits.Metres);
             return views.Select((v,i)=>v with{Settings=settings.Views[i]}).ToArray();
         }
     }

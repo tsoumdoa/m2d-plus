@@ -30,7 +30,7 @@ internal static class SectionDrawing
         // classifications cannot invalidate an independent section certificate.
         var regionUncertainSources = new HashSet<string>(StringComparer.Ordinal);
         var regionUncertainRegions = new List<BoundingBox>();
-        var result = new ViewDrawing { Name = view.Name, Tolerance = view.Settings?.Tolerance ?? scene.Tolerance, MultipleThreads = settings.MultipleThreads,
+        var result = new ViewDrawing { Name = view.Name, Settings = view.Settings, Tolerance = view.Settings?.Tolerance ?? scene.Tolerance, MultipleThreads = settings.MultipleThreads,
             Frame = DrawingFrames.Resolve(view, sources, scene.Bounds, view.Settings?.Tolerance ?? scene.Tolerance) };
         var cut = view.Cut!; var tol = view.Settings?.Tolerance ?? scene.Tolerance;
         var request = new SectionRequest(cut.Plane, tol, .001, cut.Crop, CutMode.Separate, HatchMode.Styles);
@@ -140,6 +140,7 @@ internal static class SectionDrawing
                 phase.Next("section output construction");
                 result.Phases.Include(routed.Phases);
                 result.KernelEdges = routed.KernelEdges; result.NativeEdges = routed.NativeEdges; result.NativeCalls = routed.NativeCalls;
+                result.FastNativeSources = routed.FastNativeSources; result.MultipleThreads = routed.MultipleThreads;
                 result.CurvedCandidateEdges = routed.CurvedCandidateEdges; result.PlanarNativeEdges = routed.PlanarNativeEdges; result.NativeFragments = routed.NativeFragments;
                 result.HiddenPoints += routed.HiddenPoints; result.DuplicateSegments += routed.DuplicateSegments;
                 result.EmptyNativeSlots += routed.EmptyNativeSlots; result.ZeroLengthNativeSegments += routed.ZeroLengthNativeSegments;
@@ -189,8 +190,9 @@ internal static class SectionDrawing
             using var viewport = new ViewportInfo(); var frame = result.Frame;
             var radius = Math.Max(scene.Bounds.IsValid ? scene.Bounds.Diagonal.Length : 0,16*tol);
             NativeViewport.Configure(viewport,frame,view.Direction,scene.Bounds,tol);
+            var nativeOptions = NativeHldOptions.For(view, settings);
             var parameters = new HiddenLineDrawingParameters { AbsoluteTolerance = tol, Flatten = false,
-                IncludeHiddenCurves = true, IncludeTangentEdges = view.Settings?.Tangents ?? false, IncludeTangentSeams = view.Settings?.Seams ?? false };
+                IncludeHiddenCurves = nativeOptions.IncludeHiddenCurves, IncludeTangentEdges = view.Settings?.Tangents ?? false, IncludeTangentSeams = view.Settings?.Seams ?? false };
             parameters.SetViewport(viewport);
             var curvesAndBodies = registered.Where(p => p.Geometry is not Point).ToArray();
             foreach (var entry in VisibilityInputOrder.Native(curvesAndBodies, r => new VisibilityInput(r.Geometry,r.Tag.Source,r.Tag.Far), settings))
@@ -200,7 +202,8 @@ internal static class SectionDrawing
             {
                 NativeDrawing.CountHld(); result.NativeCalls++;
                 phase.Next("native solve");
-                using var drawing = HiddenLineDrawing.Compute(parameters, settings.MultipleThreads, NativeDrawing.HldProgress, token);
+                nativeOptions.Begin(result, curvesAndBodies.Select(r => new VisibilityInput(r.Geometry,r.Tag.Source,r.Tag.Far)), settings);
+                using var drawing = HiddenLineDrawing.Compute(parameters, nativeOptions.MultipleThreads, NativeDrawing.HldProgress, token);
                 phase.Next("section output construction");
                 if (drawing is null || !drawing.WorldToHiddenLine.TryGetInverse(out var inverse)) throw new InvalidOperationException("Route C HLD failed.");
                 var project = Transform.PlanarProjection(cut.Plane) * inverse;

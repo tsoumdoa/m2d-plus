@@ -1,5 +1,17 @@
 # Worker benchmark
 
+Opt-in engine comparison: `engine <resolver> <model> <new-output-folder>` measures
+exact/fast with hidden off/on, production compute and presentation, verifier
+timings and actual native options. Add `building` for eight building views, or
+`planar` for that matrix with a strict zero-native/hash-identity gate. Authored
+settings metadata is normalized for the output hash; every geometry/class/quality
+and routing field remains. `generate-planar` writes a recorded planar-only
+derivative under the supplied stable model folder, refusing overwrite. The
+original M-blocks fixture is mixed and cannot serve as a planar-only control.
+`engine-fast-report.py <evidence-root>` generates all timing/hash tables and phase
+CSV. See `docs/research/engine-fast.md`. This explicit isolated in-process harness
+uses a 12 GiB scheduler allowance without changing production dispatch policy.
+
 Curved native HLD investigation: see `docs/research/native-curved-hld.md`.
 `hld <resolver> <model.3dm> <output-folder> <variant[,variant...]>` records a
 parallel North view with raw HLD parameters, progress, counts, exact curve

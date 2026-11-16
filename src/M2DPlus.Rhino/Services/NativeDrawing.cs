@@ -15,6 +15,7 @@ public sealed record NativeSettings(bool MultipleThreads = false, bool NativeOnl
     internal bool IsWorker { get; init; }
     internal bool ReverseNativeForAudit { get; init; }
     internal Action<IReadOnlyList<VisibilityInput>>? ObserveNativeInputs { get; init; }
+    internal Action<NativeHldOptions>? ObserveHldOptions { get; init; }
     internal Action<IReadOnlyCollection<string>>? ObserveKernelSources { get; init; }
     internal Action<PlanarExtraction, Plane>? ObservePlanarScene { get; init; }
     internal Action<string,int,bool,LineClass,Curve>? ObserveCompositionRecord { get; init; }
@@ -90,7 +91,13 @@ public sealed class ViewDrawing : IDisposable
     public string IgnoredSummary => MinVisible <= 0 ? "Ignored: off (min visible = off)." :
         FormattableString.Invariant($"Ignored (min visible {MinVisible:G6}): {IgnoredObjects} objects, {IgnoredPieces} pieces. Their lines are in the Ignored output; nothing is deleted.");
     public PhaseTimings Phases { get; } = new();
+    public int FastNativeSources { get; internal set; }
+    public string EngineSummary => FastNativeSources > 0
+        ? $"Engine: fast — Make2D-like shortcuts on {FastNativeSources} curved/freeform sources; their lines are not certified and may differ slightly between runs."
+        : Settings?.Engine == EngineMode.Fast ? "Engine: fast — no native shortcuts used; planar/analytic sources remain exact."
+        : "Engine: exact";
     public string Info => $"{Name}: {(Error ?? "finished")} · {Seconds:F3} s\n" +
+        EngineSummary + "\n" +
         $"{Report.Route}; deterministic={!MultipleThreads}; tolerance={Tolerance:R}; validation: {Report.ValidationDomain}\n" +
         $"Visible={Pieces.Count(p => p.Class == LineClass.Visible)}, hidden={Pieces.Count(p => p.Class == LineClass.Hidden)}, unresolved={Report.UncertainCount}, hidden points={HiddenPoints}; " +
         $"invalid extraction={Report.InvalidExtractionCount}; duplicate={DuplicateSegments}; projecting={ProjectingSegments}; empty slots={EmptyNativeSlots}; zero length={ZeroLengthNativeSegments}; quarantined={Report.Quarantined}\n" +
@@ -149,13 +156,14 @@ public static class NativeDrawing
 
     /// <summary>One view's step and that step's percentage. Reports go out only when the step or its whole percent
     /// changes, so per-edge kernel callbacks from many threads never flood the UI or a worker pipe.</summary>
-    private sealed class StepStatus(Action<string, double?> sink)
+    private sealed class StepStatus(Action<string, double?> sink, bool fast)
     {
         private readonly object _gate = new();
         private volatile string? _step;
         private volatile int _percent = -1;
         internal void Report(string step, double? fraction)
         {
+            if (fast && step == ViewSteps.HiddenLines) step = ViewSteps.Fast;
             var percent = fraction is double f ? (int)Math.Floor(Math.Clamp(f, 0, 1) * 100) : -1;
             if (ReferenceEquals(step, _step) && (fraction is null || percent == _percent)) return;
             lock (_gate)
@@ -207,7 +215,7 @@ public static class NativeDrawing
                         ct.ThrowIfCancellationRequested();
                         var name = views[index].Name; var at = index;
                         progress?.Report(new(JobPhase.Drawing, index, views.Count) { View = name });
-                        Steps.Value = progress is null ? null : new StepStatus((step, fraction) => progress.Report(new(JobPhase.Drawing, at, views.Count) { View = name, Step = step, StepFraction = fraction }));
+                        Steps.Value = progress is null ? null : new StepStatus((step, fraction) => progress.Report(new(JobPhase.Drawing, at, views.Count) { View = name, Step = step, StepFraction = fraction }), views[index].Settings?.Engine == EngineMode.Fast);
                         ViewDrawing drawing;
                         try { drawing = SolveView(scene, prepared, views[index], settings, ct); }
                         finally { Steps.Value = null; }
@@ -243,7 +251,7 @@ public static class NativeDrawing
             if (view.Cut is { } cut) view = view with { Cut = cut with { SourceDepth = effective.Depth, FarClip = effective.FarClip } };
         }
         if (view.Cut is not null && view.Error is null) return SectionDrawing.Solve(scene, sources, view, settings, token);
-        var result = new ViewDrawing { Name = view.Name, MultipleThreads = settings.MultipleThreads, Tolerance = tolerance };
+        var result = new ViewDrawing { Name = view.Name, Settings = view.Settings, MultipleThreads = settings.MultipleThreads, Tolerance = tolerance };
         var timer = Stopwatch.StartNew();
         using var glass = new GlassGeometry(sources, view);
         sources = glass.Sources;
@@ -257,7 +265,7 @@ public static class NativeDrawing
         {
             if (view.Error is not null) { result.Error = view.Error; return result; }
             result.Frame = view.Resolve(scene.Bounds, tolerance);
-            result._diagnostics.Add($"Admission: {scene.Cost.GeometryBytes} geometry bytes; {scene.Cost.BrepFaces} faces; {scene.Cost.MeshTriangles} triangles; {scene.SourceCount} sources. Native multipleThreads={settings.MultipleThreads} (serial global scheduler).");
+            result._diagnostics.Add($"Admission: {scene.Cost.GeometryBytes} geometry bytes; {scene.Cost.BrepFaces} faces; {scene.Cost.MeshTriangles} triangles; {scene.SourceCount} sources. Native threading follows the per-view engine setting (serial global scheduler).");
             if (sources.Count == 0) return result;
             if (!settings.NativeOnly && sources.Any(s => !ReferenceEquals(s.Geometry,s.KernelClassifiedGeometry) || s.KernelTolerance != tolerance || s.KernelEligible))
             {
@@ -289,8 +297,9 @@ public static class NativeDrawing
             using var viewport = new ViewportInfo();
             var frame = result.Frame;
             NativeViewport.Configure(viewport,frame,view.Direction,scene.Bounds,tolerance);
+            var nativeOptions = NativeHldOptions.For(view, settings);
             var parameters = new HiddenLineDrawingParameters { AbsoluteTolerance = tolerance, Flatten = false,
-                IncludeHiddenCurves = true, IncludeTangentEdges = view.Settings?.Tangents ?? false, IncludeTangentSeams = view.Settings?.Seams ?? false };
+                IncludeHiddenCurves = nativeOptions.IncludeHiddenCurves, IncludeTangentEdges = view.Settings?.Tangents ?? false, IncludeTangentSeams = view.Settings?.Seams ?? false };
             parameters.SetViewport(viewport);
             foreach (var source in VisibilityInputOrder.Native(sources, s => new VisibilityInput(s.Geometry,s), settings))
             {
@@ -299,7 +308,8 @@ public static class NativeDrawing
             }
             CountHld(); result.NativeCalls++;
             phase.Next("native solve");
-            using var drawing = HiddenLineDrawing.Compute(parameters, settings.MultipleThreads, HldProgress, token);
+            nativeOptions.Begin(result, sources.Select(s => new VisibilityInput(s.Geometry,s)), settings);
+            using var drawing = HiddenLineDrawing.Compute(parameters, nativeOptions.MultipleThreads, HldProgress, token);
             phase.Next("output construction");
             token.ThrowIfCancellationRequested();
             if (drawing is null) throw new InvalidOperationException("Native HLD returned null without cancellation.");

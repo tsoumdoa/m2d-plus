@@ -20,6 +20,7 @@ public static class SettingsCatalog
 
     public static ImmutableArray<FieldSpec> Fields { get; } =
     [
+        new("engine", "Engine", Lines, FieldKind.Choice, [O("exact", "Exact"), O("fast", "Fast (Make2D-like)")], "engine = exact | fast. Exact is the default. Fast uses Make2D-like native shortcuts for curved/freeform sources; their lines are not certified and may differ between runs. Planar and analytic engines stay exact."),
         new("depth", "Depth", ViewRange, FieldKind.Distance, [O("auto", "Auto")], "depth = auto | <distance>: the far plane, measured from the view plane. Auto: box height, clipping-plane depth, else the scene extent."),
         new("beyond", "Beyond", ViewRange, FieldKind.Distance, [O("auto", "Auto"), O("off", "Off"), O("1 m", "1 m"), O("3 m", "3 m"), O("10 m", "10 m")], "beyond = auto | off | <distance>: visible lines farther than this go to Beyond. Auto: 3 m in cut views, off otherwise."),
         new("farclip", "Far clip", ViewRange, FieldKind.Choice, [O("none", "No clip"), O("line", "Clip with line"), O("noline", "Clip without line")], "farclip = none | line | noline"),
