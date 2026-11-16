@@ -16,6 +16,10 @@ public sealed record NativeSettings(bool MultipleThreads = false, bool NativeOnl
     internal bool ReverseNativeForAudit { get; init; }
     /// <summary>Exact analytic solids (sphere, cylinder, tube, extruded arc) leave native HLD. Off only for comparisons.</summary>
     internal bool Analytic { get; init; } = true;
+    /// <summary>The mixed route of the exact analytic class: a recognised solid that an unrecognised body may hide
+    /// leaves HLD all the same, and its lines are given to HLD as curves. Off by default: on the curved test models
+    /// it moves which lines native HLD gets wrong (hillclimb/curved-engine/FINDINGS.md, section 9).</summary>
+    internal bool AnalyticMixed { get; init; }
     internal Action<IReadOnlyList<VisibilityInput>>? ObserveNativeInputs { get; init; }
     internal Action<NativeHldOptions>? ObserveHldOptions { get; init; }
     /// <summary>Harness only: the sources that left native HLD as exact analytic solids. They are occluders that

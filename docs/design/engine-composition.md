@@ -66,7 +66,7 @@ or an extruded arc (one cylindrical face between two rulings and two arcs). Reco
 every face on the expected surfaces at tolerance, only rims may be creases, every rim edge within tolerance of the
 exact rim, the caps must not meet inside the cylinder, and the volume (or area) must equal the closed form within
 1e-4. Directions are compared as distances over the body's extent, not as angles. Info names each refusal reason and,
-for a recognised solid kept on native HLD, a body that may hide it. It runs on the normalised world
+for a recognised solid beside a body that is not exact (or kept on native HLD), that body. It runs on the normalised world
 geometry, so placements, mirrors and scales need no special case: a squashed or sheared instance is no longer one
 of the shapes and is refused. Clipped route-C pieces and glass substitutes are recognised the same way, or not.
 `tangents = on` or `seams = on` turns the class off for the view (native then draws lines the class does not make).
@@ -79,9 +79,21 @@ H(c) stays a union over all occluders. A recognised source S leaves HLD only whe
   HLD needs S.
 * **As a candidate.** S's own lines are its rims and its closed-form outlines. They are hidden by planar faces
   (the existing curve/plane events and point predicate), by every recognised solid including S itself (exact), and
-  by native bodies, which only HLD knows. So S leaves **only if no unrecognised body can hide it**: none whose
-  view-frame box overlaps S's in the drawing and reaches in front of S's far side. Otherwise S stays in HLD whole,
-  as before; its exact solid is still used against the candidates of sources that did leave.
+  by native bodies, which only HLD knows. An unrecognised body *may* hide S when its view-frame box overlaps S's in
+  the drawing and reaches in front of S's far side.
+  By default S then stays in HLD whole, as before; its exact solid is still used against the candidates of sources
+  that did leave.
+* **The mixed route (`NativeSettings.AnalyticMixed`, off by default, no user setting).** S leaves all the same and
+  its lines are also given to the view's one HLD call as curves of the same source. A curve hides nothing, so HLD's answer for them is about the bodies still
+  in HLD alone. The answers are united per stretch: Hidden where HLD, an exact solid or a planar face says Hidden;
+  not drawn where HLD reports the stretch as a duplicate under another native line in front of it (that line is
+  drawn); otherwise Visible only where every side says Visible. A stretch HLD returns nothing for, or that either
+  side cannot decide, is Unresolved. HLD's pieces are placed on the candidate by closest point (ends and middle,
+  within four tolerances); a piece that cannot be placed counts as no answer. The native ray audit and Unset
+  handling apply to these curves as to any native curve. In `engine = fast` native hidden curves can be off, so
+  there S stays in HLD whole. It is off by default because it was measured to change which lines native HLD gets
+  wrong among the bodies that stay (curved S, SW: new wrong-Visible samples and four times the Unresolved length,
+  for 15 % less time); see `hillclimb/curved-engine/FINDINGS.md`, section 9.
 
 A scene of planar and exact sources makes zero HLD calls. While any source has left, native Duplicate records are
 never dropped unseen (they go through duplicate resolution, as with planar faces), and the locus reconciliation runs.
@@ -102,6 +114,30 @@ A candidate of one exact solid often lies exactly on the boundary of another (th
 mitre joint). Its chords are therefore refined until the parabola through each chord's ends and middle is within an
 eighth of the graze width (tolerance/2^16) of the curve, so the whole curve is seen on that boundary and gets one
 class, not one class per chord. A straight candidate seen end-on has no drawing and is not solved.
+
+### Cut tubes (stage 2)
+
+A body that is none of the plain shapes is tried as a **cut tube** (`CutTubeRecognition`): a hollow or solid round
+section whose ends, and wall, are cut by planes and by other cylinders (coped and saddle ends, mitres, Boolean pipe
+nodes). Every face must be a plane or a circular cylinder; the body is then a union of cells of the arrangement of
+those surfaces inside the tube's wall. The exact solid is `AnalyticCsg` in Core: the tube (inside the outer cylinder,
+outside the bore, between two virtual end planes) and, for each cutting surface, one bit of a cell number. Cells are
+labelled solid or void by asking Rhino's point-in-solid test at points clear of every surface; a cell never reached,
+or where weak answers disagree, is *unknown*, and a ray that may pass through an unknown cell is Unresolved. Two
+strong answers that disagree in one cell refuse the body. Derived planes (mitre planes, planes across the tube at
+each cutter, six sector planes) split cells that would otherwise hold both material and void.
+
+Faces need not be exact. A face that is a NURBS surface is fitted to the nearest plane or circular cylinder and its
+distance from that surface is **bounded, not sampled**: the face is refined by knot insertion and the bound is taken
+from the convex hulls of its control points, so it holds for every point of the face. The body is accepted only if
+every bound is under min(256 tolerances, a sixteenth of the wall or radius). Each surface carries its bound as slack:
+the certified test (`AnalyticCsg.Evaluate`) shrinks sure stretches and grows possible ones by it. Stored edges are
+drawn as stored; what is classified is the exact intersection of the two surfaces an edge joins, and the edge's
+measured distance from it is the edge bound. Body-level bounds come from the faces and edges themselves, never from
+the document tolerance and never from stored edge tolerances alone (those only widen the learning margins).
+Info states both bounds for each cut tube: `Cut tubes drawn exactly to a stated bound (...): <id> faces F, edges E`.
+Outlines of cylindrical faces come from Rhino's silhouette of the body and are moved onto the exact ruling when
+within four times (tolerance + bound) of it; otherwise they are classified as foreign curves with that slack.
 
 The class reports its own progress step, `exact curved`. `engine = fast` does not touch it: fast only changes what
 still goes to native HLD.

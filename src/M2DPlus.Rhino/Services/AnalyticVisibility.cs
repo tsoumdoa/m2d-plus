@@ -220,7 +220,7 @@ internal sealed class AnalyticVisibility
     /// the index of an unrecognised body that may hide it (-1 when there is none, or when its own box is invalid).
     /// A recognised solid that an unrecognised body may hide leaves HLD all the same when `mixed` is set: its lines are
     /// then also given to HLD as curves, which hide nothing, and HLD says where the unrecognised bodies hide them.
-    /// Otherwise it stays in HLD whole.</summary>
+    /// Otherwise (the default) it stays in HLD whole.</summary>
     private static (Shape? Shape, bool Leaves, int Blocker)[] Plan(IReadOnlyList<GeometryBase> geometries, Plane plane, double tol, bool mixed)
     {
         var plan = new (Shape?, bool, int)[geometries.Count]; var toView = Transform.PlaneToPlane(plane, Plane.WorldXY);
@@ -247,11 +247,11 @@ internal sealed class AnalyticVisibility
 
     /// <summary>Would any source of this view leave HLD? Used to choose the composed route for scenes with no planar source.</summary>
     internal static bool Applies(IEnumerable<GeometryBase> geometries, Plane plane, double tolerance, ViewRequest view, NativeSettings settings) =>
-        Enabled(view, settings) && Plan(geometries.ToArray(), plane, tolerance, Mixed(view)).Any(p => p.Leaves);
+        Enabled(view, settings) && Plan(geometries.ToArray(), plane, tolerance, Mixed(view, settings)).Any(p => p.Leaves);
 
     /// <summary>Fast mode may switch native hidden curves off; the mixed route needs HLD's answer for every stretch of a
     /// line, so in fast mode a recognised solid that an unrecognised body may hide stays in HLD as before.</summary>
-    private static bool Mixed(ViewRequest view) => view.Settings?.Engine != EngineMode.Fast;
+    private static bool Mixed(ViewRequest view, NativeSettings settings) => settings.AnalyticMixed && view.Settings?.Engine != EngineMode.Fast;
 
     // ---------------------------------------------------------------- one view
 
@@ -531,7 +531,7 @@ internal sealed class AnalyticVisibility
     {
         if (!Enabled(view, settings) || curved.Count == 0) return None;
         var before = settings.ObserveExactSolids is null ? null : curved.ToArray();
-        var taken = new AnalyticVisibility(curved, plane, tolerance, Mixed(view), owned, token);
+        var taken = new AnalyticVisibility(curved, plane, tolerance, Mixed(view, settings), owned, token);
         if (before is not null && taken.Any) settings.ObserveExactSolids!(before.Except(curved).ToArray());
         return taken;
     }

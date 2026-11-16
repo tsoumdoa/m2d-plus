@@ -361,7 +361,18 @@ public sealed class AnalyticVisibilityTests(RhinoHost host, ITestOutputHelper ou
         output.WriteLine($"witness: judged {judged}, wrong {wrong}"); Assert.True(judged > 8); Assert.Equal(0, wrong);
     });
 
-    [RhinoFact] public void APipeBesideATorusElbowIsExactAndNativeDecidesWhatTheElbowHides() => host.Run(() =>
+    [RhinoFact] public void APipeWithATorusElbowStaysOnNativeAndInfoNamesTheElbow() => host.Run(() =>
+    {
+        using var pipe = Pipe(new Point3d(-3, 1, 0), Vector3d.XAxis, .2, .17, 3); using var elbow = Ring(new Point3d(0, 0, 0), 1, .2);
+        Assert.NotNull(AnalyticVisibility.Recognise(pipe, Tol)); Assert.Null(AnalyticVisibility.Recognise(elbow, Tol));
+        using var view = Route([pipe, elbow]);
+        foreach (var d in view.Diagnostics.Where(d => d.Contains("nalytic"))) output.WriteLine(d);
+        Assert.Equal(1, view.NativeCalls); Assert.DoesNotContain("exact analytic solids", view.Report.Route);
+        Assert.Contains(view.Diagnostics, d => d == "Analytic solids kept on native HLD: 0 (may be hidden by 1).");
+        Assert.Contains(view.Diagnostics, d => d.StartsWith("Not exact analytic solids (native HLD): 1 x a face that is not a plane, cylinder or sphere", StringComparison.Ordinal) && d.EndsWith("(1).", StringComparison.Ordinal));
+    });
+
+    [RhinoFact] public void WithTheMixedRouteAPipeBesideATorusElbowIsExactAndNativeDecidesWhatTheElbowHides() => host.Run(() =>
     {
         // The mixed route. The pipe is exact; the elbow is not, and may hide it. The pipe leaves HLD, its lines go to
         // HLD as curves, and the two answers are united.
@@ -369,7 +380,7 @@ public sealed class AnalyticVisibilityTests(RhinoHost host, ITestOutputHelper ou
         Assert.NotNull(AnalyticVisibility.Recognise(pipe, Tol)); Assert.Null(AnalyticVisibility.Recognise(elbow, Tol));
         foreach (var name in new[] { "Top" })
         {
-            using var view = Route([pipe, elbow], null, ViewRequest.Parse(name)); using var native = Route([pipe, elbow], new NativeSettings { Analytic = false }, ViewRequest.Parse(name));
+            using var view = Route([pipe, elbow], new NativeSettings { AnalyticMixed = true }, ViewRequest.Parse(name)); using var native = Route([pipe, elbow], new NativeSettings { Analytic = false }, ViewRequest.Parse(name));
             output.WriteLine($"{name}: {view.Report.Route}");
             foreach (var d in view.Diagnostics.Where(d => d.Contains("nalytic") || d.StartsWith("Exact solids"))) output.WriteLine("  " + d);
             foreach (var source in new[] { "0", "1" })
@@ -511,10 +522,22 @@ public sealed class AnalyticVisibilityTests(RhinoHost host, ITestOutputHelper ou
         }
     });
 
-    [RhinoFact] public void AColumnThatANativeBodyMayHideIsExactAndNativeHidesItsRim() => host.Run(() =>
+    [RhinoFact] public void AColumnThatANativeBodyMayHideStaysOnNative() => host.Run(() =>
     {
         using var column = Column(Point3d.Origin, 1, 2); using var above = Ring(new Point3d(0, 0, 4), 1, .3);
         using var view = Route([column, above]);
+        output.WriteLine(view.Report.Route); foreach (var d in view.Diagnostics.Where(d => d.StartsWith("Analytic"))) output.WriteLine(d);
+        Assert.DoesNotContain("exact analytic solids", view.Report.Route);
+        Assert.Contains(view.Diagnostics, d => d.StartsWith("Analytic solids: recognised=1; exact=0; of those, beside unrecognised bodies (lines also checked by native HLD)=0; kept on native HLD because an unrecognised body may hide them=1"));
+        Assert.Equal(1, view.NativeCalls);
+        // Native decides: the ring's tube covers the rim between radii 0.7 and 1.3, so the whole top rim is hidden.
+        Assert.Equal(0, Length(view, LineClass.Visible, "0"), 3);
+    });
+
+    [RhinoFact] public void WithTheMixedRouteAColumnThatANativeBodyMayHideIsExactAndNativeHidesItsRim() => host.Run(() =>
+    {
+        using var column = Column(Point3d.Origin, 1, 2); using var above = Ring(new Point3d(0, 0, 4), 1, .3);
+        using var view = Route([column, above], new NativeSettings { AnalyticMixed = true });
         output.WriteLine(view.Report.Route); foreach (var d in view.Diagnostics.Where(d => d.StartsWith("Analytic"))) output.WriteLine(d);
         Assert.Contains("exact analytic solids=1", view.Report.Route);
         Assert.Contains(view.Diagnostics, d => d.StartsWith("Analytic solids: recognised=1; exact=1; of those, beside unrecognised bodies (lines also checked by native HLD)=1; kept on native HLD because an unrecognised body may hide them=0"));
@@ -524,7 +547,7 @@ public sealed class AnalyticVisibilityTests(RhinoHost host, ITestOutputHelper ou
         Assert.Equal(0, Length(view, LineClass.Visible, "0"), 3); Assert.Equal(0, Length(view, LineClass.Unresolved, "0"), 3);
         Assert.Equal(2 * Math.PI, Length(view, LineClass.Hidden, "0"), 3);
         // In fast mode native hidden curves may be off: the column stays in HLD whole, as before.
-        using var fast = Route([column, above], null, SettingsFor(ViewRequest.Parse("Top"), "engine=fast"));
+        using var fast = Route([column, above], new NativeSettings { AnalyticMixed = true }, SettingsFor(ViewRequest.Parse("Top"), "engine=fast"));
         Assert.DoesNotContain("exact analytic solids", fast.Report.Route);
     });
 
@@ -583,7 +606,7 @@ public sealed class AnalyticVisibilityTests(RhinoHost host, ITestOutputHelper ou
         }
     });
 
-    [RhinoFact] public void ExactSolidsBesideFreeformBodiesAgreeWithNativeInTheWholePipeline() => host.Run(() =>
+    [RhinoFact] public void WithTheMixedRouteExactSolidsBesideFreeformBodiesAgreeWithNativeInTheWholePipeline() => host.Run(() =>
     {
         // The mixed route: a column with a freeform body in front of it, a tube with a torus ring round it. Nothing
         // touches, so the tie convention cannot differ. The exact solids leave HLD, their lines are also given to HLD
@@ -598,7 +621,7 @@ public sealed class AnalyticVisibilityTests(RhinoHost host, ITestOutputHelper ou
         foreach (var b in new[] { column, tube, blob, ring, slab }) doc.Objects.AddBrep(b);
         using var cache = new SceneCache();
         var views = new[] { ViewRequest.Parse("Top"), ViewRequest.Parse("Front"), ViewRequest.Parse("SW"), ViewRequest.Parse("NE") };
-        using var exact = NativeDrawing.SolveAsync(BaselineTests.Capture(doc, cache), new("s", "v", "exact", 1), views, new(), default).GetAwaiter().GetResult();
+        using var exact = NativeDrawing.SolveAsync(BaselineTests.Capture(doc, cache), new("s", "v", "exact", 1), views, new NativeSettings { AnalyticMixed = true }, default).GetAwaiter().GetResult();
         using var native = NativeDrawing.SolveAsync(BaselineTests.Capture(doc, cache), new("s", "v", "native", 1), views, new NativeSettings { Analytic = false }, default).GetAwaiter().GetResult();
         for (int i = 0; i < views.Length; i++)
         {

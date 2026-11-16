@@ -166,7 +166,11 @@ internal static class AnalyticCheck
             }
             return;
         }
-        var off = new NativeSettings { Analytic = false }; var on = new NativeSettings();
+        bool mixed = variants.Contains("mixed");     // the mixed route, off by default
+        var off = new NativeSettings { Analytic = false }; var on = new NativeSettings { AnalyticMixed = mixed };
+        // `why`: what HLD returned in the composed solve, to show beside a flagged sample.
+        var heard = new List<(string Id, int Edge, bool Duplicate, LineClass Kind, Curve World)>();
+        var listening = !variants.Contains("why") ? on : new NativeSettings { AnalyticMixed = mixed, ObserveCompositionRecord = (id, edge, duplicate, kind, world) => { lock (heard) heard.Add((id, edge, duplicate, kind, world.DuplicateCurve())); } };
         using (var cold = SolveView(scene, prepared, view, off, timeout)) { }
         (ViewDrawing Drawing, double Wall, string Busy) Timed(NativeSettings settings)
         {
@@ -175,7 +179,7 @@ internal static class AnalyticCheck
             return (d, timer.Elapsed.TotalSeconds, busy.Stop());
         }
         var (before, beforeWall, beforeBusy) = Timed(off);
-        using var after1 = SolveView(scene, prepared, view, on, timeout);   // first analytic solve pays recognition once per scene
+        using var after1 = SolveView(scene, prepared, view, listening, timeout);   // first analytic solve pays recognition once per scene
         var (after, afterWall, afterBusy) = Timed(on);
         using var keepBefore = before; using var keepAfter = after;
         var plane = after.Frame.Plane; var e = plane.ZAxis; var toView = Transform.PlaneToPlane(plane, Plane.WorldXY);
@@ -191,6 +195,12 @@ internal static class AnalyticCheck
         Console.WriteLine($"--- {stem} [after, analytic on] wall {afterWall:F3}s (first solve {after1.Seconds:F3}s) native calls {after.NativeCalls} native solve {after.Phases.Seconds.GetValueOrDefault("native solve"):F3}s; {Show(afterLengths)}; error {after.Error}; busy {afterBusy}");
         Console.WriteLine($"    route: {after.Report.Route}");
         Console.WriteLine($"    {Analytic(after)}");
+        foreach (var (label, d) in new[] { ("before", before), ("after", after) })
+        {
+            foreach (var x in d.Diagnostics.Where(x => x.StartsWith("Native ray verifier", StringComparison.Ordinal) || x.StartsWith("Composition coverage", StringComparison.Ordinal)))
+                Console.WriteLine($"    {label}: {x[..Math.Min(x.Length, 330)]}");
+            Console.WriteLine($"    {label}: Unset notes {d.Diagnostics.Count(x => x.Contains("Unset", StringComparison.Ordinal))}; quarantined sources {d.UncertainRoutingSources.Count}; routing invalid {d.RoutingInvalid}; duplicates {d.DuplicateSegments}");
+        }
         Console.WriteLine($"    phases after: {string.Join(", ", after.Phases.Seconds.Where(p => p.Value >= .005).Select(p => $"{p.Key} {p.Value:F2}"))}");
         string hashBefore = Hash(before, plane, tol), hashAfter = Hash(after, plane, tol), hashAfter1 = Hash(after1, plane, tol);
         Console.WriteLine($"    drawing hash before {hashBefore} after {hashAfter} ({(hashBefore == hashAfter ? "identical" : "different")}); repeat of after {(hashAfter == hashAfter1 ? "identical" : "DIFFERENT")}");
@@ -426,6 +436,7 @@ internal static class AnalyticCheck
             if (p.DistanceTo(world) > reach) return world;
             moved++; return p;
         }
+        Console.WriteLine($"    after Unresolved by source kind: exact {after.Items.Where(p => p.Class == LineClass.Unresolved && exact.Contains(p.SourceIdentity)).Sum(p => { using var c = p.CopyGeometry(); return c is Curve k ? k.GetLength() : 0; }):F1}, other {after.Items.Where(p => p.Class == LineClass.Unresolved && !exact.Contains(p.SourceIdentity)).Sum(p => { using var c = p.CopyGeometry(); return c is Curve k ? k.GetLength() : 0; }):F1}");
         var random = new Random(20261116); var groups = new SortedDictionary<string, List<(DrawingPiece Piece, double T, int Class)>>(StringComparer.Ordinal);
         foreach (var (cls, flat, piece) in afterPieces)
         {
@@ -443,6 +454,8 @@ internal static class AnalyticCheck
                 list.Add((piece, t, cls));
             }
         }
+        // `only:<text>` lists up to 40 flagged samples of the groups whose name contains the text.
+        string? only = variants.FirstOrDefault(v => v.StartsWith("only:", StringComparison.Ordinal))?[5..];
         var adjudication = new SortedDictionary<string, int[]>(StringComparer.Ordinal); var flagged = new List<string>(); int flaggedTotal = 0;
         foreach (var (key, list) in groups)
         {
@@ -464,7 +477,7 @@ internal static class AnalyticCheck
                 else
                 {
                     counts[1]++; flaggedTotal++; var q = c.PointAt(t); plane.ClosestParameter(q, out var x, out var y);
-                    if (flagged.Count < 12)
+                    if (flagged.Count < (only is null ? 12 : 40) && (only is null || key.Contains(only, StringComparison.Ordinal)))
                     {
                         var where = depth.PointAt(depth.Domain.ParameterAt(c.Domain.NormalizedParameterAt(t))); var note = new StringBuilder();
                         if (variants.Contains("why"))
@@ -480,6 +493,9 @@ internal static class AnalyticCheck
                             if (mine.Brep is not null) note.Append("; Rhino point-in-solid above the point at " + string.Join(", ", new[] { 10.0, 100, 1000, 3000 }.Select(k => $"{k * tol:G3}: {mine.Brep.IsPointInside(at + e * (k * tol), tol / 10, true)}")));
                             foreach (int i in close) note.Append($"; n{i}·e {(cutShape.Surfaces[i].Cylinder ? "(cyl)" : (cutShape.Surfaces[i].Direction * e).ToString("F4"))}");
                         }
+                        if (variants.Contains("why"))
+                            foreach (var h in heard)
+                                if (h.World.ClosestPoint(where, out double ht, 20 * tol)) note.Append($" | HLD: {h.Id[^12..]}{(h.Id == piece.SourceIdentity ? " (own)" : "")} edge {h.Edge} {(h.Duplicate ? "Duplicate " : "")}{h.Kind} length {h.World.GetLength():F3} at {h.World.PointAt(ht).DistanceTo(where):E1}");
                         flagged.Add($"{key}: source {piece.SourceIdentity[^12..]} drawn {(cls == 0 ? "Visible" : "Hidden")} at ({x:F4}, {y:F4}) world {where}, check says {(agreed == 0 ? "Visible" : "Hidden")}{note}");
                     }
                 }
