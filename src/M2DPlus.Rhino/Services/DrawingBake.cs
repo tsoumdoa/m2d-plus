@@ -13,7 +13,11 @@ using Rhino.Geometry;
 
 namespace M2DPlus.Rhino.Services;
 
-public sealed record BakeDrawing(ViewDrawing Drawing, string Name);
+/// <param name="Layout">The bake layer layout (UX §8.1); null takes the drawing's resolved <c>bake</c> setting.</param>
+public sealed record BakeDrawing(ViewDrawing Drawing, string Name, BakeLayout? Layout = null)
+{
+    public BakeLayout EffectiveLayout => Layout ?? Drawing.Settings?.Bake ?? BakeLayout.ViewLayer;
+}
 public sealed record BakeResult(IReadOnlyList<Guid> Added, IReadOnlyList<string> Messages);
 
 /// <summary>Host-only mutation. A batch, including replacement deletes and pattern/layer insertion, is one undo.</summary>
@@ -28,9 +32,24 @@ public static class DrawingBake
         (int)Math.Round(ink.G * intensity + background.G * (1 - intensity)),
         (int)Math.Round(ink.B * intensity + background.B * (1 - intensity)));
 
-    public static IReadOnlyList<string> Names(RhinoDoc doc) => doc.Layers.Where(l => !l.IsDeleted &&
-        l.FullPath.StartsWith("M2D+::", StringComparison.Ordinal)).Select(l => l.FullPath.Split("::"))
-        .Where(p => p.Length >= 2).Select(p => p[1]).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+    /// <summary>Model objects a bake may own (never block-definition geometry).</summary>
+    private static ObjectEnumeratorSettings Baked() => new() { NormalObjects = true, LockedObjects = true, HiddenObjects = true };
+    /// <summary>Everything that keeps a layer in use, for the emptied-layer check.</summary>
+    private static ObjectEnumeratorSettings Everything(int layer) => new()
+    {
+        NormalObjects = true, LockedObjects = true, HiddenObjects = true, IdefObjects = true, ReferenceObjects = true,
+        IncludeLights = true, IncludeGrips = false, LayerIndexFilter = layer
+    };
+
+    /// <summary>Drawing names already baked in this document by any component, read from the bake markers: the drawing is
+    /// not at a fixed layer level in every layout (UX §8.1).</summary>
+    public static IReadOnlyList<string> Names(RhinoDoc doc) => doc.Objects.GetObjectList(Baked())
+        .Select(o => BakeTags.TryParseOwner(o.Attributes.GetUserString(BakeTags.Bake), out _, out var drawing) ? drawing : null)
+        .OfType<string>().Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+
+    /// <summary>The editable style compared to tell an unchanged M2D+ layer from one the user changed.</summary>
+    public static BakeLayerStyle Style(Layer layer) => new(layer.Color.ToArgb(), layer.PlotColor.ToArgb(), layer.PlotWeight,
+        layer.LinetypeIndex, layer.RenderMaterialIndex);
 
     public static BakeResult Bake(RhinoDoc doc, Guid component, IReadOnlyList<BakeDrawing> drawings)
     {
@@ -55,7 +74,10 @@ public static class DrawingBake
                         if (region.Hatch is { } hatch) items.Add(new(hatch.Duplicate(), source, r.Source, LineClass.Hatch, 1, Section: region.Style));
                     }
                     var owner = BakeTags.Owner(component, drawing.Name);
-                    var previous = doc.Objects.GetObjectList(new ObjectEnumeratorSettings { NormalObjects = true, LockedObjects = true, HiddenObjects = true })
+                    var layout = drawing.EffectiveLayout;
+                    // The previous bake of this drawing is found by its markers wherever it is, so a bake with another
+                    // layout replaces it as well (UX §8.2).
+                    var previous = doc.Objects.GetObjectList(Baked())
                         .Where(o => o.Attributes.GetUserString(BakeTags.Bake) == owner).ToArray();
                     var records = previous.Select(o => new BakedRecord(o.Id.ToString(), owner,
                         o.Attributes.GetUserString(BakeTags.Hash) ?? "", Fingerprint(o.Geometry, o.Attributes),
@@ -66,8 +88,8 @@ public static class DrawingBake
                         foreach (var item in items)
                         {
                             var weights = drawing.Drawing.Weights;
-                            var path = BakeNames.LayerPath(drawing.Name, item.Class, item.Style.LayerPath);
-                            var layer = EnsureLayer(path, item.Class, weights, item.Style);
+                            var path = BakeNames.Layer(layout, drawing.Name, item.Class, item.Style.LayerPath);
+                            var layer = EnsureLayer(path, layout, item.Class, weights, item.Style);
                             UnlockAncestors(layer);
                             var attributes = new ObjectAttributes { LayerIndex = layer.Index };
                             pending.Add((item, attributes, "", layer.Id.ToString()));
@@ -110,10 +132,12 @@ public static class DrawingBake
                         }
                         var plan = BakePlan.Replace(component, drawing.Name, records, pending.Select((p, i) =>
                             new NewBakeRecord(i.ToString(System.Globalization.CultureInfo.InvariantCulture), p.Layer, p.Hash, p.Item.Source, p.Item.Class)));
+                        var emptied = new HashSet<Guid>();
                         foreach (var id in plan.Delete)
                         {
                             var obj = doc.Objects.FindId(Guid.Parse(id));
                             if (obj is null) continue;
+                            emptied.Add(doc.Layers[obj.Attributes.LayerIndex].Id);
                             UnlockAncestors(doc.Layers[obj.Attributes.LayerIndex]);
                             if (!doc.Objects.Delete(obj, true)) throw new InvalidOperationException($"Could not replace baked object {id}.");
                         }
@@ -125,13 +149,10 @@ public static class DrawingBake
                             added.Add(id);
                         }
                         messages.Add(plan.Summary);
+                        var removed = RemoveEmptied(emptied);
+                        if (removed > 0) messages.Add($"{drawing.Name}: removed {removed} empty M2D+ layer{(removed == 1 ? "" : "s")}");
                     }
                     finally { foreach (var p in pending) p.Attributes.Dispose(); }
-                    // Only remove empty, explicitly owned descendants. Preserve the drawing/category layers.
-                    foreach (var layer in doc.Layers.Where(l => !l.IsDeleted && l.GetUserString("m2d.created") == component.ToString() &&
-                        l.FullPath.StartsWith($"M2D+::{drawing.Name}::", StringComparison.Ordinal) && l.FullPath.Split("::").Length > 3)
-                        .OrderByDescending(l => l.FullPath.Split("::").Length).ToArray())
-                        if (!doc.Objects.FindByLayer(layer).Any() && !doc.Layers.Any(l => !l.IsDeleted && l.ParentLayerId == layer.Id)) doc.Layers.Delete(layer.Index, true);
                 }
                 finally { foreach (var item in items) item.Dispose(); }
             }
@@ -152,46 +173,113 @@ public static class DrawingBake
 
         int Linetype(string name, IReadOnlyList<double> segments)
         {
+            // Rhino 8 returns a stock linetype with index -1 for a name not in this document's table: add it then.
             var found = doc.Linetypes.FindName(name);
-            if (found is not null) return found.Index;
+            if (found is not null && found.Index >= 0) return found.Index;
             using var type = new Linetype { Name = name };
             foreach (var segment in segments) type.AppendSegment(Math.Abs(segment), segment >= 0);
             return doc.Linetypes.Add(type);
         }
-        Layer EnsureLayer(string path, LineClass kind, LineWeightPreset weights, SourceSection source)
+        // Creates the missing levels of a bake layer. Styled levels (the line type, UX §8.1) get the preset width, the Hidden
+        // linetype and m2d.weights; grouping levels stay plain. Each created layer records its style (m2d.style), so a later
+        // cleanup can tell it from a layer the user changed.
+        Layer EnsureLayer(BakeLayerPath path, BakeLayout layout, LineClass kind, LineWeightPreset weights, SourceSection source)
         {
-            var parts = path.Split("::"); var parent = Guid.Empty; var full = "";
-            for (var i = 0; i < parts.Length; i++)
+            var parent = Guid.Empty; var full = "";
+            for (var i = 0; i < path.Segments.Length; i++)
             {
-                full += (i == 0 ? "" : "::") + parts[i];
+                full += (i == 0 ? "" : "::") + path.Segments[i];
+                var styled = path.IsStyled(i);
                 var index = doc.Layers.FindByFullPath(full, -1); var isNew = index < 0;
                 if (isNew)
                 {
-                    using var layer = new Layer { Name = parts[i], ParentLayerId = parent,
-                        Color = kind == LineClass.Unresolved ? Color.FromArgb(224, 122, 0) : weights.UseSourceLayers ? Argb(source.LayerColour) : Color.Black };
-                    layer.SetUserString("m2d.created", component.ToString());
-                    if (i >= 2)
-                    {
-                        layer.PlotWeight = weights.UseSourceLayers ? source.LayerWidth : weights[kind].PrintWidthMillimetres;
-                        layer.SetUserString(BakeTags.Weights, $"1:{weights.Scale:R}");
-                        if (kind == LineClass.Hidden) layer.LinetypeIndex = Linetype("Hidden", new[] { 2d, -1d });
-                    }
+                    using var layer = NewLayer(path.Segments[i], parent, styled, layout, kind, weights, source);
+                    layer.SetUserString(BakeLayerStyle.Created, component.ToString());
+                    layer.SetUserString(BakeLayerStyle.Tag, Style(layer).Signature);
                     index = doc.Layers.Add(layer);
                     if (index < 0) throw new InvalidOperationException($"Could not create layer {full}.");
+                    // Record the style as the document holds it, in case Rhino normalised a value on Add.
+                    var stored = doc.Layers[index];
+                    if (stored.GetUserString(BakeLayerStyle.Tag) != Style(stored).Signature)
+                    {
+                        using var copy = Copy(stored); copy.SetUserString(BakeLayerStyle.Tag, Style(stored).Signature); doc.Layers.Modify(copy, index, true);
+                    }
                 }
                 var actual = doc.Layers[index]; parent = actual.Id;
-                if (i >= 2 && !isNew)
+                if (styled && !isNew)
                 {
                     var decision = BakeLayerWidths.Decide(kind, actual.PlotWeight, actual.GetUserString(BakeTags.Weights), weights);
                     if (decision.Update)
                     {
+                        // Keep the signature in step with M2D+'s own width change, unless the user had already changed the layer.
+                        var unchanged = actual.GetUserString(BakeLayerStyle.Tag) == Style(actual).Signature;
                         using var copy = Copy(actual); copy.PlotWeight = decision.Width; copy.SetUserString(BakeTags.Weights, decision.WeightsTag);
+                        if (unchanged) copy.SetUserString(BakeLayerStyle.Tag, Style(copy).Signature);
                         doc.Layers.Modify(copy, index, true);
                     }
                     else if (decision.Message.Contains("edited", StringComparison.Ordinal)) messages.Add(full + ": " + decision.Message);
                 }
             }
             return doc.Layers.FindId(parent);
+        }
+        // A layer as M2D+ creates it. The classic layout keeps beta.3's colours on every level it creates; the others colour
+        // only the styled (line type) level, so grouping layers stay plain.
+        Layer NewLayer(string name, Guid parent, bool styled, BakeLayout layout, LineClass kind, LineWeightPreset weights, SourceSection? source)
+        {
+            var coloured = styled || layout == BakeLayout.ViewType;
+            var layer = new Layer
+            {
+                Name = name, ParentLayerId = parent,
+                Color = coloured && kind == LineClass.Unresolved ? Color.FromArgb(224, 122, 0)
+                    : coloured && weights.UseSourceLayers && source is not null ? Argb(source.LayerColour) : Color.Black
+            };
+            if (styled)
+            {
+                layer.PlotWeight = weights.UseSourceLayers && source is not null ? source.LayerWidth : weights[kind].PrintWidthMillimetres;
+                layer.SetUserString(BakeTags.Weights, $"1:{weights.Scale:R}");
+                if (kind == LineClass.Hidden) layer.LinetypeIndex = Linetype("Hidden", new[] { 2d, -1d });
+            }
+            return layer;
+        }
+        // Removes the layers a re-bake emptied, then their emptied parents, when M2D+ created them and the user has not
+        // changed them (BakeLayerCleanup). Layers from beta.3 and earlier have no m2d.style: they are compared with the style
+        // the classic layout created them with.
+        int RemoveEmptied(HashSet<Guid> emptied)
+        {
+            var removed = 0;
+            var candidates = new Dictionary<Guid, int>();
+            foreach (var id in emptied)
+                for (var layer = doc.Layers.FindId(id); layer is not null && !layer.IsDeleted;
+                     layer = layer.ParentLayerId == Guid.Empty ? null : doc.Layers.FindId(layer.ParentLayerId))
+                    candidates.TryAdd(layer.Id, layer.FullPath.Split("::").Length);
+            foreach (var id in candidates.OrderByDescending(c => c.Value).Select(c => c.Key))
+            {
+                var layer = doc.Layers.FindId(id);
+                if (layer is null || layer.IsDeleted) continue;
+                var tag = layer.GetUserString(BakeLayerStyle.Tag);
+                var state = new BakeLayerState(layer.FullPath, layer.GetUserString(BakeLayerStyle.Created) is not null,
+                    !doc.Objects.GetObjectList(Everything(layer.Index)).Any(),
+                    doc.Layers.Any(l => !l.IsDeleted && l.ParentLayerId == layer.Id), layer.IsVisible,
+                    layer.IsLocked || locked.ContainsKey(layer.Id), tag, Style(layer).Signature, tag is null ? Classic(layer) : null);
+                if (BakeLayerCleanup.Removable(state) && doc.Layers.Delete(layer.Index, true)) removed++;
+            }
+            return removed;
+        }
+        // The style the classic layout (beta.3) created a layer with, assuming weights = auto; null when it cannot tell.
+        string? Classic(Layer layer)
+        {
+            var tag = layer.GetUserString(BakeTags.Weights);
+            if (BakeNames.ClassicCategory(layer.FullPath) is { } kind)
+            {
+                if (tag?.StartsWith("1:", StringComparison.Ordinal) != true ||
+                    !double.TryParse(tag[2..], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var scale) ||
+                    !double.IsFinite(scale) || scale <= 0) return null;
+                using var styled = NewLayer(layer.Name, Guid.Empty, true, BakeLayout.ViewType, kind, new LineWeightPreset(scale), null);
+                return Style(styled).Signature;
+            }
+            if (tag is not null) return null;
+            using var plain = NewLayer(layer.Name, Guid.Empty, false, BakeLayout.ViewType, LineClass.Visible, new LineWeightPreset(100), null);
+            return Style(plain).Signature;
         }
         void UnlockAncestors(Layer layer)
         {

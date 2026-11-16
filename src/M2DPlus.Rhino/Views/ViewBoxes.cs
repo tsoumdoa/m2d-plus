@@ -42,9 +42,9 @@ public static class ViewBoxes
 
     /// <summary>Per-view settings written as user text, in Settings-key order (UX §6.3). Depth and crop come from the
     /// geometry; tree, gap and tolerance are rarely per-view, so they are not written (but m2d.tree, m2d.gap and
-    /// m2d.tolerance are read).</summary>
+    /// m2d.tolerance are read). <c>m2d.bake</c> (the bake layer layout, UX §8.1) is bake-time only.</summary>
     public static ImmutableArray<string> Keys { get; } = ["name", "farclip", "cutonly", "beyond", "fade", "fade.start", "fade.end", "fade.limit",
-        "hidden", "engine", "tangents", "seams", "glass", "scale", "weights", "hatch", "cuts", "min_visible"];
+        "hidden", "engine", "tangents", "seams", "glass", "scale", "weights", "hatch", "cuts", "min_visible", "bake"];
 
     public static bool IsViewBox(RhinoObject? obj) => obj?.Attributes.GetUserString(Marker) is not null;
 
@@ -234,6 +234,9 @@ public static class ViewBoxes
                 || key.Equals(ColorKey, StringComparison.OrdinalIgnoreCase)) continue;
             var value = strings[key]?.Trim() ?? "";
             if (value.Length == 0 || value.Equals(Inherit, StringComparison.OrdinalIgnoreCase)) continue;
+            // m2d.bake is also the marker on baked objects (component/drawing); only a layout name is a setting.
+            if (key.Equals(M2DPlus.Core.Bake.BakeTags.Bake, StringComparison.OrdinalIgnoreCase) &&
+                M2DPlus.Core.Bake.BakeTags.TryParseOwner(value, out _, out _)) continue;
             values.Add(KeyValuePair.Create(key[Prefix.Length..].ToLowerInvariant(), value));
         }
         return new(values);

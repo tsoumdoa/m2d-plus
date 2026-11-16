@@ -26,6 +26,136 @@ public sealed class BakeTests
         Assert.Equal($"M2D+::Section A::{category}", BakeNames.LayerPath("Section A", lineClass));
     }
 
+    // Owner decision 2026-11-16 (UX §8.1): four layouts; the line type is the leaf except in the classic layout.
+    [Theory]
+    [InlineData(BakeLayout.ViewLayer, "M2D+::Section A::Arch::Walls::Visible", "M2D+::Section A::Grasshopper (no layer)::Visible", 4)]
+    [InlineData(BakeLayout.LayerView, "M2D+::Arch::Walls::Section A::Visible", "M2D+::Grasshopper (no layer)::Section A::Visible", 4)]
+    [InlineData(BakeLayout.Layer, "M2D+::Arch::Walls::Visible", "M2D+::Grasshopper (no layer)::Visible", 3)]
+    [InlineData(BakeLayout.ViewType, "M2D+::Section A::Visible::Arch::Walls", "M2D+::Section A::Visible", 2)]
+    public void EachLayoutPlacesDrawingSourceLayersAndLineType(BakeLayout layout, string nested, string grasshopper, int styledFrom)
+    {
+        var path = BakeNames.Layer(layout, "Section A", LineClass.Visible, "Arch::Walls");
+        Assert.Equal(nested, path.FullPath);
+        Assert.Equal(styledFrom, path.StyledFrom);
+        // Only the line-type level is styled, except classic, which styles the type layer and its source sublayers.
+        Assert.Equal(layout == BakeLayout.ViewType ? [false, false, true, true, true] : Enumerable.Range(0, path.Segments.Length).Select(i => i == path.Segments.Length - 1),
+            Enumerable.Range(0, path.Segments.Length).Select(path.IsStyled));
+        Assert.Equal(grasshopper, BakeNames.Layer(layout, "Section A", LineClass.Visible).FullPath);
+        Assert.Equal(grasshopper, BakeNames.Layer(layout, "Section A", LineClass.Visible, "").FullPath);
+    }
+
+    [Theory]
+    [InlineData(LineClass.Visible, "Visible")]
+    [InlineData(LineClass.Profile, "Visible")]
+    [InlineData(LineClass.Hidden, "Hidden")]
+    [InlineData(LineClass.Beyond, "Beyond")]
+    [InlineData(LineClass.FarClip, "Far clip")]
+    [InlineData(LineClass.Cut, "Cut")]
+    [InlineData(LineClass.Hatch, "Hatch")]
+    [InlineData(LineClass.Unresolved, "Unresolved")]
+    [InlineData(LineClass.Ignored, "Ignored")]
+    public void TheLineTypeIsAlwaysTheLeafAndDeepSourcePathsNest(LineClass lineClass, string type)
+    {
+        const string source = "Site::Building A::Level 2::Walls";
+        Assert.Equal($"M2D+::Plan +3.00::Site::Building A::Level 2::Walls::{type}", BakeNames.Layer(BakeLayout.ViewLayer, "Plan +3.00", lineClass, source).FullPath);
+        Assert.Equal($"M2D+::Site::Building A::Level 2::Walls::Plan +3.00::{type}", BakeNames.Layer(BakeLayout.LayerView, "Plan +3.00", lineClass, source).FullPath);
+        Assert.Equal($"M2D+::Site::Building A::Level 2::Walls::{type}", BakeNames.Layer(BakeLayout.Layer, "Plan +3.00", lineClass, source).FullPath);
+        Assert.Equal($"M2D+::Plan +3.00::{type}::Site::Building A::Level 2::Walls", BakeNames.Layer(BakeLayout.ViewType, "Plan +3.00", lineClass, source).FullPath);
+        foreach (var layout in BakeNames.Layouts)
+        {
+            var path = BakeNames.Layer(layout, "Plan +3.00", lineClass, source);
+            Assert.Equal("M2D+", path.Segments[0]);
+            if (layout != BakeLayout.ViewType) Assert.Equal(type, path.Segments[^1]);
+        }
+        Assert.Equal(lineClass == LineClass.Profile ? LineClass.Visible : lineClass,
+            BakeNames.ClassicCategory(BakeNames.LayerPath("Plan", lineClass, source)));
+    }
+
+    [Fact]
+    public void TheLayerLayoutMergesDrawingsAndTheOthersKeepThemApart()
+    {
+        string P(BakeLayout l, string d) => BakeNames.Layer(l, d, LineClass.Cut, "Arch::Walls").FullPath;
+        Assert.Equal(P(BakeLayout.Layer, "Section A"), P(BakeLayout.Layer, "Section B"));
+        foreach (var layout in new[] { BakeLayout.ViewLayer, BakeLayout.LayerView, BakeLayout.ViewType })
+            Assert.NotEqual(P(layout, "Section A"), P(layout, "Section B"));
+        Assert.Throws<ArgumentException>(() => BakeNames.Layer(BakeLayout.Layer, "A::B", LineClass.Visible));
+        Assert.Throws<ArgumentException>(() => BakeNames.Layer(BakeLayout.LayerView, "A", LineClass.Visible, "Arch::::Walls"));
+        Assert.Throws<ArgumentException>(() => BakeNames.Layer(BakeLayout.ViewLayer, "A", LineClass.Visible, "Arch:: "));
+        Assert.Null(BakeNames.ClassicCategory("M2D+::Section A"));
+        Assert.Null(BakeNames.ClassicCategory("Other::Section A::Visible"));
+        Assert.Null(BakeNames.ClassicCategory("M2D+::Arch::Walls::Visible"));
+    }
+
+    [Theory]
+    [InlineData("view-layer", BakeLayout.ViewLayer)]
+    [InlineData("Layer-View", BakeLayout.LayerView)]
+    [InlineData(" layer ", BakeLayout.Layer)]
+    [InlineData("VIEW-TYPE", BakeLayout.ViewType)]
+    public void BakeSettingParsesEveryLayoutDefaultsToViewLayerAndIsNeverAVisibilityKey(string text, BakeLayout expected)
+    {
+        var view = new ViewSettingsContext("a", "A", ViewSourceKind.Plane, true, 20, .001);
+        var resolved = Settings.Resolve([view], [[$"bake = {text}"]], DocumentUnits.Metres).Views[0];
+        Assert.Equal(expected, resolved.Bake);
+        Assert.Contains($"bake = {BakeNames.LayoutText(expected)} (set by input)", resolved.Describe());
+        var plain = Settings.Resolve([view], [], DocumentUnits.Metres).Views[0];
+        Assert.Equal(BakeLayout.ViewLayer, plain.Bake);
+        Assert.Equal(plain.VisibilityKey(), resolved.VisibilityKey());
+        Assert.DoesNotContain("bake", Settings.VisibilityKeys);
+        var wrong = Settings.Resolve([view], [["bake = layers"]], DocumentUnits.Metres);
+        Assert.Contains(wrong.Diagnostics, d => d.Key == "bake" && d.Message.Contains("Did you mean 'layer'?", StringComparison.Ordinal));
+        Assert.Equal(BakeLayout.ViewLayer, wrong.Views[0].Bake);
+    }
+
+    [Fact]
+    public void RunTextLeavesOutOnlyBakeLines()
+    {
+        Assert.True(Settings.IsBakeTimeLine("bake = layer"));
+        Assert.True(Settings.IsBakeTimeLine("  BAKE=view-type   # classic"));
+        Assert.False(Settings.IsBakeTimeLine("# bake = layer"));
+        Assert.False(Settings.IsBakeTimeLine("[Section A]"));
+        Assert.False(Settings.IsBakeTimeLine("name = bake = 2"));
+        Assert.False(Settings.IsBakeTimeLine("baked = on"));
+        Assert.Equal(Settings.RunText(["hidden = off", "[Section A]", "fade = on"]),
+            Settings.RunText(["hidden = off", "bake = layer", "[Section A]", "bake=view-type", "fade = on"]));
+        Assert.NotEqual(Settings.RunText(["hidden = off"]), Settings.RunText(["hidden = on"]));
+        Assert.Equal(Settings.RunText(new SettingsRow([KeyValuePair.Create("scale", "1:50")])),
+            Settings.RunText(new SettingsRow([KeyValuePair.Create("scale", "1:50"), KeyValuePair.Create("bake", "layer")])));
+    }
+
+    [Fact]
+    public void OwnerMarkersAreTellableFromALayoutSetting()
+    {
+        Assert.True(BakeTags.TryParseOwner(BakeTags.Owner(Component, "Plan/Roof"), out var component, out var drawing));
+        Assert.Equal(Component, component); Assert.Equal("Plan/Roof", drawing);
+        Assert.False(BakeTags.TryParseOwner("layer", out _, out _));
+        Assert.False(BakeTags.TryParseOwner("view-layer", out _, out _));
+        Assert.False(BakeTags.TryParseOwner($"{Guid.Empty:D}/A", out _, out _));
+        Assert.False(BakeTags.TryParseOwner($"{Component:D}/", out _, out _));
+        Assert.False(BakeTags.TryParseOwner(null, out _, out _));
+    }
+
+    [Fact]
+    public void CleanupRemovesOnlyEmptyUnchangedLayersM2DCreated()
+    {
+        var style = new BakeLayerStyle(-16777216, -16777216, .18, -1, -1).Signature;
+        var empty = new BakeLayerState("M2D+::Section A::Visible::Arch", true, true, false, true, false, style, style);
+        Assert.True(BakeLayerCleanup.Removable(empty));
+        Assert.False(BakeLayerCleanup.Removable(empty with { CreatedByM2D = false }));
+        Assert.False(BakeLayerCleanup.Removable(empty with { Empty = false }));
+        Assert.False(BakeLayerCleanup.Removable(empty with { HasChildren = true }));
+        Assert.False(BakeLayerCleanup.Removable(empty with { Visible = false }));
+        Assert.False(BakeLayerCleanup.Removable(empty with { Locked = true }));
+        Assert.False(BakeLayerCleanup.Removable(empty with { Signature = new BakeLayerStyle(-16777216, -16777216, .42, -1, -1).Signature }));
+        Assert.False(BakeLayerCleanup.Removable(empty with { FullPath = "M2D+" }));
+        Assert.False(BakeLayerCleanup.Removable(empty with { FullPath = "Arch::Walls" }));
+        // Layers from beta.3 have no stored signature: compared with what the classic layout created, else kept.
+        Assert.True(BakeLayerCleanup.Removable(empty with { StyleTag = null, ClassicSignature = style }));
+        Assert.False(BakeLayerCleanup.Removable(empty with { StyleTag = null, ClassicSignature = null }));
+        Assert.False(BakeLayerCleanup.Removable(empty with { StyleTag = null, ClassicSignature = new BakeLayerStyle(0, 0, .18, -1, -1).Signature }));
+        Assert.NotEqual(style, new BakeLayerStyle(-16777216, -16777216, .18, 3, -1).Signature);
+        Assert.NotEqual(style, new BakeLayerStyle(-16777216, -1, .18, -1, -1).Signature);
+    }
+
     [Fact]
     public void DrawingNamesUseSourceOverrideAndGeometricDescriptions()
     {

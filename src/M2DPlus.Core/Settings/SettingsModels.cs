@@ -17,6 +17,10 @@ public enum WeightMode { Auto, Layers }
 /// <summary>How outputs are split into branches (UX §1.3). Auto is by layer for document mode or an all-referenced
 /// Geometry input, else by object; see <see cref="Output.OutputTree.Effective"/>.</summary>
 public enum OutputTreeMode { Auto, Layer, Object }
+/// <summary>How Bake arranges its layers (owner decision 2026-11-16, UX §8.1). Bake-time only: never re-solves or re-presents.
+/// The line type is always the leaf, except in the classic <see cref="ViewType"/> layout kept for existing files.
+/// Text: <c>view-layer</c> (default) · <c>layer-view</c> · <c>layer</c> · <c>view-type</c>; see <see cref="Bake.BakeNames.Layer"/>.</summary>
+public enum BakeLayout { ViewLayer, LayerView, Layer, ViewType }
 public enum ViewSourceKind { Rectangle, Plane, Box, ClippingPlane, NamedView, Vector, Direction }
 public enum DistanceMode { Auto, Off, Value }
 
@@ -105,6 +109,8 @@ public sealed class EffectiveSettings
     public DistanceSetting Gap => Get<DistanceSetting>("gap");
     public string Name => Get<string>("name");
     public OutputTreeMode Tree => Get<OutputTreeMode>("tree");
+    /// <summary>The bake layer layout. Read at bake time from the latest resolution (UX §8.1).</summary>
+    public BakeLayout Bake => Get<BakeLayout>("bake");
     public double Tolerance => Get<double>("tolerance");
     /// <summary>The <c>min visible</c> threshold in document units; 0 = off (REQUIREMENTS, "small gaps").</summary>
     public double MinVisible => Get<double>("min_visible");

@@ -26,8 +26,16 @@ public sealed partial class DrawingComponent
     private TreeSources? _drawingSources;
     /// <summary>A View item is text (a named view, clipping plane name or direction), so clipping planes may matter.</summary>
     private bool _textViews;
-    /// <summary>SolveInstance calls and scene captures, for the re-run and capture-count tests.</summary>
-    private int _solveCount, _captureCount;
+    /// <summary>SolveInstance calls, scene captures and republished drawings, for the re-run and capture-count tests.</summary>
+    private int _solveCount, _captureCount, _restoreCount;
+    /// <summary>What a run draws from, without bake-time keys (UX §8.1): inputs, views, Settings text, menu and view-object
+    /// rows, Depth, Target, units and tolerance. The published drawing keeps the key it was drawn with.</summary>
+    private string? _runKey, _drawingRunKey;
+    private long _drawingGeneration;
+    /// <summary>The drawing taken down by the last expiry. If the next run's key and the document are unchanged (only
+    /// <c>bake</c> changed), it is published again as it is: no visibility solve and no presentation.</summary>
+    private sealed record Parked(DrawingBatch Batch, TreeSources Sources, string RunKey, long Generation);
+    private Parked? _parked;
     /// <summary>The captured scene, kept across runs (owner feedback on beta.1): a Settings, Depth, Target, menu or
     /// view-object change re-solves from it, and only a change to what it read (the capture key, or a scene change in the
     /// document) reads the objects again. The component holds one lease; each job gets its own share.</summary>
@@ -73,7 +81,8 @@ public sealed partial class DrawingComponent
     private JobProgress? _progress;
     private readonly object _progressSync = new();
     private readonly object _completionSync = new();
-    private sealed record Completion(RequestIdentity Identity, long Epoch, long DocumentGeneration, DrawingBatch? Batch, string? Error, TreeSources Sources);
+    private sealed record Completion(RequestIdentity Identity, long Epoch, long DocumentGeneration, DrawingBatch? Batch, string? Error, TreeSources Sources,
+        string? RunKey);
     private Completion? _completion;
 
     // Model Object/View values are host-only GH adapters; compute never sees a GH wrapper.
@@ -188,9 +197,14 @@ public sealed partial class DrawingComponent
         // The progress weights of the next run come from this one when the inputs, views and settings are the same.
         _historyKey = _captureKey + "|" + string.Join("|", _views.Select(v => v.Revision)) + "|" + string.Join("\n", branches.SelectMany(b => b)) +
             "|" + string.Join(",", depth.Select(d => d?.Value)) + "|" + Ui.State + "|" + string.Join(",", _targets);
+        const char Unit = '\u001f';
+        _runKey = string.Join(Unit, [_captureKey ?? "", string.Join(Unit, _views.Select(v => v.Revision)),
+            string.Join(Unit, branches.Select(Settings.RunText)), string.Join(Unit, depth.Select(d => d?.Value)), Settings.RunText(Ui.State.Menu),
+            string.Join(Unit, rows.OrderBy(r => r.Key, StringComparer.Ordinal).Select(r => r.Key + "=" + Settings.RunText(r.Value))),
+            string.Join(Unit, _targets), _settings.ToString(), _context.Units.ToString(), _tolerance.ToString("R", System.Globalization.CultureInfo.InvariantCulture)]);
         _started = true; _uiSeconds = 0; _jobClock.Restart(); Array.Clear(_stageSeen); _reused = false; _loadingEnd = 0;
         _model = null; _state = default; _status = new("Starting…"); Message = _status.Full;
-        _timer ??= CreateTimer(); _timer.Interval = 250; _timer.Start();
+        _timer ??= CreateTimer(); _timer.Interval = _parked is null ? 250 : 1; _timer.Start();
     }
     private System.Windows.Forms.Timer CreateTimer()
     {
@@ -214,7 +228,8 @@ public sealed partial class DrawingComponent
                 _watch.VerifyHostState();
                 if (completed.Epoch != _epoch || _watch.IsClosed || _watch.Generation != completed.DocumentGeneration)
                 { completed.Batch?.Dispose(); return; }
-                if (completed.Batch is { } batch && _requests.TryPublish(completed.Identity, batch.Complete, () => { _drawing = batch; _drawingSources = completed.Sources; }))
+                if (completed.Batch is { } batch && _requests.TryPublish(completed.Identity, batch.Complete, () =>
+                    { _drawing = batch; _drawingSources = completed.Sources; _drawingRunKey = completed.RunKey; _drawingGeneration = completed.DocumentGeneration; }))
                 { Finish(); _timer?.Stop(); Refresh(true); return; }
                 completed.Batch?.Dispose();
                 if (_requests.IsCurrent(completed.Identity)) { _timer?.Stop(); _error = completed.Error ?? "Cancelled"; Refresh(true); }
@@ -251,9 +266,10 @@ public sealed partial class DrawingComponent
                 {
                     _reused = true;
                     _watch.Scope?.SetViews(_views.Select(v => v.ObjectId), _textViews);
-                    StartJob();
+                    if (!Restore()) StartJob();
                     return;
                 }
+                DisposeParked();
                 DropScene();
                 // What the drawing reads, so the watch re-runs only for changes to it (UX §5.1).
                 var scope = new WatchScope(_inputs is null ? M2DPlus.Core.Watch.WatchMode.Document : M2DPlus.Core.Watch.WatchMode.Referenced,
@@ -291,7 +307,22 @@ public sealed partial class DrawingComponent
         lock (_progressSync) _progress = new(JobPhase.Preparing, 0, 0);
         Status(new(JobPhase.Preparing, 0, 0));
         _timer!.Interval = 100;
-        _ = RunDrawing(scene, request.Identity, request.Token, epoch, documentGeneration, _views, _settings, _sceneSources!);
+        _ = RunDrawing(scene, request.Identity, request.Token, epoch, documentGeneration, _views, _settings, _sceneSources!, _runKey);
+    }
+
+    /// <summary>Only bake-time keys changed (UX §8.1): the parked drawing was drawn from the same scene, views, inputs and
+    /// settings, so it is published again as it is. Settings are resolved again for Info and the next bake.</summary>
+    private bool Restore()
+    {
+        if (_parked is not { } parked) return false;
+        _parked = null;
+        if (_runKey is null || parked.RunKey != _runKey || parked.Generation != _watch!.Generation || _scene is null)
+        { parked.Batch.Dispose(); return false; }
+        ResolveSettings(_scene.Value.Bounds);
+        _drawing = parked.Batch; _drawingSources = parked.Sources; _drawingRunKey = parked.RunKey; _drawingGeneration = parked.Generation;
+        _restoreCount++; _model = null; _status = null; _state = default; _timer?.Stop();
+        Refresh(true);
+        return true;
     }
 
     /// <summary>Folds a report into the stage model and the status line. UI thread only; never redraws Rhino's viewports
@@ -358,7 +389,7 @@ public sealed partial class DrawingComponent
     private sealed class ProgressSink(Action<JobProgress> report) : IProgress<JobProgress>
     { public void Report(JobProgress value) => report(value); }
     private async Task RunDrawing(LeaseEntry<PreparedScene>.Lease scene, RequestIdentity identity, CancellationToken token,
-        long epoch, long documentGeneration, ViewRequest[] views, NativeSettings settings, TreeSources sources)
+        long epoch, long documentGeneration, ViewRequest[] views, NativeSettings settings, TreeSources sources, string? runKey)
     {
         DrawingBatch? batch = null;
         string? error = null;
@@ -374,7 +405,7 @@ public sealed partial class DrawingComponent
         {
             if (epoch != Interlocked.Read(ref _epoch)) { batch?.Dispose(); return; }
             _completion?.Batch?.Dispose();
-            _completion = new(identity, epoch, documentGeneration, batch, error, sources);
+            _completion = new(identity, epoch, documentGeneration, batch, error, sources, runKey);
         }
     }
     private void Emit(IGH_DataAccess da, DrawingBatch batch, TreeSources sources)
@@ -464,8 +495,21 @@ public sealed partial class DrawingComponent
     }
     /// <summary>A change to what the scene read: read the objects again on the next run.</summary>
     private void DocumentChanged() { DropScene(); Invalidate(); Refresh(false); }
-    /// <summary>A change to view objects only: re-run from the captured scene.</summary>
-    private void ViewsChanged() { Invalidate(); Refresh(false); }
+    /// <summary>A change to view objects only: re-run from the captured scene, or republish the drawing when only their
+    /// bake-time text (<c>m2d.bake</c>) changed.</summary>
+    private void ViewsChanged() { Park(); Refresh(false); }
+    /// <summary>Takes the drawing down like <see cref="Invalidate"/>, but keeps it for <see cref="Restore"/>.</summary>
+    private void Park()
+    {
+        if (_drawing is { } drawing && _drawingRunKey is not null && _drawingSources is not null)
+        {
+            DisposeParked();
+            _parked = new(drawing, _drawingSources, _drawingRunKey, _drawingGeneration);
+            _drawing = null;
+        }
+        Invalidate(keepParked: true);
+    }
+    private void DisposeParked() { _parked?.Batch.Dispose(); _parked = null; }
     private void DropScene() { _scene?.Dispose(); _scene = null; _sceneKey = null; _sceneSources = null; }
     private void AbandonAccept()
     {
@@ -473,12 +517,13 @@ public sealed partial class DrawingComponent
         _accepting = null;
         accepting.ContinueWith(t => { if (t.IsCompletedSuccessfully) t.Result.Dispose(); }, TaskScheduler.Default);
     }
-    private void Invalidate()
+    private void Invalidate(bool keepParked = false)
     {
         Interlocked.Increment(ref _epoch); _requests.Cancel(); _timer?.Stop(); _capture?.Dispose(); _capture = null; AbandonAccept();
         _model = null; _status = null; _state = default;
         lock (_completionSync) { _completion?.Batch?.Dispose(); _completion = null; }
-        _drawing?.Dispose(); _drawing = null; _drawingSources = null; _inputs = null; _started = false; _error = null;
+        if (!keepParked) DisposeParked();
+        _drawing?.Dispose(); _drawing = null; _drawingSources = null; _drawingRunKey = null; _inputs = null; _started = false; _error = null;
         lock (_progressSync) _progress = null;
         Message = "Cancelled";
     }
@@ -488,7 +533,8 @@ public sealed partial class DrawingComponent
     {
         if (!_internalRefresh)
         {
-            Invalidate();
+            // Any expiry (an input, the menu, Run now) parks the drawing; the next run republishes it if only bake changed.
+            Park();
             if (Params.Input.Count > 1 && Params.Input[1].Sources.Count == 0 &&
                 Params.Input[1] is global::Grasshopper.Kernel.Parameters.Param_GenericObject { PersistentDataCount: 0 })
                 Message = "Pick a view";

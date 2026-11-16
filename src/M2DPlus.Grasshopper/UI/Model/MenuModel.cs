@@ -86,6 +86,8 @@ public static class ComponentMenu
             Tooltip: done ? null : "Bake becomes available when the drawing is complete."));
         items.Add(new("Bake one", Enabled: done && views.Count > 0,
             Children: views.Select((v, i) => new MenuNode(v.Name, MenuCommands.BakeOne + i)).ToImmutableArray()));
+        // Bake time only (UX §8.1): choosing a layout never redraws.
+        items.Add(Choice(settings, "Bake layers", "bake") with { Tooltip = SettingsCatalog.Spec("bake").Tooltip });
         items.Add(MenuNode.Separator);
         items.Add(new("Run automatically", MenuCommands.AutoRun, Checked: state.AutoRun));
         items.Add(new("Run now", MenuCommands.Run));
