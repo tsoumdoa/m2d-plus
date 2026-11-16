@@ -84,8 +84,12 @@ internal sealed class NativeRayEvidence : IDisposable
     internal void AuditRestored(ViewDrawing drawing, string baseline, string output, BoundingBox scene)
     {
         using var before = JsonDocument.Parse(File.ReadAllText(baseline));
-        var sources = before.RootElement.GetProperty("pieces").EnumerateArray().Where(p => p.GetProperty("c").GetString() == "Unresolved")
+        // Section fixes can restore a source that emitted no baseline curve at
+        // all. The optional broader audit includes that newly generated ink too.
+        bool allNew = Environment.GetEnvironmentVariable("PERFF_AUDIT_ALL_NEW") == "1";
+        var sources = before.RootElement.GetProperty("pieces").EnumerateArray().Where(p => allNew || p.GetProperty("c").GetString() == "Unresolved")
             .Select(p => p.GetProperty("s").GetString()!).ToHashSet(StringComparer.Ordinal);
+        if (allNew) sources.UnionWith(drawing.Items.Where(p => p.Class == M2DPlus.Core.LineClass.Visible).Select(p => p.SourceIdentity));
         var oldUnresolved = before.RootElement.GetProperty("pieces").EnumerateArray().Where(p => p.GetProperty("c").GetString() == "Unresolved")
             .GroupBy(p => p.GetProperty("s").GetString()!).ToDictionary(g => g.Key,g => g.Select(p => p.GetProperty("p").EnumerateArray().Select(v => v.GetDouble()).ToArray()).ToArray());
         var oldVisible = before.RootElement.GetProperty("pieces").EnumerateArray().Where(p => p.GetProperty("c").GetString() == "Visible")
@@ -122,13 +126,13 @@ internal sealed class NativeRayEvidence : IDisposable
             foreach (double t in curve.DivideByCount(count,true) ?? throw new InvalidOperationException("Audit subdivision failed"))
             {
                 var point = curve.PointAt(t); var projected = plane.ClosestPoint(point);
-                bool wasUnresolved = oldUnresolved[piece.SourceIdentity].Any(poly => Enumerable.Range(1,poly.Length/3-1).Any(i =>
+                bool wasUnresolved = oldUnresolved.TryGetValue(piece.SourceIdentity,out var oldUncertain) && oldUncertain.Any(poly => Enumerable.Range(1,poly.Length/3-1).Any(i =>
                 {
                     var a=new Point3d(poly[(i-1)*3],poly[(i-1)*3+1],poly[(i-1)*3+2]);
                     var b=new Point3d(poly[i*3],poly[i*3+1],poly[i*3+2]);
                     return new Line(a,b).DistanceTo(projected,true)<=2*tol;
                 }));
-                if(!wasUnresolved) continue;
+                if(!allNew && !wasUnresolved) continue;
                 samples++; bool inconclusive = false;
                 for (int bi=0;bi<_bodies.Count;bi++)
                 {
@@ -170,7 +174,7 @@ internal sealed class NativeRayEvidence : IDisposable
                 if(inconclusive) uncertain++;
             }
         }
-        File.WriteAllText(output,JsonSerializer.Serialize(new {baseline,curves,unchangedVisibleCurves,samples,bodyCount=_bodies.Count,bodyRayPairs=pairs,
+        File.WriteAllText(output,JsonSerializer.Serialize(new {baseline,allNew,curves,unchangedVisibleCurves,samples,bodyCount=_bodies.Count,bodyRayPairs=pairs,
             expectedPairs=(long)samples*_bodies.Count*5,excluded,inconclusiveSamples=uncertain,wrongVisible=failures.Count,failures,
             method="Every owned body x centre and four offset rays; full world-box exclusions; no spatial index, native visibility labels or work budget. Samples detect contradictions, never certify unsampled spans."}));
     }

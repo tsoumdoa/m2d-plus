@@ -43,7 +43,7 @@ public sealed class WorkerTests(RhinoHost host)
     {
         using var doc=RhinoDoc.CreateHeadless(null);Populate(doc);using var cache=new SceneCache();using var lease=Capture(doc,cache);
         using var baseline=NativeDrawing.SolveBorrowedAsync(lease.Value,Identity(lease.Value),Views,new(),default,null).GetAwaiter().GetResult();
-        using var pool=new DrawingWorkerPool(Options(2));
+        using var pool=new DrawingWorkerPool(Options(2) with{ReadMemory=()=>new(64*WorkerMemoryPolicy.GiB,48*WorkerMemoryPolicy.GiB)});
         var receiving=0;var replies=0;
         pool.ObserveReply=reply=>
         {
@@ -53,7 +53,11 @@ public sealed class WorkerTests(RhinoHost host)
         using var first=pool.SolveAsync(lease.Value,Identity(lease.Value),Views,new(),default).GetAwaiter().GetResult();
         var pids=pool.ProcessIds;
         using var second=pool.SolveAsync(lease.Value,Identity(lease.Value,2),Views,new(),default).GetAwaiter().GetResult();
-        Assert.Equal(pids,pool.ProcessIds);Assert.Equal(2,pids.Length);
+        // #40 lets a ready sibling finish a cold batch while another process
+        // is still handshaking. A later batch can therefore add a second PID;
+        // already-ready matching workers must remain, without respawning.
+        Assert.InRange(pids.Length,1,2);Assert.InRange(pool.ProcessIds.Length,pids.Length,2);
+        Assert.All(pids,pid=>Assert.Contains(pid,pool.ProcessIds));
         Assert.Equal(2*Views.Length,replies);
         for(var i=0;i<Views.Length;i++)
         {

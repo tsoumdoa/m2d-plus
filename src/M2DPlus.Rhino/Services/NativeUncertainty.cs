@@ -7,6 +7,7 @@ internal sealed record UnsetEvidence(UnsetKind Kind, PreparedLeaf? Source = null
 
 internal static class NativeUncertainty
 {
+    internal const int MaximumRecoveryBoundTests = 65536;
     // A detached, valid proxy bounds the uncertainty of this record. The source
     // remains registered as an occluder; no reduced-scene visibility is inferred.
     internal static bool TryDetach(HiddenLineDrawingSegment segment, Transform inverse, out Curve? world)
@@ -96,18 +97,41 @@ internal static class NativeUncertainty
 
     internal static void ApplyFootprints(ViewDrawing output, IReadOnlyList<PreparedLeaf> sources, bool quarantine,
         HashSet<string> uncertainSources, IReadOnlyList<BoundingBox> regions, double tolerance, CancellationToken token, bool localize = true,
-        IReadOnlySet<string>? localSources = null)
+        IReadOnlySet<string>? localSources = null, IReadOnlyList<BoundingBox>? proofRegions = null,
+        IReadOnlyList<VisibilityInput>? verificationInputs = null, NativeVerificationOptions? recoveryAudit = null,
+        int maximumBoundTests = MaximumRecoveryBoundTests)
     {
+        if (maximumBoundTests < 0) throw new ArgumentOutOfRangeException(nameof(maximumBoundTests));
         var toXY = Transform.PlaneToPlane(output.Frame.Plane, Plane.WorldXY);
         var occluders = sources.Where(s => s.Geometry is Brep or Mesh or Surface or Extrusion)
             .Select(s => ConservativeBound(s.Geometry, toXY)).ToArray();
-        int proved = 0, refused = 0;
+        int proved = 0, refused = 0, boundTests = 0, boundRefusals = 0;
+        bool ProveClear(BoundingBox candidate)
+        {
+            if (!candidate.IsValid) return false;
+            foreach (var body in occluders)
+            {
+                token.ThrowIfCancellationRequested();
+                if (boundTests >= maximumBoundTests) { boundRefusals++; return false; }
+                boundTests++;
+                if (!body.IsValid || !(body.Max.X < candidate.Min.X - tolerance || body.Min.X > candidate.Max.X + tolerance ||
+                    body.Max.Y < candidate.Min.Y - tolerance || body.Min.Y > candidate.Max.Y + tolerance ||
+                    body.Max.Z <= candidate.Min.Z + tolerance / 2)) return false;
+            }
+            return true;
+        }
+        NativeVisibilityVerifier? hiddenVerifier = null;
+        int hiddenIntervals = 0; double hiddenBefore = 0, hiddenKept = 0, hiddenVeto = 0;
+        try
+        {
         foreach (var piece in output.Pieces.ToArray())
         {
             token.ThrowIfCancellationRequested();
             using var geometry = piece.CopyGeometry();
             bool whole = quarantine || uncertainSources.Contains(piece.SourceIdentity);
-            bool touched = regions.Any(b => Affects(b, geometry.GetBoundingBox(true), tolerance));
+            var pieceBounds = geometry.GetBoundingBox(true);
+            bool touched = regions.Any(b => Affects(b, pieceBounds, tolerance)) ||
+                proofRegions?.Any(b => Affects(b, pieceBounds, tolerance)) == true;
             bool localSource = localSources?.Contains(piece.SourceIdentity) == true;
             if (!whole && !touched && !localSource) continue;
             if (geometry is Point) { output.Pieces.Remove(piece); piece.Dispose(); continue; }
@@ -118,12 +142,45 @@ internal static class NativeUncertainty
             {
                 var depth = (piece.DepthGeometry as Curve)?.Trim(part.Domain);
                 var kind = affected ? M2DPlus.Core.LineClass.Unresolved : piece.Class;
+                if (kind == M2DPlus.Core.LineClass.Hidden)
+                {
+                    hiddenIntervals++;hiddenBefore += part.GetLength();
+                    var additions = new List<DrawingPiece>();
+                    try
+                    {
+                        if (depth is not null)
+                        {
+                            hiddenVerifier ??= new NativeVisibilityVerifier(verificationInputs ?? sources.Select(s => new VisibilityInput(s.Geometry,s)).ToArray(),
+                                output,(recoveryAudit ?? new()) with { RefuseUnaudited = true },token);
+                            foreach (var span in hiddenVerifier.Verify(depth,kind,piece.SourceIdentity,token))
+                            {
+                                var projectedPart = part.Trim(span.A,span.B);var worldPart = depth.Trim(span.A,span.B);
+                                if (projectedPart is null || worldPart is null)
+                                { projectedPart?.Dispose();worldPart?.Dispose();foreach(var a in additions)a.Dispose();additions.Clear();break; }
+                                additions.Add(new(projectedPart,source,span.Class,worldPart,span.Class == M2DPlus.Core.LineClass.Unresolved ? span.Class : piece.SolvedClass)
+                                    { Profile=piece.Profile,FarCandidate=piece.FarCandidate,KernelOwned=piece.KernelOwned });
+                            }
+                        }
+                        // A missing world curve or failed partition withholds the whole
+                        // interval, rather than silently restoring unaudited Hidden.
+                        if(additions.Count==0) additions.Add(new(part.DuplicateCurve(),source,M2DPlus.Core.LineClass.Unresolved,depth?.DuplicateCurve(),M2DPlus.Core.LineClass.Unresolved)
+                            { Profile=piece.Profile,FarCandidate=piece.FarCandidate,KernelOwned=piece.KernelOwned });
+                        foreach(var a in additions)
+                        {
+                            using var g=a.CopyGeometry();var length=((Curve)g).GetLength();
+                            if(a.Class==M2DPlus.Core.LineClass.Hidden)hiddenKept+=length;else hiddenVeto+=length;
+                        }
+                        output.Pieces.AddRange(additions);additions.Clear();
+                    }
+                    finally { foreach(var a in additions)a.Dispose();part.Dispose();depth?.Dispose(); }
+                    continue;
+                }
                 // Native Unset can accompany wrong native Visible records elsewhere
                 // on that source. Disjointness localises the *record*, not visibility.
                 // Restored Visible therefore requires a continuous all-body proof.
                 if (kind == M2DPlus.Core.LineClass.Visible)
                 {
-                    if (depth is not null && Clear(ConservativeBound(depth, toXY), occluders, tolerance)) proved++;
+                    if (depth is not null && ProveClear(ConservativeBound(depth, toXY))) proved++;
                     else { kind = M2DPlus.Core.LineClass.Unresolved; refused++; }
                 }
                 output.Pieces.Add(new(part, source, kind, depth, piece.SolvedClass)
@@ -132,6 +189,10 @@ internal static class NativeUncertainty
             output.Pieces.Remove(piece); piece.Dispose();
         }
         if (proved + refused != 0) output._diagnostics.Add($"Local quarantine Visible certificates: all-body bound proofs={proved}; refused without continuous proof={refused}. Sampling never upgrades visibility.");
+        if (proved + refused != 0) output._diagnostics.Add($"Recovery bound budget: tests={boundTests}/{maximumBoundTests}; budget refusals={boundRefusals}; exhausted proofs remain Unresolved.");
+        if(hiddenIntervals!=0) output._diagnostics.Add(FormattableString.Invariant($"Restored Hidden ray audit: intervals={hiddenIntervals}; before length={hiddenBefore:R}; kept length={hiddenKept:R}; veto length={hiddenVeto:R}. Both-direction verifier; definite false-Hidden -> Unresolved; sampling is not a continuous certificate."));
+        }
+        finally { if(hiddenVerifier is not null) { hiddenVerifier.Report();hiddenVerifier.Dispose(); } }
     }
 
     private static BoundingBox ConservativeBound(GeometryBase geometry, Transform toXY)

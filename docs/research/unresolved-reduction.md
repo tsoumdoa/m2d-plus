@@ -390,3 +390,312 @@ raw receipt/drawing hashes, source counts and the complete cause ledgers.
 | space-frame__plan | 387.164482 → 166.880993 | 57.1015% → 24.1083% | 92 → 6 |
 | space-frame__SW | 0.000000 → 0.000000 | 0.0000% → 0.0000% | 0 → 0 |
 | space-frame__Top | 0.000000 → 0.000000 | 0.0000% → 0.0000% | 0 → 0 |
+
+## Round 2
+
+The beta.4 review fixes and verification are recorded in
+[Round 2 on beta.4](reliability-round2-beta4-review.md).
+
+The subsequent beta.3/#40 rebase is verified separately in
+[Reliability round 2 on beta.3](reliability-round2-beta3-rebase.md). The numbers
+below remain bound to the original beta.2 build.
+
+Both fresh 50-view censuses and the 219-case light gate are complete. The gate
+passes with zero known bugs and zero evidenced wrong-Visible; the attached
+50-view before/after Hidden audits also report zero wrong-Hidden witnesses.
+
+The implementation was first rebased onto beta.1 (`5921714`). During its long
+verification run, `origin/main` advanced to beta.2; the final base is now
+`df039a2`. Evidence lives outside git in
+`~/.t3/m2d-plus-models/evidence/round2`. Fresh final verification uses
+`beta2-before-v5/` and `beta2-reviewed-v5/`, with compiled producers in
+`beta2-baseline-v5-assembly/` and `beta2-reviewed-v5-assembly/`. They share one
+observer binary, built from the archived sources in `shared-beta2-v5-harness-build/`.
+Earlier beta.1 runs are retained separately and will not substitute for beta.2
+results. `pre31-reference/` preserves the original pre-#31 Unresolved support
+for the Hidden audit. The generated models are unchanged. No commit, push,
+install or publication is performed.
+
+### Changes and proof boundaries
+
+1. **Sphere poles and the slab.** A sphere recognized at coordinate-roundoff
+   scale uses its geometric normal bound, avoiding its singular NURBS pole
+   parameters. For radius `r`, centre distance `h` and slab half-width `s`, the
+   slope is bounded by `d / sqrt((r-d)(r+d))`, where `d = abs(h)+s+roundoff`.
+   The original transversality margin and perturbation width remain unchanged.
+   Real tangency still refuses. The review found that a dome wholly outside
+   the slab was incorrectly refused; conservative face bounds and sphere/slab
+   disjointness now skip such faces. The adopted capsule regression checks the
+   analytic circle area below the dome. Orthogonal sphere meridians check
+   circle area, hemisphere volume and closed retained geometry.
+2. **One-sided contacts.** Complete one-sided bounds plus an actual planar face
+   coincident at roundoff scale prove a curved end-cap contact. Retained bodies
+   stay whole; removed bodies retain their contact faces/features. Neither gets
+   a material cut or hatch. Tests reject tolerance-sized snapping.
+3. **Trim provenance.** Missing native overlaps can be recovered only by the
+   existing continuous shared-topology certificate: each entire subcurve box
+   must fit inside a tolerance ball centred ON an original edge. Convexity
+   covers every point in the box. Budget exhaustion and departing curves still
+   refuse. Fresh final-engine probes for facade, diagrid and space-frame plan
+   and long cuts are retained in `beta2-probes/`, with model, engine, harness
+   and probe hashes. Counts are reported with the final results below.
+4. **Independent regions, with visible refusals.** Complete certified material
+   loops survive unrelated line/clip uncertainty. Failed region candidates
+   remain absent; excluded foreground occluders and unknown uncaptured bodies
+   keep their presentation safeguards. Under the owner's R2-1 decision, every
+   refused participating source also gets Unresolved drawing ink: its
+   uncertified intersection strokes, or a projected footprint if those fail.
+   A marker never gets a hatch. The licensed box/near-tangent-sphere regression
+   requires both the square's area-16 hatch and the sphere's own `?` marker.
+   Marker length has a separate census cause, not region withholding.
+5. **Mesh bounds.** Capture already normalizes SubD, Extrusion (including holes)
+   and Surface to owned Breps. The remaining unsupported sources in these cases
+   are five welded curved open panel meshes, in each facade cut. Open Breps
+   retain unfilled section outlines. Native smooth mesh silhouettes are not
+   replaced by guessed Brep candidates. Up to 128 projected face boxes cover
+   the face convex hulls; denser meshes fall back to one conservative source
+   box. A dense-mesh regression checks bounded count and vertex coverage.
+   The saved `beta2-unsupported-inventory.json` identifies the five actual
+   sources as `glass-mesh-0` through `glass-mesh-4`, each an open quad mesh with
+   289 vertices and 256 quads. These use the coarse fallback under the review's
+   box cap. The final census includes that conservative cost and their explicit
+   refusal markers.
+6. **Both confidence directions.** Better section geometry does not certify
+   native visibility, and changing native inputs can perturb HLD beyond a
+   source footprint. Recovered-section solves therefore retain Visible only
+   with the complete all-body XY/depth bound certificate. Mesh footprint
+   narrowing likewise keeps its original box as the trigger for that proof.
+   Restored Hidden intervals now pass through the existing both-direction ray
+   verifier against owned post-glass/post-trim geometry, including self and
+   planar occlusion. Definite contradictions become Unresolved; missing depth
+   or failed interval extraction withholds the whole interval. Hidden-off
+   filtering follows this check, so vetoed ink remains in `?`. Clip ownership
+   extends through verification. Sampling is a veto, not a continuous Hidden
+   certificate. Tests include a clear span mislabelled Hidden, true blocking,
+   metadata/length conservation and frozen diagrid wrong-Visible witnesses.
+
+The old other-footprint row originates in local native Unset records propagating
+onto other contributors; it is not an unidentified input type. General native
+curved attribution and the separate analytic visibility engine remain outside
+this implementation. Only the composition call's post-trim verification inputs
+are passed through; no analytic engine or GH UI implementation is changed.
+
+### Rejected confidence restorations
+
+Dropping the five wholly removed facade meshes exposed 47 wrong-Visible
+body/ray witnesses in unrelated native curves. That experiment is rejected
+(`all-new-audit/`). A geometric section/trim recovery candidate then exposed
+21 diagrid-plan and 57 diagrid-long witnesses (`verified/`); seven of the latter
+overlap prior Visible support. A spatially local guard left those seven, so the
+final guard covers confidence throughout the changed native solve. These
+exploratory producers are not final evidence and no sampled clear result
+promotes uncertainty to Visible. Two frozen regressions preserve definite
+wrong-Visible locations while requiring the sphere's analytic material area
+and hatch to remain available.
+
+### Audit and reproduction
+
+Use the supplied resolver and archive complete producer folders. The observer
+harness is shared by the clean beta.1 and changed engines. Run the census with
+`--hidden-baseline <root>/pre31-reference`; the final run additionally uses
+`--baseline <root>/beta2-before-v5` and `PERFF_AUDIT_ALL_NEW=1`. The Visible audit
+also covers sources that emitted no baseline curve. The adopted Hidden audit
+checks Hidden on pre-#31 Unresolved support against every original owned body,
+including planar bodies and self, with central and four offset rays. Rays stop
+at the cut plane. Exact unchanged prior Hidden curves are excluded, preventing
+a shared transition endpoint from being counted as restored confidence.
+Exact straight segments also match within a coordinate-roundoff bound:
+matching both endpoints bounds every point in their convex interpolation.
+Curved approximations get no such relaxation. This handles the reviewer's known
+SW transition endpoint after beta.2 changed projection's last bits. Its whole
+prior Hidden segment differs by at most `2.842170943040401e-14`, below the
+`6.526625654916924e-13` bound; the apparent witness is `2.76e-14` from its endpoint.
+`inherited-hidden-transition-proof.json` retains the original witness, both
+exact segments and dump hashes. The final before/after censuses use one shared
+observer and record these unchanged straight segments separately.
+A zero-length forward ray at the cut is inconclusive, not a vacuous clear
+witness. Original closed-solid containment at the cut endpoint accounts for
+retained cap material: a ray can end inside the original solid without hitting
+an original face before the cut. Strict interior uses the actual cap distance;
+boundary contact within tolerance is inconclusive. This independent containment
+query does not reuse the product's trim or section loops. The first complete
+beta.1 audit exposed this observer omission in space-frame plan. Its corrected
+candidate probe reports 25,642 samples: 24,805 blocked, 837 inconclusive, zero
+wrong-Hidden, with an unchanged drawing dump and engine hash. The discarded
+observer runs remain available in the `*-v2/` and `*-v3/` folders.
+
+Summarize only complete receipts with:
+`python -B tools/perf-f/summarize-uncertainty.py <root> --direct-baseline --before-folder beta2-before-v5 --final-folder beta2-reviewed-v5`.
+Then run the normal publication composition gate, independent reference and
+interval witness scripts, and `routing_light_gate.py` with
+`--hidden-audit <root>/beta2-reviewed-v5 --hidden-audit-before <root>/beta2-before-v5`.
+The gate binds the Hidden files/receipts and checks complete pair counts and
+zero final wrong-Hidden witnesses. Beta.1's captured source-colour argument is
+passed by the publication probe; the component itself is unchanged.
+
+### Runtime acceptance
+
+The reviewed source passes Debug and Release solution builds with **0 warnings
+and 0 errors**. `beta2-review-acceptance.log` records `Test-WalkingSkeleton.ps1` with
+the supplied resolver on both actual runtimes. All six TRX results are archived
+with SHA-256 receipts in `beta2-review-acceptance-results/`:
+
+| Runtime | Core | GH UI models | Licensed Rhino | Failures / skips |
+|---|---:|---:|---:|---:|
+| .NET 8 | 364 | 71 | 261 | 0 / 1 |
+| .NET 10 | 364 | 71 | 261 | 0 / 1 |
+
+The single skip per runtime is beta.2's opt-in `ProfileHostCapture` benchmark
+(`M2D_PROFILE_CAPTURE=1`), which is disabled by default. The forced local hook
+also passes the build, 364 Core and 71 UI-model tests
+(`beta2-review-hook.log`). The configured Python harness/fixture run reports 19 checks:
+18 pass and one optional render-bridge class skips because its local artifact is
+absent; those checks do not start Rhino. Fresh oblique planar controls at 17 and
+45 degrees are byte-identical to beta.2, including diagnostics and regions;
+`beta2-planar-controls/comparison.json` binds both dump pairs by SHA-256.
+Earlier intermediate acceptance folders are retained but are not substituted
+for final-source results.
+
+### Completed 50-view census
+
+Both sides contain 50 successful, model-hash-matched receipts on beta.2. Lengths
+are sums of output curves in metres, including explicit refusal markers. The
+share denominator includes output region boundaries, as in round 1.
+
+**Unresolved: 898.031200 → 732.804580 m (18.40% lower).** Regions increase from
+1,992 to 2,205; loops from 2,366 to 2,610; non-null hatches from 1,703 to 1,902.
+Whole-source quarantined view/source pairs fall from 106 to 10: the five open
+facade meshes in each of its two cuts.
+
+| Disjoint cause / mechanism | Before, m | Final, m |
+|---|---:|---:|
+| Region withholding | 264.601550 | 0.000000 |
+| Native Unset propagation / continuous-proof refusal | 261.566464 | 263.323753 |
+| Unsupported-source footprint quarantine | 119.011203 | 64.286419 |
+| Section-certificate footprint quarantine | 85.800731 | 0.000000 |
+| Other footprint quarantine | 78.954908 | 80.409766 |
+| Native duplicate attribution | 47.881982 | 47.881982 |
+| Native-record verifier contradiction | 21.969386 | 22.112371 |
+| Native Unset interval | 18.244976 | 19.086943 |
+| Native coverage/event gap | 0.000000 | 0.000000 |
+| Refused section source marker | 0.000000 | 80.947867 |
+| Section recovery continuous-proof refusal | 0.000000 | 154.755478 |
+
+The partition sums to the measured Unresolved length. Quarantine rows use
+preserved pre-quarantine classification; restored-Hidden verification vetoes
+inside that path remain in those rows. Their separate verification-visit
+lengths below are not added again to this table. Unsupported whole-view
+quarantine, verifier-budget-attributed Unresolved length and tie-rule-attributed
+Unresolved length remain zero.
+
+| Model / cut | Unresolved m, before → after | Share, before → after | Regions, before → after |
+|---|---:|---:|---:|
+| curved-facade plan | 81.142770 → 94.737524 | 59.5104% → 56.9475% | 1 → 15 |
+| curved-facade long | 0.000000 → 50.938927 | 0.0000% → 62.0306% | 0 → 0 |
+| diagrid-shell plan | 53.435863 → 21.643407 | 92.2752% → 36.0480% | 0 → 14 |
+| diagrid-shell long | 60.624163 → 48.659349 | 38.5204% → 29.9339% | 0 → 13 |
+| space-frame plan | 165.288623 → 150.633089 | 23.8916% → 21.5196% | 128 → 176 |
+| space-frame long | 211.419995 → 38.616893 | 92.7307% → 16.8394% | 0 → 124 |
+
+The facade-long increase is deliberate: the old result showed no drawing ink
+for its five refused sources. It now exposes 50.938927 m of uncertified markers.
+Facade plan also gains marker ink while its certified regions return. These
+two cuts contribute all 80.947867 m of the new marker category.
+
+The certificate population was mislocated in the initial task: it is **diagrid
+long (4) and space-frame long (78)**, not the facade/diagrid plan cuts. The
+30 sphere cases and 52 one-sided cap contacts now certify; real tangency still
+refuses. The separate trim-attribution population is diagrid plan (2),
+space-frame plan (6) and space-frame long (6). All fourteen succeed in fresh
+final-engine probes. `beta2-probes/probe-summary.json` retains every recovered
+source ID, successful clips, proof diagnostics, model hash and both sides'
+receipt/dump hashes.
+
+The unsupported-footprint decrease comes from recovering supported-source trim
+failures formerly labelled Unsupported. The actual open-mesh footprint remains
+**64.286419 → 64.286419 m** under the dense-mesh cap. Sparse per-face bounds have
+exact convex-hull coverage; these 256-quad meshes use the coarse fallback, with
+their material topology uncertified and unhatched. The other-footprint row
+originates in local native Unset propagating onto other contributors. It changes
+78.954908 → 80.409766 m; no safe further confidence restoration was found. The
+rejected wrong-Visible experiments show why footprint disjointness is insufficient.
+
+The conservative section-recovery guard costs 154.755478 m of Unresolved output
+while independently proven material regions return. There are **no newly Visible
+suite spans**: the new-Visible observer has zero eligible samples/pairs. Its zero
+contradictions therefore are not presented as an empirical visibility certificate.
+
+All 20 mixed building-control dumps are byte-identical to the clean beta.2
+baseline (`beta2-building-comparison.json`). Both dedicated fully planar oblique
+controls are also byte-identical, including diagnostics, geometry and regions.
+The complete per-view table is saved in `census-table.md`.
+
+### Both-direction verification evidence
+
+| Independent restored-Hidden audit | Clean beta.2 | Round 2 |
+|---|---:|---:|
+| Completed views | 50 | 50 |
+| Samples on pre-#31 Unresolved support | 35,092 | 44,450 |
+| Complete body/ray pairs | 115,966,050 | 140,010,920 |
+| Blocked samples | 34,250 | 43,480 |
+| Margin/inconclusive samples | 842 | 970 |
+| Wrong-Hidden witnesses | 0 | 0 |
+| Unchanged prior Hidden curves excluded | 1,873 | 1,851 |
+| Of those, exact lines matching within roundoff | 723 | 757 |
+
+Every body/ray pair is accounted for; planar bodies and self are included. Both
+sides use observer SHA-256
+`bcdeb67f7068f933f19e538e7f7708a598e4b9308f78afcebaac32935b66d334`.
+Cap containment uses original closed solids, independent of product section
+loops. Boundary contact and uncastable short rays remain inconclusive. This is
+sampled evidence, not a continuous Hidden certificate; the diagnostic warning
+remains in drawing Info.
+
+The production restored-Hidden verifier processed **12,607 interval visits**:
+1,610.910530 m before verification, 1,596.667411 m kept Hidden and **14.243120 m
+vetoed to Unresolved**. These are visit totals: composition and outer section
+paths may revisit retained intervals. Hidden-off presentation preserves vetoed
+ink in `?`. The existing general native verifier still reports budget skips
+(322,201 before / 321,953 after); the added restored-Hidden pass uses a separate
+uncapped deterministic visit budget and does not infer a continuous proof.
+
+### Gate results
+
+All **219 / 219 required publication cases** complete successfully. The final
+light gate passes with **0 known bugs, 0 evidenced wrong-Visible and 0 final
+wrong-Hidden witnesses**. Both 50-view Hidden audit sets are complete and bound
+to the same observer; the final set also matches the gate's drawing-engine hash.
+No new region contradicts the analytic area/loop tests, independent section
+oracles or the gate's region area/loop comparisons.
+
+M-blocks' 58 raw SW flags have
+fresh, hash-bound tolerance witnesses: 56 planar interval/point witnesses and
+two points on the actual saved native-derived output curve. The latter lie on a
+tolerance transition; nearby actual-curve points pass the independent all-pairs
+planar oracle and every curved-body ray. `NativePointWitnesses.cs` records source,
+saved output-piece index, curve parameter, projected distance, world/local
+coordinates and all-face query counts. No test tolerance is widened. All 58 pass
+the complete curved-body centre and four-offset ray checks. These witnesses
+cover disputed samples within drawing tolerance, not a native span or full view.
+Raw gate rows remain unchanged. M-exploded's 92 SW flags also pass fresh planar
+interval/point and complete curved-body ray checks. Together these cover 150
+mixed witnesses and 157,500 curved-body/ray pairs; ten other planar/point
+witnesses bring the tolerance-artefact count to 160.
+
+The strict whole-output comparison passes 187 cases; fresh full planar agreement
+clears eight further cases. **24 cases remain Unresolved/Info**, with 31,659
+unclassified comparisons. Those comparisons receive no visibility promotion.
+This is the owner's light gate; a full 233-view verdict is not claimed.
+
+Final evidence is in `beta2-light-gate/merge-gate.json`. The raw 219-case inventory,
+completed process watches and all hash-bound reference inputs, exact witnesses,
+native-point helper/source snapshots and curved-ray captures are retained in
+`beta2-routing/`.
+
+| Producer | SHA-256 |
+|---|---|
+| Clean beta.2 Rhino engine | `3d47bef3bfba41bfd19ebad2886735878d778704f59888589ae12770b068ebac` |
+| Round-2 Rhino engine | `2c12f4f26aad3b159c8b49d7f60bb10a40e84c482518f5015a03809049b5e28f` |
+| Completed census summary | `23eea3b80af1d7485231447ba5d30f50d9b06fe46942fec3ec073c51cd62a444` |
+| Final light gate | `814d9b8a23f15ff1b3711bc3e41bb18c17b19da6c2f84c8c239d97183790c6f5` |
+| Final source-probe summary | `3f9122cbac2c8c1e040fd02bcdf810720efa7f6d87f95406f03c19f916664b8e` |

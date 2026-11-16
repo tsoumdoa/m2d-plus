@@ -30,6 +30,7 @@ internal static class Program
             if(args[0]=="engine"){EngineFastBench.Run(args[2],args[3],args.Length>4?args[4]:"curved");return 0;}
             if(args[0]=="cutonly"){CutOnlyBench.Run(args[2],args[3],args.Length>4?args[4]:"building");return 0;}
             if(args[0]=="offset"){OffsetBench.Run(args[2],args.Length>3?args[3]:"probe");return 0;}
+            if(args[0]=="presentation"){PresentationProbe.Run(args[2],args[3],args.Length>4?int.Parse(args[4]):-1);return 0;}
             if(args[0]=="scale"){ScaleBench.Run(args[2],args[3],args.Length>4?args[4]:"5");return 0;}
             if(args[0]=="compare-drawings"){ScaleBench.Compare(args[2],args[3],args[4]);return 0;}
             if(args[0]=="dump")DumpFrames(args[2],args[3]);else if(args[0]=="restore")RestoreFrames(args[2]);else Export(args[2],args[3],args[0]!="scene");return 0;

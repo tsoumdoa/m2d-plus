@@ -8,31 +8,84 @@ namespace M2DPlus.Rhino.Sections;
 public static class SectionRegionEngine
 {
     /// <summary>Rebuild fill/merge from certified cut regions. Visibility is unaffected by either policy.</summary>
-    internal static SectionResult Restyle(IReadOnlyList<SectionRegion> regions, SectionRequest request)
+    internal static SectionResult Restyle(IReadOnlyList<SectionRegion> regions, SectionRequest request,
+        Func<Curve[], Plane, double, CurveBooleanRegions?>? arrangement = null)
+        => SectionCoordinates.Restyle(regions, request, arrangement);
+
+    internal static SectionResult RestyleLocal(IReadOnlyList<SectionRegion> regions, SectionRequest request,
+        Func<Curve[], Plane, double, CurveBooleanRegions?>? arrangement = null)
     {
         var result = new SectionResult(); var candidates = new List<Candidate>();
         try
         {
             foreach (var region in regions)
             {
-                var style = SectionPolicy.EffectiveStyle(region.Style, request.Hatch);
-                if (region.Status == SectionStatus.OutlineOnly)
+                var start = candidates.Count;
+                try
                 {
-                    result.Regions.Add(region with { Loops = region.Loops.Select(l => new SectionLoop(l.Curve.DuplicateCurve(), l.IsHole,
-                        l.Edges.Select(e => new SectionEdge(e.Curve.DuplicateCurve(), e.Origin)).ToArray())).ToArray(), Hatch = null, Style = style });
-                    continue;
+                    var style = SectionPolicy.EffectiveStyle(region.Style, request.Hatch);
+                    ValidateStyle(style);
+                    if (region.Status == SectionStatus.OutlineOnly)
+                    {
+                        result.Regions.Add(SectionCoordinates.CopyRegion(region, Transform.Identity) with { Style = style });
+                        continue;
+                    }
+                    if (region.Status == SectionStatus.Uncertain || region.Loops.Any(l => !l.Curve.IsClosed))
+                        throw new SectionFailure("Restyle requires certified closed material loops.");
+                    var faces = Brep.CreatePlanarBreps(region.Loops.Select(l => l.Curve), request.Tolerance);
+                    if (faces is null || faces.Length == 0) throw new SectionFailure("Restyle region failed.");
+                    try
+                    {
+                        if (faces.Sum(f => f.Loops.Count) != region.Loops.Count ||
+                            faces.Sum(f => f.Loops.Count(l => l.LoopType == BrepLoopType.Inner)) != region.Loops.Count(l => l.IsHole) ||
+                            Math.Abs(faces.Sum(SectionGeometry.Area) - region.Area) > SectionGeometry.AreaError(region.Area, request.Tolerance))
+                            throw new SectionFailure("Restyle changed certified material area or loop topology.");
+                        foreach (var face in faces)
+                            candidates.Add(new(face, region.SourceIds.ToArray(), style,
+                                region.Loops.SelectMany(l => l.Edges).Where(e => (e.Origin & EdgeOrigin.PhysicalCut) != 0).Select(e => e.Curve.DuplicateCurve()).ToArray()));
+                    }
+                    finally
+                    {
+                        foreach (var face in faces)
+                            if (!candidates.Skip(start).Any(c => ReferenceEquals(c.Face, face))) face.Dispose();
+                    }
                 }
-                foreach (var face in Brep.CreatePlanarBreps(region.Loops.Select(l => l.Curve), request.Tolerance) ?? throw new SectionFailure("Restyle region failed."))
-                    candidates.Add(new(face, region.SourceIds.ToArray(), style,
-                        region.Loops.SelectMany(l => l.Edges).Where(e => (e.Origin & EdgeOrigin.PhysicalCut) != 0).Select(e => e.Curve.DuplicateCurve()).ToArray()));
+                catch (Exception ex) when (ex is SectionFailure or ArgumentException or InvalidOperationException)
+                {
+                    foreach (var candidate in candidates.Skip(start)) candidate.Dispose();
+                    candidates.RemoveRange(start, candidates.Count - start);
+                    RefuseRestyle(result, region, ex.Message);
+                }
             }
-            if (request.Cuts == CutMode.Merge) candidates = Merge(candidates, request, result);
+            if (request.Cuts == CutMode.Merge) candidates = Merge(candidates, request, result, arrangement);
             var ordinal = 0;
-            foreach (var candidate in candidates) result.Regions.Add(Build(candidate, $"presentation/{ordinal++}", request));
+            foreach (var candidate in candidates)
+            {
+                try
+                {
+                    result.Regions.Add(Build(candidate, $"presentation/{ordinal++}", request));
+                }
+                catch (Exception ex) when (ex is SectionFailure or ArgumentException or InvalidOperationException)
+                {
+                    // These are uncertainty markers, never material regions. The
+                    // presenter routes their loops to '?' and publishes no hatch.
+                    var loops = candidate.Face.Loops.Select(l => new SectionLoop(l.To3dCurve(), l.LoopType == BrepLoopType.Inner, [])).ToArray();
+                    using var refused = new SectionRegion($"presentation/{ordinal++}", loops, null, candidate.Sources,
+                        candidate.Style, SectionStatus.Uncertain, 0, ex.Message);
+                    RefuseRestyle(result, refused, ex.Message);
+                }
+            }
             return result;
         }
         catch { result.Dispose(); throw; }
         finally { foreach (var candidate in candidates) candidate.Dispose(); }
+    }
+
+    internal static void RefuseRestyle(SectionResult result, SectionRegion region, string reason)
+    {
+        var message = $"Unresolved section presentation: {SectionPolicy.MembershipKey(region.SourceIds)}; {reason}; outline only, no hatch.";
+        result.Regions.Add(SectionCoordinates.CopyRegion(region, Transform.Identity) with { Status = SectionStatus.Uncertain, Area = 0, Uncertainty = message });
+        result.Diagnostics.Add(new(SectionPolicy.MembershipKey(region.SourceIds), SectionStatus.Uncertain, message));
     }
     private sealed record Candidate(Brep Face, string[] Sources, SectionStyleSnapshot Style, Curve[] Physical) : IDisposable
     {
@@ -106,57 +159,83 @@ public static class SectionRegionEngine
                         {
                             cancellationToken.ThrowIfCancellationRequested();
                             var component = components[i];
-                            var classification = shared.ClassifyNear(source.Id, i, component, out var evidence);
-                            using var certificate = evidence;
-                            outcome.Components.Add(classification);
-                            var stable = classification.Certificate.StartsWith(StableSectionCertificate.Route, StringComparison.Ordinal);
-                            if (stable) outcome.Diagnostics.Add(new(source.Id, SectionStatus.Crossing, classification.Certificate));
-                            if (classification.Status == SectionStatus.Uncertain)
-                                outcome.Diagnostics.Add(new(source.Id, SectionStatus.Uncertain, classification.Certificate));
-                            if (classification.Status != SectionStatus.Crossing) continue;
-                            var loops = certificate?.Loops.Select(c => c.DuplicateCurve()).ToArray() ?? SectionGeometry.Intersections(component, request.Plane, request.Tolerance);
+                            var firstCandidate = outcome.Candidates.Count; var firstOutline = outcome.Outlines.Count;
                             try
                             {
-                                if (loops.Length == 0) throw new SectionFailure("Crossing certificate has no transverse intersection.");
-                                if (!component.IsSolid)
+                                var classification = shared.ClassifyNear(source.Id, i, component, out var evidence);
+                                using var certificate = evidence;
+                                outcome.Components.Add(classification);
+                                var stable = classification.Certificate.StartsWith(StableSectionCertificate.Route, StringComparison.Ordinal);
+                                if (stable) outcome.Diagnostics.Add(new(source.Id, SectionStatus.Crossing, classification.Certificate));
+                                if (classification.Status == SectionStatus.Uncertain)
                                 {
-                                    AddOutlines(source.Id, loops, style, request, outcome.Outlines, outlineOrdinals);
-                                    outcome.Diagnostics.Add(new(source.Id, SectionStatus.OutlineOnly, "Open source: section outline only, Hatch null."));
-                                    continue;
+                                    outcome.Diagnostics.Add(new(source.Id, SectionStatus.Uncertain, classification.Certificate));
+                                    outcome.Refusals.Add(new(source.Id, component.DuplicateBrep()));
                                 }
-                                if (stable)
-                                {
-                                    // The slab/winding proof authorizes the planar region independently.
-                                    // Visibility preparation retains its own quarantine on any trim failure.
-                                }
-                                else if (prepareVisibility)
-                                {
-                                    if (!outcome.Visibility!.Succeeded && !(farPlane is { } fp && -request.Plane.DistanceTo(fp.Origin) <= request.Tolerance))
-                                        throw new SectionFailure("Crossing trim/cap could not be certified.");
-                                }
-                                else
-                                {
-                                    var checkDiagnostics = new List<SectionDiagnostic>();
-                                    var clipped = PhysicalSectionClipper.Halfspace(source.Id, component, request, checkDiagnostics);
-                                    foreach (var piece in clipped) piece.Dispose();
-                                    if (checkDiagnostics.Count != 0) throw new SectionFailure("Crossing trim/cap could not be certified.");
-                                }
-                                var regions = SectionGeometry.PlanarRegions(loops, request);
+                                if (classification.Status != SectionStatus.Crossing) continue;
+                                var loops = certificate?.Loops.Select(c => c.DuplicateCurve()).ToArray() ?? SectionGeometry.Intersections(component, request.Plane, request.Tolerance);
                                 try
                                 {
-                                    foreach (var region in regions)
-                                    foreach (var cropped in Crop(region, request))
-                                        outcome.Candidates.Add(new(cropped, new[] { source.Id }, style, loops.Select(l => l.DuplicateCurve()).ToArray()));
+                                    if (loops.Length == 0) throw new SectionFailure("Crossing certificate has no transverse intersection.");
+                                    if (!component.IsSolid)
+                                    {
+                                        AddOutlines(source.Id, loops, style, request, outcome.Outlines, outlineOrdinals);
+                                        outcome.Diagnostics.Add(new(source.Id, SectionStatus.OutlineOnly, "Open source: section outline only, Hatch null."));
+                                        continue;
+                                    }
+                                    if (stable)
+                                    {
+                                        // The slab/winding proof authorizes the planar region independently.
+                                        // Visibility preparation retains its own quarantine on any trim failure.
+                                    }
+                                    else if (prepareVisibility)
+                                    {
+                                        if (!outcome.Visibility!.Succeeded && !(farPlane is { } fp && -request.Plane.DistanceTo(fp.Origin) <= request.Tolerance))
+                                        {
+                                            // Another component can invalidate whole-source
+                                            // visibility preparation. Recheck this component's
+                                            // near cap independently before publishing its cut.
+                                            var checkDiagnostics = new List<SectionDiagnostic>();
+                                            var clipped = PhysicalSectionClipper.Halfspace(source.Id, component, request, checkDiagnostics);
+                                            foreach (var piece in clipped) piece.Dispose();
+                                            if (checkDiagnostics.Count != 0) throw new SectionFailure("Crossing trim/cap could not be certified.");
+                                        }
+                                    }
+                                    else
+                                    {
+                                        var checkDiagnostics = new List<SectionDiagnostic>();
+                                        var clipped = PhysicalSectionClipper.Halfspace(source.Id, component, request, checkDiagnostics);
+                                        foreach (var piece in clipped) piece.Dispose();
+                                        if (checkDiagnostics.Count != 0) throw new SectionFailure("Crossing trim/cap could not be certified.");
+                                    }
+                                    var regions = SectionGeometry.PlanarRegions(loops, request);
+                                    try
+                                    {
+                                        foreach (var region in regions)
+                                        foreach (var cropped in Crop(region, request))
+                                            outcome.Candidates.Add(new(cropped, new[] { source.Id }, style, loops.Select(l => l.DuplicateCurve()).ToArray()));
+                                    }
+                                    finally { foreach (var region in regions) region.Dispose(); }
                                 }
-                                finally { foreach (var region in regions) region.Dispose(); }
+                                finally { foreach (var loop in loops) loop.Dispose(); }
                             }
-                            finally { foreach (var loop in loops) loop.Dispose(); }
+                            catch (Exception ex) when (ex is SectionFailure or ArgumentException or InvalidOperationException)
+                            {
+                                foreach (var candidate in outcome.Candidates.Skip(firstCandidate)) candidate.Dispose();
+                                outcome.Candidates.RemoveRange(firstCandidate, outcome.Candidates.Count-firstCandidate);
+                                foreach (var outline in outcome.Outlines.Skip(firstOutline)) outline.Dispose();
+                                outcome.Outlines.RemoveRange(firstOutline, outcome.Outlines.Count-firstOutline);
+                                outcome.Refusals.Add(new(source.Id, component.DuplicateBrep()));
+                                outcome.Diagnostics.Add(new(source.Id, SectionStatus.Unsupported, $"Component {i}: {ex.Message}"));
+                            }
                         }
                     }
                 }
                 catch (Exception ex) when (ex is SectionFailure or ArgumentException or InvalidOperationException)
                 {
                     outcome.DropRegions();
+                    foreach (var refusal in outcome.Refusals) refusal.Dispose(); outcome.Refusals.Clear();
+                    outcome.Refusals.Add(new(source.Id, source.Geometry.Duplicate()));
                     outcome.Diagnostics.Add(new(source.Id, SectionStatus.Unsupported, ex.Message));
                 }
                 catch { outcome.Dispose(); throw; }
@@ -186,12 +265,12 @@ public static class SectionRegionEngine
                 if (outcome!.Visibility is { } visibility) result.Visibility.Add(outcome.Id, visibility);
                 result.Diagnostics.AddRange(outcome.Diagnostics); result.Components.AddRange(outcome.Components);
                 result.Regions.AddRange(outcome.Outlines); candidates.AddRange(outcome.Candidates);
+                result.Refusals.AddRange(outcome.Refusals);
                 outcome.Transfer();
             }
             cancellationToken.ThrowIfCancellationRequested();
             ReportOverlaps(candidates, request, result);
             if (request.Cuts == CutMode.Merge) candidates = Merge(candidates, request, result);
-            var failedSources = new HashSet<string>(StringComparer.Ordinal);
             var ordinals = new Dictionary<string, int>(StringComparer.Ordinal);
             foreach (var candidate in candidates.OrderBy(c => SectionPolicy.MembershipKey(c.Sources), StringComparer.Ordinal)
                 .ThenBy(c => c.Face.GetBoundingBox(Transform.PlaneToPlane(request.Plane, Plane.WorldXY)).Min.X)
@@ -205,13 +284,13 @@ public static class SectionRegionEngine
                 try { result.Regions.Add(Build(candidate, $"{key}/region/{ordinal}", request)); }
                 catch (Exception ex) when (ex is SectionFailure or ArgumentException or InvalidOperationException)
                 {
-                    foreach (var sourceId in candidate.Sources) failedSources.Add(sourceId);
-                    result.Diagnostics.Add(new(key, SectionStatus.Unsupported, ex.Message));
+                    foreach (var sourceId in candidate.Sources)
+                    {
+                        result.Diagnostics.Add(new(sourceId, SectionStatus.Unsupported, ex.Message));
+                        foreach (var loop in candidate.Face.Loops) result.Refusals.Add(new(sourceId, loop.To3dCurve()));
+                    }
                 }
             }
-            for (var i = result.Regions.Count - 1; i >= 0; i--)
-                if (result.Regions[i].SourceIds.Any(failedSources.Contains))
-                { result.Regions[i].Dispose(); result.Regions.RemoveAt(i); }
             cancellationToken.ThrowIfCancellationRequested();
             return result;
         }
@@ -229,6 +308,7 @@ public static class SectionRegionEngine
         public readonly List<ComponentClassification> Components = new();
         public readonly List<Candidate> Candidates = new();
         public readonly List<SectionRegion> Outlines = new();
+        public readonly List<SectionRefusal> Refusals = new();
         public SourceOutcome(string id) { Id = id; Interlocked.Increment(ref _liveOutcomes); }
         public void DropRegions()
         {
@@ -239,7 +319,7 @@ public static class SectionRegionEngine
         public void Dispose()
         {
             if (Interlocked.Exchange(ref _live, 0) != 1) return;
-            Visibility?.Dispose(); DropRegions(); Interlocked.Decrement(ref _liveOutcomes);
+            Visibility?.Dispose(); DropRegions(); foreach (var refusal in Refusals) refusal.Dispose(); Interlocked.Decrement(ref _liveOutcomes);
         }
     }
 
@@ -293,19 +373,23 @@ public static class SectionRegionEngine
             foreach (var loop in candidate.Face.Loops.OrderBy(l => l.LoopType == BrepLoopType.Outer ? 0 : 1))
             {
                 var curve = loop.To3dCurve();
-                var segments = curve.DuplicateSegments();
                 var edges = new List<SectionEdge>();
-                // These faces are constructed exclusively from physical loops, crop, and
-                // their planar arrangement. Unmatched intervals inherit physical ancestry;
-                // native periodic reparameterization need not reproduce a CurveCurve overlap.
-                // Crop matches still override that ancestry (and retain dual origins).
-                try { foreach (var segment in segments) edges.AddRange(EdgeProvenance.Split(segment, references, request.Tolerance, EdgeOrigin.PhysicalCut)); }
-                finally { foreach (var segment in segments) segment.Dispose(); }
-                if (edges.Any(e => e.Origin == EdgeOrigin.None))
-                { curve.Dispose(); foreach (var edge in edges) edge.Dispose(); throw new SectionFailure("Unattributed section boundary interval."); }
-                loops.Add(new(curve, loop.LoopType == BrepLoopType.Inner, edges));
+                try
+                {
+                    var segments = curve.DuplicateSegments();
+                    // These faces are constructed exclusively from physical loops, crop, and
+                    // their planar arrangement. Unmatched intervals inherit physical ancestry;
+                    // native periodic reparameterization need not reproduce a CurveCurve overlap.
+                    // Crop matches still override that ancestry (and retain dual origins).
+                    try { foreach (var segment in segments) edges.AddRange(EdgeProvenance.Split(segment, references, request.Tolerance, EdgeOrigin.PhysicalCut)); }
+                    finally { foreach (var segment in segments) segment.Dispose(); }
+                    if (edges.Any(e => e.Origin == EdgeOrigin.None))
+                        throw new SectionFailure("Unattributed section boundary interval.");
+                    loops.Add(new(curve, loop.LoopType == BrepLoopType.Inner, edges));
+                }
+                catch { curve.Dispose(); foreach (var edge in edges) edge.Dispose(); throw; }
             }
-            return new(id, loops, SectionHatches.Build(candidate.Face, candidate.Style, request.Plane), candidate.Sources,
+            return new(id, loops, SectionHatches.Build(candidate.Face, candidate.Style, request.Plane, request.PatternPlane), candidate.Sources,
                 candidate.Style, SectionStatus.Crossing, SectionGeometry.Area(candidate.Face), null);
         }
         catch { foreach (var loop in loops) loop.Dispose(); throw; }
@@ -344,7 +428,8 @@ public static class SectionRegionEngine
 
     // Build all atomic cells, select those lying in source material, then combine the selected cells.
     // This preserves holes even where another object's outer loop crosses them.
-    private static List<Candidate> Merge(List<Candidate> candidates, SectionRequest request, SectionResult result)
+    private static List<Candidate> Merge(List<Candidate> candidates, SectionRequest request, SectionResult result,
+        Func<Curve[], Plane, double, CurveBooleanRegions?>? arrangement = null)
     {
         var groups = new List<List<Candidate>>();
         foreach (var candidate in candidates)
@@ -359,10 +444,12 @@ public static class SectionRegionEngine
             {
                 if (group.Count == 1)
                 { var c = group[0]; merged.Add(new(c.Face.DuplicateBrep(), c.Sources, c.Style, c.Physical.Select(p => p.DuplicateCurve()).ToArray())); continue; }
+                var groupStart = merged.Count;
                 var boundaries = group.SelectMany(c => c.Face.Loops.Select(l => l.To3dCurve())).ToArray();
                 try
                 {
-                    using var atomic = Curve.CreateBooleanRegions(boundaries, request.Plane, false, request.Tolerance);
+                    using var atomic = arrangement is null ? Curve.CreateBooleanRegions(boundaries, request.Plane, false, request.Tolerance) :
+                        arrangement(boundaries, request.Plane, request.Tolerance);
                     if (atomic is null) throw new SectionFailure("Style-compatible union arrangement failed.");
                     var seeds = new List<Point3d>();
                     for (var i = 0; i < atomic.RegionCount; i++)
@@ -378,7 +465,6 @@ public static class SectionRegionEngine
                     }
                     using var union = Curve.CreateBooleanRegions(boundaries, request.Plane, seeds, true, request.Tolerance);
                     if (union is null || union.RegionCount == 0) throw new SectionFailure("Style-compatible region union failed.");
-                    var groupStart = merged.Count;
                     for (var i = 0; i < union.RegionCount; i++)
                     {
                         var loops = union.RegionCurves(i);
@@ -401,16 +487,23 @@ public static class SectionRegionEngine
                         area < group.Max(c => SectionGeometry.Area(c.Face)) - SectionGeometry.AreaError(inputArea, request.Tolerance))
                         throw new SectionFailure("Union area bounds failed.");
                 }
+                catch (Exception ex) when (ex is SectionFailure or ArgumentException or InvalidOperationException)
+                {
+                    foreach (var candidate in merged.Skip(groupStart)) candidate.Dispose();
+                    merged.RemoveRange(groupStart, merged.Count-groupStart);
+                    foreach (var c in group) merged.Add(new(c.Face.DuplicateBrep(), c.Sources, c.Style, c.Physical.Select(p => p.DuplicateCurve()).ToArray()));
+                    result.Diagnostics.Add(new(SectionPolicy.MembershipKey(group.SelectMany(c => c.Sources).Distinct().Order().ToArray()), SectionStatus.Crossing,
+                        $"Style-compatible merge refused: {ex.Message}; this style group keeps its separate certified faces."));
+                }
                 finally { foreach (var curve in boundaries) curve.Dispose(); }
             }
             foreach (var candidate in candidates) candidate.Dispose();
             return merged;
         }
-        catch (SectionFailure ex)
+        catch
         {
             foreach (var candidate in merged) candidate.Dispose();
-            result.Diagnostics.Add(new("*", SectionStatus.Unsupported, ex.Message));
-            return candidates; // Explicitly diagnosed separate output; caller must respect RequiresQuarantine.
+            throw;
         }
     }
 

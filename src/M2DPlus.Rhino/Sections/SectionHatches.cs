@@ -23,7 +23,7 @@ public static class SectionHatches
         return pattern;
     }
 
-    internal static Hatch? Build(Brep region, SectionStyleSnapshot style, Plane plane)
+    internal static Hatch? Build(Brep region, SectionStyleSnapshot style, Plane plane, Plane? patternPlane = null)
     {
         if (style.Pattern is null && style.Background == BackgroundMode.None) return null;
         var curves = region.Loops.OrderBy(l => l.LoopType == BrepLoopType.Outer ? 0 : 1).Select(l => l.To3dCurve()).ToArray();
@@ -32,7 +32,7 @@ public static class SectionHatches
         {
             foreach (var curve in curves) curve.Transform(Transform.PlaneToPlane(plane, Plane.WorldXY));
             hatch = Hatch.Create(plane, curves[0], curves.Skip(1), 0, style.Rotation, style.Scale);
-            if (hatch is not null) hatch.BasePoint = plane.PointAt(style.PatternOrigin.X, style.PatternOrigin.Y);
+            if (hatch is not null) hatch.BasePoint = (patternPlane ?? plane).PointAt(style.PatternOrigin.X, style.PatternOrigin.Y);
         }
         finally { foreach (var curve in curves) curve.Dispose(); }
         if (hatch is null || !hatch.IsValid) { hatch?.Dispose(); throw new SectionFailure("Hatch construction failed."); }

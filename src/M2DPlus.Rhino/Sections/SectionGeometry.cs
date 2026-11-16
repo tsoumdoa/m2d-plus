@@ -145,7 +145,7 @@ internal static class SectionGeometry
     // a subcurve inside a tolerance ball about a point ON a shared edge proves the whole
     // subcurve is on shared topology. Samples alone cannot prove this. Adjacent edges may
     // supply different witnesses. Budget exhaustion always rejects, never accepts.
-    internal static bool CoveredBySharedTopology(Curve curve, BrepEdge[] shared, double tolerance)
+    internal static bool CoveredBySharedTopology(Curve curve, Curve[] shared, double tolerance)
     {
         if (shared.Length == 0) return false;
         var budget = 262144;
@@ -241,6 +241,15 @@ internal static class SectionGeometry
         var min = polyhedral && distances.Length > 0 ? distances.Min() : bounds.Min.Z;
         var max = polyhedral && distances.Length > 0 ? distances.Max() : bounds.Max.Z;
         var status = SectionPolicy.Classify(min, max, request.Tolerance, polyhedral, roundoff);
+        // Conservative curved bounds can prove a one-sided contact without
+        // proving exact extrema. An actual planar face on the requested plane
+        // supplies contact truth; no tolerance-sized gap is silently snapped.
+        if (status == SectionStatus.Uncertain &&
+            (max <= roundoff && min < -request.Tolerance || min >= -roundoff && max > request.Tolerance) &&
+            brep.Faces.Any(f => f.TryGetPlane(out var support, roundoff) &&
+                Math.Abs(plane.DistanceTo(support.Origin)) <= roundoff &&
+                Vector3d.CrossProduct(support.Normal, plane.Normal).Length <= 64 * 2.2204460492503131e-16))
+            return new(id, index, SectionStatus.Contact, min, max, "Conservative one-sided bound and exact planar contact face; no material cut.");
         if (status == SectionStatus.Crossing && !polyhedral)
         {
             var analytic = distances.Any(d => d < -request.Tolerance) && distances.Any(d => d > request.Tolerance) &&

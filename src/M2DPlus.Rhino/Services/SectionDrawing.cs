@@ -27,10 +27,8 @@ internal static class SectionDrawing
         var timer = Stopwatch.StartNew(); var invalid = 0; var quarantine = scene.HasPotentialOccluderUnsupported;
         var uncertainSources = new HashSet<string>(StringComparer.Ordinal); var uncertainRegions = new List<BoundingBox>();
         var localSources = new HashSet<string>(StringComparer.Ordinal);
-        // Snapshot region/occluder evidence before visibility. Native candidate
-        // classifications cannot invalidate an independent section certificate.
-        var regionUncertainSources = new HashSet<string>(StringComparer.Ordinal);
-        var regionUncertainRegions = new List<BoundingBox>();
+        var footprintProofRegions = new List<BoundingBox>();
+        SectionResult? preparedSections = null;
         var result = new ViewDrawing { Name = view.Name, Settings = view.Settings, Tolerance = view.Settings?.Tolerance ?? scene.Tolerance, MultipleThreads = settings.MultipleThreads,
             Frame = DrawingFrames.Resolve(view, sources, scene.Bounds, view.Settings?.Tolerance ?? scene.Tolerance) };
         var cut = view.Cut!; var tol = view.Settings?.Tolerance ?? scene.Tolerance;
@@ -56,7 +54,7 @@ internal static class SectionDrawing
         try
         {
             using var phase = result.Phases.Start("sections");
-            using var sections = SectionRegionEngine.Compute(bodies.Select(s => new SectionSource(s.Identity, s.Geometry, cut.Style(s)) { Canonical = s.Canonical }),
+            var sections = preparedSections = SectionRegionEngine.Compute(bodies.Select(s => new SectionSource(s.Identity, s.Geometry, cut.Style(s)) { Canonical = s.Canonical }),
                 request, scene.SectionVerdicts, token, prepareVisibility: true, farPlane: far, phases: result.Phases);
             result.Phases.Add("sections", -result.Phases.Seconds.GetValueOrDefault("route C trim"));
             result.UncertainSectionComponents = sections.Components.Count(c => c.Status == SectionStatus.Uncertain);
@@ -64,15 +62,31 @@ internal static class SectionDrawing
             {
                 var affected = sources.FirstOrDefault(s => s.Identity == diagnostic.SourceId);
                 if (affected is null) { quarantine = true; continue; }
-                var footprint = affected.Geometry.GetBoundingBox(Transform.PlanarProjection(cut.Plane));
-                if (!footprint.IsValid) quarantine = true;
-                else { uncertainSources.Add(affected.Identity); uncertainRegions.Add(footprint); }
+                var footprints = SectionFootprints(affected.Geometry, cut.Plane);
+                if (footprints.Length == 0 || footprints.Any(b => !b.IsValid)) quarantine = true;
+                else { uncertainSources.Add(affected.Identity); uncertainRegions.AddRange(footprints); }
+                // Narrow the actual footprint, but do not silently restore native
+                // Visible elsewhere in its former box. It still needs the same
+                // continuous all-body certificate used before narrowing.
+                if (affected.Geometry is Mesh) footprintProofRegions.Add(affected.Geometry.GetBoundingBox(Transform.PlanarProjection(cut.Plane)));
             }
-            regionUncertainSources.UnionWith(uncertainSources);
-            regionUncertainRegions.AddRange(uncertainRegions);
             result._diagnostics.Add($"Admission: {scene.Cost.GeometryBytes} geometry bytes; {scene.Cost.BrepFaces} faces; {scene.Cost.MeshTriangles} triangles; {scene.SourceCount} sources.");
             result._diagnostics.Add($"Route C; depth={range.Depth:R}; farclip={range.FarClip}; regime={range.Regime}; cuts={request.Cuts}; hatch={request.Hatch}; no native clipping planes.");
             result._diagnostics.AddRange(sections.Diagnostics.Select(d => $"{d.SourceId}: {d.Status}: {d.Message}"));
+            // Better section topology/trim evidence changes the native input set,
+            // whose order-dependent errors are not spatially local. Require an
+            // independent whole-span proof for Visible throughout that solve.
+            var recoveredSources = sections.Diagnostics.Where(d =>
+                    d.Message.Contains(StableSectionCertificate.PoleRecovery, StringComparison.Ordinal) ||
+                    d.Message.StartsWith(PhysicalSectionClipper.RecoveredEdges, StringComparison.Ordinal))
+                .Select(d => d.SourceId).Concat(sections.Components.Where(c =>
+                    c.Certificate.StartsWith("Conservative one-sided bound", StringComparison.Ordinal)).Select(c => c.SourceId))
+                .ToHashSet(StringComparer.Ordinal);
+            if (recoveredSources.Count != 0)
+            {
+                localSources.UnionWith(sources.Select(s => s.Identity));
+                result._diagnostics.Add($"Section recovery visibility proofs: {recoveredSources.Count} recovered sources change native inputs; Visible throughout this solve requires a continuous all-body bound certificate.");
+            }
             result._diagnostics.AddRange(bodies.Select(s => $"Style {s.Identity}: {s.Section.Rule}; raw ARGB={cut.Style(s).PatternColour:x8}; source={cut.Style(s).ObjectColour:x8}"));
             var byId = sources.GroupBy(s => s.Identity).ToDictionary(g => g.Key, g => g.First(), StringComparer.Ordinal);
             foreach (var region in sections.Regions.ToArray())
@@ -181,7 +195,6 @@ internal static class SectionDrawing
                         continue;
                     }
                     if (geometry is not Curve curve) continue;
-                    if (item.Class == LineClass.Hidden && view.Settings?.Hidden == false) continue;
                     if (item.FarCandidate && item.Class != LineClass.Visible) continue;
                     var farParts = EdgeProvenance.Split(curve, (sourceFar.GetValueOrDefault(source.Identity) ?? Enumerable.Empty<Curve>()).Select(c => (c, EdgeOrigin.FarTrim)), tol);
                     foreach (var farPart in farParts)
@@ -258,7 +271,6 @@ internal static class SectionDrawing
                     if (visibility == HiddenLineDrawingSegment.Visibility.Projecting) { result.ProjectingSegments++; continue; }
                     if (segment.ParentCurve?.SourceObject?.Tag is not Candidate candidate || segment.CurveGeometry is not { } proxy)
                     { invalid++; quarantine = true; continue; }
-                    if (visibility == HiddenLineDrawingSegment.Visibility.Hidden && view.Settings?.Hidden == false) continue;
                     if (candidate.Far && visibility != HiddenLineDrawingSegment.Visibility.Visible) continue;
                     nativeFragments++;
                     using var depthCurve = proxy.DuplicateCurve(); depthCurve.Transform(inverse);
@@ -308,27 +320,174 @@ internal static class SectionDrawing
         finally
         {
             result._diagnostics.Add(work.Diagnostic);
-            foreach (var geometry in owned) geometry.Dispose();
-            foreach (var curve in suppression.Concat(cutLoci).Concat(farLoci)) curve.Dispose();
-            if (quarantine || uncertainSources.Count != 0 || uncertainRegions.Count != 0)
+            try
             {
-                try { NativeUncertainty.ApplyFootprints(result, sources, quarantine, uncertainSources, uncertainRegions, tol, token, !settings.NativeOnly, localSources); }
+            token.ThrowIfCancellationRequested();
+            if (quarantine || uncertainSources.Count != 0 || uncertainRegions.Count != 0 || footprintProofRegions.Count != 0 || localSources.Count != 0)
+            {
+                try { NativeUncertainty.ApplyFootprints(result, sources, quarantine, uncertainSources, uncertainRegions, tol, token, !settings.NativeOnly, localSources, footprintProofRegions,
+                    registered.Select(r => new VisibilityInput(r.Geometry,r.Tag.Source,r.Tag.Far)).ToArray()); }
                 catch { result.Dispose(); throw; }
-                foreach (var region in result.Regions.ToArray())
-                {
-                    if (!quarantine && !region.Region.SourceIds.Any(regionUncertainSources.Contains) && !region.Region.Loops.Any(l => regionUncertainRegions.Any(b => NativeUncertainty.Affects(b, l.Curve.GetBoundingBox(true), tol)))) continue;
-                    var source = sources.First(s => s.Identity == region.Region.SourceIds[0]);
-                    foreach (var loop in region.Region.Loops) result.Pieces.Add(new(loop.Curve.DuplicateCurve(), source, LineClass.Unresolved));
-                    region.Region.Dispose(); result.Regions.Remove(region);
-                }
+                // SectionRegionEngine publishes only complete certified material loops
+                // (or explicitly unfilled open outlines). Its failed candidates are
+                // already absent. Another source's section/clip failure, or a failure
+                // preparing this source for visibility, cannot change these loops.
+                // Participating sources are removed in front of this exact cut plane;
+                // excluded foreground sources were checked before region admission.
+                // Unknown uncaptured occluders still withhold presentation globally.
+                if (scene.HasPotentialOccluderUnsupported)
+                    foreach (var region in result.Regions.ToArray())
+                    {
+                        var source = sources.First(s => s.Identity == region.Region.SourceIds[0]);
+                        foreach (var loop in region.Region.Loops) result.Pieces.Add(new(loop.Curve.DuplicateCurve(), source, LineClass.Unresolved));
+                        region.Region.Dispose(); result.Regions.Remove(region);
+                    }
             }
+            if (preparedSections is { } completed)
+                foreach (var refusal in completed.Refusals)
+                {
+                    token.ThrowIfCancellationRequested();
+                    var source = participating.First(s => s.Identity == refusal.SourceId);
+                    AddRefusedMarker(result, source, refusal.Geometry, request, token);
+                }
             if (result.EmptyNativeSlots + result.ZeroLengthNativeSegments != 0) result._diagnostics.Add($"Benign native records dropped: {result.EmptyNativeSlots} empty slots; {result.ZeroLengthNativeSegments} exactly zero-length point curves.");
+            if(view.Settings?.Hidden==false)
+                foreach(var piece in result.Pieces.Where(p=>p.Class==LineClass.Hidden).ToArray())
+                { result.Pieces.Remove(piece);piece.Dispose(); }
             result.Pieces.Sort(NativeDrawing.ComparePieces);
             result.Report = new("Route C physical section + " + route, result.Items.Count(p => p.Class == LineClass.Unresolved),
                 invalid, scene.Unsupported, scene.Conversions, quarantine) { ValidationDomain = "analytic section/visibility controls; unverified freeform crossings quarantined" };
             result.Seconds = timer.Elapsed.TotalSeconds;
+            }
+            catch { result.Dispose(); throw; }
+            finally
+            {
+                preparedSections?.Dispose();
+                foreach (var geometry in owned) geometry.Dispose();
+                foreach (var curve in suppression.Concat(cutLoci).Concat(farLoci)) curve.Dispose();
+            }
         }
         return result;
+    }
+
+    // Each mesh face lies inside the convex hull of its vertices (including
+    // either diagonal and a bilinear quad). A projected face box therefore
+    // covers every possible occlusion locus without filling empty space between
+    // disconnected or curved mesh panels with one whole-source rectangle.
+    internal const int MaximumMeshFootprints = 128;
+    internal static BoundingBox[] SectionFootprints(GeometryBase geometry, Plane plane)
+    {
+        var projection = Transform.PlanarProjection(plane);
+        if (geometry is not Mesh mesh || !mesh.IsValid || mesh.Faces.Count > MaximumMeshFootprints)
+            return [geometry.GetBoundingBox(projection)];
+        return mesh.Faces.Select(f => new BoundingBox(new[] { f.A, f.B, f.C, f.D }.Distinct().Select(i =>
+        {
+            var p = (Point3d)mesh.Vertices[i]; p.Transform(projection); return p;
+        }))).ToArray();
+    }
+
+    internal static void AddRefusedMarker(ViewDrawing result, PreparedLeaf source, GeometryBase geometry,
+        SectionRequest request, CancellationToken token)
+    {
+        token.ThrowIfCancellationRequested();
+        var tolerance = request.Tolerance;
+        using var input = geometry.Duplicate(); input.EnsurePrivateCopy();
+        var origin = SectionCoordinates.Origin(request.Plane, input.GetBoundingBox(true));
+        var toLocal = Transform.Translation(-origin.X, -origin.Y, -origin.Z);
+        var toWorld = Transform.Translation(origin.X, origin.Y, origin.Z);
+        var local = SectionCoordinates.LocalRequest(request, origin);
+        var plane = local.Plane;
+        if (!input.Transform(toLocal)) throw new SectionFailure("Cannot translate refused section marker.");
+        var markers = new List<Curve>();
+        try
+        {
+            try
+            {
+                token.ThrowIfCancellationRequested();
+                if (input is Brep brep)
+                {
+                    var success = Intersection.BrepPlane(brep,plane,tolerance,out var curves,out _);
+                    try
+                    {
+                        foreach (var curve in curves)
+                        {
+                            token.ThrowIfCancellationRequested();
+                            if (!success || !curve.IsValid || curve.GetLength() <= 0) continue;
+                            var copy = curve.DuplicateCurve();
+                            if (copy.Transform(Transform.PlanarProjection(plane))) markers.Add(copy); else copy.Dispose();
+                        }
+                    }
+                    finally { foreach (var curve in curves) curve.Dispose(); }
+                }
+                else if (input is Mesh mesh)
+                    foreach (var line in Intersection.MeshPlane(mesh,plane) ?? [])
+                        if (line.IsValid && line.Count > 1) markers.Add(new PolylineCurve(line));
+                else if (input is Curve outline) markers.Add(outline.DuplicateCurve());
+                token.ThrowIfCancellationRequested();
+            }
+            catch (Exception ex) when (ex is InvalidOperationException or ArgumentException)
+            { foreach (var curve in markers) curve.Dispose(); markers.Clear(); }
+            bool footprint = markers.Count == 0;
+            if (footprint)
+            {
+                token.ThrowIfCancellationRequested();
+                var bounds = input.GetBoundingBox(Transform.PlaneToPlane(plane,Plane.WorldXY));
+                if (bounds.IsValid)
+                {
+                    var x = new Interval(bounds.Min.X,bounds.Max.X);var y = new Interval(bounds.Min.Y,bounds.Max.Y);
+                    if (x.Length <= tolerance) x = new(x.Mid-tolerance,x.Mid+tolerance);
+                    if (y.Length <= tolerance) y = new(y.Mid-tolerance,y.Mid+tolerance);
+                    markers.Add(new Rectangle3d(plane,x,y).ToNurbsCurve());
+                }
+                else
+                {
+                    var frame = result.Frame; frame.Transform(toLocal); markers.Add(frame.ToNurbsCurve());
+                }
+            }
+            var firstMarker = result.Pieces.Count;
+            foreach (var curve in markers)
+            {
+                token.ThrowIfCancellationRequested();
+                IEnumerable<Curve> parts = local.Crop is { } crop ? NativeDrawing.Crop(curve, crop, tolerance) : [curve.DuplicateCurve()];
+                foreach (var part in parts)
+                {
+                    try
+                    {
+                        token.ThrowIfCancellationRequested();
+                        if (!part.Transform(toWorld)) throw new SectionFailure("Cannot restore refused section marker.");
+                        result.Pieces.Add(new(part,source,LineClass.Unresolved));
+                    }
+                    catch { part.Dispose(); throw; }
+                }
+            }
+            // The uncertain outline can surround the entire crop, leaving no
+            // clipped boundary ink. Mark the intersection of its conservative
+            // footprint and the crop, rather than disappearing from the view.
+            if (result.Pieces.Count == firstMarker && local.Crop is { } covered)
+            {
+                token.ThrowIfCancellationRequested();
+                var b = input.GetBoundingBox(Transform.PlaneToPlane(covered.Plane, Plane.WorldXY));
+                var x = new Interval(Math.Max(covered.X.Min,b.Min.X),Math.Min(covered.X.Max,b.Max.X));
+                var y = new Interval(Math.Max(covered.Y.Min,b.Min.Y),Math.Min(covered.Y.Max,b.Max.Y));
+                if (b.IsValid && x.T1>x.T0 && y.T1>y.T0)
+                {
+                    using var rectangle = new Rectangle3d(covered.Plane,x,y).ToNurbsCurve();
+                    foreach (var part in NativeDrawing.Crop(rectangle,covered,tolerance))
+                    {
+                        try
+                        {
+                            token.ThrowIfCancellationRequested();
+                            if (!part.Transform(toWorld)) throw new SectionFailure("Cannot restore refused footprint marker.");
+                            result.Pieces.Add(new(part,source,LineClass.Unresolved));
+                        }
+                        catch { part.Dispose();throw; }
+                    }
+                    footprint = true;
+                }
+            }
+            result._diagnostics.Add($"Uncertified section marker: source={source.Identity}; {(footprint ? "projected source footprint" : "uncertified intersection outline")}; Unresolved only, no hatch.");
+        }
+        finally { foreach (var curve in markers) curve.Dispose(); }
     }
 
     private static bool ProjectedOverlap(GeometryBase geometry, SectionRegion region, Plane plane, double tolerance)

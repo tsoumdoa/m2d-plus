@@ -88,6 +88,33 @@ public sealed class OffsetSectionTests(RhinoHost host, ITestOutputHelper output)
         Assert.True(b <= 1.5 * a + .02, $"Origin={a:F6}s; offset={b:F6}s");
     });
 
+    [RhinoTheory]
+    [InlineData(0d)]
+    [InlineData(1e5)]
+    [InlineData(1e6)]
+    [InlineData(1e7)]
+    public void LocalSpherePoleBoundKeepsAnalyticMeridianAndRefusesTangency(double offset) => host.Run(() =>
+    {
+        var centre = new Point3d(offset, offset, offset);
+        using var sphere = new Sphere(centre, 160).ToBrep();
+        var archive = WorkerCodec.Archive(sphere);
+        using var work = new SectionWork();
+        using var section = SectionRegionEngine.Compute([new("sphere", sphere, SectionStyleSnapshot.Default())],
+            new(new Plane(centre, Vector3d.XAxis), Tol, .001), prepareVisibility: true);
+        Assert.False(section.RequiresQuarantine, string.Join("; ", section.Diagnostics.Select(d => d.Message)));
+        var region = Assert.Single(section.Regions);
+        Assert.InRange(Math.Abs(region.Area - Math.PI * 160 * 160), 0, .01);
+        Assert.Single(region.Loops); Assert.NotNull(region.Hatch);
+        Assert.All(section.Visibility.Values, c => Assert.True(c.Succeeded));
+        Assert.Contains(section.Diagnostics, d => d.Message.Contains(StableSectionCertificate.PoleRecovery, StringComparison.Ordinal));
+        Assert.Contains("slab budget hits=0", work.Diagnostic);
+        Assert.Equal(archive, WorkerCodec.Archive(sphere));
+        using var tangent = SectionRegionEngine.Compute([new("sphere", sphere, SectionStyleSnapshot.Default())],
+            new(new Plane(centre + Vector3d.ZAxis * (160 - 2 * Tol), Vector3d.ZAxis), Tol, .001));
+        Assert.Empty(tangent.Regions);
+        Assert.True(tangent.RequiresQuarantine);
+    });
+
     [RhinoFact]
     public void ExplodedTranslationsReuseOnlyIdenticalLocalArchives() => host.Run(() =>
     {

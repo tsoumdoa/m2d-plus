@@ -33,7 +33,8 @@ internal sealed class UncertaintyCensus : IDisposable
                 var causes = new Dictionary<string, double>();
                 // Quarantine modifies Class but preserves the pre-quarantine class.
                 if (item.DepthGeometry is null)
-                    causes["region withholding"] = curve.GetLength();
+                    causes[output.Diagnostics.Any(d=>d.StartsWith($"Uncertified section marker: source={item.SourceIdentity};",StringComparison.Ordinal))
+                        ? "refused section source marker" : "region withholding"] = curve.GetLength();
                 else if (item.SolvedClass != LineClass.Unresolved)
                     causes["source/footprint quarantine"] = curve.GetLength();
                 else

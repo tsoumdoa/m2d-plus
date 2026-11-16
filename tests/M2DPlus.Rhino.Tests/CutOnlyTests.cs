@@ -120,15 +120,18 @@ public sealed class CutOnlyTests(RhinoHost host)
         Assert.Contains(ViewNotices.For(worker.Views[1]), n => n.Text.Contains(ViewNotices.CutOnlyEmpty, StringComparison.Ordinal));
     });
 
-    [RhinoFact] public void CutUncertaintySurvivesTheProjectionBoundary() => host.Run(() =>
+    [RhinoFact] public void BackgroundUncertaintyDoesNotInventCutRefusalsAtTheProjectionBoundary() => host.Run(() =>
     {
         using var doc = RhinoDoc.CreateHeadless(null); Populate(doc); using var cache = new SceneCache();
         using var scene = BaselineTests.Capture(doc, cache);
-        // Existing near/far stability refusal: regions must stay withheld and their outlines Unresolved.
+        // The background slab is ambiguous. Both near cuts have their own
+        // complete topology certificates and must not gain orange overlays.
         using var result = Solve(scene.Value, View(true, extra: "depth=0.00005"));
         var drawing = result.Views[0]; OnlySections(drawing);
         Assert.True(drawing.UncertainSectionComponents > 0 || drawing.Diagnostics.Any(d => d.Contains("within tolerance", StringComparison.Ordinal)));
-        Assert.True(drawing.Report.UncertainCount > 0); Assert.NotEmpty(drawing.Items);
+        Assert.Equal(0,drawing.Report.UncertainCount); Assert.Empty(drawing.Items);
+        Assert.Equal(2,drawing.Regions.Count); Assert.All(drawing.Regions,r=>Assert.NotNull(r.Region.Hatch));
+        Assert.InRange(Math.Abs(drawing.Regions.Sum(r=>r.Region.Area)-(16+Math.PI*.9375)),0,1e-6);
         Assert.DoesNotContain(ViewNotices.For(drawing), n => n.Text.Contains(ViewNotices.CutOnlyEmpty, StringComparison.Ordinal));
     });
 

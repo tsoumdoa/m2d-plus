@@ -1,4 +1,5 @@
 using M2DPlus.Core;
+using M2DPlus.Core.Sections;
 using M2DPlus.Rhino.Services;
 using Rhino.Geometry;
 using Xunit;
@@ -13,16 +14,114 @@ namespace M2DPlus.Rhino.Tests;
 [Trait("Category", "RhinoIntegration")]
 public sealed class UncertaintyReductionTests(RhinoHost host)
 {
+    [RhinoFact] public void RestoredWrongHiddenIsVetoedAndItsLengthIsNotLost() => host.Run(() =>
+    {
+        using var line=new LineCurve(new Point3d(-10,0,0),new Point3d(10,0,0));
+        var source=new PreparedLeaf("line",[0],line);
+        using var drawing=new ViewDrawing { Frame=new Rectangle3d(Plane.WorldXY,20,20),Tolerance=1e-6 };
+        drawing.Pieces.Add(new(line.DuplicateCurve(),source,LineClass.Hidden,line.DuplicateCurve()));
+        NativeUncertainty.ApplyFootprints(drawing,[source],false,[],[new(new Point3d(-1,-1,0),new Point3d(1,1,0))],1e-6,default);
+        Assert.All(drawing.Items,p=>Assert.Equal(LineClass.Unresolved,p.Class));
+        Assert.Equal(20,drawing.Items.Sum(p=>{using var g=p.CopyGeometry();return ((Curve)g).GetLength();}),8);
+        Assert.Contains(drawing.Diagnostics,d=>d.Contains("false-hidden samples=",StringComparison.Ordinal) && !d.Contains("false-hidden samples=0;",StringComparison.Ordinal));
+    });
+
+    [RhinoFact] public void DenseMeshFootprintsHaveABoundedConservativeFallback() => host.Run(() =>
+    {
+        using var mesh=Mesh.CreateFromPlane(Plane.WorldXY,new(-10,10),new(-10,10),32,32);
+        Assert.True(mesh.Faces.Count>SectionDrawing.MaximumMeshFootprints);
+        var box=Assert.Single(SectionDrawing.SectionFootprints(mesh,Plane.WorldXY));
+        Assert.All(mesh.Vertices,v=>Assert.True(box.Contains((Point3d)v)));
+    });
+    [RhinoTheory]
+    [InlineData(true,"02ec87ed-4697-5ec8-8168-d13efed0a4b4",-2.3853466355070316,-2.992283317636817,4.639632959298169)]
+    [InlineData(false,"b25cea92-867e-55b7-8b19-5037a96d08ef",-.9684725027918946,.2064561171318786,6.060678806885097)]
+    public void RecoveredSectionsDoNotRestoreWrongNativeVisible(bool plan,string identity,double x,double y,double z) => host.Run(() =>
+    {
+        using var document=RhinoDoc.OpenHeadless(Path.Combine(AppContext.BaseDirectory,"fixtures","features","diagrid-shell.3dm"));
+        using var cache=new SceneCache();using var lease=BaselineTests.Capture(document,cache);
+        var bounds=lease.Value.Bounds;
+        var plane=plan ? new Plane(new Point3d(0,0,bounds.Min.Z+Math.Min(1.2,bounds.Diagonal.Z*.4)),Vector3d.ZAxis) :
+            new Plane(new Point3d(0,bounds.Center.Y,0),Vector3d.XAxis,Vector3d.ZAxis);
+        using var batch=BaselineTests.Solve(lease,ViewRequest.Parse(plane));
+        var view=Assert.Single(batch.Views);Assert.Null(view.Error);Assert.NotEmpty(view.Regions);
+        // Archived independent five-ray witnesses have positive gaps on every
+        // ray (minimum .061 m plan / .206 m long). A better section certificate
+        // must never re-authorize this native Visible locus.
+        var point=plane.ClosestPoint(new Point3d(x,y,z));
+        Assert.DoesNotContain(view.Items,p=>
+        {
+            if(p.Class!=LineClass.Visible || p.SourceIdentity!=identity)return false;
+            using var geometry=p.CopyGeometry();
+            return geometry is Curve c && c.ClosestPoint(point,out var t) && c.PointAt(t).DistanceTo(point)<=2e-4;
+        });
+        Assert.Contains(view.Diagnostics,d=>d.StartsWith("Section recovery visibility proofs:",StringComparison.Ordinal));
+        if(!plan)
+        {
+            var node=Assert.Single(view.Regions,r=>r.Region.SourceIds.Contains("af9b7ed5-f639-5199-9492-5e230b4147d5")).Region;
+            Assert.InRange(Math.Abs(node.Area-Math.PI*.16*.16),0,2e-6);Assert.Single(node.Loops);Assert.NotNull(node.Hatch);
+        }
+    });
+
+    [RhinoFact] public void MeshFootprintsCoverFacesWithoutQuarantiningTheSpaceBetweenPanels() => host.Run(() =>
+    {
+        using var mesh = new Mesh();
+        foreach (var x in new[] { -5d,5d })
+        {
+            var i=mesh.Vertices.Count;
+            mesh.Vertices.Add(x,0,-1);mesh.Vertices.Add(x+1,0,1);mesh.Vertices.Add(x,1,1);
+            mesh.Faces.AddFace(i,i+1,i+2);
+        }
+        var boxes=SectionDrawing.SectionFootprints(mesh,Plane.WorldXY);
+        Assert.Equal(2,boxes.Length);
+        Assert.DoesNotContain(boxes,b=>b.Contains(Point3d.Origin));
+        foreach (var f in mesh.Faces)
+            foreach(var i in new[]{f.A,f.B,f.C})
+                Assert.Contains(boxes,b=>b.Contains(Plane.WorldXY.ClosestPoint(mesh.Vertices[i])));
+        using var removed=mesh.DuplicateMesh();removed.Transform(Transform.Translation(0,0,3));
+        using var clip=PhysicalSectionClipper.Clip(new("mesh",removed,SectionStyleSnapshot.Default()),new(Plane.WorldXY,1e-4,.001));
+        Assert.False(clip.Succeeded);Assert.Empty(clip.Pieces);Assert.Empty(clip.ContactFeatures);
+        using var crossing=PhysicalSectionClipper.Clip(new("mesh",mesh,SectionStyleSnapshot.Default()),new(Plane.WorldXY,1e-4,.001));
+        Assert.False(crossing.Succeeded);Assert.Empty(crossing.Pieces);
+        using var line=new LineCurve(new Point3d(-1,0,0),new Point3d(1,0,0));
+        using var body=new Sphere(new Point3d(0,0,1),.5).ToBrep();
+        var source=new PreparedLeaf("line",[0],line);
+        using var drawing=new ViewDrawing{Frame=new Rectangle3d(Plane.WorldXY,10,10)};
+        drawing.Pieces.Add(new(line.DuplicateCurve(),source,LineClass.Visible,line.DuplicateCurve()));
+        NativeUncertainty.ApplyFootprints(drawing,[source,new("body",[1],body)],false,[],boxes,1e-4,default,
+            proofRegions:[mesh.GetBoundingBox(Transform.PlanarProjection(Plane.WorldXY))]);
+        Assert.All(drawing.Items,p=>Assert.Equal(LineClass.Unresolved,p.Class));
+    });
+
+    [RhinoFact] public void CertifiedMaterialRegionSurvivesAnotherSourcesAmbiguousSection() => host.Run(() =>
+    {
+        using var document = RhinoDoc.CreateHeadless(null); document.ModelAbsoluteTolerance = 1e-4;
+        using var box = Brep.CreateFromBox(new BoundingBox(new Point3d(-2,-2,-1), new Point3d(2,2,1)));
+        // A real near-tangency is inside the box's footprint, but cannot alter
+        // the box's exact square material intersection at z=0.
+        using var tangent = new Sphere(new Point3d(0,0,1-2e-4), 1).ToBrep();
+        var inputs = new[] { new CaptureInput(box,[0],"certified"), new CaptureInput(tangent,[1],"ambiguous") };
+        using var cache = new SceneCache(); using var lease = BaselineTests.Capture(document,cache,inputs);
+        using var batch = BaselineTests.Solve(lease,ViewRequest.Parse(Plane.WorldXY));
+        var view = Assert.Single(batch.Views); Assert.Null(view.Error);
+        var region = Assert.Single(view.Regions).Region;
+        Assert.Equal(new[]{"certified"},region.SourceIds); Assert.Equal(16,region.Area,8);
+        Assert.Single(region.Loops); Assert.NotNull(region.Hatch);
+        Assert.Contains(view.Diagnostics,d=>d.Contains("ambiguous: Uncertain:",StringComparison.Ordinal));
+        Assert.DoesNotContain(view.Regions,r=>r.Region.SourceIds.Contains("ambiguous"));
+    });
+
     [RhinoFact] public void FootprintsWithholdOnlyLocalIntervalsAndRetainDepthAndSolvedClass() => host.Run(() =>
     {
         using var line = new LineCurve(new Point3d(-10,0,0), new Point3d(10,0,0));
         using var depth = new LineCurve(new Point3d(-10,0,-3), new Point3d(10,0,-1));
+        using var blocker = Brep.CreateFromBox(new BoundingBox(new Point3d(-11,-2,0),new Point3d(11,2,1)));
         depth.Domain = line.Domain;
         var source = new PreparedLeaf("line", [2], line);
-        using var output = new ViewDrawing();
+        using var output = new ViewDrawing { Tolerance=1e-6,Frame=new Rectangle3d(Plane.WorldXY,20,20) };
         output.Pieces.Add(new(line.DuplicateCurve(), source, LineClass.Hidden, depth.DuplicateCurve()) { Profile = true, KernelOwned = true });
         var box = new BoundingBox(new Point3d(-1,-1,0),new Point3d(1,1,0));
-        NativeUncertainty.ApplyFootprints(output,[source],false,[],[box],1e-6,default);
+        NativeUncertainty.ApplyFootprints(output,[source,new("blocker",[3],blocker)],false,[],[box],1e-6,default);
         Assert.Equal(3,output.Items.Count);
         Assert.Equal(20,output.Items.Sum(p => { using var g=p.CopyGeometry(); return ((Curve)g).GetLength(); }),9);
         Assert.Equal(2.000004,output.Items.Where(p => p.Class == LineClass.Unresolved).Sum(p => { using var g=p.CopyGeometry(); return ((Curve)g).GetLength(); }),8);

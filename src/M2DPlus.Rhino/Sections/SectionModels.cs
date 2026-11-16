@@ -10,7 +10,12 @@ public sealed record SectionSource(string Id, GeometryBase Geometry, SectionStyl
     internal SectionCanonical? Canonical { get; init; }
 }
 public sealed record SectionRequest(Plane Plane, double Tolerance, double AngleTolerance,
-    Rectangle3d? Crop = null, CutMode Cuts = CutMode.Separate, HatchMode Hatch = HatchMode.Styles);
+    Rectangle3d? Crop = null, CutMode Cuts = CutMode.Separate, HatchMode Hatch = HatchMode.Styles)
+{
+    // Geometry may be centred independently of the user's plane origin. Styles
+    // remain relative to that original plane, including through presentation.
+    internal Plane? PatternPlane { get; init; }
+}
 public sealed record SectionDiagnostic(string SourceId, SectionStatus Status, string Message);
 public sealed record ComponentClassification(string SourceId, int Component, SectionStatus Status,
     double Minimum, double Maximum, string Certificate);
@@ -35,8 +40,15 @@ public sealed class SectionResult : IDisposable
     public Dictionary<string, PhysicalClipResult> Visibility { get; } = new(StringComparer.Ordinal);
     public List<ComponentClassification> Components { get; } = new();
     public List<SectionDiagnostic> Diagnostics { get; } = new();
+    internal List<SectionRefusal> Refusals { get; } = new();
     public bool RequiresQuarantine => Diagnostics.Any(d => d.Status is SectionStatus.Uncertain or SectionStatus.Unsupported);
-    public void Dispose() { foreach (var region in Regions) region.Dispose(); foreach (var clip in Visibility.Values) clip.Dispose(); }
+    public void Dispose() { foreach (var region in Regions) region.Dispose(); foreach (var clip in Visibility.Values) clip.Dispose(); foreach (var refusal in Refusals) refusal.Dispose(); }
+}
+// Transient compute evidence, consumed before drawing/worker serialization.
+// Only components without published cut topology are represented here.
+internal sealed record SectionRefusal(string SourceId, GeometryBase Geometry) : IDisposable
+{
+    public void Dispose() => Geometry.Dispose();
 }
 public sealed record VisibilityPiece(string SourceId, Brep Geometry, IReadOnlyList<SectionEdge> Edges) : IDisposable
 {

@@ -18,6 +18,7 @@ def main():
     p.add_argument('--select', default='')
     p.add_argument('--resume', action='store_true')
     p.add_argument('--baseline', type=Path, help='Audit Visible pieces from sources that had baseline Unresolved output')
+    p.add_argument('--hidden-baseline', type=Path, help='Independent all-body audit of Hidden on baseline Unresolved support (use pre-#31 to cover both rounds)')
     p.add_argument('--assembly', type=Path, help='Explicit archived harness/engine directory for a baseline cause replay')
     p.add_argument('--suite', choices=('all', 'buildings', 'curved'), default='all')
     a = p.parse_args()
@@ -48,6 +49,10 @@ def main():
                 rows.append(row)
                 continue
         print(key, flush=True)
+        if a.hidden_baseline:
+            hidden_dumps=list((a.hidden_baseline/key).glob('*-1-census.json'))
+            if len(hidden_dumps)!=1:raise RuntimeError('Missing unique Hidden baseline for '+key)
+            os.environ['PERFF_HIDDEN_BASELINE']=str(hidden_dumps[0].resolve())
         if a.baseline:
             dumps = list((a.baseline / key).glob('*-1-census.json'))
             if len(dumps) != 1:

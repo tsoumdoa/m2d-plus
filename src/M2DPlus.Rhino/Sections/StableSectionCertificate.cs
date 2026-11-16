@@ -8,6 +8,7 @@ namespace M2DPlus.Rhino.Sections;
 internal static class StableSectionCertificate
 {
     public const string Route = "D: perturbation stability + outward winding + Bezier slab transversality";
+    internal const string PoleRecovery = "geometric sphere pole recovery";
     private sealed record Loop(double Area, double Perimeter, Point3d Centre, int? Parent, bool Hole);
     internal sealed record Evidence(Curve[] Loops) : IDisposable
     {
@@ -31,7 +32,7 @@ internal static class StableSectionCertificate
                 throw new SectionFailure("D: cannot standardize outward face orientation.");
             source = normalized;
             // Bounding the whole slab also bounds curvature-induced changes between samples.
-            var slope = SlabSlope(source, request, delta);
+            var slope = SlabSlope(source, request, delta, out var poleRecovery);
             var planes = new[] { request.Plane, request.Plane, request.Plane };
             planes[0].Origin -= delta * request.Plane.Normal;
             planes[2].Origin += delta * request.Plane.Normal;
@@ -60,7 +61,8 @@ internal static class StableSectionCertificate
                 evidence = new(sets[1]); sets[1] = Array.Empty<Curve>();
             }
             finally { foreach (var set in sets) if (set is not null) foreach (var loop in set) loop.Dispose(); }
-            reason = $"{Route}; delta={delta:G6}, slope<={slope:G6}; loops are the cap boundary.";
+            reason = $"{Route}; delta={delta:G6}, slope<={slope:G6}; loops are the cap boundary." +
+                (poleRecovery ? $" {PoleRecovery}; native line confidence requires a separate proof." : "");
             return true;
         }
         catch (SectionFailure ex) { reason = ex.Message; return false; }
@@ -124,13 +126,37 @@ internal static class StableSectionCertificate
         }
     }
 
-    private static double SlabSlope(Brep brep, SectionRequest request, double delta)
+    private static double SlabSlope(Brep brep, SectionRequest request, double delta, out bool poleRecovery)
     {
+        poleRecovery = false;
         var slope = 0d; var budget = 20000;
         try
         {
             foreach (var face in brep.Faces)
             {
+                // A sphere's NURBS poles are singular parameters, not geometric
+                // tangencies. Bound its geometric normal throughout the slab instead.
+                // Recognition is at roundoff scale, never a fitted approximate sphere.
+                // SectionCoordinates has already translated the owned geometry
+                // and cut together; measure arithmetic scale in that same local
+                // frame. Its world-coordinate precision guard runs before this.
+                var box = face.GetBoundingBox(true);
+                var roundoff = 256 * 2.2204460492503131e-16 * Math.Max(1,
+                    Math.Max(box.Min.DistanceTo(Point3d.Origin), box.Max.DistanceTo(Point3d.Origin)));
+                var slab = delta + request.Tolerance;
+                var faceBounds = face.GetBoundingBox(Transform.PlaneToPlane(request.Plane, Plane.WorldXY));
+                if (faceBounds.IsValid && (faceBounds.Min.Z > slab + roundoff || faceBounds.Max.Z < -slab - roundoff)) continue;
+                if (face.TryGetSphere(out var sphere, roundoff))
+                {
+                    if (Math.Abs(request.Plane.DistanceTo(sphere.Center)) - sphere.Radius > slab + roundoff) continue;
+                    poleRecovery |= brep.Vertices.Any(v => Math.Abs(request.Plane.DistanceTo(v.Location)) <= delta + request.Tolerance + roundoff);
+                    var distance = Math.Abs(request.Plane.DistanceTo(sphere.Center)) + delta + request.Tolerance + roundoff;
+                    var radialSquared = (sphere.Radius - distance) * (sphere.Radius + distance);
+                    if (radialSquared <= 0 || Math.Sqrt(radialSquared) <= .02 * sphere.Radius)
+                        throw new SectionFailure("D: spherical slab reaches geometric tangency.");
+                    slope = Math.Max(slope, distance / Math.Sqrt(radialSquared));
+                    continue;
+                }
                 using var surface = face.ToNurbsSurface();
                 surface.Transform(Transform.PlaneToPlane(request.Plane, Plane.WorldXY));
                 // ConvertSpanToBezier uses control-net span indices, including empty
@@ -142,7 +168,8 @@ internal static class StableSectionCertificate
                         surface.KnotsV[v + surface.OrderV - 2] >= surface.KnotsV[v + surface.OrderV - 1]) continue;
                     using var patch = surface.ConvertSpanToBezier(u, v);
                     if (patch is null) throw new SectionFailure("D: Bezier span conversion failed.");
-                    Bound(patch, delta + request.Tolerance, 0, ref budget, ref slope);
+                    try { Bound(patch, delta + request.Tolerance, 0, ref budget, ref slope); }
+                    catch (SectionFailure ex) { throw new SectionFailure($"{ex.Message} face={face.FaceIndex}, span={u}/{v}."); }
                 }
             }
             return slope;
