@@ -582,6 +582,45 @@ Evidence (git-ignored): `artifacts/stage1/` — `av/` (logs and JSON per view), 
 `routing/` and `light-gate/` (gate), `batchA-final.log` (planar hashes). `av-round1..3` and `routing-round3` are
 earlier passes kept for the history above.
 
+### Rebased onto 0.1.0-beta.3 (2026-11-16)
+
+The work was rebased onto `origin/main` at `e091e09` (#31–#40) as commit `38235d3` and verified again. The tables above
+are from before the rebase; the rebased numbers are in `artifacts/rebase/tables-final.md`.
+
+Resolutions:
+
+- **Kernel solve (#37):** main's progress callback and work-budget diagnostics are kept; exact solids hide kernel edges
+  right after it.
+- **Duplicate resolution (#31):** main's witness-budget callback is kept, with the `!analytic.Any` condition added.
+- **`ClipCurve` (#37):** the face-count and work budgets are kept. The box-versus-plane skip runs before the work
+  counter, so a plane the curve cannot reach is not charged to the budget.
+- **Progress (#37):** the class reports its own step, `exact curved` (`ViewSteps.ExactCurved`), per candidate.
+- **Fast engine (#39):** nothing to change. The class does not read the engine setting; exact solids stay exact and
+  are not counted as fast sources.
+- **Local-frame sections (#40):** nothing to change. Clipped pieces come back in world coordinates and are recognised
+  there (test: a plan and an oblique section 400 km from the origin).
+- **Publication probe:** `TreeSources` gained a colours field in #36; the probe passes an empty map and
+  `--publication` runs again.
+- Four tests new on main used a sphere to stand for a body that reaches native (`RerunTests` ×3,
+  `UnitScaleRhinoTests`); they use ellipsoids now.
+
+Results on the rebased build: forced hook passed; Debug and Release 0 warnings; `Test-WalkingSkeleton.ps1` Core 383,
+UI 72, Rhino 292 (1 skipped) on .NET 8 and .NET 10; planar hashes identical to `origin/main` on 13 of 13 views; ray
+check 25,641 samples, 0 flagged on every view the class changes, including glass SW with clear glass (fixed by #34;
+448 right) and all eight perf-L views; the 153 flagged samples are on the views where nothing leaves HLD. Light gate
+(without `--publication`): **PASS, 219/219, 0 known bugs, 0 evidenced wrong-Visible**; 188 strict, 8 by the planar
+reference, 23 Info. The mixed certificates clear 56 and 92 tolerance-tie samples on perf-M blocks/exploded SW. The one
+Info case more than before the rebase, `mesh_terrain_brep_building` North, has no exact solid and its drawing is
+hash-identical to `origin/main`.
+
+| Model, view | Before s | After s | Native calls |
+|---|---:|---:|---|
+| space-frame Front / SW / Top | 12.0 / 65.5 / 31.2 | 2.1 / 2.1 / 1.7 | 1 → 0 |
+| round tower SW / Top | 1.45 / 1.61 | 0.53 / 0.17 | 1 → 0 |
+| perf-M SW / Top | 10.3 / 5.5 | 5.6 / 2.7 | 1 → 1 |
+| perf-L SW / North / Top | 42.3 / 16.3 / 24.4 | 21.4 / 9.7 / 18.4 | 1 → 1 |
+| glass SW, clear glass | 0.44 | 0.03 | 1 → 0 |
+
 ## Reproduce
 
 ```sh

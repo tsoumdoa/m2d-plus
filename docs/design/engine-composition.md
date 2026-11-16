@@ -98,6 +98,9 @@ mitre joint). Its chords are therefore refined until the parabola through each c
 eighth of the graze width (tolerance/2^16) of the curve, so the whole curve is seen on that boundary and gets one
 class, not one class per chord. A straight candidate seen end-on has no drawing and is not solved.
 
+The class reports its own progress step, `exact curved`. `engine = fast` does not touch it: fast only changes what
+still goes to native HLD.
+
 ## Contacts, coincident pieces and ownership
 
 Native Visible/Hidden curve records also receive an independent, deterministic
