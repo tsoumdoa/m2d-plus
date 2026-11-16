@@ -144,6 +144,7 @@ public sealed class ProgressModelTests
         Assert.Equal(ViewSteps.ExactLines, ViewSteps.Of("kernel solve"));
         Assert.Equal(ViewSteps.Sections, ViewSteps.Of("sections"));
         Assert.Equal(ViewSteps.Checking, ViewSteps.Of("native ray verification"));
+        Assert.Equal(ViewSteps.ExactCurved, ViewSteps.Of("exact curved"));
         Assert.Equal(ViewSteps.Output, ViewSteps.Of("output construction"));
         Assert.Null(ViewSteps.Of("normalisation"));
     }

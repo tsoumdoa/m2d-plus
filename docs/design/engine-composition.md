@@ -59,6 +59,53 @@ runs. A scene consisting entirely of kernel-eligible planar sources still makes 
 HLD calls and retains the same geometry/classes, including hidden evidence for min-visible
 presentation. Engine always keys visibility; hidden additionally keys it in fast mode.
 
+## Exact analytic solids (third class)
+
+`AnalyticVisibility` recognises a whole owned body as a sphere, a cylinder between two planes (solid or hollow)
+or an extruded arc (one cylindrical face between two rulings and two arcs). Recognition is strict and fails closed:
+every face on the expected surfaces at tolerance, only rims may be creases, every rim edge within tolerance of the
+exact rim, the caps must not meet inside the cylinder, and the volume (or area) must equal the closed form within
+1e-4. Directions are compared as distances over the body's extent, not as angles. Info names each refusal reason and,
+for a recognised solid kept on native HLD, a body that may hide it. It runs on the normalised world
+geometry, so placements, mirrors and scales need no special case: a squashed or sheared instance is no longer one
+of the shapes and is refused. Clipped route-C pieces and glass substitutes are recognised the same way, or not.
+`tangents = on` or `seams = on` turns the class off for the view (native then draws lines the class does not make).
+
+H(c) stays a union over all occluders. A recognised source S leaves HLD only when nothing is lost on either side:
+
+* **As an occluder.** S hides kernel edges (closed-form intervals on the straight edge, applied to the kernel result
+  before anything else reads it), native curves (cut on chords with a half-tolerance sideways margin, because a
+  native curve is only known to the native tolerance), points, and the candidates of other exact solids. Nothing in
+  HLD needs S.
+* **As a candidate.** S's own lines are its rims and its closed-form outlines. They are hidden by planar faces
+  (the existing curve/plane events and point predicate), by every recognised solid including S itself (exact), and
+  by native bodies, which only HLD knows. So S leaves **only if no unrecognised body can hide it**: none whose
+  view-frame box overlaps S's in the drawing and reaches in front of S's far side. Otherwise S stays in HLD whole,
+  as before; its exact solid is still used against the candidates of sources that did leave.
+
+A scene of planar and exact sources makes zero HLD calls. While any source has left, native Duplicate records are
+never dropped unseen (they go through duplicate resolution, as with planar faces), and the locus reconciliation runs.
+
+Conventions. In depth the tie rule holds: cover must extend more than a tolerance in front of the point; the
+decision has a window (tolerance/16 to tolerance/8 of cover beyond the tolerance) inside which the result is
+Unresolved. Sideways the solids are closed, like polygons in the planar kernel: a ray along an outline, in the plane
+of a cap seen edge-on or along a sheet's edge is covered, so nothing shows through the joint of two stacked members.
+Bores are open. An undecided run shorter than one tolerance between decided neighbours of different classes is a
+change point known to that accuracy and is shared between them (four tolerances on native curves). Between neighbours
+of one class it is not a change point: on a native curve it stays Unresolved, because behind a sliver narrower than
+the half-tolerance margin the whole hidden stretch is undecided; on an exact candidate it is a tie of at most a
+tolerance and goes to the neighbour. A Hidden curve that lies exactly under
+a Visible, Unresolved or earlier Hidden curve of this class is not drawn twice. Coordinates binary64 cannot resolve
+to tolerance/64 give Unresolved.
+
+A candidate of one exact solid often lies exactly on the boundary of another (the rims of stacked columns in plan, a
+mitre joint). Its chords are therefore refined until the parabola through each chord's ends and middle is within an
+eighth of the graze width (tolerance/2^16) of the curve, so the whole curve is seen on that boundary and gets one
+class, not one class per chord. A straight candidate seen end-on has no drawing and is not solved.
+
+The class reports its own progress step, `exact curved`. `engine = fast` does not touch it: fast only changes what
+still goes to native HLD.
+
 ## Contacts, coincident pieces and ownership
 
 Native Visible/Hidden curve records also receive an independent, deterministic

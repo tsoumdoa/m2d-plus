@@ -48,6 +48,50 @@ product is changed. It first solves the view through the product with observers,
 `spike_compare.py` prints locus and class agreement at several budgets. `PERFF_PROOF_SEGMENTS` and
 `PERFF_PROOF_QUERIES` raise the proof limits; `PERFF_NO_KINK=1` turns kink splitting off.
 
+## Curved engine prototype
+
+`ce:<view>` runs the curved-engine prototype ([findings](../../hillclimb/curved-engine/FINDINGS.md)); nothing in the
+product is changed. `ce-census` (in place of the view) classifies every source the product sends to native HLD, with no
+solve.
+
+```sh
+dotnet $EXE $R <model.3dm> <out> ce-census x                  # what the curved sources are made of
+dotnet $EXE $R <model.3dm> <out> ce:SW eps:30 eps:10          # prototype at 30 x and 10 x model tolerance
+dotnet $EXE $R <model.3dm> <out> ce:Front eps:10 t1off        # mesh tier only (no exact analytic solids)
+python tools/perf-f/ce_report.py <out folder>                 # markdown tables from every *-ce.json below it
+```
+
+It solves the view through the product for the native reference (shipped default, then raw native with the ray audit
+off), runs the prototype on exactly the inputs the product sent to native, compares classed loci both ways and
+adjudicates differences with direct ray/Brep intersections. `CurvedCore.cs` has no Rhino types.
+
+| Switch | Meaning |
+|---|---|
+| `eps:<k>` | Chord tolerance of the mesh tier, k x model tolerance. Several may be given. |
+| `t1off` | Disable the exact analytic solids (everything goes through meshes). |
+| `adjudicate:<n>` | Samples checked per disagreement group (default 250). |
+| `PERFF_CE_ONLY=<text>` | Keep only sources whose identity contains the text. |
+| `PERFF_CE_CHAIN=strict\|loose` | Own-face exemption rule (default: strict for edges, loose for silhouettes). |
+| `PERFF_CE_CAND=kink` | Split kinked faces before taking candidates. |
+| `PERFF_CE_RHINO_SILHOUETTES=1` | Use Rhino's silhouettes for exact solids too, not the closed-form outlines. |
+| `PERFF_CE_TRACE=0\|1` | Print why samples the ray check calls wrong were classified as they were (1 adds triangles). |
+
+## Stage 1 check of the exact analytic tier
+
+`av:<view>` checks the production analytic tier (`AnalyticVisibility`, Core `AnalyticSolids`). It solves the view
+through the product with the tier off and on, back to back on one prepared scene, reports time, native calls and class
+lengths, compares the two drawings as classed loci, and checks sampled points of the new drawing with direct ray/Brep
+intersections on the original sources (in a section the ray ends at the cut plane and a solid crossing the plane is
+capped there). Variants: `glass` (glass = clear), `samples:<n>` per group (default 300), `why` (list Unresolved pieces,
+lines that disappeared, and what blocks a flagged sample). `bodies` lists every source with its recognised shape or the
+refusal reason and, for Breps, each face's surface type.
+
+```sh
+dotnet $EXE $R <model.3dm> <out> av:SW
+dotnet $EXE $R <model.3dm> <out> "av:sidecar=Section transverse" why
+python tools/perf-f/av_report.py <out>                        # markdown tables from every *-av.json in the folder
+```
+
 ## Comparing against main
 
 The same sources build against a tree without the section-reuse internals:

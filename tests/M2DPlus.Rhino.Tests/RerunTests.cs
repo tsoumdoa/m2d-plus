@@ -16,7 +16,7 @@ namespace M2DPlus.Rhino.Tests;
 
 /// <summary>
 /// What re-runs the component (owner request 2026-11-15, UX §5.1): every document change is made to a running GH
-/// definition and the component's solves and native HLD calls are counted. Spheres force native HLD, so a visibility
+/// definition and the component's solves and native HLD calls are counted. Ellipsoids force native HLD (a sphere would be an exact analytic solid), so a visibility
 /// re-solve shows as HLD calls. Headless documents may raise no Rhino events, so after each edit the watch's snapshot
 /// check runs as well (it applies the same policy as the events).
 /// </summary>
@@ -54,7 +54,7 @@ public sealed class RerunTests(RhinoHost host, ITestOutputHelper output)
         var other = rhino.Layers.Add("Other", Color.Black);
         var empty = rhino.Layers.Add("Empty", Color.Black);
         Guid Sphere(Point3d centre, int layer)
-        { using var brep = new Sphere(centre, 1).ToBrep(); return rhino.Objects.AddBrep(brep, new ObjectAttributes { LayerIndex = layer }); }
+        { using var brep = Ellipsoid(centre, 1); return rhino.Objects.AddBrep(brep, new ObjectAttributes { LayerIndex = layer }); }
         var drawn = Sphere(new Point3d(0, 0, 1), walls);
         var otherId = Sphere(new Point3d(4, 0, 1), other);
         // A plan view box above the model, referenced on V.
@@ -126,7 +126,13 @@ public sealed class RerunTests(RhinoHost host, ITestOutputHelper output)
         var layer = doc.Layers[index]; layer.IsVisible = visible; doc.Layers.Modify(layer, index, true);
     }
     private static Guid AddSphere(RhinoDoc doc, Point3d centre, ObjectAttributes attributes)
-    { using var brep = new Sphere(centre, .5).ToBrep(); return doc.Objects.AddBrep(brep, attributes); }
+    { using var brep = Ellipsoid(centre, .5); return doc.Objects.AddBrep(brep, attributes); }
+    private static Brep Ellipsoid(Point3d centre, double radius)
+    {
+        using var surface = NurbsSurface.CreateFromSphere(new Sphere(centre, radius));
+        Assert.True(surface.Transform(Transform.Scale(new Plane(centre, Vector3d.XAxis, Vector3d.YAxis), 1, 1, 1.5)));
+        return surface.ToBrep();
+    }
 
     [RhinoFact] public void WithGeometryGivenVisibilityAndViewportChangesNeverReRun() => host.Run(() =>
     {

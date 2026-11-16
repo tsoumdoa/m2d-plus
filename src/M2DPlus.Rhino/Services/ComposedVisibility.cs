@@ -60,6 +60,9 @@ internal static class ComposedVisibility
                     for (int i = start; i < extraction.Edges.Count; i++) edgeInputs.Add(input);
                 else curved.Add(input);
             }
+            // Exact analytic solids leave `curved` (and so HLD) here; see AnalyticVisibility for the argument.
+            var analytic = AnalyticVisibility.Take(curved, plane, tol, view, settings, owned, token);
+            output._diagnostics.AddRange(analytic.Diagnostics);
             settings.ObservePlanarScene?.Invoke(extraction, plane);
             settings.ObserveKernelSources?.Invoke(edgeInputs.Select(i => i.Source.Identity).Distinct(StringComparer.Ordinal).ToArray());
             phase.Next("kernel solve");
@@ -72,11 +75,12 @@ internal static class ComposedVisibility
                     output._diagnostics.Add($"Kernel certificates: exact prepared faces={work.ExactFaces}; budget-limited candidates={work.BudgetEdges}.");
                 }
             }, token);
+            kernel = analytic.Occlude(kernel, extraction.Edges, token);
             phase.Next("composition setup");
             output._diagnostics.Add($"Kernel predicates: face tests={kernel.FaceTests}; exact fallbacks={kernel.ExactFallbacks}.");
             output._diagnostics.AddRange(kernel.Diagnostics);
             EdgeFaceKernel.PointQuery? query = null;
-            try { if (curved.Count != 0 || points.Count != 0) query = new(extraction.Faces, tol, token); }
+            try { if (curved.Count != 0 || points.Count != 0 || analytic.Any) query = new(extraction.Faces, tol, token); }
             catch (ArithmeticException ex) { output._diagnostics.Add(ex.Message); }
             var kernelByEdge = kernel.Intervals.GroupBy(i => i.Edge).ToDictionary(g => g.Key, g => g.ToArray());
             var native = curved.Select(i => new Tag(i)).ToList();
@@ -163,7 +167,7 @@ internal static class ComposedVisibility
                     if (visibility == HiddenLineDrawingSegment.Visibility.Duplicate)
                     {
                         output.DuplicateSegments++;
-                        if (extraction.Faces.Count == 0 && tag.Edge < 0) continue;
+                        if (extraction.Faces.Count == 0 && !analytic.Any && tag.Edge < 0) continue;
                     }
                     var world = proxy.DuplicateCurve(); world.EnsurePrivateCopy(); world.Transform(inverse); owned.Add(world);
                     records.Add(new(world, tag, kind, segment.IsSceneSilhouette, visibility == HiddenLineDrawingSegment.Visibility.Duplicate));
@@ -222,7 +226,7 @@ internal static class ComposedVisibility
                         retained.Add(new(world,new(edgeInputs[support.Edge],support.Edge),LineClass.Hidden,extraction.Profiles[support.Edge],false));
                     }
                 }
-                foreach (var record in extraction.Edges.Count == 0 && extraction.Faces.Count == 0 ? records : ResolveDuplicates(records, plane, tol, owned, token,retained,
+                foreach (var record in extraction.Edges.Count == 0 && extraction.Faces.Count == 0 && !analytic.Any ? records : ResolveDuplicates(records, plane, tol, owned, token,retained,
                     () => output._diagnostics.Add("Duplicate certificate witness budget exceeded; candidate retained as Unresolved.")))
                 {
                     var tag = record.Tag; var world = record.World;
@@ -251,7 +255,7 @@ internal static class ComposedVisibility
                     if (point.SourceObject?.Tag is not Tag tag) { output.RoutingQuarantine = true; output.RoutingInvalid++; continue; }
                     handledPoints.Add(tag.Input);
                     var world = point.Location; world.Transform(inverse);
-                    var k = query?.Classify(Project(world), token) ?? VisibilityClass.Unresolved;
+                    var k = analytic.Point(world, query?.Classify(Project(world), token) ?? VisibilityClass.Unresolved);
                     if (point.PointVisibility == HiddenLineDrawingPoint.Visibility.Hidden || k == VisibilityClass.Hidden) { output.HiddenPoints++; continue; }
                     if (point.PointVisibility != HiddenLineDrawingPoint.Visibility.Visible || k == VisibilityClass.Unresolved)
                     { output.RoutingInvalid++; output._diagnostics.Add($"Uncertain point suppressed: {tag.Input.Source.Identity}"); continue; }
@@ -294,6 +298,12 @@ internal static class ComposedVisibility
                     Emit(ends[j - 1], ends[j], c);
                 }
             }
+            if (analytic.Any)
+            {   // Its own step: on a scene of tubes this is most of the view's time.
+                phase.Next("exact curved");
+                analytic.Append(nativeCurves, owned, token);
+                phase.Next("output construction");
+            }
             foreach (var c in nativeCurves)
             {
                 token.ThrowIfCancellationRequested();
@@ -315,7 +325,7 @@ internal static class ComposedVisibility
                 // Missing records from a submitted native point are uncertainty, not visible.
                 if (native.Any(t => t.Input == p)) { output.RoutingInvalid++; continue; }
                 var world = ((Point)p.Geometry).Location;
-                var k = query?.Classify(Project(world), token) ?? VisibilityClass.Unresolved;
+                var k = analytic.Point(world, query?.Classify(Project(world), token) ?? VisibilityClass.Unresolved);
                 if (k == VisibilityClass.Hidden) output.HiddenPoints++;
                 else if (k == VisibilityClass.Visible) output.Pieces.Add(new(new Point(plane.ClosestPoint(world)), p.Source, LineClass.Visible, new Point(world)));
                 else { output.RoutingInvalid++; output._diagnostics.Add($"Kernel cannot decide point {p.Source.Identity}"); }
@@ -327,8 +337,8 @@ internal static class ComposedVisibility
                 NativeUncertainty.ApplyFootprints(output, inputs.Select(i => i.Source).ToArray(), false, [], localUnsetRegions, tol, token,
                     localSources: localUnsetSources, verificationInputs: inputs);
             phase.Next("interval union");
-            if (extraction.Edges.Count != 0 || extraction.Faces.Count != 0) Reconcile(output, inputs, token);
-            return $"{(curved.Count == 0 ? "Planar kernel" : "Planar kernel + curved native HLD")}; kernel edges={output.KernelEdges}; native candidates={output.NativeEdges}; planar edges submitted={nativeEdges.Count}; curved candidate edges={output.CurvedCandidateEdges}; native fragments={output.NativeFragments}; native calls={output.NativeCalls}";
+            if (extraction.Edges.Count != 0 || extraction.Faces.Count != 0 || analytic.Any) Reconcile(output, inputs, token);
+            return $"{(curved.Count == 0 ? "Planar kernel" : "Planar kernel + curved native HLD")}{analytic.Route}; kernel edges={output.KernelEdges}; native candidates={output.NativeEdges}; planar edges submitted={nativeEdges.Count}; curved candidate edges={output.CurvedCandidateEdges}; native fragments={output.NativeFragments}; native calls={output.NativeCalls}";
         }
         finally { foreach (var g in owned) g.Dispose(); }
     }
@@ -582,6 +592,7 @@ internal static class ComposedVisibility
         var ids = query?.OverlappingFaces(bounds.Min.X, bounds.Min.Y, bounds.Max.X, bounds.Max.Y) ?? Enumerable.Range(0, faces.Count).ToArray();
         if (ids.Count > 4096) { budgetExceeded?.Invoke(); yield return (world.DuplicateCurve(),LineClass.Unresolved); yield break; }
         int work = 0; bool exhausted = false;
+        var corners = bounds.GetCorners();
         foreach (int fi in ids)
         {
             var face = faces[fi];
@@ -596,8 +607,13 @@ internal static class ComposedVisibility
             void Events(Plane boundary)
             {
                 token.ThrowIfCancellationRequested();
-                if (++work > 8192 || ends.Count > 16384) { exhausted = true; return; }
                 if (!boundary.IsValid) { failed = true; return; }
+                // A plane that the curve's box stays clear of by more than two tolerances cannot cut the curve; it
+                // costs no intersection and is not counted against the work budget.
+                double low = double.MaxValue, high = double.MinValue;
+                foreach (var corner in corners) { double d = boundary.DistanceTo(corner); low = Math.Min(low, d); high = Math.Max(high, d); }
+                if (low > 2 * tolerance || high < -2 * tolerance) return;
+                if (++work > 8192 || ends.Count > 16384) { exhausted = true; return; }
                 using var hits = Intersection.CurvePlane(local, boundary, tolerance);
                 if (hits is null) return; // RhinoCommon contract: no intersections recorded.
                 foreach (var hit in hits)

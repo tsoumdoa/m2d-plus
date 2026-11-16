@@ -215,9 +215,19 @@ public static partial class CompositionGate
         if (view.Cut is null && !File.Exists(prefix + ".native-order.json"))
             Observe(".native-order.json", false)(VisibilityInputOrder.Canonical(lease.Value.Prepare(default).Select(s => new VisibilityInput(s.Geometry,s)), i=>i));
         timer.Restart();
+        // Exact analytic solids are curved occluders too, though no longer native inputs: without their bounds the
+        // reference would call a kernel edge behind a round column "outside every curved-occluder bound", so Visible.
+        // The frame is taken from the solids' own observation order: bounds are added once the frame is known.
+        var exactSolids = new List<GeometryBase>();
         using var batch = NativeDrawing.SolveBorrowedAsync(lease.Value, identity, [view], new NativeSettings { Scheduler = scheduler, ObserveNativeInputs = Observe(".routed-order.json", true), ObserveKernelSources = ids => kernelSourceIds.UnionWith(ids),
+            ObserveExactSolids = inputs => { lock (exactSolids) exactSolids.AddRange(inputs.Select(i => i.Geometry.Duplicate())); },
             ObservePlanarScene = (extraction, plane) => { observedScene = extraction; observedFrame = plane; },
             ObserveCompositionRecord = (source,edge,duplicate,kind,world) => nativeTrace.Add(source,edge,duplicate,kind,world) }, default, null).GetAwaiter().GetResult();
+        foreach (var solid in exactSolids)
+        {
+            if (observedFrame.IsValid) curvedBounds.Add(solid.GetBoundingBox(Transform.PlaneToPlane(observedFrame,Plane.WorldXY)));
+            solid.Dispose();
+        }
         using var placed = DrawingPresentation.ApplySnapshot(batch, identity, [view], [], lease.Value.SourceMetadata);
         publication?.Publish(placed,capture.Groups,capture.Colours);
         double solveSeconds = timer.Elapsed.TotalSeconds;
