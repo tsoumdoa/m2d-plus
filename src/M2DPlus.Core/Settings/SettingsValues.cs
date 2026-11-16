@@ -9,16 +9,20 @@ public static partial class Settings
 {
     public const bool DefaultHidden = true;
     public static ImmutableArray<string> Keys { get; } = ["depth", "farclip", "beyond", "fade", "fade.start", "fade.end",
-        "fade.limit", "crop", "hidden", "tangents", "seams", "glass", "scale", "weights", "hatch", "cuts", "gap", "name", "tree", "tolerance", "min_visible", "engine"];
+        "fade.limit", "crop", "hidden", "tangents", "seams", "glass", "scale", "weights", "hatch", "cuts", "gap", "name", "tree", "tolerance", "min_visible", "engine", "cutonly"];
 
     /// <summary>The keys that change what the visibility solve computes, and so key the drawing cache (UX §12.14).
     /// Hidden is additionally keyed in fast mode by <see cref="EffectiveSettings.VisibilityKey"/>.
     /// Min-visible and styling remain presentation over the cached solve.</summary>
-    public static ImmutableArray<string> VisibilityKeys { get; } = ["depth", "farclip", "crop", "tangents", "seams", "glass", "tolerance", "engine"];
+    public static ImmutableArray<string> VisibilityKeys { get; } = ["depth", "farclip", "crop", "tangents", "seams", "glass", "tolerance", "engine", "cutonly"];
 
     /// <summary>Canonical key spelling: lower case, runs of spaces as one underscore, so <c>min visible</c>,
     /// <c>Min_Visible</c> and the user-text key <c>m2d.min_visible</c> all name <c>min_visible</c>.</summary>
-    public static string NormalizeKey(string key) => WhitespaceRun().Replace(key.Trim().ToLowerInvariant(), "_");
+    public static string NormalizeKey(string key)
+    {
+        var normalized = WhitespaceRun().Replace(key.Trim().ToLowerInvariant(), "_");
+        return normalized == "cut_only" ? "cutonly" : normalized;
+    }
 
     [System.Text.RegularExpressions.GeneratedRegex(@"\s+")]
     private static partial System.Text.RegularExpressions.Regex WhitespaceRun();
@@ -70,7 +74,7 @@ public static partial class Settings
                 var scale = Number(scaleText);
                 if (scale <= 0) throw new FormatException("Scale denominator must be positive.");
                 return scale;
-            case "fade": case "hidden": case "tangents": case "seams":
+            case "fade": case "hidden": case "tangents": case "seams": case "cutonly":
                 return value switch { "on" or "true" or "yes" or "1" => true, "off" or "false" or "no" or "0" => false,
                     _ => throw new FormatException(Suggest(value, ["on", "off", "true", "false", "yes", "no", "1", "0"])) };
             case "farclip": return Choice(value, ("none", FarClipMode.None), ("line", FarClipMode.Line), ("noline", FarClipMode.NoLine));
@@ -134,7 +138,7 @@ public static partial class Settings
     private static object DefaultValue(string key, ViewSettingsContext view) => key switch
     {
         "depth" or "beyond" or "gap" => DistanceSetting.Auto,
-        "farclip" => FarClipMode.NoLine, "fade" or "tangents" or "seams" => false, "hidden" => DefaultHidden,
+        "farclip" => FarClipMode.NoLine, "fade" or "tangents" or "seams" or "cutonly" => false, "hidden" => DefaultHidden,
         "fade.start" => 0d, "fade.end" => 100d, "fade.limit" => 30d, "crop" => CropMode.Auto,
         "glass" => GlassMode.Opaque, "scale" => 100d, "weights" => WeightMode.Auto, "hatch" => HatchMode.Styles,
         "cuts" => CutMode.Separate, "name" => "auto", "tree" => OutputTreeMode.Auto, "tolerance" => view.DocumentTolerance,

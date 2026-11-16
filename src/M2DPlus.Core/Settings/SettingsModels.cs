@@ -85,6 +85,7 @@ public sealed class EffectiveSettings
     public double Depth => Get<double>("depth");
     public double? Beyond => (double?)Values["beyond"].Value;
     public FarClipMode FarClip => Get<FarClipMode>("farclip");
+    public bool CutOnly => Get<bool>("cutonly");
     public bool Fade => Get<bool>("fade");
     public double FadeStart => Get<double>("fade.start");
     public double FadeEnd => Get<double>("fade.end");

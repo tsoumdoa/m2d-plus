@@ -28,6 +28,7 @@ internal static class Program
             var resolver=Assembly.LoadFrom(args[1]);resolver.GetType("RhinoInside.Resolver",true)!.GetMethod("Initialize",[typeof(string)])!.Invoke(null,["C:/Program Files/Rhino 8/System"]);
             if(args[0]=="hld"){NativeHldBench.Run(args[2],args[3],args[4]);return 0;}
             if(args[0]=="engine"){EngineFastBench.Run(args[2],args[3],args.Length>4?args[4]:"curved");return 0;}
+            if(args[0]=="cutonly"){CutOnlyBench.Run(args[2],args[3],args.Length>4?args[4]:"building");return 0;}
             if(args[0]=="offset"){OffsetBench.Run(args[2],args.Length>3?args[3]:"probe");return 0;}
             if(args[0]=="scale"){ScaleBench.Run(args[2],args[3],args.Length>4?args[4]:"5");return 0;}
             if(args[0]=="compare-drawings"){ScaleBench.Compare(args[2],args[3],args[4]);return 0;}

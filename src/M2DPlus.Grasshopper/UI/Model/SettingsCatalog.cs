@@ -24,6 +24,7 @@ public static class SettingsCatalog
         new("depth", "Depth", ViewRange, FieldKind.Distance, [O("auto", "Auto")], "depth = auto | <distance>: the far plane, measured from the view plane. Auto: box height, clipping-plane depth, else the scene extent."),
         new("beyond", "Beyond", ViewRange, FieldKind.Distance, [O("auto", "Auto"), O("off", "Off"), O("1 m", "1 m"), O("3 m", "3 m"), O("10 m", "10 m")], "beyond = auto | off | <distance>: visible lines farther than this go to Beyond. Auto: 3 m in cut views, off otherwise."),
         new("farclip", "Far clip", ViewRange, FieldKind.Choice, [O("none", "No clip"), O("line", "Clip with line"), O("noline", "Clip without line")], "farclip = none | line | noline"),
+        new("cutonly", "Cut only", ViewRange, FieldKind.Toggle, OnOff, "cutonly = on | off: section outlines and fills only; skip projection beyond the cut. Views that cut nothing give Frame and Info only."),
         new("crop", "Crop", ViewRange, FieldKind.Choice, [O("auto", "Auto"), O("off", "Off")], "crop = auto | off: off turns off a named view's crop. Rectangles and boxes always crop."),
         new("fade", "Fade with distance", ViewRange, FieldKind.Toggle, OnOff, "fade = on | off (Revit's depth cueing)"),
         new("fade.start", "Start", ViewRange, FieldKind.Percent, [], "fade.start = 0–100 %: nearer lines keep full intensity."),

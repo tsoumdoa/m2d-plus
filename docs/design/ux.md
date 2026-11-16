@@ -407,6 +407,7 @@ frame rectangle and that reaches behind the frame plane (what is in front of the
 | `m2d.view` | `1` (marker and format version) | `1` |
 | `m2d.name` | drawing name (bake layer); `default` = the object's name | `default` |
 | `m2d.farclip` | `none` · `line` · `noline` | `default` |
+| `m2d.cutonly` | `on` · `off` (§3.2) | `default` |
 | `m2d.beyond` | `auto` · `off` · distance | `default` |
 | `m2d.fade` | `on` · `off` | `default` |
 | `m2d.fade.start` / `m2d.fade.end` / `m2d.fade.limit` | 0–100 % | `default` |
@@ -480,6 +481,14 @@ Every view has a **view volume**: the view plane, the crop extent, and a far pla
 All distances are measured **along the view direction from the view plane**: from the cut plane for a section or
 plan, from the rectangle or plane even when it cuts nothing, and from the front of the scene for named views,
 directions and vectors.
+
+**Cut only** (owner, 2026-11-16, beta.4): `cutonly = on` (`cut only` is accepted too; default `off`)
+keeps Cut outlines/regions, Hatch, Frame and Info, plus cut-related Unresolved and refused-cut markers.
+Visible, Hidden, Beyond and Far clip are empty. It skips projection beyond the cut entirely: no native HLD,
+planar visibility solve or verifier. Section stability certificates, validation, region construction, crop and merge
+stay unchanged (§3.7). An elevation, axo or frame that cuts nothing gives Frame and Info only and a component
+**remark**: `Cut only: this view cuts nothing`. It is a visibility key, so changing it re-solves; turning it off
+restores the normal drawing. Settings, `m2d.cutonly` and the menu follow normal precedence, including on workers.
 
 ```
  viewer   view plane (cut)       beyond             fade start          fade end      depth (far clip plane)
@@ -936,6 +945,9 @@ Unknown keys and bad values are warnings that suggest the closest match ("Unknow
 
 ### 5.4 Info (one per view)
 
+With `cutonly = on`, Info says `Cut only: projection beyond the cut skipped`. While drawing, the footer step
+is `sections`; no exact-lines, hidden-lines or checking step runs. The separate output stage remains as usual.
+
 Info states `Engine: exact`, or, when fast used native HLD:
 
 ```text
@@ -1029,6 +1041,7 @@ fade.limit = 25 %
 | **View range** | | | | | |
 | `depth` | `auto` · distance | `auto`: clipping plane *Depth*, else scene extent. Box / view box: always its length | distance from the view plane | View Depth (plan) / Far Clip Offset | **Depth input**, the view box itself |
 | `farclip` | `none` · `line` · `noline` | `noline` | — | Far Clipping: No clip / Clip with line / Clip without line | view object, menu |
+| `cutonly` (`cut only`) | `on` · `off` | `off` | — | — | view object (`m2d.cutonly`), menu |
 | `beyond` | `auto` · `off` · distance | `auto` (3 m in cut views, off otherwise) | distance from the view plane | View range *Bottom* → `<Beyond>` line style | view object, menu |
 | `fade` | `on` · `off` | `off` | — | Depth Cueing | view object, menu |
 | `fade.start` | 0–100 | `0 %` | % of depth | Depth Cueing *Start* | view object |
@@ -1082,6 +1095,7 @@ Seams                                 seams    = off | on
 Min visible ▸ Off ✓ · 1 mm · 2 mm · 5 mm · 10 mm      min_visible = off | <length>   (§3.9)
 Beyond ▸     Auto ✓ · Off · 1 m · 3 m · 10 m          beyond  = auto | off | <distance>
 Far clip ▸   No clip · Clip with line · Clip without line ✓   farclip = none | line | noline
+Cut only                              cutonly  = off | on
 Depth cueing                          fade     = off | on   (start/end/limit: m2d.fade.* or text)
 Cuts ▸       Separate per object ✓ · Merge touching (same style)   cuts = separate | merge
 Hatch ▸      From section styles ✓ · Object colour · Black · None   hatch = styles | colour | black | none
@@ -1328,7 +1342,7 @@ new in revision 3** and follow from the two decisions.
 13. **Unit-aware defaults:** the document tolerance and angle tolerance, and metre defaults (3 m beyond) converted to document units.
 14. **Settings-independent caching:** depth cueing, line weights (`scale`, `weights`), fill colours and the `hatch` override are
     styling only and must not invalidate the drawing cache. Neither does `min visible` (§3.9). Exact also treats
-    `hidden` as presentation. Visibility keys are `depth`, `farclip`, `crop`, `tangents`, `seams`, `glass`, `tolerance`
+    `hidden` as presentation. Visibility keys are `depth`, `farclip`, `crop`, `tangents`, `seams`, `glass`, `tolerance`, `cutonly`
     and `engine` (`Settings.VisibilityKeys`); `EffectiveSettings.VisibilityKey()` additionally includes hidden in
     fast mode. `beyond` and `cuts` are applied over the cached solve too. Engine changes always invalidate
     visibility even if the resulting planar-only drawing is geometrically identical.

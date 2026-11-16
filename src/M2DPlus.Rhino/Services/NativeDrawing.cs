@@ -98,6 +98,7 @@ public sealed class ViewDrawing : IDisposable
         : "Engine: exact";
     public string Info => $"{Name}: {(Error ?? "finished")} · {Seconds:F3} s\n" +
         EngineSummary + "\n" +
+        (Settings?.CutOnly == true ? "Cut only: projection beyond the cut skipped\n" : "") +
         $"{Report.Route}; deterministic={!MultipleThreads}; tolerance={Tolerance:R}; validation: {Report.ValidationDomain}\n" +
         $"Visible={Pieces.Count(p => p.Class == LineClass.Visible)}, hidden={Pieces.Count(p => p.Class == LineClass.Hidden)}, unresolved={Report.UncertainCount}, hidden points={HiddenPoints}; " +
         $"invalid extraction={Report.InvalidExtractionCount}; duplicate={DuplicateSegments}; projecting={ProjectingSegments}; empty slots={EmptyNativeSlots}; zero length={ZeroLengthNativeSegments}; quarantined={Report.Quarantined}\n" +
@@ -265,6 +266,13 @@ public static class NativeDrawing
         {
             if (view.Error is not null) { result.Error = view.Error; return result; }
             result.Frame = view.Resolve(scene.Bounds, tolerance);
+            if (view.Settings?.CutOnly == true)
+            {
+                ReportPhase("sections");
+                route = "sections";
+                result._diagnostics.Add(ViewNotices.CutOnlyEmpty);
+                return result;
+            }
             result._diagnostics.Add($"Admission: {scene.Cost.GeometryBytes} geometry bytes; {scene.Cost.BrepFaces} faces; {scene.Cost.MeshTriangles} triangles; {scene.SourceCount} sources. Native threading follows the per-view engine setting (serial global scheduler).");
             if (sources.Count == 0) return result;
             if (!settings.NativeOnly && sources.Any(s => !ReferenceEquals(s.Geometry,s.KernelClassifiedGeometry) || s.KernelTolerance != tolerance || s.KernelEligible))

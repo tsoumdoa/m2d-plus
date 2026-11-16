@@ -43,7 +43,7 @@ public static class ViewBoxes
     /// <summary>Per-view settings written as user text, in Settings-key order (UX §6.3). Depth and crop come from the
     /// geometry; tree, gap and tolerance are rarely per-view, so they are not written (but m2d.tree, m2d.gap and
     /// m2d.tolerance are read).</summary>
-    public static ImmutableArray<string> Keys { get; } = ["name", "farclip", "beyond", "fade", "fade.start", "fade.end", "fade.limit",
+    public static ImmutableArray<string> Keys { get; } = ["name", "farclip", "cutonly", "beyond", "fade", "fade.start", "fade.end", "fade.limit",
         "hidden", "engine", "tangents", "seams", "glass", "scale", "weights", "hatch", "cuts", "min_visible"];
 
     public static bool IsViewBox(RhinoObject? obj) => obj?.Attributes.GetUserString(Marker) is not null;
