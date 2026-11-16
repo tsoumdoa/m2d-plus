@@ -92,6 +92,7 @@ public static class ComponentMenu
         if (context.Runtime.Phase == DrawingPhase.Running) items.Add(new("Cancel", MenuCommands.Cancel, Hint: "Esc"));
         items.Add(MenuNode.Separator);
         items.Add(Toggle(settings, "Hidden lines", "hidden"));
+        items.Add(Choice(settings, "Engine", "engine") with { Tooltip = SettingsCatalog.Spec("engine").Tooltip });
         items.Add(Toggle(settings, "Tangent edges", "tangents"));
         items.Add(Toggle(settings, "Seams", "seams"));
         items.Add(Choice(settings, "Min visible", "min_visible") with { Tooltip = SettingsCatalog.Spec("min_visible").Tooltip });

@@ -42,7 +42,7 @@ public static class ViewBoxes
     /// geometry; tree, gap and tolerance are rarely per-view, so they are not written (but m2d.tree, m2d.gap and
     /// m2d.tolerance are read).</summary>
     public static ImmutableArray<string> Keys { get; } = ["name", "farclip", "beyond", "fade", "fade.start", "fade.end", "fade.limit",
-        "hidden", "tangents", "seams", "glass", "scale", "weights", "hatch", "cuts", "min_visible"];
+        "hidden", "engine", "tangents", "seams", "glass", "scale", "weights", "hatch", "cuts", "min_visible"];
 
     public static bool IsViewBox(RhinoObject? obj) => obj?.Attributes.GetUserString(Marker) is not null;
 

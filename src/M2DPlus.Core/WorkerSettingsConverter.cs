@@ -12,7 +12,7 @@ public sealed class WorkerSettingsConverter : JsonConverter<EffectiveSettings>
     private sealed record Entry(Value Effective, Value Authored, string Text, SettingSource Source, SettingSource AssignedBy);
     private sealed record Snapshot(ViewSettingsContext View, Dictionary<string, Entry> Values);
     private static readonly Type[] Types = [typeof(string), typeof(bool), typeof(double), typeof(DistanceSetting),
-        typeof(FarClipMode), typeof(CropMode), typeof(GlassMode), typeof(WeightMode), typeof(HatchMode), typeof(CutMode), typeof(OutputTreeMode)];
+        typeof(FarClipMode), typeof(CropMode), typeof(GlassMode), typeof(WeightMode), typeof(HatchMode), typeof(CutMode), typeof(OutputTreeMode), typeof(EngineMode)];
     private static Value Pack(object? value) => new(value?.GetType().Name ?? "null", JsonSerializer.SerializeToElement(value, value?.GetType() ?? typeof(object)));
     private static object? Unpack(Value value)
     {

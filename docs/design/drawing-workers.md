@@ -4,11 +4,18 @@ Implemented 2026-11-15. This replaces the M0 worker identity-only executable. It
 
 ## Boundary and ownership
 
-`DrawingCache` routes a visibility cache miss through `DrawingExecution`; presentation and target placement still run on the receiving side. `NativeDrawing` remains the explicit in-process entry point for correctness harnesses. Workers invoke that same adapter, including SectionDrawing and ComposedVisibility, with native multipleThreads disabled. Each process has one serial, budgeted native scheduler.
+`DrawingCache` routes a visibility cache miss through `DrawingExecution`; presentation and target placement still run on the receiving side. `NativeDrawing` remains the explicit in-process entry point for correctness harnesses. Workers invoke that same adapter, including SectionDrawing and ComposedVisibility. Default exact mode disables native multipleThreads; opt-in fast mode enables it only at native calls and follows the view's hidden-generation setting. Each process still has one serial, budgeted native scheduler.
 
 The host encodes only an already-owned PreparedScene. Definition geometry is serialized once per content key using Rhino's own JSON/binary archive (Rhino 8, user data included); source identities, paths, styles, transparency, scoped-clipping IDs and exact transform chains accompany it. The receiver reconstructs leases and runs the ordinary preparation code, preserving section canonicalization and mirrored-instance semantics. No RhinoDoc, live object, viewport, GH wrapper or document table crosses this boundary. Scenes are sent once per participating process and retained by scene revision; warm solves avoid even re-encoding an unchanged scene. One scene is retained per process.
 
 Results contain independent Rhino geometry archives, depth geometry, every source/path/class/profile value, section loops and edge provenance, aligned hatches and resolved styles, quality and extraction counters. Order is preserved. Settings values use an explicit type whitelist and sorted keys, with their effective/authored values and provenance preserved. The stable result comparison includes all serialized geometry, settings and quality; it excludes wall/phase timings and diagnostic prose, which necessarily differ between processes. No rounding, locus canonicalization or tolerance-based repair is used for this byte comparison.
+
+Owner decision 2026-11-16: `engine` crosses the settings whitelist and `FastNativeSources` crosses the drawing
+codec/presentation boundary. The strict repeat/worker equality gate is **exact mode only**; its tests explicitly
+request `engine=exact`. Threaded fast native output may differ between solves or worker counts, so its tests verify
+policy, progress, disclosure and lossless transport of a single result without promising repeat byte identity.
+The default remains exact. A planar-only exact/fast comparison normalizes the authored engine setting only and
+compares every output geometry/class/quality/routing field byte-for-byte; native calls must remain zero.
 
 ## Protocol and containment
 
@@ -66,7 +73,7 @@ Fake-machine unit-tested policy outputs at **75% of physical RAM available** and
 | Manual-bootstrap scheduler fallback | Server has a 4 GiB fallback only when its private budget variable is absent. Production always passes the resolved cap; this is not an additional production limit |
 | Preparation-cache retention | Existing host 128 MiB LRU retained; oversize/live scene leases stay usable, and this is not worker admission or the worker scene lifetime |
 | Confirm owned process death | 10 s retained; never replace a slot whose process death is unconfirmed |
-| Native scheduling | One serial native slot per process; one shared host batch reservation; native multithreading off |
+| Native scheduling | One serial native slot per process; one shared host batch reservation; native multithreading off in exact, on at native calls in opt-in fast |
 | Kernel managed threads | Existing maximum 8 per view retained to bound per-view temporary work, further limited by each worker's processor allowance. Aggregate concurrency grows through workers; this round measures face preparation rather than assuming more edge threads help |
 | Memory retry | Exactly once, alone, after original workers exit; larger cap only within fresh budget |
 

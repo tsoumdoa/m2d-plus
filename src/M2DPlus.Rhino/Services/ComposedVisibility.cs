@@ -111,7 +111,8 @@ internal static class ComposedVisibility
                 var bounds = sceneBounds ?? BoundingBox.Empty;
                 if (sceneBounds is null) foreach (var i in inputs) bounds.Union(i.Geometry.GetBoundingBox(true));
                 NativeViewport.Configure(viewport,output.Frame,view.Direction,bounds,tol);
-                var parameters = new HiddenLineDrawingParameters { AbsoluteTolerance = tol, Flatten = false, IncludeHiddenCurves = true,
+                var nativeOptions = NativeHldOptions.For(view, settings);
+                var parameters = new HiddenLineDrawingParameters { AbsoluteTolerance = tol, Flatten = false, IncludeHiddenCurves = nativeOptions.IncludeHiddenCurves,
                     IncludeTangentEdges = view.Settings?.Tangents ?? false, IncludeTangentSeams = view.Settings?.Seams ?? false };
                 parameters.SetViewport(viewport);
                 foreach (var tag in VisibilityInputOrder.Native(native, t => t.Input with { KernelCandidate = t.Edge >= 0 }, settings))
@@ -121,7 +122,8 @@ internal static class ComposedVisibility
                 }
                 NativeDrawing.CountHld(); output.NativeCalls++;
                 phase.Next("native solve");
-                using var drawing = HiddenLineDrawing.Compute(parameters, settings.MultipleThreads, NativeDrawing.HldProgress, token);
+                nativeOptions.Begin(output, native.Select(t => t.Input), settings);
+                using var drawing = HiddenLineDrawing.Compute(parameters, nativeOptions.MultipleThreads, NativeDrawing.HldProgress, token);
                 phase.Next("native extraction and duplicates");
                 token.ThrowIfCancellationRequested();
                 if (drawing is null || !drawing.WorldToHiddenLine.TryGetInverse(out var inverse)) throw new InvalidOperationException("Composition HLD failed");

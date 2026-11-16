@@ -9,12 +9,12 @@ public static partial class Settings
 {
     public const bool DefaultHidden = true;
     public static ImmutableArray<string> Keys { get; } = ["depth", "farclip", "beyond", "fade", "fade.start", "fade.end",
-        "fade.limit", "crop", "hidden", "tangents", "seams", "glass", "scale", "weights", "hatch", "cuts", "gap", "name", "tree", "tolerance", "min_visible"];
+        "fade.limit", "crop", "hidden", "tangents", "seams", "glass", "scale", "weights", "hatch", "cuts", "gap", "name", "tree", "tolerance", "min_visible", "engine"];
 
     /// <summary>The keys that change what the visibility solve computes, and so key the drawing cache (UX §12.14).
-    /// Every other key, including <c>hidden</c> and <c>min_visible</c>, is presentation over a cached solve and
-    /// never re-runs visibility. The solve always keeps hidden lines (<see cref="EffectiveSettings.ForVisibilitySolve"/>).</summary>
-    public static ImmutableArray<string> VisibilityKeys { get; } = ["depth", "farclip", "crop", "tangents", "seams", "glass", "tolerance"];
+    /// Hidden is additionally keyed in fast mode by <see cref="EffectiveSettings.VisibilityKey"/>.
+    /// Min-visible and styling remain presentation over the cached solve.</summary>
+    public static ImmutableArray<string> VisibilityKeys { get; } = ["depth", "farclip", "crop", "tangents", "seams", "glass", "tolerance", "engine"];
 
     /// <summary>Canonical key spelling: lower case, runs of spaces as one underscore, so <c>min visible</c>,
     /// <c>Min_Visible</c> and the user-text key <c>m2d.min_visible</c> all name <c>min_visible</c>.</summary>
@@ -76,6 +76,7 @@ public static partial class Settings
             case "farclip": return Choice(value, ("none", FarClipMode.None), ("line", FarClipMode.Line), ("noline", FarClipMode.NoLine));
             case "crop": return Choice(value, ("auto", CropMode.Auto), ("off", CropMode.Off));
             case "glass": return Choice(value, ("opaque", GlassMode.Opaque), ("clear", GlassMode.Clear));
+            case "engine": return Choice(value, ("exact", EngineMode.Exact), ("fast", EngineMode.Fast));
             case "weights": return Choice(value, ("auto", WeightMode.Auto), ("layers", WeightMode.Layers));
             case "hatch": return Choice(value, ("styles", HatchMode.Styles), ("colour", HatchMode.Colour), ("black", HatchMode.Black), ("none", HatchMode.None));
             case "cuts": return Choice(value, ("separate", CutMode.Separate), ("merge", CutMode.Merge));
@@ -137,7 +138,7 @@ public static partial class Settings
         "fade.start" => 0d, "fade.end" => 100d, "fade.limit" => 30d, "crop" => CropMode.Auto,
         "glass" => GlassMode.Opaque, "scale" => 100d, "weights" => WeightMode.Auto, "hatch" => HatchMode.Styles,
         "cuts" => CutMode.Separate, "name" => "auto", "tree" => OutputTreeMode.Auto, "tolerance" => view.DocumentTolerance,
-        "min_visible" => 0d,
+        "min_visible" => 0d, "engine" => EngineMode.Exact,
         _ => throw new ArgumentException("Unknown key.", nameof(key))
     };
 }

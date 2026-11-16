@@ -92,7 +92,7 @@ See [UX revision 4](design/ux.md) §2.2 and §6.
 
 - **Engine pivot (conditional on the A2 native locus validation passing):** our own exact visibility kernel becomes the core engine. It handles planes now and analytic cylinders next. Rhino's native HiddenLineDrawing is kept only for true freeform. The worker, disk cache and tiling work in M4/M5 shrink accordingly; tiling is dropped (S3: no equivalence).
 - **Live view boxes:** build them on Fable's "scrub stack": one solve per view direction, after which every cut depth is a lookup. First prove the section-fill (cap parity) rule against route C.
-- **Hidden lines are off by default.** This is a presentation choice only: native HLD loses visible geometry when hidden curves are disabled, so the engine always solves with hidden lines and discards them.
+- **Hidden lines are off by default** (superseded by beta.2's hidden-on default). In the default exact engine this is a presentation choice only: native HLD loses visible geometry when hidden curves are disabled, so exact solves with hidden lines and discards them. The opt-in fast engine below follows the requested hidden setting in native HLD.
 - **Test data:** no owner project models. Use the campus model and the generated suites, and treat the census results as optimistic.
 
 ## Engine composition decisions (2026-11-15)
@@ -175,3 +175,22 @@ From the owner's first real use of v0.1.0-beta.1 on a ~6,000-object model.
 - **The footer says what is being processed and how far along** (loading, waiting, preparing, drawing per view and
   step, workers, output), with a progress bar that only moves forward, a shimmer for stages without sub-progress and a
   rough estimate when there is enough history. See §5.2.
+
+## Opt-in fast engine (owner decision, 2026-11-16)
+
+- **Setting:** `engine = exact | fast`, default **exact**, from Settings, view-object `m2d.engine` user text, or
+  *Engine ▸ Exact · Fast (Make2D-like)*. Normal precedence applies.
+- **Scope:** fast changes only native HLD: the remaining curved/freeform composition route, native fallback and
+  physically clipped route C use multithreading and request hidden curves only when `hidden = on`. Planar exact
+  and analytic engines retain their algorithms and certificates. Exact retains serial, hidden-on native computation.
+- **Verification:** budgets and contradiction rules are unchanged; detected contradictions go to Unresolved.
+  Info states that false-Hidden checking is skipped for hidden curves not generated. Residual native Hidden
+  fragments, when Rhino returns any despite hidden-off, are still audited.
+- **Disclosure:** when native shortcuts touch sources, Info says `Engine: fast — Make2D-like shortcuts on N
+  curved/freeform sources; their lines are not certified and may differ slightly between runs.` The component
+  adds a **remark**, not a warning. The footer may show `fast` while native work runs. No fast remark for a
+  planar/analytic-only view that never uses native HLD.
+- **Cache and determinism:** engine always keys visibility. Hidden also keys visibility in fast mode; exact
+  still treats hidden as presentation. Fast native output is not promised byte-identical across runs or workers;
+  exact-mode worker equality tests retain their strict gate. Transporting one result remains lossless in either
+  mode. `min visible` and styling remain presentation; they do not change verifier or visibility budgets.

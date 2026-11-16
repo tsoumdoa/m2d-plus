@@ -59,10 +59,11 @@ public sealed class SettingsTests
             tree = object
             tolerance = 0.1 mm
             min visible = 2 mm
+            engine = fast
             """, View(source: ViewSourceKind.NamedView));
         Assert.Empty(result.Diagnostics);
         var s = Assert.Single(result.Views);
-        Assert.Equal(21, s.Values.Count); Assert.Equal(.002, s.MinVisible, 12);
+        Assert.Equal(22, s.Values.Count); Assert.Equal(.002, s.MinVisible, 12); Assert.Equal(EngineMode.Fast, s.Engine);
         Assert.Equal(8, s.Depth); Assert.Equal(3, s.Beyond); Assert.Equal(FarClipMode.Line, s.FarClip);
         Assert.True(s.Fade); Assert.Equal(25, s.FadeStart); Assert.Equal(90, s.FadeEnd); Assert.Equal(10, s.FadeLimit);
         Assert.False(s.Crop); Assert.False(s.Hidden); Assert.True(s.Tangents); Assert.True(s.Seams);

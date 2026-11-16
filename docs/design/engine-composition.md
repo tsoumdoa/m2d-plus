@@ -48,8 +48,16 @@ Candidate ownership is independent of occluder participation:
 Native camera placement uses the same full-scene bounds in both adapters, including
 route C; clipped-input bounds must not change the native camera.
 All engines use the same parallel frame, larger view Z toward the viewer, and
-model tolerance. HLD always receives IncludeHiddenCurves=true; hidden-off is a
-downstream presentation filter. A scene consisting entirely of kernel-eligible planar sources makes zero HLD calls.
+model tolerance. In the default `engine = exact`, HLD receives IncludeHiddenCurves=true
+and serial computation; hidden-off is a downstream presentation filter. Owner decision
+2026-11-16 adds opt-in `engine = fast`: only native calls enable multithreading and follow
+the view's hidden-generation flag. The planar and analytic kernels, composition proofs,
+quarantine rules and verifier budgets do not change. Residual Hidden fragments returned
+by native are still audited; omitted hidden curves cannot receive false-Hidden checks,
+and Info states that limitation. Fast native output is unverified and can differ between
+runs. A scene consisting entirely of kernel-eligible planar sources still makes zero
+HLD calls and retains the same geometry/classes, including hidden evidence for min-visible
+presentation. Engine always keys visibility; hidden additionally keys it in fast mode.
 
 ## Contacts, coincident pieces and ownership
 
