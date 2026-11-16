@@ -34,7 +34,11 @@ internal sealed class AnalyticVisibility
     /// <summary>A tube cut by planes and cylinders (see <see cref="CutTubeRecognition"/>). Surfaces from index Real on are
     /// the two planes that end the tube and are not faces. FaceBound and EdgeBound are the stated accuracy.</summary>
     internal sealed record CutTubeShape(IReadOnlyList<CutTubeRecognition.Surface> Surfaces, BoundingBox Bounds, IReadOnlyList<CutTubeRecognition.Edge> Edges,
-        int[] FaceSurface, int Real, double FaceBound, double EdgeBound, IReadOnlyList<int> Inside, IReadOnlyList<int> Outside) : Shape;
+        int[] FaceSurface, int Real, double FaceBound, double EdgeBound, IReadOnlyList<int> Inside, IReadOnlyList<int> Outside) : Shape
+    {
+        /// <summary>How the cells were learned; for diagnostics.</summary>
+        internal string Note { get; init; } = "";
+    }
 
     private sealed class Entry { internal double Tolerance; internal Shape? Shape; internal string? Refusal; }
     private static readonly ConditionalWeakTable<GeometryBase, Entry> Cache = new();
@@ -331,21 +335,35 @@ internal sealed class AnalyticVisibility
         var faces = shapes.Select(s => Faces(s).ToArray()).ToArray();
         for (int k = 0; k < _candidates.Count; k++)
         {
-            var c = _candidates[k]; var mine = faces[c.Solid].Where(f => (f.Bit & c.OnSurface) != 0).ToArray(); if (mine.Length == 0) continue;
+            var c = _candidates[k]; var mine = faces[c.Solid].Where(f => (f.Bit & c.OnSurface) != 0).ToArray();
             double near = _tol + c.Slack; List<(int, int)>? contacts = null;
+            // The curve that is classified (the exact rim or outline when the candidate snaps), at nine points.
+            var points = Enumerable.Range(0, 9).Select(i => { var q = c.Curve.PointAt(c.Curve.Domain.ParameterAt(i / 8.0)); return c.Snap is null ? q : c.Snap(q); }).ToArray();
             for (int other = 0; other < shapes.Count; other++)
             {
                 if (other == c.Solid || shapes[other] is not CutTubeShape && shapes[c.Solid] is not CutTubeShape) continue;
                 int bits = 0;
                 foreach (var f in faces[other])
-                    foreach (var m in mine)
+                {
+                    // The same surface as one the candidate lies on (a coped end lies on the neighbour's cylinder).
+                    bool same = mine.Any(m => f.Cylinder == m.Cylinder && (f.Cylinder
+                        ? Math.Abs(f.Radius - m.Radius) <= near && Vector3d.CrossProduct(f.Direction, m.Direction).Length * Math.Max(1, f.Radius) <= near && new Line(f.Origin, f.Origin + f.Direction).DistanceTo(m.Origin, false) <= near
+                        : Vector3d.CrossProduct(f.Direction, m.Direction).Length <= 1e-9 && Math.Abs(new Plane(f.Origin, f.Direction).DistanceTo(m.Origin)) <= near));
+                    // Or a different surface the exact curve lies on all the same (the rim of a mitre lies on both
+                    // members' cylinders): every point within the graze width of it. Not for an outline: its ray is
+                    // tangent to its own cylinder, not to this surface.
+                    if (!same && !c.Tangent && c.Slack == 0)
                     {
-                        if (f.Cylinder != m.Cylinder) continue;
-                        bool same = f.Cylinder
-                            ? Math.Abs(f.Radius - m.Radius) <= near && Vector3d.CrossProduct(f.Direction, m.Direction).Length * Math.Max(1, f.Radius) <= near && new Line(f.Origin, f.Origin + f.Direction).DistanceTo(m.Origin, false) <= near
-                            : Vector3d.CrossProduct(f.Direction, m.Direction).Length <= 1e-9 && Math.Abs(new Plane(f.Origin, f.Direction).DistanceTo(m.Origin)) <= near;
-                        if (same) bits |= f.Bit;
+                        double reach = Math.Max(AnalyticSolid.Graze(_tol), 1e-12 * (1 + f.Radius + Math.Abs(f.Origin.X) + Math.Abs(f.Origin.Y) + Math.Abs(f.Origin.Z)));
+                        same = points.All(q =>
+                        {
+                            var w = q - f.Origin;
+                            if (!f.Cylinder) return Math.Abs(w * f.Direction) <= reach;
+                            w -= f.Direction * (w * f.Direction); return Math.Abs(w.Length - f.Radius) <= reach;
+                        });
                     }
+                    if (same) bits |= f.Bit;
+                }
                 if (bits != 0) (contacts ??= []).Add((other, bits));
             }
             if (contacts is not null) _candidates[k] = c with { Contacts = contacts };

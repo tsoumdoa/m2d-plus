@@ -62,7 +62,7 @@ public sealed class AnalyticCsg : AnalyticSolid
             _primitives[i] = p with { Direction = Unit(p.Direction) };
             _bit[i] = p.Role == CsgRole.Free ? _free++ : -1;
         }
-        if (_free > 20) throw new ArgumentException("More than 20 free surfaces");
+        if (_free > 26) throw new ArgumentException("More than 26 free surfaces");
         _in = inside is null ? [] : [.. inside]; _out = outside is null ? [] : [.. outside];
         if (_free == 0) { _in.Clear(); _in.Add(0); _out.Clear(); }
         if (_in.Overlaps(_out) || _in.Concat(_out).Any(c => c < 0 || c >= 1 << _free)) throw new ArgumentException("Invalid cells");

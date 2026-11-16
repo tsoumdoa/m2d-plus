@@ -74,7 +74,7 @@ internal static class AnalyticCheck
             {
                 if (leaf.Geometry is not (Brep or Extrusion or Surface)) { Console.WriteLine($"    BODY {leaf.Identity[^12..]} {leaf.Geometry.GetType().Name}"); continue; }
                 var (shape, refusal) = AnalyticVisibility.Examine(leaf.Geometry, tol);
-                Console.WriteLine($"    BODY {leaf.Identity[^12..]} {(shape is null ? "REFUSED: " + refusal : "recognised " + shape)}");
+                Console.WriteLine($"    BODY {leaf.Identity[^12..]} {(shape is null ? "REFUSED: " + refusal : shape is AnalyticVisibility.CutTubeShape ct ? $"recognised cut tube: {ct.Surfaces.Count} surfaces ({ct.Real} faces' surfaces), face bound {ct.FaceBound:G3}, edge bound {ct.EdgeBound:G3}, {ct.Edges.Count} edges; {ct.Note}" : "recognised " + shape)}");
                 if (leaf.Geometry is not Brep brep) continue;
                 foreach (var sil in Silhouette.Compute(brep, SilhouetteType.Tangent, view.Direction, tol, .001) ?? [])
                     Console.WriteLine($"        SILHOUETTE type {sil?.SilhouetteType} component {sil?.GeometryComponentIndex.ComponentIndexType} {sil?.GeometryComponentIndex.Index} curve {sil?.Curve?.GetType().Name} length {sil?.Curve?.GetLength():F3}");
@@ -203,7 +203,25 @@ internal static class AnalyticCheck
                 Console.WriteLine($"    UNRESOLVED {item.Length * 1000:F4} mm {(item.Linear ? "line" : "curve")} at ({ux:F3}, {uy:F3}) world {w} source {item.p.SourceIdentity[^12..]} {AnalyticVisibility.Recognise(leaf.Geometry, tol)?.GetType().Name}");
                 foreach (var other in prepared)
                     if (AnalyticVisibility.Recognise(other.Geometry, tol) is { } shape && AnalyticVisibility.Solid(shape, plane).Occlusion(AnalyticVisibility.Project(plane, w), tol) is var k && k != M2DPlus.Core.Visibility.VisibilityClass.Visible)
-                        Console.WriteLine($"        {k} by {other.Identity[^12..]}{(other.Identity == item.p.SourceIdentity ? " (own)" : "")} {shape}");
+                    {
+                        Console.WriteLine($"        {k} by {other.Identity[^12..]}{(other.Identity == item.p.SourceIdentity ? " (own)" : "")} {shape.GetType().Name}");
+                        if (shape is AnalyticVisibility.CutTubeShape cutTube)
+                        {   // Along the ray: which cells of the cut tube it passes through, and whether each is known.
+                            var csg = (M2DPlus.Core.Visibility.AnalyticCsg)AnalyticVisibility.Solid(cutTube, plane); var v0 = AnalyticVisibility.Project(plane, w);
+                            var seen = new List<string>(); string last = "";
+                            double reach = cutTube.Bounds.Diagonal.Length;
+                            for (int march = 1; march <= 4000; march++)
+                            {
+                                double h = reach * march / 4000; var x = new M2DPlus.Core.Visibility.Vertex(v0.X, v0.Y, v0.Z + h);
+                                int cell = csg.Cell(x, 0, out _, out bool inTube); bool? state = csg.Contains(x, 0);
+                                string label = !inTube ? "outside tube" : $"cell {Convert.ToString(cell, 2)} {(state == true ? "solid" : state == false ? "void" : "UNKNOWN")}";
+                                if (label != last) { seen.Add($"{h:F3}: {label}"); last = label; }
+                            }
+                            Console.WriteLine("            along the ray: " + string.Join(" | ", seen.Take(14)));
+                            int near = Enumerable.Range(0, cutTube.Surfaces.Count).OrderBy(i => Math.Abs(CutTubeRecognition.Distance(cutTube.Surfaces[i], w))).First();
+                            Console.WriteLine("            surfaces within 1 of the point: " + string.Join(", ", Enumerable.Range(0, cutTube.Surfaces.Count).Where(i => Math.Abs(CutTubeRecognition.Distance(cutTube.Surfaces[i], w)) < 1).Select(i => $"{i}:{(cutTube.Surfaces[i].Cylinder ? $"cyl r={cutTube.Surfaces[i].Radius:F2}" : "plane")} {cutTube.Surfaces[i].Role}{(cutTube.Surfaces[i].Virtual ? "*" : "")} slack {cutTube.Surfaces[i].Slack:G3} at {CutTubeRecognition.Distance(cutTube.Surfaces[i], w):E2}")));
+                        }
+                    }
             }
         // ---- Classed loci, both ways.
         static int Class(LineClass c) => c == LineClass.Hidden ? 1 : c == LineClass.Unresolved ? 2 : c is LineClass.Visible or LineClass.Profile or LineClass.Beyond ? 0 : 3;

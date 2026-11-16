@@ -147,7 +147,26 @@ internal static class CutTubeRecognition
                     surfaces.Add(new(false, pa, n, 0, CsgRole.Free, 0, true, 1));
                 }
             }
-        if (surfaces.Count(k => k.Role == CsgRole.Free) > 18 || surfaces.Count > 30) return no("more than 18 cutting surfaces");
+        // "Outside a cutting cylinder" has two sides along the tube: before the cutter and beyond it. A tip of material
+        // left beyond a cutter and the void in front of it would share a cell; a plane through the cutter's axis, across
+        // the tube's direction, tells them apart.
+        for (int i = 0; i < real; i++)
+        {
+            var c = surfaces[i]; if (!c.Cylinder || c.Role != CsgRole.Free) continue;
+            var n = axis - c.Direction * (axis * c.Direction); if (!n.Unitize()) continue;           // parallel to the tube: no before or beyond
+            if (surfaces.Any(k => !k.Cylinder && Along(k.Direction, n) && Math.Abs(new Plane(k.Origin, k.Direction).DistanceTo(c.Origin)) <= tol)) continue;
+            surfaces.Add(new(false, c.Origin, n, 0, CsgRole.Free, 0, true, 1));
+        }
+        // The wall is a ring. A region bounded by planes alone can hold two pieces of it, on different sides of the
+        // bore (a slab along the tube narrower than the bore), one material and one void. Six planes through the tube's
+        // axis divide the wall into 30° sectors, in each of which such a region is one piece.
+        if (surfaces.Any(k => k.Role == CsgRole.Free))
+            for (int k = 0; k < 6; k++)
+            {
+                var n = frame.XAxis * Math.Cos(k * Math.PI / 6) + frame.YAxis * Math.Sin(k * Math.PI / 6);
+                surfaces.Add(new(false, axisPoint, n, 0, CsgRole.Free, 0, true, 1));
+            }
+        if (surfaces.Count(k => k.Role == CsgRole.Free) > 26 || surfaces.Count > 30) return no("more than 26 cutting and separating surfaces");
 
         // ---- The cells of the cutting surfaces, from samples through the wall.
         static Vertex W(Point3d p) => new(p.X, p.Y, p.Z); static Vertex D(Vector3d d) => new(d.X, d.Y, d.Z);
@@ -166,56 +185,147 @@ internal static class CutTubeRecognition
             return frame.PointAt(rho * Math.Cos(theta), rho * Math.Sin(theta), h);
         }
         var byCell = new Dictionary<int, List<int>>(); var count = new Dictionary<int, long>(); long cells = 0;
+        var best = new Dictionary<int, (double Clearance, int Id)>();     // per cell, the grid sample furthest from every surface
+        double Clear0(Point3d x) { double least = double.MaxValue; foreach (var k in surfaces) least = Math.Min(least, Math.Abs(Distance(k, x))); return least; }
         for (int ih = 0; ih < nH; ih++)
             for (int it = 0; it < nTheta; it++)
                 for (int ir = 0; ir < nRho; ir++)
                 {
-                    int cell = probe.Cell(W(Sample(ih, it, ir)), margin, out bool certain, out _); cells++;
+                    var sample = Sample(ih, it, ir);
+                    int cell = probe.Cell(W(sample), margin, out bool certain, out _); cells++;
                     count[cell] = count.GetValueOrDefault(cell) + 1;
+                    double clearance = Clear0(sample);
+                    if (!best.TryGetValue(cell, out var held) || clearance > held.Clearance) best[cell] = (clearance, (ih * nTheta + it) * nRho + ir);
                     if (!certain) continue;
                     if (!byCell.TryGetValue(cell, out var list)) byCell[cell] = list = [];
                     list.Add((ih * nTheta + it) * nRho + ir);
                 }
-        var inside = new List<int>(); var outside = new List<int>(); int asked = 0;
+        // ---- Learning. Rhino's point-in-solid test is asked at points that are clear of every surface. A point clear
+        // by four times the body's looseness (its faces' bound, its stored edge and vertex tolerances) is strong
+        // evidence; one clear by only twice that is weak: next to a ragged tip with loose edges the test itself wobbles
+        // there. Two strong answers that disagree in one cell refuse the body (a stub beyond a cut, a notch, a hole
+        // through one wall: material in part of a cell). A strong answer overrules a weak one. Two weak answers that
+        // disagree leave the cell unknown, and so does a cell never reached.
+        double low = Math.Max(8 * tol, 2 * Math.Max(faceBound, loose));
+        var label = new Dictionary<int, (bool Solid, bool Strong, Point3d At)>(); var mixed = new HashSet<int>(); var askedOf = new Dictionary<int, int>();
+        int asked = 0; string? refusal = null;
+        string Tell(int cell, Point3d x, bool here, Point3d before)
+        {
+            var free = Enumerable.Range(0, surfaces.Count).Where(k => surfaces[k].Role == CsgRole.Free && !surfaces[k].Virtual).ToArray();
+            int Bit(int k) => surfaces.Take(k).Count(f => f.Role == CsgRole.Free);
+            string sides = string.Join(", ", free.Select(k => $"{((cell >> Bit(k) & 1) != 0 ? "in" : "out")} {(surfaces[k].Cylinder ? $"cylinder r={surfaces[k].Radius:F2}" : "plane")} {k}"));
+            (double H, double Angle, double Rho) Polar(Point3d q) { var d = q - axisPoint; double px = d * frame.XAxis, py = d * frame.YAxis; return (d * axis, Math.Atan2(py, px) * 180 / Math.PI, Math.Sqrt(px * px + py * py)); }
+            var a = Polar(x); var b = Polar(before);
+            return $"[{sides}] is {(here ? "solid" : "void")} at height {a.H:F2}, angle {a.Angle:F1}, radius {a.Rho:F2} and {(here ? "void" : "solid")} at height {b.H:F2}, angle {b.Angle:F1}, radius {b.Rho:F2}";
+        }
+        bool Learn(int cell, Point3d x, bool strong, string where, int most)
+        {
+            if (mixed.Contains(cell) || askedOf.GetValueOrDefault(cell) >= most && label.TryGetValue(cell, out var seen) && (seen.Strong || !strong)) return true;
+            askedOf[cell] = askedOf.GetValueOrDefault(cell) + 1;
+            bool here = brep.IsPointInside(x, tol, false); asked++;
+            if (!label.TryGetValue(cell, out var held)) { label[cell] = (here, strong, x); return true; }
+            if (held.Solid == here) { if (strong && !held.Strong) label[cell] = (here, true, x); return true; }
+            if (held.Strong && strong) { refusal = $"material in part of a cell only, seen {where}: the cell {Tell(cell, x, here, held.At)}"; return false; }
+            if (strong) label[cell] = (here, true, x);
+            else if (!held.Strong) { label.Remove(cell); mixed.Add(cell); }
+            return true;
+        }
+        double Clearance(Point3d x) => Clear0(x);
+        // The grid: up to 24 points spread through each cell, its first and last along the axis among them.
         foreach (var (cell, list) in byCell.OrderBy(k => k.Key))
-        {   // Up to 24 points spread through the cell, its first and last along the axis among them.
-            int take = Math.Min(24, list.Count); bool? solid = null;
+        {
+            int take = Math.Min(24, list.Count);
             for (int k = 0; k < take; k++)
             {
                 int id = list[take == 1 ? 0 : (int)((long)k * (list.Count - 1) / (take - 1))]; int ir = id % nRho, it = id / nRho % nTheta, ih = id / nRho / nTheta;
-                bool here = brep.IsPointInside(Sample(ih, it, ir), tol, false); asked++;
-                if (solid is { } before && before != here) return no("material in part of a cell only (a stub beyond a cut, a notch or a hole through one wall)");
-                solid = here;
+                if (!Learn(cell, Sample(ih, it, ir), true, "on the grid", 24)) return no(refusal!);
             }
-            (solid == true ? inside : outside).Add(cell);
         }
-        // A small face can bound a cell the grid has no sample in. The points just behind and in front of every face
-        // are asked too; a cell they disagree about with the grid, or with each other, refuses the body.
-        var known = inside.ToDictionary(c => c, _ => true); foreach (int c in outside) known[c] = false;
+        // Behind and in front of every face, from just clear of it to well beyond the margin: a small face can bound a
+        // cell the grid has no sample in, and a thin cell between the face and the next surface is met at one of the steps.
         foreach (var face in brep.Faces)
         {
-            int own = faceSurface[face.FaceIndex];
             foreach (var (at, normal) in InteriorPoints(face, 9))
-                foreach (double side in new[] { -2.0, 2.0 })
+                foreach (double side in new[] { -1.0, 1.0 })
                 {
-                    var x = at + normal * (side * margin);
-                    if (!Clear(surfaces, own, x, margin)) continue;
-                    int cell = probe.Cell(W(x), margin, out bool certain, out bool inTube); if (!certain || !inTube) continue;
-                    bool here = brep.IsPointInside(x, tol, false); asked++;
-                    if (known.TryGetValue(cell, out bool before))
+                    var steps = new List<double> { 2 * margin };
+                    for (double d = 1.25 * low; d < 8 * margin; d *= 1.25) steps.Add(d);
+                    foreach (double d in steps)
                     {
-                        if (before != here)
-                        {
-                            var free = Enumerable.Range(0, surfaces.Count).Where(i => surfaces[i].Role == CsgRole.Free).ToArray();
-                            string sides = string.Join(", ", free.Select((i, bit) => $"{((cell >> bit & 1) != 0 ? "in" : "out")} {i}:{(surfaces[i].Cylinder ? $"cyl r={surfaces[i].Radius:F2}" : "plane")}{(surfaces[i].Virtual ? "*" : "")}"));
-                            var d = x - axisPoint; double hx = d * axis;
-                            string grid = byCell.TryGetValue(cell, out var seen) ? $"grid samples {seen.Count}, heights {h0 + length * (seen.Min(id => id / nRho / nTheta) + .5) / nH:F1}..{h0 + length * (seen.Max(id => id / nRho / nTheta) + .5) / nH:F1}" : "no grid sample";
-                            return no($"material in part of a cell only, seen at face {face.FaceIndex}: cell [{sides}] was {(before ? "solid" : "void")} ({grid}) but is {(here ? "solid" : "void")} at height {hx:F1}, point {x} (tube heights {h0:F1}..{h1:F1})");
-                        }
+                        var x = at + normal * (side * d); double clearance = Clearance(x);
+                        if (clearance < low) continue;
+                        int cell = probe.Cell(W(x), low, out bool certain, out bool inTube); if (!certain || !inTube) continue;
+                        if (!Learn(cell, x, clearance >= margin, $"at face {face.FaceIndex}", 8)) return no(refusal!);
                     }
-                    else { known[cell] = here; (here ? inside : outside).Add(cell); }
                 }
         }
+        // Cells the grid passes through without a certain sample: the sample deepest in each is moved away from its
+        // nearest surface a few times, staying in the cell.
+        foreach (var (cell, (_, id)) in best.OrderBy(k => k.Key))
+        {
+            if (label.ContainsKey(cell) || mixed.Contains(cell)) continue;
+            int ir = id % nRho, it = id / nRho % nTheta, ih = id / nRho / nTheta; var x = Sample(ih, it, ir);
+            for (int round = 0; round < 40 && Clearance(x) < 2 * low; round++)
+            {
+                int nearest = Enumerable.Range(0, surfaces.Count).OrderBy(k => Math.Abs(Distance(surfaces[k], x))).First(); var f = surfaces[nearest];
+                Vector3d away;
+                if (f.Cylinder) { away = x - f.Origin; away -= f.Direction * (away * f.Direction); if (!away.Unitize()) break; } else away = f.Direction;
+                double d = Distance(f, x); if (d < 0) away = -away;
+                var moved = x + away * Math.Max(low / 4, (2 * low - Math.Abs(d)) / 2);
+                if (probe.Cell(W(moved), 0, out _, out bool stillIn) != cell || !stillIn) break;
+                x = moved;
+            }
+            double clearance = Clearance(x);
+            if (clearance < low || probe.Cell(W(x), low, out bool sure, out bool inTube) != cell || !sure || !inTube) continue;
+            if (!Learn(cell, x, clearance >= margin, "on the grid", 2)) return no(refusal!);
+        }
+        // Cells that meet the body at an edge: rings of points about every edge, at a few radii.
+        foreach (var edge in brep.Edges)
+        {
+            if (edge.AdjacentFaces().Length != 2) continue;
+            for (int k = 0; k <= 24; k++)
+            {
+                double t = edge.Domain.ParameterAt((k + .5) / 25.5); var centre = edge.PointAt(t); var tangent = edge.TangentAt(t);
+                if (!tangent.Unitize()) continue; var ring = new Plane(centre, tangent);
+                foreach (double radius in new[] { 2 * low, 3 * low, 5 * low, 8 * low, 13 * low })
+                    for (int a = 0; a < 16; a++)
+                    {
+                        var x = ring.PointAt(radius * Math.Cos(a * Math.PI / 8 + .1), radius * Math.Sin(a * Math.PI / 8 + .1)); double clearance = Clearance(x);
+                        if (clearance < low) continue;
+                        int cell = probe.Cell(W(x), low, out bool certain, out bool inTube); if (!certain || !inTube) continue;
+                        if (!Learn(cell, x, clearance >= margin, $"beside edge {edge.EdgeIndex}", 4)) return no(refusal!);
+                    }
+            }
+        }
+        // Cells smaller than the grid: along lines through the wall in random directions, every stretch between two
+        // consecutive surface crossings is one cell, and its middle is as deep in that cell as the line gets.
+        {
+            var lines = new Random(20261118); var crossings = new List<double>(); int before = asked;
+            for (int n = 0; n < 6000 && asked - before < 600; n++)
+            {
+                var origin = Sample(lines.Next(nH), lines.Next(nTheta), lines.Next(nRho));
+                var d = new Vector3d(lines.NextDouble() * 2 - 1, lines.NextDouble() * 2 - 1, lines.NextDouble() * 2 - 1); if (!d.Unitize()) continue;
+                double far = 3 * ro; crossings.Clear(); crossings.Add(-far); crossings.Add(far);
+                foreach (var f in surfaces)
+                {
+                    var w = origin - f.Origin;
+                    if (!f.Cylinder) { double dn = d * f.Direction; if (Math.Abs(dn) > 1e-12) crossings.Add(-(w * f.Direction) / dn); continue; }
+                    var wa = w - f.Direction * (w * f.Direction); var da = d - f.Direction * (d * f.Direction);
+                    double qa = da * da, qb = wa * da, qc = wa * wa - f.Radius * f.Radius, disc = qb * qb - qa * qc;
+                    if (qa < 1e-12 || disc <= 0) continue;
+                    double root = Math.Sqrt(disc); crossings.Add((-qb - root) / qa); crossings.Add((-qb + root) / qa);
+                }
+                crossings.Sort();
+                for (int k = 0; k + 1 < crossings.Count; k++)
+                {
+                    double a0 = crossings[k], a1 = crossings[k + 1]; if (a1 <= a0 || a0 < -far || a1 > far || a1 - a0 < 2 * low) continue;
+                    var x = origin + d * ((a0 + a1) / 2); double clearance = Clearance(x);
+                    int cell = probe.Cell(W(x), low, out bool certain, out bool inTube); if (!certain || !inTube) continue;
+                    if (!Learn(cell, x, clearance >= margin, "on a line through the wall", 2)) return no(refusal!);
+                }
+            }
+        }
+        var inside = label.Where(k => k.Value.Solid).Select(k => k.Key).OrderBy(c => c).ToList(); var outside = label.Where(k => !k.Value.Solid).Select(k => k.Key).OrderBy(c => c).ToList();
         if (inside.Count == 0 || asked < 24) return no("too few points to compare with the body");
         AnalyticCsg world;
         try { world = new AnalyticCsg(primitives, W(box.Min), W(box.Max), inside, outside); }
@@ -262,7 +372,9 @@ internal static class CutTubeRecognition
             edgeBound = Math.Max(edgeBound, slack);
             edges.Add(new(edge.DuplicateCurve(), (1 << a) | (1 << b), slack * 1.25));
         }
-        return new AnalyticVisibility.CutTubeShape(surfaces, box, edges, faceSurface, real, faceBound, edgeBound, inside, outside);
+        int unknownKinds = count.Keys.Count(k => !inside.Contains(k) && !outside.Contains(k)) + mixed.Count(k => !count.ContainsKey(k));
+        return new AnalyticVisibility.CutTubeShape(surfaces, box, edges, faceSurface, real, faceBound, edgeBound, inside, outside)
+            { Note = $"cells: {inside.Count} solid, {outside.Count} void, {unknownKinds} unknown holding {100.0 * unknownCells / cells:F3} % of the tube's wall; {asked} points asked; {mixed.Count} cells left unknown because weak answers disagreed" };
     }
 
     /// <summary>Signed distance to a surface: negative inside a cylinder or behind a plane.</summary>
