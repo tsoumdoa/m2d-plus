@@ -50,7 +50,7 @@ internal static class CutTubeRecognition
 
         // ---- Faces to nominal surfaces. Planes and cylinders Rhino recognises at the model tolerance first; a NURBS
         // face that is nearly a cylinder gets its cylinder from its own shape, and its bound is certified below.
-        var nominal = new (bool Cylinder, Point3d O, Vector3d D, double R)?[brep.Faces.Count];
+        var nominal = new (bool Cylinder, Point3d O, Vector3d D, double R)?[brep.Faces.Count]; var fitted = new bool[brep.Faces.Count];
         foreach (var face in brep.Faces)
         {
             if (face.TryGetPlane(out var plane, tol)) nominal[face.FaceIndex] = (false, plane.Origin, plane.Normal, 0);
@@ -59,7 +59,7 @@ internal static class CutTubeRecognition
                 var u = cylinder.Axis; if (!u.Unitize()) return no("degenerate cylinder axis");
                 nominal[face.FaceIndex] = (true, cylinder.Center, u, cylinder.Radius);
             }
-            else if (Ruled(face, tol) is { } fitted) nominal[face.FaceIndex] = fitted;
+            else if (Ruled(face, tol) is { } near) { nominal[face.FaceIndex] = near; fitted[face.FaceIndex] = true; }
             else return no($"face {face.FaceIndex} is neither a plane nor near a circular cylinder");
         }
         // The tube itself: the axis that carries the most cylindrical area.
@@ -97,8 +97,11 @@ internal static class CutTubeRecognition
             else natural = s.D;
             if (Math.Abs(natural * normal) < .5) return no($"face {face.FaceIndex}: its normal is not its surface's");
             int outward = natural * normal > 0 ? 1 : -1;
+            // A face fitted loosely (a NURBS near-cylinder, often one of several pieces of the same surface) joins an
+            // existing cylinder it agrees with to a quarter of the limit; its bound is then taken against that one.
+            double same = fitted[face.FaceIndex] ? limit / 4 : tol;
             int index = surfaces.FindIndex(k => k.Cylinder == s.Cylinder && (s.Cylinder
-                ? Math.Abs(k.Radius - s.R) <= tol && Along(k.Direction, s.D) && new Line(k.Origin, k.Origin + k.Direction).DistanceTo(s.O, false) <= tol
+                ? Math.Abs(k.Radius - s.R) <= same && Vector3d.CrossProduct(k.Direction, s.D).Length * span <= same && new Line(k.Origin, k.Origin + k.Direction).DistanceTo(s.O, false) <= same
                 : Along(k.Direction, s.D) && Math.Abs(new Plane(k.Origin, k.Direction).DistanceTo(s.O)) <= tol));
             if (index < 0)
             {
@@ -167,6 +170,7 @@ internal static class CutTubeRecognition
             for (int k = 0; k < 6; k++)
             {
                 var n = frame.XAxis * Math.Cos(k * Math.PI / 6) + frame.YAxis * Math.Sin(k * Math.PI / 6);
+                if (surfaces.Any(f => !f.Cylinder && Along(f.Direction, n) && Math.Abs(new Plane(f.Origin, f.Direction).DistanceTo(axisPoint)) <= tol)) continue;   // already a surface
                 surfaces.Add(new(false, axisPoint, n, 0, CsgRole.Free, 0, true, 1));
             }
         if (surfaces.Count(k => k.Role == CsgRole.Free) > 26 || surfaces.Count > 30) return no("more than 26 cutting and separating surfaces");
@@ -181,7 +185,7 @@ internal static class CutTubeRecognition
         // looseness: its faces' bound and the tolerances stored on its edges and vertices.
         double loose = Math.Max(brep.Edges.Max(e => e.Tolerance), brep.Vertices.Max(v => v.Tolerance)); if (!(loose >= 0) || loose > limit) return no("edge or vertex tolerances beyond the limit");
         double margin = Math.Max(16 * tol, 4 * Math.Max(faceBound, loose)), length = h1 - h0;
-        int nTheta = 96, nH = (int)Math.Clamp(length / (2 * Math.PI * ro / nTheta), 8, 1500), nRho = ri > 0 ? 3 : 6;
+        int nTheta = 96, nH = (int)Math.Clamp(length / (2 * Math.PI * ro / nTheta), 8, 1500), nRho = ri > 0 ? 3 : 12;
         Point3d Sample(int ih, int it, int ir)
         {   // Equal volumes: rho² uniform between the radii.
             double rho = Math.Sqrt(ri * ri + (ro * ro - ri * ri) * (ir + .5) / nRho), theta = 2 * Math.PI * (it + .5) / nTheta, h = h0 + length * (ih + .5) / nH;
@@ -365,6 +369,8 @@ internal static class CutTubeRecognition
         {
             var faces = edge.AdjacentFaces(); if (faces.Length != 2) { if (edge.Valence == EdgeAdjacency.Interior) continue; return no("an edge that is not shared by two faces"); }
             int a = faceSurface[faces[0]], b = faceSurface[faces[1]]; if (a == b) continue;
+            // A smooth join between two faces is not a line of the drawing (tangent edges are off whenever this class runs).
+            if (edge.IsSmoothManifoldEdge(Math.PI / 180)) continue;
             double slack = 0;
             for (int k = 0; k <= 16; k++)
             {
@@ -438,9 +444,10 @@ internal static class CutTubeRecognition
             {
                 using var iso = surface.IsoCurve(1 - along, domain.ParameterAt(k / 2.0));
                 if (iso is null || Round(iso) is not { } c) { round = false; break; }
-                centres.Add(c.C); radius += c.R / 3;
+                if (k > 0 && Math.Abs(c.R - radius / k) > 64 * tol) { round = false; break; }      // a cone is not a cylinder
+                centres.Add(c.C); radius += c.R;
             }
-            if (!round) continue;
+            if (!round) continue; radius /= 3;
             var axis = centres[2] - centres[0]; if (!axis.Unitize()) continue;
             if (new Line(centres[0], centres[2]).DistanceTo(centres[1], false) > 64 * tol) continue;
             return (true, centres[0], axis, radius);

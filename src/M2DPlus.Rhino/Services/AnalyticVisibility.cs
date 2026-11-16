@@ -410,6 +410,10 @@ internal sealed class AnalyticVisibility
         return taken;
     }
 
+    /// <summary>A copy the composition can project and trim: a line stays a line, anything else becomes a NURBS curve
+    /// (arcs and polycurves do not survive the planar projection as they are).</summary>
+    private static Curve Drawable(Curve curve) => curve is LineCurve ? curve.DuplicateCurve() : curve.ToNurbsCurve() ?? curve.DuplicateCurve();
+
     /// <summary>The lines native draws for these bodies with tangent edges and seams off: rims and outlines.</summary>
     private IEnumerable<Candidate> Candidates(Shape shape, VisibilityInput input, int solid)
     {
@@ -476,7 +480,7 @@ internal sealed class AnalyticVisibility
                     // slack; otherwise the stored edge is classified with its measured slack.
                     Func<Point3d, Point3d>? snap = null;
                     if (edge.Exact && pair.Length == 2) snap = q => CutTubeRecognition.Onto(pair[0], pair[1], q) ?? q;
-                    yield return new(edge.World.DuplicateCurve(), input, solid, edge.On, false, Profile, edge.Slack, null, snap);
+                    yield return new(Drawable(edge.World), input, solid, edge.On, false, Profile, edge.Slack, null, snap);
                 }
                 // Outlines of its cylindrical faces, from Rhino's silhouette of the body: each is a ruling of the face's
                 // cylinder, already cut to the face. The ray there touches that cylinder.
@@ -505,13 +509,18 @@ internal sealed class AnalyticVisibility
                         // when it is that close, and classified with that slack otherwise.
                         var cylinder = t.Surfaces[surface]; var side = Vector3d.CrossProduct(cylinder.Direction, e); double near = 4 * (_tol + cylinder.Slack);
                         Func<Point3d, Point3d>? onto = null;
+                        // Seen along its axis a cylinder has no outline of its own: its rims are the outline.
+                        if (side.Length < 1e-6) continue;
                         if (side.Unitize())
                         {
                             Point3d OnOutline(Point3d q) { var w = q - cylinder.Origin; return cylinder.Origin + side * (w * side < 0 ? -cylinder.Radius : cylinder.Radius) + cylinder.Direction * (w * cylinder.Direction); }
                             var c = silhouette.Curve;
                             if (new[] { 0, .25, .5, .75, 1 }.All(f => { var q = c.PointAt(c.Domain.ParameterAt(f)); return OnOutline(q).DistanceTo(q) <= near; })) onto = OnOutline;
                         }
-                        yield return new(silhouette.Curve.DuplicateCurve(), input, solid, 1 << surface, true, _ => true, onto is null ? _tol + cylinder.Slack : 0, null, onto);
+                        // A curve Rhino gives that is not on the exact outline (a dent's own outline) is not known to
+                        // touch the cylinder: it is classified as a curve near the body, with slack and no surface of its own.
+                        if (onto is null) yield return new(Drawable(silhouette.Curve), input, -1, 0, false, _ => true, _tol + cylinder.Slack);
+                        else yield return new(Drawable(silhouette.Curve), input, solid, 1 << surface, true, _ => true, 0, null, onto);
                     }
                 }
                 finally { temporary?.Dispose(); }

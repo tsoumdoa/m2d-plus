@@ -89,6 +89,7 @@ public sealed class AnalyticCsg : AnalyticSolid
         // For each surface: the ray is surely inside it on [inLo, inHi] and possibly inside on [outLo, outHi].
         Span<double> inLo = stackalloc double[n], inHi = stackalloc double[n], outLo = stackalloc double[n], outHi = stackalloc double[n];
         Span<double> cuts = stackalloc double[4 * n + 2]; int nc = 0; cuts[nc++] = 0; double error = 0;
+        int border = 0;      // free surfaces the rays run in (the start lies on them and the view is along them)
         for (int i = 0; i < n; i++)
         {
             var s = _primitives[i]; bool mine = (own & (1 << i)) != 0;
@@ -99,7 +100,14 @@ public sealed class AnalyticCsg : AnalyticSolid
                 double ne = s.Direction.Z, f = Dot(s.Direction, w);    // inside: n·(x - o) ≤ 0
                 if (mine)
                 {   // The start is on the plane: f is zero by construction.
-                    if (Math.Abs(ne) < 1e-9 || ne < 0) { il = ol = 0; ih = oh = double.PositiveInfinity; }   // in the plane (closed), or going in
+                    if (Math.Abs(ne) < 1e-9)
+                    {   // The ray runs in the plane. A surface the solid is wholly inside of is closed; in a free
+                        // surface the ray is on the border of two cells, and the solid, being closed, holds it when
+                        // either cell is solid.
+                        il = ol = 0; ih = oh = double.PositiveInfinity;
+                        if (s.Role == CsgRole.Free) border |= 1 << _bit[i];
+                    }
+                    else if (ne < 0) { il = ol = 0; ih = oh = double.PositiveInfinity; }   // going in
                     else { il = ol = 0; ih = oh = 0; }
                 }
                 else
@@ -131,6 +139,7 @@ public sealed class AnalyticCsg : AnalyticSolid
                         // side the solid is on (closed for a kept inside, in the material for a bore).
                         bool inside = !tangent && s.Role != CsgRole.Outside;
                         (il, ih) = inside ? (0, double.PositiveInfinity) : (1, 0); (ol, oh) = (il, ih);
+                        if (!tangent && s.Role == CsgRole.Free) border |= 1 << _bit[i];
                     }
                     else
                     {
@@ -181,7 +190,7 @@ public sealed class AnalyticCsg : AnalyticSolid
             double a = cuts[k], b = k + 1 < nc ? cuts[k + 1] : double.PositiveInfinity;
             if (!(b > a)) continue;
             double at = double.IsFinite(b) ? (a + b) / 2 : a + 1;
-            int state = State(at, inLo, inHi, outLo, outHi);       // 2: surely in the solid, 1: possibly, 0: surely not
+            int state = State(at, inLo, inHi, outLo, outHi, border);       // 2: surely in the solid, 1: possibly, 0: surely not
             if (state == 2) { if (double.IsNaN(sureFrom)) sureFrom = a; } else if (!double.IsNaN(sureFrom)) { if (Cover(sureFrom, a, tolerance) - 2 * error >= tolerance / 8) return VisibilityClass.Hidden; sureFrom = double.NaN; }
             if (state != 0) { if (double.IsNaN(maybeFrom)) maybeFrom = a; } else if (!double.IsNaN(maybeFrom)) { if (Cover(maybeFrom, a, tolerance) + 2 * error > tolerance / 16) undecided = true; maybeFrom = double.NaN; }
         }
@@ -193,7 +202,7 @@ public sealed class AnalyticCsg : AnalyticSolid
     /// <summary>The depth rule: cover counts from one tolerance in front of the start.</summary>
     private static double Cover(double from, double to, double tolerance) => to - Math.Max(from, tolerance);
 
-    private int State(double t, ReadOnlySpan<double> inLo, ReadOnlySpan<double> inHi, ReadOnlySpan<double> outLo, ReadOnlySpan<double> outHi)
+    private int State(double t, ReadOnlySpan<double> inLo, ReadOnlySpan<double> inHi, ReadOnlySpan<double> outLo, ReadOnlySpan<double> outHi, int along)
     {
         int value = 0, unknown = 0; bool possible = true, sure = true;
         for (int i = 0; i < _primitives.Length; i++)
@@ -204,6 +213,7 @@ public sealed class AnalyticCsg : AnalyticSolid
                 case CsgRole.Inside: if (!possiblyIn) return 0; if (!surelyIn) sure = false; break;
                 case CsgRole.Outside: if (surelyIn) return 0; if (possiblyIn) sure = false; break;
                 default:
+                    if ((along & (1 << _bit[i])) != 0) break;       // on the border of this surface: both sides are tried below
                     if (surelyIn) value |= 1 << _bit[i]; else if (possiblyIn) unknown |= 1 << _bit[i];
                     break;
             }
@@ -211,14 +221,22 @@ public sealed class AnalyticCsg : AnalyticSolid
         if (_free != 0)
         {
             // Every way of settling the unknown sides. More than eight unknown at once is not decided.
-            if (System.Numerics.BitOperations.PopCount((uint)unknown) > 8) { sure = false; }
+            if (System.Numerics.BitOperations.PopCount((uint)(unknown | along)) > 8) { sure = false; }
             else
             {
+                // Every way of settling the unknown sides must leave the point in the solid; on a border the point is
+                // in the (closed) solid when the cell on either side is.
                 bool any = false, all = true;
                 for (int sub = unknown; ; sub = (sub - 1) & unknown)
                 {
-                    int cell = value | sub;
-                    if (_in.Contains(cell)) any = true; else { all = false; if (!_out.Contains(cell)) any = true; }   // an unknown cell may be either
+                    bool solid = false, maybe = false;
+                    for (int side = along; ; side = (side - 1) & along)
+                    {
+                        int cell = value | sub | side;
+                        if (_in.Contains(cell)) solid = true; else if (!_out.Contains(cell)) maybe = true;   // an unknown cell may be either
+                        if (side == 0) break;
+                    }
+                    if (solid || maybe) any = true; if (!solid) all = false;
                     if (sub == 0) break;
                 }
                 if (!any) possible = false; if (!all) sure = false;
