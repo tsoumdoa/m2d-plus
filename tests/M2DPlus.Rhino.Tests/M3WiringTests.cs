@@ -64,6 +64,19 @@ public sealed class M3WiringTests(RhinoHost host, ITestOutputHelper output)
         Assert.Equal(5, far.Depths.Maximum, 5);
     });
 
+    // Regression: Silhouette.Compute can return null curves for clear glass in an oblique view (beta.1 crash).
+    [RhinoFact] public void ClearGlassFixtureInAnObliqueViewDoesNotCrash() => host.Run(() =>
+    {
+        using var doc = RhinoDoc.CreateHeadless(null);
+        Assert.True(doc.Import(Path.Combine(AppContext.BaseDirectory, "fixtures", "features", "glass.3dm")));
+        using var scene = new SceneCache(); using var cache = new DrawingCache();
+        foreach (var view in new[] { "SW", "NE", "Front" })
+        {
+            using var batch = Draw(doc, scene, cache, new[] { SettingsFor(ViewRequest.Parse(view), "glass=clear") });
+            output.WriteLine(batch.Views[0].Info); Assert.Null(batch.Views[0].Error);
+        }
+    });
+
     [RhinoFact] public void HiddenOffAndClearGlassPreserveTheProbeLoci() => host.Run(() =>
     {
         foreach (var materialGlass in new[] { false, true })
