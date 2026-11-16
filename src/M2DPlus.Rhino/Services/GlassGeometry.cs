@@ -31,6 +31,8 @@ internal sealed class GlassGeometry : IDisposable
         SilhouetteType.Boundary | SilhouetteType.Crease | SilhouetteType.Tangent | SilhouetteType.Projecting |
         (view.Settings?.Tangents == true ? SilhouetteType.NonSilhouetteTangent : SilhouetteType.None) |
         (view.Settings?.Seams == true ? SilhouetteType.NonSilhouetteSeam : SilhouetteType.None),
-        view.Direction, view.Settings?.Tolerance ?? .001, .001).Select(s => s.Curve.DuplicateCurve()).ToArray();
+        view.Direction, view.Settings?.Tolerance ?? .001, .001)?
+        // Silhouette.Compute can return null, and projecting silhouettes can carry no curve.
+        .Where(s => s?.Curve is not null).Select(s => s.Curve.DuplicateCurve()).ToArray() ?? [];
     public void Dispose() { foreach (var geometry in _owned) geometry.Dispose(); }
 }
