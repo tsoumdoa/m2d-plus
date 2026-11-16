@@ -21,10 +21,13 @@ internal sealed record SectionCanonical(string Key, double Scale, Func<GeometryB
 internal sealed class SectionVerdictCache : IDisposable
 {
     private readonly ConcurrentDictionary<string, Lazy<string>> _verdicts = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, Lazy<string>> _localVerdicts = new(StringComparer.Ordinal);
     private int _computations;
+    private int _localComputations;
     private volatile bool _disposed;
     internal int Count => _verdicts.Count;
     internal int Computations => Volatile.Read(ref _computations);
+    internal int LocalComputations => Volatile.Read(ref _localComputations);
     internal bool IsDisposed => _disposed;
 
     internal string Verdict(SectionCanonical canonical, double tolerance)
@@ -34,11 +37,24 @@ internal sealed class SectionVerdictCache : IDisposable
         return _verdicts.GetOrAdd(key, _ => new Lazy<string>(() =>
         {
             Interlocked.Increment(ref _computations);
-            return SectionGeometry.CanonicalVerdict(canonical, tolerance);
+            return SectionGeometry.CanonicalVerdict(canonical, tolerance, this);
         }, LazyThreadSafetyMode.ExecutionAndPublication)).Value;
     }
 
-    public void Dispose() { _disposed = true; _verdicts.Clear(); }
+    // Exact complete archives only: translated copies of an exploded building element
+    // can share validation without treating near-equal shapes as congruent.
+    internal string LocalVerdict(Brep local, double tolerance, Func<string> compute)
+    {
+        if (_disposed) throw new ObjectDisposedException(nameof(SectionVerdictCache));
+        var key = Services.GeometryFingerprint.Compute(local) + "|tolerance=" + tolerance.ToString("R", System.Globalization.CultureInfo.InvariantCulture);
+        return _localVerdicts.GetOrAdd(key, _ => new Lazy<string>(() =>
+        {
+            Interlocked.Increment(ref _localComputations);
+            return compute();
+        }, LazyThreadSafetyMode.ExecutionAndPublication)).Value;
+    }
+
+    public void Dispose() { _disposed = true; _verdicts.Clear(); _localVerdicts.Clear(); }
 }
 
 /// <summary>

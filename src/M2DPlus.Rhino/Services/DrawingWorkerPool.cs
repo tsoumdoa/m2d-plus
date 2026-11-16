@@ -76,11 +76,12 @@ public sealed class DrawingWorkerPool : IDisposable
             var pending=new System.Collections.Concurrent.ConcurrentQueue<int>(order);var seconds=new double[views.Count];
             progress?.Report(new(JobPhase.Drawing,0,views.Count){Workers=plan.Count,Step="starting workers"});
             var retry=new bool[views.Count];var done=0;
+            using var startup=CancellationTokenSource.CreateLinkedTokenSource(token);
             var shownSync=new object();var shown=-1;long shownAt=0; // the view whose inner step the status shows
             var unavailable=new System.Collections.Concurrent.ConcurrentDictionary<Slot,byte>();
             WorkerUnavailableException? startupFailure=null;
-            // A healthy shard may finish before a slower startup fails and requeues
-            // its view. Drain again after all shards settle; never retry a failed slot.
+            // A process does not own a view until its handshake succeeds. Slow startup
+            // must not strand work that a ready sibling could take from the queue.
             while(!pending.IsEmpty)
             {
                 var active=_slots.Take(plan.Count).Where(s=>!unavailable.ContainsKey(s)).ToArray();
@@ -136,9 +137,21 @@ public sealed class DrawingWorkerPool : IDisposable
                 await slot.Gate.WaitAsync(token).ConfigureAwait(false);
                 try
                 {
-                    while(pending.TryDequeue(out var i))
+                    while(!pending.IsEmpty)
                     {
                         token.ThrowIfCancellationRequested();
+                        try
+                        {
+                            slot.Client??=await WorkerClient.StartAsync(_options with{MemoryBytes=plan.CapBytes,ProcessorLimit=processors},fingerprint,startup.Token).ConfigureAwait(false);
+                        }
+                        catch(OperationCanceledException) when(startup.IsCancellationRequested && !token.IsCancellationRequested)
+                        { break; } // All views finished elsewhere; StartAsync has reaped its owned process.
+                        catch(WorkerUnavailableException ex)
+                        {
+                            unavailable.TryAdd(slot,0);Interlocked.CompareExchange(ref startupFailure,ex,null);
+                            break;
+                        }
+                        if(!pending.TryDequeue(out var i))break;
                         try
                         {
                             var drawing=await SolveView(slot,i,plan.CapBytes,false,plan.ReplyExpandedLimit).ConfigureAwait(false);
@@ -158,7 +171,9 @@ public sealed class DrawingWorkerPool : IDisposable
                             Failure(i,retry[i]?MemoryFailure(plan.CapBytes,"Queued for an isolated retry."):"Worker failed for this view (crash, timeout or invalid reply): "+ex.Message);
                             slot.Client?.Dispose();slot.Client=null;
                         }
-                        progress?.Report(new(JobPhase.Drawing,Interlocked.Increment(ref done),views.Count){Workers=plan.Count});
+                        var completed=Interlocked.Increment(ref done);
+                        if(completed==views.Count)startup.Cancel();
+                        progress?.Report(new(JobPhase.Drawing,completed,views.Count){Workers=plan.Count});
                     }
                 }
                 finally

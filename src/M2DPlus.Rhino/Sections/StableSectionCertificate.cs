@@ -127,23 +127,27 @@ internal static class StableSectionCertificate
     private static double SlabSlope(Brep brep, SectionRequest request, double delta)
     {
         var slope = 0d; var budget = 20000;
-        foreach (var face in brep.Faces)
+        try
         {
-            using var surface = face.ToNurbsSurface();
-            surface.Transform(Transform.PlaneToPlane(request.Plane, Plane.WorldXY));
-            // ConvertSpanToBezier uses control-net span indices, including empty
-            // repeated-knot slots, rather than the count of nonempty spans.
-            for (var u = 0; u <= surface.Points.CountU - surface.OrderU; u++)
-            for (var v = 0; v <= surface.Points.CountV - surface.OrderV; v++)
+            foreach (var face in brep.Faces)
             {
-                if (surface.KnotsU[u + surface.OrderU - 2] >= surface.KnotsU[u + surface.OrderU - 1] ||
-                    surface.KnotsV[v + surface.OrderV - 2] >= surface.KnotsV[v + surface.OrderV - 1]) continue;
-                using var patch = surface.ConvertSpanToBezier(u, v);
-                if (patch is null) throw new SectionFailure("D: Bezier span conversion failed.");
-                Bound(patch, delta + request.Tolerance, 0, ref budget, ref slope);
+                using var surface = face.ToNurbsSurface();
+                surface.Transform(Transform.PlaneToPlane(request.Plane, Plane.WorldXY));
+                // ConvertSpanToBezier uses control-net span indices, including empty
+                // repeated-knot slots, rather than the count of nonempty spans.
+                for (var u = 0; u <= surface.Points.CountU - surface.OrderU; u++)
+                for (var v = 0; v <= surface.Points.CountV - surface.OrderV; v++)
+                {
+                    if (surface.KnotsU[u + surface.OrderU - 2] >= surface.KnotsU[u + surface.OrderU - 1] ||
+                        surface.KnotsV[v + surface.OrderV - 2] >= surface.KnotsV[v + surface.OrderV - 1]) continue;
+                    using var patch = surface.ConvertSpanToBezier(u, v);
+                    if (patch is null) throw new SectionFailure("D: Bezier span conversion failed.");
+                    Bound(patch, delta + request.Tolerance, 0, ref budget, ref slope);
+                }
             }
+            return slope;
         }
-        return slope;
+        finally { SectionWork.Slab(20000 - budget, budget < 0); }
     }
 
     // Rational Bezier derivatives: S_u=(A_u W-A W_u)/W^2. The common positive
