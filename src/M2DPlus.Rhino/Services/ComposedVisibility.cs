@@ -247,6 +247,7 @@ internal static class ComposedVisibility
                         if (record.Duplicate) duplicateUnresolved++;
                         nativeCurves.Add((world, tag, record.Class, record.Profile));
                     }
+                    else analytic.Covered(tag, world);     // a line of an exact solid that lies under another native line
                 }
 
                 foreach (var point in drawing.Points)

@@ -217,8 +217,11 @@ internal sealed class AnalyticVisibility
         settings.Analytic && !settings.NativeOnly && view.Settings?.Tangents != true && view.Settings?.Seams != true;
 
     /// <summary>For each geometry: its shape (null when not recognised), whether it leaves HLD, and for a recognised one
-    /// that stays, the index of an unrecognised body that may hide it (-1 when its own box is invalid).</summary>
-    private static (Shape? Shape, bool Leaves, int Blocker)[] Plan(IReadOnlyList<GeometryBase> geometries, Plane plane, double tol)
+    /// the index of an unrecognised body that may hide it (-1 when there is none, or when its own box is invalid).
+    /// A recognised solid that an unrecognised body may hide leaves HLD all the same when `mixed` is set: its lines are
+    /// then also given to HLD as curves, which hide nothing, and HLD says where the unrecognised bodies hide them.
+    /// Otherwise it stays in HLD whole.</summary>
+    private static (Shape? Shape, bool Leaves, int Blocker)[] Plan(IReadOnlyList<GeometryBase> geometries, Plane plane, double tol, bool mixed)
     {
         var plan = new (Shape?, bool, int)[geometries.Count]; var toView = Transform.PlaneToPlane(plane, Plane.WorldXY);
         var foreign = new List<(BoundingBox Box, int Index)>(); bool any = false;
@@ -237,14 +240,18 @@ internal sealed class AnalyticVisibility
                 foreach (var (f, index) in foreign)
                     if (!f.IsValid || f.Min.X <= box.Max.X + tol && f.Max.X >= box.Min.X - tol &&
                         f.Min.Y <= box.Max.Y + tol && f.Max.Y >= box.Min.Y - tol && f.Max.Z >= box.Min.Z - tol) { exposed = true; blocker = index; break; }
-            plan[i] = (plan[i].Item1, !exposed, blocker);
+            plan[i] = (plan[i].Item1, !exposed || mixed && blocker >= 0, blocker);
         }
         return plan;
     }
 
     /// <summary>Would any source of this view leave HLD? Used to choose the composed route for scenes with no planar source.</summary>
     internal static bool Applies(IEnumerable<GeometryBase> geometries, Plane plane, double tolerance, ViewRequest view, NativeSettings settings) =>
-        Enabled(view, settings) && Plan(geometries.ToArray(), plane, tolerance).Any(p => p.Leaves);
+        Enabled(view, settings) && Plan(geometries.ToArray(), plane, tolerance, Mixed(view)).Any(p => p.Leaves);
+
+    /// <summary>Fast mode may switch native hidden curves off; the mixed route needs HLD's answer for every stretch of a
+    /// line, so in fast mode a recognised solid that an unrecognised body may hide stays in HLD as before.</summary>
+    private static bool Mixed(ViewRequest view) => view.Settings?.Engine != EngineMode.Fast;
 
     // ---------------------------------------------------------------- one view
 
@@ -253,17 +260,27 @@ internal sealed class AnalyticVisibility
     /// two surfaces a stored edge joins, or a cylinder's outline). What is classified is the exact curve; what is drawn
     /// is the stored one, within the body's stated edge bound of it.</param>
     private sealed record Candidate(Curve Curve, VisibilityInput Input, int Solid, int OnSurface, bool Tangent, Func<Point3d, bool> Profile, double Slack = 0,
-        IReadOnlyList<(int Solid, int OnSurface)>? Contacts = null, Func<Point3d, Point3d>? Snap = null);
+        IReadOnlyList<(int Solid, int OnSurface)>? Contacts = null, Func<Point3d, Point3d>? Snap = null)
+    {
+        /// <summary>An unrecognised body may hide this line: native HLD is asked as well.</summary>
+        public bool Native { get; init; }
+    }
+    /// <summary>What native HLD said about a stretch of a candidate it was asked about.</summary>
+    private enum Said { Visible, Hidden, Unresolved, Covered }
 
     internal static readonly AnalyticVisibility None = new();
     private readonly AnalyticOccluders _removed = new([]), _all = new([]);
     private readonly List<Candidate> _candidates = [];
-    private readonly Plane _plane; private readonly double _tol; private readonly int _recognised;
+    private readonly Plane _plane; private readonly double _tol; private readonly int _recognised, _beside;
+    // The candidates given to HLD as curves, by the input each was given as, and what came back for each.
+    private readonly Dictionary<VisibilityInput, int> _asked = new(ReferenceEqualityComparer.Instance);
+    private readonly Dictionary<int, List<(Interval Domain, Said Said)>> _said = [];
+    private bool[] _endOn = [];
     internal bool Any => _removed.Count != 0;
     internal string Route => Any ? $"; exact analytic solids={_removed.Count}" : "";
     private readonly List<string> _notes = [];
     internal IEnumerable<string> Diagnostics => (_recognised == 0 ? [] : new[]
-        { $"Analytic solids: recognised={_recognised}; exact={_removed.Count}; kept on native HLD because an unrecognised body may hide them={_recognised - _removed.Count}; own candidate curves={_candidates.Count}." })
+        { $"Analytic solids: recognised={_recognised}; exact={_removed.Count}; of those, beside unrecognised bodies (lines also checked by native HLD)={_beside}; kept on native HLD because an unrecognised body may hide them={_recognised - _removed.Count}; own candidate curves={_candidates.Count}; given to native HLD={_asked.Count}." })
         .Concat(_notes);
 
     /// <summary>Info for the owner: which recognised solids stayed on native HLD and the body that may hide each, and
@@ -271,6 +288,11 @@ internal sealed class AnalyticVisibility
     private void Explain(List<VisibilityInput> curved, (Shape? Shape, bool Leaves, int Blocker)[] plan, double tol)
     {
         const int limit = 8;
+        var beside = Enumerable.Range(0, plan.Length).Where(i => plan[i].Shape is not null && plan[i].Leaves && plan[i].Blocker >= 0).ToArray();
+        if (beside.Length != 0)
+            _notes.Add("Exact solids beside bodies that are not exact (native HLD decides where those bodies hide their lines): " + string.Join("; ", beside.Take(limit).Select(i =>
+                $"{curved[i].Source.Identity} (beside {curved[plan[i].Blocker].Source.Identity})")) +
+                (beside.Length > limit ? $"; and {beside.Length - limit} more." : "."));
         var kept = Enumerable.Range(0, plan.Length).Where(i => plan[i].Shape is not null && !plan[i].Leaves).ToArray();
         if (kept.Length != 0)
             _notes.Add("Analytic solids kept on native HLD: " + string.Join("; ", kept.Take(limit).Select(i =>
@@ -380,10 +402,10 @@ internal sealed class AnalyticVisibility
         }
     }
 
-    private AnalyticVisibility(List<VisibilityInput> curved, Plane plane, double tol, List<GeometryBase> owned, CancellationToken token)
+    private AnalyticVisibility(List<VisibilityInput> curved, Plane plane, double tol, bool mixed, List<GeometryBase> owned, CancellationToken token)
     {
         _plane = plane; _tol = tol;
-        var plan = Plan(curved.Select(c => c.Geometry).ToArray(), plane, tol);
+        var plan = Plan(curved.Select(c => c.Geometry).ToArray(), plane, tol, mixed);
         _recognised = plan.Count(p => p.Shape is not null);
         Explain(curved, plan, tol);
         if (!plan.Any(p => p.Leaves)) return;
@@ -397,7 +419,7 @@ internal sealed class AnalyticVisibility
                 var solid = Solid(shape, plane); int index = all.Count; all.Add(solid); shapes.Add(shape);
                 if (!plan[i].Leaves) continue;
                 removed.Add(solid); leaving.Add(curved[i]);
-                foreach (var candidate in Candidates(shape, curved[i], index)) { owned.Add(candidate.Curve); _candidates.Add(candidate); }
+                foreach (var candidate in Candidates(shape, curved[i], index)) { owned.Add(candidate.Curve); _candidates.Add(candidate with { Native = plan[i].Blocker >= 0 }); }
             }
         }
         catch (ArgumentException)
@@ -407,6 +429,100 @@ internal sealed class AnalyticVisibility
         _all = new(all); _removed = new(removed);
         Contacts(shapes);
         curved.RemoveAll(leaving.Contains);
+        // A straight candidate seen end-on (the outline of a column in plan) has no drawing.
+        var projection = Transform.PlanarProjection(_plane); _endOn = new bool[_candidates.Count];
+        for (int i = 0; i < _endOn.Length; i++)
+        {
+            if (_candidates[i].Curve is not LineCurve) continue;
+            using var flat = _candidates[i].Curve.DuplicateCurve();
+            _endOn[i] = flat.Transform(projection) && ComposedVisibility.ProjectionResidue(_candidates[i].Curve, flat, _tol);
+        }
+        // The mixed route. The lines of an exact solid that an unrecognised body may hide go to HLD as curves of the
+        // same source. A curve hides nothing, so HLD's answer for them is about the bodies still in HLD alone; what the
+        // exact solids and the planar faces hide is decided here and by the caller, and the answers are united.
+        _beside = Enumerable.Range(0, plan.Length).Count(i => plan[i].Leaves && plan[i].Blocker >= 0);
+        for (int i = 0; i < _candidates.Count; i++)
+        {
+            if (!_candidates[i].Native || _endOn[i]) continue;
+            var input = new VisibilityInput(_candidates[i].Curve, _candidates[i].Input.Source, _candidates[i].Input.Far);
+            _asked.Add(input, i); curved.Add(input);
+        }
+    }
+
+    /// <summary>A stretch of a candidate that HLD reported as a duplicate lying under another native line in front of
+    /// it: that line is drawn there, this one is not.</summary>
+    internal void Covered(ComposedVisibility.Tag tag, Curve world)
+    {
+        if (_asked.TryGetValue(tag.Input, out int index)) Heard(index, world, Said.Covered);
+    }
+
+    /// <summary>Records what HLD said for a piece of a candidate. The piece is HLD's copy of part of the curve: it is
+    /// placed on the candidate by its two ends and its middle, each within four tolerances of it; a piece that cannot
+    /// be placed is ignored, and the stretch it stood for counts as not answered.</summary>
+    private void Heard(int index, Curve piece, Said said)
+    {
+        var curve = _candidates[index].Curve; var domain = curve.Domain; double near = 4 * _tol;
+        if (!curve.ClosestPoint(piece.PointAtStart, out double ta, near) || !curve.ClosestPoint(piece.PointAtEnd, out double tb, near) ||
+            !curve.ClosestPoint(piece.PointAt(piece.Domain.Mid), out double tm, near)) return;
+        if (!_said.TryGetValue(index, out var list)) _said.Add(index, list = []);
+        if (!curve.IsClosed)
+        {
+            double low = Math.Min(ta, tb), high = Math.Max(ta, tb);
+            if (tm >= low && tm <= high && high > low) list.Add((new Interval(low, high), said));
+            return;
+        }
+        // Closed: the piece runs from ta through tm to tb, one way round or the other, possibly across the seam.
+        double U(double t) => (t - domain.Min) / domain.Length; static double Turn(double v) { v %= 1; return v < 0 ? v + 1 : v; }
+        double ua = Turn(U(ta)), um = Turn(U(tm)), ub = Turn(U(tb)), start, sweep;
+        if (Turn(um - ua) <= Turn(ub - ua)) { start = ua; sweep = Turn(ub - ua); } else { start = ub; sweep = Turn(ua - ub); }
+        if (sweep < 1e-12 && piece.GetLength() > curve.GetLength() / 2) { list.Add((domain, said)); return; }     // all the way round
+        if (sweep <= 0) return;
+        double T(double u) => domain.Min + u * domain.Length;
+        if (start + sweep <= 1) list.Add((new Interval(T(start), T(start + sweep)), said));
+        else { list.Add((new Interval(T(start), domain.Max), said)); list.Add((new Interval(domain.Min, T(start + sweep - 1)), said)); }
+    }
+
+    /// <summary>
+    /// The union for a candidate HLD was asked about. Hidden where either side says Hidden. Where HLD says the line lies
+    /// under another native line, it is not drawn. Otherwise Visible only where both say Visible: a stretch HLD gave
+    /// no answer for is Unresolved, as is one either side could not decide.
+    /// </summary>
+    private List<(Interval Domain, VisibilityClass? Class)> United(int index, List<(Interval Domain, VisibilityClass Class)> exact)
+    {
+        var curve = _candidates[index].Curve; var domain = curve.Domain;
+        var heard = (_said.GetValueOrDefault(index) ?? []).OrderBy(h => h.Domain.Min).ThenBy(h => h.Domain.Max).ToList();
+        // HLD's pieces follow one another along the curve; their ends are placed by closest point, so a gap or an
+        // overshoot at the ends of under a quarter of a tolerance is closed.
+        bool Close(double a, double b) => curve.PointAt(a).DistanceTo(curve.PointAt(b)) <= _tol / 4;
+        for (int k = 0; k < heard.Count; k++)
+        {
+            var h = heard[k]; double low = h.Domain.Min, high = h.Domain.Max;
+            if (k == 0 && low > domain.Min && Close(domain.Min, low)) low = domain.Min;
+            double next = k + 1 < heard.Count ? heard[k + 1].Domain.Min : domain.Max;
+            if (next > high && Close(high, next)) high = next;
+            heard[k] = (new Interval(low, high), h.Said);
+        }
+        var ends = new SortedSet<double> { domain.Min, domain.Max };
+        foreach (var e in exact) { ends.Add(e.Domain.Min); ends.Add(e.Domain.Max); }
+        foreach (var h in heard) { ends.Add(Math.Clamp(h.Domain.Min, domain.Min, domain.Max)); ends.Add(Math.Clamp(h.Domain.Max, domain.Min, domain.Max)); }
+        var cuts = ends.ToArray(); var result = new List<(Interval, VisibilityClass?)>();
+        for (int k = 0; k + 1 < cuts.Length; k++)
+        {
+            double middle = (cuts[k] + cuts[k + 1]) / 2;
+            var mine = VisibilityClass.Unresolved;
+            foreach (var e in exact) if (e.Domain.Min <= middle && middle <= e.Domain.Max) { mine = e.Class; break; }
+            bool hidden = false, covered = false, unresolved = false, answered = false;
+            foreach (var h in heard)
+            {
+                if (h.Domain.Min > middle || h.Domain.Max < middle) continue;
+                answered = true; hidden |= h.Said == Said.Hidden; covered |= h.Said == Said.Covered; unresolved |= h.Said == Said.Unresolved;
+            }
+            VisibilityClass? kind = mine == VisibilityClass.Hidden || hidden ? VisibilityClass.Hidden : covered ? null :
+                mine == VisibilityClass.Unresolved || unresolved || !answered ? VisibilityClass.Unresolved : VisibilityClass.Visible;
+            if (result.Count > 0 && result[^1].Item2 == kind) result[^1] = (new Interval(result[^1].Item1.Min, cuts[k + 1]), kind);
+            else result.Add((new Interval(cuts[k], cuts[k + 1]), kind));
+        }
+        return result;
     }
 
     /// <summary>Takes the sources that may leave HLD out of `curved`. Their candidate curves are added to `owned`.</summary>
@@ -415,7 +531,7 @@ internal sealed class AnalyticVisibility
     {
         if (!Enabled(view, settings) || curved.Count == 0) return None;
         var before = settings.ObserveExactSolids is null ? null : curved.ToArray();
-        var taken = new AnalyticVisibility(curved, plane, tolerance, owned, token);
+        var taken = new AnalyticVisibility(curved, plane, tolerance, Mixed(view), owned, token);
         if (before is not null && taken.Any) settings.ObserveExactSolids!(before.Except(curved).ToArray());
         return taken;
     }
@@ -592,6 +708,9 @@ internal sealed class AnalyticVisibility
         foreach (var c in curves)
         {
             token.ThrowIfCancellationRequested();
+            // HLD's answer for a candidate it was asked about is united with the exact answer below.
+            if (_asked.TryGetValue(c.Tag.Input, out int asked))
+            { Heard(asked, c.Curve, c.Class == LineClass.Hidden ? Said.Hidden : c.Class == LineClass.Visible ? Said.Visible : Said.Unresolved); continue; }
             if (c.Class == LineClass.Hidden) { result.Add(c); continue; }
             // A native curve is only known to the native tolerance: a decision must hold half a tolerance to each side,
             // and an undecided run up to four tolerances between decided neighbours is that curve's change point.
@@ -608,13 +727,7 @@ internal sealed class AnalyticVisibility
         // in parallel; results are taken in candidate order.
         // A straight candidate seen end-on (the outline of a column in plan) has no drawing: it is passed on whole,
         // unsolved, and the caller's projection test drops it as it drops any projecting segment.
-        var projection = Transform.PlanarProjection(_plane); var endOn = new bool[_candidates.Count];
-        for (int i = 0; i < endOn.Length; i++)
-        {
-            if (_candidates[i].Curve is not LineCurve) continue;
-            using var flat = _candidates[i].Curve.DuplicateCurve();
-            endOn[i] = flat.Transform(projection) && ComposedVisibility.ProjectionResidue(_candidates[i].Curve, flat, _tol);
-        }
+        var endOn = _endOn;
         var chords = new List<Chord>?[_candidates.Count]; long done = 0;
         var solved = new List<(Interval Domain, VisibilityClass Class)>[chords.Length]; var made = new List<(Curve Curve, ComposedVisibility.Tag Tag, LineClass Class, bool Profile)>();
         Parallel.For(0, chords.Length, new ParallelOptions { MaxDegreeOfParallelism = Math.Min(Environment.ProcessorCount, 8), CancellationToken = token },
@@ -640,7 +753,9 @@ internal sealed class AnalyticVisibility
             }
             // A whole closed rim in one class is emitted as two halves: seen edge-on a closed curve projects onto
             // itself, and a piece whose two ends coincide is poor drawing geometry.
-            if (pieces.Count == 1 && candidate.Curve.IsClosed)
+            if (_asked.Count != 0 && candidate.Native)
+                pieces = United(index, pieces).Where(p => p.Class is not null).Select(p => (p.Domain, p.Class!.Value)).ToList();
+            if (pieces.Count == 1 && candidate.Curve.IsClosed && pieces[0].Domain.Min == candidate.Curve.Domain.Min && pieces[0].Domain.Max == candidate.Curve.Domain.Max)
                 pieces = [(new Interval(pieces[0].Domain.Min, pieces[0].Domain.Mid), pieces[0].Class), (new Interval(pieces[0].Domain.Mid, pieces[0].Domain.Max), pieces[0].Class)];
             foreach (var piece in pieces)
             {

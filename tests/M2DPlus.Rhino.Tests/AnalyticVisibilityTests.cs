@@ -361,15 +361,27 @@ public sealed class AnalyticVisibilityTests(RhinoHost host, ITestOutputHelper ou
         output.WriteLine($"witness: judged {judged}, wrong {wrong}"); Assert.True(judged > 8); Assert.Equal(0, wrong);
     });
 
-    [RhinoFact] public void APipeWithATorusElbowStaysOnNativeAndInfoNamesTheElbow() => host.Run(() =>
+    [RhinoFact] public void APipeBesideATorusElbowIsExactAndNativeDecidesWhatTheElbowHides() => host.Run(() =>
     {
+        // The mixed route. The pipe is exact; the elbow is not, and may hide it. The pipe leaves HLD, its lines go to
+        // HLD as curves, and the two answers are united.
         using var pipe = Pipe(new Point3d(-3, 1, 0), Vector3d.XAxis, .2, .17, 3); using var elbow = Ring(new Point3d(0, 0, 0), 1, .2);
         Assert.NotNull(AnalyticVisibility.Recognise(pipe, Tol)); Assert.Null(AnalyticVisibility.Recognise(elbow, Tol));
-        using var view = Route([pipe, elbow]);
-        foreach (var d in view.Diagnostics.Where(d => d.Contains("nalytic"))) output.WriteLine(d);
-        Assert.Equal(1, view.NativeCalls); Assert.DoesNotContain("exact analytic solids", view.Report.Route);
-        Assert.Contains(view.Diagnostics, d => d == "Analytic solids kept on native HLD: 0 (may be hidden by 1).");
-        Assert.Contains(view.Diagnostics, d => d.StartsWith("Not exact analytic solids (native HLD): 1 x a face that is not a plane, cylinder or sphere", StringComparison.Ordinal) && d.EndsWith("(1).", StringComparison.Ordinal));
+        foreach (var name in new[] { "Top" })
+        {
+            using var view = Route([pipe, elbow], null, ViewRequest.Parse(name)); using var native = Route([pipe, elbow], new NativeSettings { Analytic = false }, ViewRequest.Parse(name));
+            output.WriteLine($"{name}: {view.Report.Route}");
+            foreach (var d in view.Diagnostics.Where(d => d.Contains("nalytic") || d.StartsWith("Exact solids"))) output.WriteLine("  " + d);
+            foreach (var source in new[] { "0", "1" })
+                output.WriteLine($"  source {source}: mixed V {Length(view, LineClass.Visible, source):F4} H {Length(view, LineClass.Hidden, source):F4} U {Length(view, LineClass.Unresolved, source):F4}; native V {Length(native, LineClass.Visible, source):F4} H {Length(native, LineClass.Hidden, source):F4} U {Length(native, LineClass.Unresolved, source):F4}");
+            Assert.Equal(1, view.NativeCalls); Assert.Contains("exact analytic solids=1", view.Report.Route);
+            Assert.Contains(view.Diagnostics, d => d == "Exact solids beside bodies that are not exact (native HLD decides where those bodies hide their lines): 0 (beside 1).");
+            Assert.Contains(view.Diagnostics, d => d.StartsWith("Not exact analytic solids (native HLD): 1 x a face that is not a plane, cylinder or sphere", StringComparison.Ordinal) && d.EndsWith("(1).", StringComparison.Ordinal));
+            if (name != "Top") continue;
+            var (judged, wrong) = Witness(view, [pipe, elbow], 2);
+            output.WriteLine($"  witness: judged {judged}, wrong {wrong}"); Assert.True(judged > 8); Assert.Equal(0, wrong);
+            Assert.Equal(Length(native, LineClass.Visible), Length(view, LineClass.Visible), 2);
+        }
     });
 
     // ---------------------------------------------------------------- composition with the planar kernel
@@ -499,28 +511,21 @@ public sealed class AnalyticVisibilityTests(RhinoHost host, ITestOutputHelper ou
         }
     });
 
-    [RhinoFact] public void AColumnThatANativeBodyMayHideStaysOnNative() => host.Run(() =>
+    [RhinoFact] public void AColumnThatANativeBodyMayHideIsExactAndNativeHidesItsRim() => host.Run(() =>
     {
         using var column = Column(Point3d.Origin, 1, 2); using var above = Ring(new Point3d(0, 0, 4), 1, .3);
         using var view = Route([column, above]);
         output.WriteLine(view.Report.Route); foreach (var d in view.Diagnostics.Where(d => d.StartsWith("Analytic"))) output.WriteLine(d);
-        Assert.DoesNotContain("exact analytic solids", view.Report.Route);
-        Assert.Contains(view.Diagnostics, d => d.StartsWith("Analytic solids: recognised=1; exact=0; kept on native HLD because an unrecognised body may hide them=1"));
+        Assert.Contains("exact analytic solids=1", view.Report.Route);
+        Assert.Contains(view.Diagnostics, d => d.StartsWith("Analytic solids: recognised=1; exact=1; of those, beside unrecognised bodies (lines also checked by native HLD)=1; kept on native HLD because an unrecognised body may hide them=0"));
         Assert.Equal(1, view.NativeCalls);
         // Native decides: the ring's tube covers the rim between radii 0.7 and 1.3, so the whole top rim is hidden.
-        Assert.Equal(0, Length(view, LineClass.Visible, "0"), 3);
-    });
-
-    [RhinoFact] public void TangentAndSeamSettingsAndTheSwitchKeepEverythingOnNative() => host.Run(() =>
-    {
-        using var column = Column(Point3d.Origin, 1, 2); using var plate = Plate(-3, 0, -1.2, 3, 3, -1);
-        using var off = Route([plate, column], new NativeSettings { Analytic = false });
-        Assert.DoesNotContain("exact analytic solids", off.Report.Route); Assert.Equal(1, off.NativeCalls);
-        foreach (var line in new[] { "tangents=on", "seams=on" })
-        {
-            using var view = Route([plate, column], view: SettingsFor(ViewRequest.Parse("Top"), line));
-            Assert.DoesNotContain("exact analytic solids", view.Report.Route); Assert.Equal(1, view.NativeCalls);
-        }
+        output.WriteLine($"column V {Length(view, LineClass.Visible, "0"):F4} H {Length(view, LineClass.Hidden, "0"):F4} U {Length(view, LineClass.Unresolved, "0"):F4}");
+        Assert.Equal(0, Length(view, LineClass.Visible, "0"), 3); Assert.Equal(0, Length(view, LineClass.Unresolved, "0"), 3);
+        Assert.Equal(2 * Math.PI, Length(view, LineClass.Hidden, "0"), 3);
+        // In fast mode native hidden curves may be off: the column stays in HLD whole, as before.
+        using var fast = Route([column, above], null, SettingsFor(ViewRequest.Parse("Top"), "engine=fast"));
+        Assert.DoesNotContain("exact analytic solids", fast.Report.Route);
     });
 
     // ---------------------------------------------------------------- whole pipeline: uncut, sections, crop, glass
@@ -529,9 +534,9 @@ public sealed class AnalyticVisibilityTests(RhinoHost host, ITestOutputHelper ou
 
     /// <summary>Length of the pieces of one class in `first` that do not lie on a piece of that class in `second`
     /// (judged at five points of each piece, to a tenth of a millimetre).</summary>
-    private static double Uncovered(ViewDrawing first, ViewDrawing second, LineClass kind)
+    private static double Uncovered(ViewDrawing first, ViewDrawing second, LineClass kind, LineClass? also = null)
     {
-        var others = second.Items.Where(p => p.Class == kind).Select(p => p.CopyGeometry()).OfType<Curve>().ToArray(); double total = 0;
+        var others = second.Items.Where(p => p.Class == kind || p.Class == also).Select(p => p.CopyGeometry()).OfType<Curve>().ToArray(); double total = 0;
         try
         {
             foreach (var piece in first.Items.Where(p => p.Class == kind))
@@ -574,6 +579,40 @@ public sealed class AnalyticVisibilityTests(RhinoHost host, ITestOutputHelper ou
             if (i < 3) Assert.Equal(Total(b, LineClass.Visible), Total(a, LineClass.Visible), 2);
             Assert.Equal(b.Regions.Count, a.Regions.Count); Assert.Equal(b.Regions.Sum(r => r.Region.Area), a.Regions.Sum(r => r.Region.Area), 6);
             // Native merges coincident hidden lines; where it reports nothing Unresolved the hidden lengths agree too.
+            if (b.Report.UncertainCount == 0) Assert.Equal(Total(b, LineClass.Hidden), Total(a, LineClass.Hidden), 2);
+        }
+    });
+
+    [RhinoFact] public void ExactSolidsBesideFreeformBodiesAgreeWithNativeInTheWholePipeline() => host.Run(() =>
+    {
+        // The mixed route: a column with a freeform body in front of it, a tube with a torus ring round it. Nothing
+        // touches, so the tie convention cannot differ. The exact solids leave HLD, their lines are also given to HLD
+        // as curves, and the drawing is the native one.
+        using var doc = RhinoDoc.CreateHeadless(null); doc.ModelAbsoluteTolerance = 1e-5;
+        using var column = Column(new Point3d(0, 0, .5), .6, 3); using var tube = Tube(new Point3d(3, 1, .2), .8, .6, 2);
+        var centre = new Point3d(.3, -1.5, 2); using var round = NurbsSurface.CreateFromSphere(new Sphere(centre, .7));
+        Assert.True(round.Transform(Transform.Scale(new Plane(centre, Vector3d.XAxis, Vector3d.YAxis), 1, 1.4, .8))); using var blob = round.ToBrep();
+        var extent = blob.GetBoundingBox(true).Diagonal; output.WriteLine($"blob extent {extent}"); Assert.Equal(1.96, extent.Y, 6); Assert.Equal(1.12, extent.Z, 6);
+        using var ring = Ring(new Point3d(3, 1, 1.2), 1.2, .25); using var slab = Plate(-5, -4, -.5, 6, 5, -.2);
+        Assert.Null(AnalyticVisibility.Recognise(blob, 1e-5)); Assert.Null(AnalyticVisibility.Recognise(ring, 1e-5));
+        foreach (var b in new[] { column, tube, blob, ring, slab }) doc.Objects.AddBrep(b);
+        using var cache = new SceneCache();
+        var views = new[] { ViewRequest.Parse("Top"), ViewRequest.Parse("Front"), ViewRequest.Parse("SW"), ViewRequest.Parse("NE") };
+        using var exact = NativeDrawing.SolveAsync(BaselineTests.Capture(doc, cache), new("s", "v", "exact", 1), views, new(), default).GetAwaiter().GetResult();
+        using var native = NativeDrawing.SolveAsync(BaselineTests.Capture(doc, cache), new("s", "v", "native", 1), views, new NativeSettings { Analytic = false }, default).GetAwaiter().GetResult();
+        for (int i = 0; i < views.Length; i++)
+        {
+            var a = exact.Views[i]; var b = native.Views[i]; output.WriteLine($"{views[i].Name}: {a.Report.Route}");
+            output.WriteLine($"    mixed V {Total(a, LineClass.Visible):F3} H {Total(a, LineClass.Hidden):F3} U {Total(a, LineClass.Unresolved):F3} | native V {Total(b, LineClass.Visible):F3} H {Total(b, LineClass.Hidden):F3} U {Total(b, LineClass.Unresolved):F3}");
+            foreach (var d in a.Diagnostics.Where(d => d.Contains("nalytic") || d.StartsWith("Exact solids"))) output.WriteLine("    " + d);
+            Assert.Null(a.Error); Assert.Null(b.Error); Assert.False(a.Report.Quarantined, a.Info);
+            Assert.Contains("exact analytic solids=2", a.Report.Route); Assert.Equal(1, a.NativeCalls);
+            Assert.Contains(a.Diagnostics, d => d.StartsWith("Exact solids beside bodies that are not exact", StringComparison.Ordinal));
+            // Where native could not decide, the mixed drawing may: its Visible lies on native Visible or Unresolved.
+            Assert.True(Uncovered(a, b, LineClass.Visible, LineClass.Unresolved) < .01, $"{views[i].Name}: {Uncovered(a, b, LineClass.Visible, LineClass.Unresolved):F3} of mixed Visible has no native Visible or Unresolved under it");
+            Assert.True(Uncovered(b, a, LineClass.Visible) < .01, $"{views[i].Name}: {Uncovered(b, a, LineClass.Visible):F3} of native Visible has no mixed Visible under it");
+            Assert.InRange(Total(a, LineClass.Visible) - Total(b, LineClass.Visible), -.005, Total(b, LineClass.Unresolved) + .005);
+            Assert.True(Total(a, LineClass.Unresolved) <= Total(b, LineClass.Unresolved) + .01, $"{views[i].Name}: more Unresolved than native");
             if (b.Report.UncertainCount == 0) Assert.Equal(Total(b, LineClass.Hidden), Total(a, LineClass.Hidden), 2);
         }
     });
