@@ -83,7 +83,8 @@ through the product with the tier off and on, back to back on one prepared scene
 lengths, compares the two drawings as classed loci, and checks sampled points of the new drawing with direct ray/Brep
 intersections on the original sources (in a section the ray ends at the cut plane and a solid crossing the plane is
 capped there). Variants: `glass` (glass = clear), `samples:<n>` per group (default 300), `why` (list Unresolved pieces,
-lines that disappeared, and what blocks a flagged sample).
+lines that disappeared, and what blocks a flagged sample). `bodies` lists every source with its recognised shape or the
+refusal reason and, for Breps, each face's surface type.
 
 ```sh
 dotnet $EXE $R <model.3dm> <out> av:SW

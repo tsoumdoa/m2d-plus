@@ -69,6 +69,23 @@ internal static class AnalyticCheck
             if (resolved.HasErrors) throw new InvalidOperationException(string.Join(";", resolved.Diagnostics));
             view = view with { Settings = resolved.Views[0] }; stem += "-glass";
         }
+        if (variants.Contains("bodies"))
+            foreach (var leaf in prepared)
+            {
+                if (leaf.Geometry is not (Brep or Extrusion or Surface)) { Console.WriteLine($"    BODY {leaf.Identity[^12..]} {leaf.Geometry.GetType().Name}"); continue; }
+                var (shape, refusal) = AnalyticVisibility.Examine(leaf.Geometry, tol);
+                Console.WriteLine($"    BODY {leaf.Identity[^12..]} {(shape is null ? "REFUSED: " + refusal : "recognised " + shape)}");
+                if (leaf.Geometry is not Brep brep) continue;
+                Console.WriteLine($"        faces {brep.Faces.Count}, edges {brep.Edges.Count}, solid {brep.IsSolid}, valid {brep.IsValid}, volume {brep.GetVolume():R}");
+                foreach (var face in brep.Faces)
+                {
+                    string kind = face.TryGetPlane(out var pl, tol) ? $"plane n=({pl.Normal.X:F8}, {pl.Normal.Y:F8}, {pl.Normal.Z:F8}) at {pl.Origin}"
+                        : face.TryGetCylinder(out var cy, tol) ? $"cylinder r={cy.Radius:R} axis=({cy.Axis.X:F9}, {cy.Axis.Y:F9}, {cy.Axis.Z:F9}) centre {cy.Center} h {cy.Height1:F3}..{cy.Height2:F3}"
+                        : face.TryGetSphere(out var sp, tol) ? $"sphere r={sp.Radius:R}" : face.TryGetCone(out var co, tol) ? "cone" : face.TryGetTorus(out var to, tol) ? "torus"
+                        : face.UnderlyingSurface().GetType().Name + string.Concat(new[] { 10.0, 100, 1000, 10000 }.Select(k => face.TryGetCylinder(out var loose, k * tol) ? $" [cylinder r={loose.Radius:F4} at {k} tol]" : face.TryGetPlane(out _, k * tol) ? $" [plane at {k} tol]" : "").Take(4).Where(t => t.Length > 0).Take(1));
+                    Console.WriteLine($"        face {face.FaceIndex}: {kind}; loops {face.Loops.Count}; edges {face.AdjacentEdges().Length}; area {AreaMassProperties.Compute(face)?.Area:F3}");
+                }
+            }
         var off = new NativeSettings { Analytic = false }; var on = new NativeSettings();
         using (var cold = SolveView(scene, prepared, view, off, timeout)) { }
         (ViewDrawing Drawing, double Wall, string Busy) Timed(NativeSettings settings)

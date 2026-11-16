@@ -410,8 +410,11 @@ public sealed class AnalyticOccluders
     /// Intervals of one candidate piece over [0, 1], in order and without gaps.
     /// Change points are closed-form roots on the chord; each interval is decided at its middle and checked just
     /// inside both ends, and bisected where those disagree. An undecided run no longer than `absorb` between decided
-    /// neighbours is a change point known to that accuracy and is shared between them. The default is one tolerance:
-    /// each side moves by half a tolerance at most, the same order as the planar kernel's endpoint certificate.
+    /// neighbours of different classes is a change point known to that accuracy and is shared between them. The
+    /// default is one tolerance: each side moves by half a tolerance at most, the same order as the planar kernel's
+    /// endpoint certificate. Between neighbours of one class, or at an end, an undecided run is not a change point: it
+    /// is given to the neighbour only when the candidate is exact (no slack), where it is a tie no longer than a
+    /// tolerance. With slack it stays Unresolved: it may be a whole hidden stretch the slack could not decide.
     /// </summary>
     public List<AnalyticInterval> Intervals(in AnalyticCandidate candidate, double tolerance, double slack = 0, double absorb = -1, int except = -1, CancellationToken token = default)
     {
@@ -442,6 +445,8 @@ public sealed class AnalyticOccluders
             var run = joined[i];
             if (run.Class != VisibilityClass.Unresolved || (run.End - run.Start) * length > absorb) continue;
             bool left = i > 0, right = i + 1 < joined.Count;
+            bool changePoint = left && right && joined[i - 1].Class != joined[i + 1].Class;
+            if (!changePoint && (slack > 0 || (run.End - run.Start) * length > tolerance)) continue;
             if (left && right)
             {
                 if (joined[i - 1].Class == joined[i + 1].Class) { joined[i - 1] = joined[i - 1] with { End = joined[i + 1].End }; joined.RemoveRange(i, 2); i--; }

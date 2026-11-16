@@ -621,6 +621,87 @@ hash-identical to `origin/main`.
 | perf-L SW / North / Top | 42.3 / 16.3 / 24.4 | 21.4 / 9.7 / 18.4 | 1 → 1 |
 | glass SW, clear glass | 0.44 | 0.03 | 1 → 0 |
 
+## 8. Review fixes, the owner's pipe node, and the mixed route for stage 2 (2026-11-17)
+
+### Review fixes
+
+1. **A hidden stretch could be merged into Visible (soundness).** A native curve is only known to half a tolerance
+   sideways. Behind a sliver narrower than that (an edge-on sheet) the whole stretch is undecided, and the rule that
+   shares a short undecided run between its neighbours gave it to two Visible neighbours. Short undecided runs are now
+   shared only at a real change point (neighbours of different classes). Between neighbours of one class, or at an end,
+   a run stays Unresolved on a native curve; on an exact candidate it may go to the neighbour only up to one tolerance
+   (a tie). Core `Intervals` and the Rhino-side `Solve` follow the same rule. Test: a curve under a leaning upstand
+   whose drawing is 0.8 tolerances wide is Unresolved there (it was Visible); under one 2.5 tolerances wide it is Hidden.
+2. **Cut-only views (#43)** return before any projection, so the class is never asked. Test: the same plan with
+   `cutonly = on`, class on and off, gives identical regions, pieces and diagnostics.
+3. **Tests.** Core: every interval of random lines is sampled along its whole length against the point-membership
+   oracle; the change-point rule. Rhino: refusals with the reason given (off-centre bore, two coaxial cylinders with
+   a gap in one Brep, filleted and chamfered ends, a dented NURBS cylinder, an open two-face tube, an arc wall with a
+   hole, end planes meeting inside the cylinder, bolt holes); accepted variants (a cylinder whose faces are split,
+   an inside-out solid, an exported pipe whose bore axis is off by 3e-7 rad); five pipes through one node with and
+   without a node sphere, and insulation over a pipe, each checked by a point-in-solid witness that marches up from
+   the drawn curves; a pipe with a torus elbow, which stays native and is named in Info.
+
+Also changed:
+
+- **Directions are compared as distances, not angles.** Two axes (or cap normals) are the same when their cross
+  product times the body's extent is within tolerance. The fixed 1e-7 rad refused exported pipes and would have
+  accepted a real kink on a very long one.
+- **Loose edges are refused.** The drawn rims are the exact ones (cylinder against cap plane), so every stored rim
+  edge must lie within tolerance of that curve. A Brep with exact faces but edges looser than the model tolerance
+  stays native.
+- **Info says why.** One line names each recognised solid kept on native HLD and a body that may hide it; one line
+  counts refused round bodies by reason. Bodies with planar faces only are not listed; lists are capped at eight.
+- Face types are tested before `Brep.IsValid`.
+
+A dent of a fifth of a tolerance in a NURBS cylinder is also refused: Rhino no longer reports the face as a cylinder.
+That is stricter than the contract needs and on the safe side.
+
+Not done (low items): an R-tree in the removal plan (the box test is linear and has not shown up in timings),
+recognition on a translated copy far from the origin, and a fingerprint guard on the recognition cache.
+
+### The owner's pipe node (`owner/pipes-node-gdas.3dm`)
+
+Millimetres, tolerance 0.001, about 65 m from the origin. Five closed CHS 216.3 x 6.
+
+| Pipe | Faces | Result | Why |
+|---|---:|---|---|
+| `3368e2f7` | 4 | recognised | tube between two oblique planes |
+| `6aaf0a84` | 4 | refused | a rim edge is further than a tolerance from the exact rim (stored edge tolerances are 0.03-0.04 mm against 0.001 mm) |
+| `417ea64b` | 11 | refused | ends coped by the other pipes' cylinders; three NURBS faces that are cylinders of radius 159.25 only at 1-10 mm |
+| `5dfd542b` | 9 | refused | coped ends; the bore itself is a NURBS face (a cylinder only at 1 mm) |
+| `7072d67a` | 12 | refused | coped ends; three NURBS faces |
+
+The one recognised pipe stays on native HLD because the refused pipes' boxes overlap it. So the drawing is unchanged by
+this class: Top 21.37 m Visible, 41.02 m Hidden, 6.50 m Unresolved, 2.0 s, before and after; SW 13.41 / 36.11 / 9.32 m.
+Ends trimmed by several planes would not help here: the node pipes are saddle-cut by cylinders, and their faces are
+not exact cylinders at the model tolerance. Planar multi-trim ends were therefore not built.
+
+### Stage 2 sketch: a recognised solid next to native bodies
+
+Today a recognised solid S stays in HLD whole when an unrecognised body N may hide it. The mixed route lets S leave
+anyway. It was evaluated for this PR and left out: it changes every view that has freeform next to round members
+(curved S has 124 such sources of 500), it lives in the native-record code of `ComposedVisibility` that another branch
+is changing, and it needs its own gate pass. It is sound in the same sense as the planar + native composition is:
+
+- **S as an occluder** is already complete: its exact solid hides kernel edges, native curves, points and exact
+  candidates. Nothing more is needed.
+- **S as a candidate.** Its lines are hidden by planar faces (done), exact solids (done) and N (missing). Submit S's
+  candidate curves to the same HLD call as *non-occluding curves*, as kernel edges are today, tagged with the
+  candidate's index. HLD then classifies them against the native bodies only.
+- **Combine as a union.** For each candidate: native Hidden stays Hidden. Where native says Visible, the exact solve
+  (own solid, on-surface and tangent rules, no slack) and the planar clip decide. Where native returns nothing for a
+  stretch (no coverage, a Duplicate that cannot be attributed, hidden curves switched off in fast mode), the stretch
+  is Unresolved unless the exact or planar side proves it Hidden. A native change point on these curves is only known
+  to the native tolerance, so the stretch within half a tolerance of it follows the change-point rule above.
+- **What it inherits.** Native's own errors against freeform occluders (sections 3-4) apply to these candidates as
+  they do to kernel edges now; the ray verifier audits them the same way.
+- **Work.** A candidate tag through the native round trip and duplicate resolution; mapping returned curve fragments
+  back to candidate parameters (rims are conics, not lines); the coverage rule for curves; fast-mode behaviour; the
+  gate's reference must treat these loci as mixed. Tests: the node and elbow cases above with a freeform body added.
+- **For the owner's model** it would free one pipe of five. The other four need recognition of coped tubes (a tube
+  minus other cylinders) or of near-cylinders at a looser, certified tolerance; both are separate questions.
+
 ## Reproduce
 
 ```sh

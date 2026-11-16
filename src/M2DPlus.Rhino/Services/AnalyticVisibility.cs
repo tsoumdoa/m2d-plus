@@ -32,83 +32,112 @@ internal sealed class AnalyticVisibility
     /// <summary>Angles are measured from X towards Axis × X.</summary>
     internal sealed record SheetShape(Point3d Origin, Vector3d Axis, Vector3d X, double Radius, double Start, double Sweep, double Height0, double Height1) : Shape;
 
-    private sealed class Entry { internal double Tolerance; internal Shape? Shape; }
+    private sealed class Entry { internal double Tolerance; internal Shape? Shape; internal string? Refusal; }
     private static readonly ConditionalWeakTable<GeometryBase, Entry> Cache = new();
 
     /// <summary>The exact shape of a whole body, or null. Cached on the owned geometry object.</summary>
-    internal static Shape? Recognise(GeometryBase geometry, double tolerance)
+    internal static Shape? Recognise(GeometryBase geometry, double tolerance) => Examine(geometry, tolerance).Shape;
+
+    /// <summary>The exact shape of a whole body, or why it is not one (null for geometry that is not a body at all).</summary>
+    internal static (Shape? Shape, string? Refusal) Examine(GeometryBase geometry, double tolerance)
     {
-        if (geometry is not (Brep or Extrusion or Surface)) return null;
-        if (Cache.TryGetValue(geometry, out var entry) && entry.Tolerance == tolerance) return entry.Shape;
-        Brep? temporary = null; Shape? shape = null;
+        if (geometry is not (Brep or Extrusion or Surface)) return (null, null);
+        if (Cache.TryGetValue(geometry, out var entry) && entry.Tolerance == tolerance) return (entry.Shape, entry.Refusal);
+        Brep? temporary = null; Shape? shape = null; string? refusal = null;
         try
         {
             var brep = geometry as Brep ?? (temporary = geometry is Extrusion e ? e.ToBrep() : ((Surface)geometry).ToBrep());
-            if (brep is not null && brep.IsValid) shape = RecogniseBrep(brep, tolerance);
+            if (brep is null) refusal = "no Brep form";
+            else shape = RecogniseBrep(brep, tolerance, out refusal);
         }
-        catch (Exception ex) when (ex is not OperationCanceledException) { shape = null; }
+        catch (Exception ex) when (ex is not OperationCanceledException) { shape = null; refusal = "recognition failed: " + ex.GetType().Name; }
         finally { temporary?.Dispose(); }
-        Cache.AddOrUpdate(geometry, new Entry { Tolerance = tolerance, Shape = shape });
-        return shape;
+        if (shape is null) refusal ??= "not recognised"; else refusal = null;
+        Cache.AddOrUpdate(geometry, new Entry { Tolerance = tolerance, Shape = shape, Refusal = refusal });
+        return (shape, refusal);
     }
 
-    private static Shape? RecogniseBrep(Brep brep, double tol)
+    private static Shape? RecogniseBrep(Brep brep, double tol, out string? why)
     {
+        string? reason = null; Shape? No(string text) { reason = text; return null; }
+        var shape = Classify(brep, tol, No); why = reason; return shape;
+    }
+
+    private static Shape? Classify(Brep brep, double tol, Func<string, Shape?> no)
+    {
+        // Surface types first: cheap, and what decides most bodies. Validity only for those that pass.
         var cylinders = new List<(int Face, Cylinder C)>(); var planes = new List<(int Face, Plane P)>(); var spheres = new List<Sphere>();
         foreach (var face in brep.Faces)
         {
             if (face.TryGetPlane(out var plane, tol)) planes.Add((face.FaceIndex, plane));
             else if (face.TryGetCylinder(out var cylinder, tol)) cylinders.Add((face.FaceIndex, cylinder));
             else if (face.TryGetSphere(out var sphere, tol)) spheres.Add(sphere);
-            else return null;
+            else return no("a face that is not a plane, cylinder or sphere");
         }
-        if (!brep.IsSolid) return brep.Faces.Count == 1 && cylinders.Count == 1 ? Sheet(brep, cylinders[0].C, tol) : null;
-        if (!brep.IsManifold || brep.SolidOrientation == BrepSolidOrientation.None) return null;
-        double volume = Math.Abs(brep.GetVolume()); if (!(volume > 0)) return null;   // a mirrored instance is inside out
+        if (!brep.IsValid) return no("invalid Brep");
+        if (!brep.IsSolid) return brep.Faces.Count == 1 && cylinders.Count == 1 ? Sheet(brep, cylinders[0].C, tol, no) : no("open Brep that is not one cylindrical face");
+        if (!brep.IsManifold || brep.SolidOrientation == BrepSolidOrientation.None) return no("non-manifold or unoriented solid");
+        double volume = Math.Abs(brep.GetVolume()); if (!(volume > 0)) return no("no volume");   // a mirrored instance is inside out
         if (spheres.Count == brep.Faces.Count)
         {
             var s = spheres[0];
-            if (!(s.Radius > 8 * tol) || spheres.Any(x => x.Center.DistanceTo(s.Center) > tol || Math.Abs(x.Radius - s.Radius) > tol)) return null;
-            return Math.Abs(volume - 4.0 / 3 * Math.PI * Math.Pow(s.Radius, 3)) <= 1e-4 * volume ? new SphereShape(s.Center, s.Radius) : null;
+            if (!(s.Radius > 8 * tol) || spheres.Any(x => x.Center.DistanceTo(s.Center) > tol || Math.Abs(x.Radius - s.Radius) > tol)) return no("spherical faces of different spheres");
+            return Math.Abs(volume - 4.0 / 3 * Math.PI * Math.Pow(s.Radius, 3)) <= 1e-4 * volume ? new SphereShape(s.Center, s.Radius) : no("sphere volume differs from the closed form");
         }
-        if (spheres.Count != 0 || cylinders.Count == 0 || planes.Count < 2) return null;
-        var axis = cylinders[0].C.Axis; if (!axis.Unitize()) return null; var origin = cylinders[0].C.Center; var line = new Line(origin, origin + axis);
+        if (spheres.Count != 0) return no("spherical and other faces in one body");
+        if (cylinders.Count == 0) return no(PlanarOnly);
+        if (planes.Count < 2) return no("fewer than two planar end faces");
+        var axis = cylinders[0].C.Axis; if (!axis.Unitize()) return no("degenerate cylinder axis"); var origin = cylinders[0].C.Center; var line = new Line(origin, origin + axis);
         double outer = cylinders.Max(c => c.C.Radius), inner = cylinders.Min(c => c.C.Radius);
+        // Directions are compared as distances over the body's extent, not as angles: an exported pipe whose faces
+        // differ by rounding in the eighth decimal is still one pipe, and a real kink on a long pipe is not.
+        var box = brep.GetBoundingBox(false); double span = box.IsValid ? box.Diagonal.Length : 0; if (!(span > 0)) return no("no extent");
+        bool Along(Vector3d a, Vector3d b) => a.Unitize() && b.Unitize() && Vector3d.CrossProduct(a, b).Length * span <= tol;
         foreach (var (_, c) in cylinders)
         {
-            if (c.Axis.IsParallelTo(axis, 1e-7) == 0 || line.DistanceTo(c.Center, false) > tol) return null;
-            if (Math.Abs(c.Radius - outer) > tol && Math.Abs(c.Radius - inner) > tol) return null;
+            if (!Along(c.Axis, axis) || line.DistanceTo(c.Center, false) > tol) return no("cylindrical faces on different axes");
+            if (Math.Abs(c.Radius - outer) > tol && Math.Abs(c.Radius - inner) > tol) return no("more than two radii");
         }
-        if (outer - inner <= tol) inner = 0; else if (inner <= 8 * tol || outer - inner <= 8 * tol) return null;
-        if (outer <= 8 * tol) return null;
+        if (outer - inner <= tol) inner = 0; else if (inner <= 8 * tol || outer - inner <= 8 * tol) return no("wall or bore thinner than eight tolerances");
+        if (outer <= 8 * tol) return no("radius below eight tolerances");
         // Every planar face lies on one of exactly two cap planes.
         var caps = new List<Plane>();
         foreach (var (_, p) in planes)
         {
-            if (caps.Any(k => k.Normal.IsParallelTo(p.Normal, 1e-7) != 0 && Math.Abs(k.DistanceTo(p.Origin)) <= tol)) continue;
-            caps.Add(p); if (caps.Count > 2) return null;
+            if (caps.Any(k => Along(k.Normal, p.Normal) && Math.Abs(k.DistanceTo(p.Origin)) <= tol)) continue;
+            caps.Add(p); if (caps.Count > 2) return no("end faces on more than two planes");
         }
-        if (caps.Count != 2) return null;
+        if (caps.Count != 2) return no("one end plane only");
         // Each cap meets the axis; the two must not meet inside the outer cylinder.
         var cuts = new double[2]; var reach = new double[2];
         for (int i = 0; i < 2; i++)
         {
-            var n = caps[i].Normal; double un = axis * n; if (Math.Abs(un) < 1e-3) return null;
+            var n = caps[i].Normal; double un = axis * n; if (Math.Abs(un) < 1e-3) return no("an end plane along the axis");
             cuts[i] = ((caps[i].Origin - origin) * n) / un; reach[i] = outer * Math.Sqrt(Math.Max(0, 1 - un * un)) / Math.Abs(un);
         }
         double length = Math.Abs(cuts[1] - cuts[0]);
-        if (length <= reach[0] + reach[1] + 8 * tol) return null;
+        if (length <= reach[0] + reach[1] + 8 * tol) return no("end planes meet inside the cylinder");
         double expected = Math.PI * (outer * outer - inner * inner) * length;
-        if (Math.Abs(volume - expected) > 1e-4 * expected) return null;
+        if (Math.Abs(volume - expected) > 1e-4 * expected) return no("volume differs from the closed form (holes, notches or a gap)");
         // Edges: only rims (a cylinder against a cap) may be creases. Anything else must be smooth or a seam.
         var planar = planes.Select(p => p.Face).ToHashSet();
         foreach (var edge in brep.Edges)
         {
             var faces = edge.AdjacentFaces();
             if (faces.Length == 1 && edge.Valence == EdgeAdjacency.Interior) continue;                // seam
-            if (faces.Length != 2) return null;
-            if (planar.Contains(faces[0]) != planar.Contains(faces[1])) continue;                      // rim
-            if (!edge.IsSmoothManifoldEdge(RhinoMathAngle)) return null;
+            if (faces.Length != 2) return no("an edge that is not shared by two faces");
+            if (planar.Contains(faces[0]) != planar.Contains(faces[1]))
+            {   // A rim. The lines drawn are the exact rims (cylinder against cap plane), so the stored edge must be
+                // that curve to tolerance: a Brep whose edges are looser than the model tolerance is refused.
+                for (int k = 0; k <= 8; k++)
+                {
+                    var q = edge.PointAt(edge.Domain.ParameterAt(k / 8.0)); double radial = line.DistanceTo(q, false);
+                    if (Math.Abs(radial - outer) > tol && Math.Abs(radial - inner) > tol || caps.All(c => Math.Abs(c.DistanceTo(q)) > tol))
+                        return no("a rim edge further than a tolerance from the exact rim");
+                }
+                continue;
+            }
+            if (!edge.IsSmoothManifoldEdge(RhinoMathAngle)) return no("a crease that is not a rim");
         }
         var middle = origin + axis * ((cuts[0] + cuts[1]) / 2); var oriented = new Plane[2];
         for (int i = 0; i < 2; i++)
@@ -122,35 +151,36 @@ internal sealed class AnalyticVisibility
     private const double RhinoMathAngle = Math.PI / 180;
 
     /// <summary>An extruded arc: one cylindrical face bounded by rulings and by arcs in planes square to the axis.</summary>
-    private static Shape? Sheet(Brep brep, Cylinder sheet, double tol)
+    private static Shape? Sheet(Brep brep, Cylinder sheet, double tol, Func<string, Shape?> refuse)
     {
-        var u = sheet.Axis; if (!u.Unitize() || sheet.Radius <= 8 * tol) return null; var o = sheet.Center;
-        var x = sheet.BasePlane.XAxis; x -= u * (x * u); if (!x.Unitize()) return null; var y = Vector3d.CrossProduct(u, x);
+        Shape? no = refuse("open cylindrical face that is not an extruded arc");
+        var u = sheet.Axis; if (!u.Unitize() || sheet.Radius <= 8 * tol) return no; var o = sheet.Center;
+        var x = sheet.BasePlane.XAxis; x -= u * (x * u); if (!x.Unitize()) return no; var y = Vector3d.CrossProduct(u, x);
         var axis = new Line(o, o + u);
         double h0 = double.PositiveInfinity, h1 = double.NegativeInfinity, phi = double.NaN, sweep = double.NaN; int rulings = 0, arcs = 0;
         static double Mod(double v) { v %= 2 * Math.PI; return v < 0 ? v + 2 * Math.PI : v; }
         foreach (var edge in brep.Edges)
         {
-            if (edge.Valence == EdgeAdjacency.Interior) { if (!edge.IsLinear(tol)) return null; continue; }   // seam of a full turn
-            if (edge.Valence != EdgeAdjacency.Naked) return null;
+            if (edge.Valence == EdgeAdjacency.Interior) { if (!edge.IsLinear(tol)) return no; continue; }   // seam of a full turn
+            if (edge.Valence != EdgeAdjacency.Naked) return no;
             if (edge.IsLinear(tol))
             {
                 var d = edge.PointAtEnd - edge.PointAtStart;
-                if (!d.Unitize() || d.IsParallelTo(u, 1e-7) == 0 || Math.Abs(axis.DistanceTo(edge.PointAtStart, false) - sheet.Radius) > tol) return null;
+                if (!d.Unitize() || d.IsParallelTo(u, 1e-7) == 0 || Math.Abs(axis.DistanceTo(edge.PointAtStart, false) - sheet.Radius) > tol) return no;
                 rulings++; continue;
             }
-            if (!edge.TryGetArc(out var arc, tol) || Math.Abs(arc.Radius - sheet.Radius) > tol || arc.Plane.Normal.IsParallelTo(u, 1e-7) == 0 || axis.DistanceTo(arc.Center, false) > tol) return null;
+            if (!edge.TryGetArc(out var arc, tol) || Math.Abs(arc.Radius - sheet.Radius) > tol || arc.Plane.Normal.IsParallelTo(u, 1e-7) == 0 || axis.DistanceTo(arc.Center, false) > tol) return no;
             double h = (arc.Center - o) * u; h0 = Math.Min(h0, h); h1 = Math.Max(h1, h); arcs++;
             double Angle(Point3d q) => Math.Atan2((q - o) * y, (q - o) * x);
             double a0 = Angle(edge.PointAtStart), am = Angle(edge.PointAt(edge.Domain.Mid)), a1 = Angle(edge.PointAtEnd);
             double d1 = Mod(am - a0), d2 = edge.IsClosed ? 2 * Math.PI : Mod(a1 - a0);
             double start = d1 <= d2 ? a0 : a1, span = d1 <= d2 ? d2 : 2 * Math.PI - d2;
             if (double.IsNaN(phi)) { phi = start; sweep = span; }
-            else if (Math.Abs(span - sweep) > 1e-7 || Math.Min(Mod(start - phi), Mod(phi - start)) > 1e-7 && sweep < 2 * Math.PI - 1e-9) return null;
+            else if (Math.Abs(span - sweep) > 1e-7 || Math.Min(Mod(start - phi), Mod(phi - start)) > 1e-7 && sweep < 2 * Math.PI - 1e-9) return no;
         }
-        if (arcs != 2 || h1 - h0 <= 8 * tol || double.IsNaN(phi) || !(sweep > 1e-6)) return null;
+        if (arcs != 2 || h1 - h0 <= 8 * tol || double.IsNaN(phi) || !(sweep > 1e-6)) return no;
         bool full = sweep >= 2 * Math.PI - 1e-9;
-        if (rulings != (full ? 0 : 2)) return null;
+        if (rulings != (full ? 0 : 2)) return no;
         double area = sheet.Radius * sweep * (h1 - h0);
         return Math.Abs(brep.GetArea() - area) <= 1e-4 * area ? new SheetShape(o, u, x, sheet.Radius, phi, full ? 2 * Math.PI : sweep, h0, h1) : null;
     }
@@ -161,25 +191,28 @@ internal sealed class AnalyticVisibility
     private static bool Enabled(ViewRequest view, NativeSettings settings) =>
         settings.Analytic && !settings.NativeOnly && view.Settings?.Tangents != true && view.Settings?.Seams != true;
 
-    /// <summary>For each geometry: null when it is not recognised, false when recognised but kept in HLD, true when it leaves.</summary>
-    private static (Shape? Shape, bool Leaves)[] Plan(IReadOnlyList<GeometryBase> geometries, Plane plane, double tol)
+    /// <summary>For each geometry: its shape (null when not recognised), whether it leaves HLD, and for a recognised one
+    /// that stays, the index of an unrecognised body that may hide it (-1 when its own box is invalid).</summary>
+    private static (Shape? Shape, bool Leaves, int Blocker)[] Plan(IReadOnlyList<GeometryBase> geometries, Plane plane, double tol)
     {
-        var plan = new (Shape?, bool)[geometries.Count]; var toView = Transform.PlaneToPlane(plane, Plane.WorldXY);
-        var foreign = new List<BoundingBox>(); bool any = false;
+        var plan = new (Shape?, bool, int)[geometries.Count]; var toView = Transform.PlaneToPlane(plane, Plane.WorldXY);
+        var foreign = new List<(BoundingBox Box, int Index)>(); bool any = false;
         for (int i = 0; i < geometries.Count; i++)
         {
-            var shape = Recognise(geometries[i], tol); plan[i] = (shape, false); any |= shape is not null;
+            var shape = Recognise(geometries[i], tol); plan[i] = (shape, false, -1); any |= shape is not null;
         }
         if (!any) return plan;
         for (int i = 0; i < geometries.Count; i++)
-            if (plan[i].Item1 is null && Body(geometries[i])) foreign.Add(geometries[i].GetBoundingBox(toView));
+            if (plan[i].Item1 is null && Body(geometries[i])) foreign.Add((geometries[i].GetBoundingBox(toView), i));
         for (int i = 0; i < geometries.Count; i++)
         {
             if (plan[i].Item1 is null) continue;
-            var box = geometries[i].GetBoundingBox(toView);
-            bool exposed = !box.IsValid || foreign.Any(f => !f.IsValid || f.Min.X <= box.Max.X + tol && f.Max.X >= box.Min.X - tol &&
-                f.Min.Y <= box.Max.Y + tol && f.Max.Y >= box.Min.Y - tol && f.Max.Z >= box.Min.Z - tol);
-            plan[i] = (plan[i].Item1, !exposed);
+            var box = geometries[i].GetBoundingBox(toView); int blocker = -1; bool exposed = !box.IsValid;
+            if (!exposed)
+                foreach (var (f, index) in foreign)
+                    if (!f.IsValid || f.Min.X <= box.Max.X + tol && f.Max.X >= box.Min.X - tol &&
+                        f.Min.Y <= box.Max.Y + tol && f.Max.Y >= box.Min.Y - tol && f.Max.Z >= box.Min.Z - tol) { exposed = true; blocker = index; break; }
+            plan[i] = (plan[i].Item1, !exposed, blocker);
         }
         return plan;
     }
@@ -198,8 +231,30 @@ internal sealed class AnalyticVisibility
     private readonly Plane _plane; private readonly double _tol; private readonly int _recognised;
     internal bool Any => _removed.Count != 0;
     internal string Route => Any ? $"; exact analytic solids={_removed.Count}" : "";
-    internal IEnumerable<string> Diagnostics => _recognised == 0 ? [] :
-        [$"Analytic solids: recognised={_recognised}; exact={_removed.Count}; kept on native HLD because an unrecognised body may hide them={_recognised - _removed.Count}; own candidate curves={_candidates.Count}."];
+    private readonly List<string> _notes = [];
+    internal IEnumerable<string> Diagnostics => (_recognised == 0 ? [] : new[]
+        { $"Analytic solids: recognised={_recognised}; exact={_removed.Count}; kept on native HLD because an unrecognised body may hide them={_recognised - _removed.Count}; own candidate curves={_candidates.Count}." })
+        .Concat(_notes);
+
+    /// <summary>Info for the owner: which recognised solids stayed on native HLD and the body that may hide each, and
+    /// why round bodies were refused. Bodies with planar faces only are not listed. Lists are capped.</summary>
+    private void Explain(List<VisibilityInput> curved, (Shape? Shape, bool Leaves, int Blocker)[] plan, double tol)
+    {
+        const int limit = 8;
+        var kept = Enumerable.Range(0, plan.Length).Where(i => plan[i].Shape is not null && !plan[i].Leaves).ToArray();
+        if (kept.Length != 0)
+            _notes.Add("Analytic solids kept on native HLD: " + string.Join("; ", kept.Take(limit).Select(i =>
+                $"{curved[i].Source.Identity} (may be hidden by {(plan[i].Blocker >= 0 ? curved[plan[i].Blocker].Source.Identity : "an unbounded body")})")) +
+                (kept.Length > limit ? $"; and {kept.Length - limit} more." : "."));
+        var refused = Enumerable.Range(0, plan.Length).Where(i => plan[i].Shape is null)
+            .Select(i => (Index: i, Why: Examine(curved[i].Geometry, tol).Refusal)).Where(r => r.Why is not null && r.Why != PlanarOnly)
+            .GroupBy(r => r.Why!, StringComparer.Ordinal).OrderByDescending(g => g.Count()).ThenBy(g => g.Key, StringComparer.Ordinal).ToArray();
+        if (refused.Length != 0)
+            _notes.Add("Not exact analytic solids (native HLD): " + string.Join("; ", refused.Take(limit).Select(g =>
+                $"{g.Count()} x {g.Key} ({string.Join(", ", g.Take(3).Select(r => curved[r.Index].Source.Identity))}{(g.Count() > 3 ? ", ..." : "")})")) +
+                (refused.Length > limit ? $"; and {refused.Length - limit} more reasons." : "."));
+    }
+    private const string PlanarOnly = "planar faces only";
 
     private AnalyticVisibility() { }
 
@@ -222,6 +277,7 @@ internal sealed class AnalyticVisibility
         _plane = plane; _tol = tol;
         var plan = Plan(curved.Select(c => c.Geometry).ToArray(), plane, tol);
         _recognised = plan.Count(p => p.Shape is not null);
+        Explain(curved, plan, tol);
         if (!plan.Any(p => p.Leaves)) return;
         var all = new List<AnalyticSolid>(); var removed = new List<AnalyticSolid>(); var leaving = new HashSet<VisibilityInput>();
         try
@@ -519,12 +575,18 @@ internal sealed class AnalyticVisibility
             foreach (var i in occluders.Intervals(chord.Piece, _tol, slack, absorb: 0, token: token))
                 Push(i.Start == 0 ? ta : ta + (tb - ta) * i.Start, i.End == 1 ? tb : ta + (tb - ta) * i.End, i.Class, chord.Length * (i.End - i.Start));
         }
-        // An undecided run no longer than `absorb` between decided neighbours is a change point known to that accuracy.
+        // An undecided run no longer than `absorb` between decided neighbours of different classes is a change point
+        // known to that accuracy. Between neighbours of one class, or at an end, it is not a change point. On an exact
+        // candidate (no slack) it is then a tie no longer than a tolerance and goes to the neighbour. On a native curve
+        // it stays Unresolved: behind a sliver narrower than the slack (an edge-on sheet) the whole hidden stretch is
+        // undecided, and giving it to its Visible neighbours would draw a hidden line.
         for (int i = 0; i < runs.Count; i++)
         {
             var run = runs[i];
             if (run.Class != VisibilityClass.Unresolved || run.Length > absorb) continue;
             bool left = i > 0, right = i + 1 < runs.Count;
+            bool changePoint = left && right && runs[i - 1].Class != runs[i + 1].Class;
+            if (!changePoint && (slack > 0 || run.Length > _tol)) continue;
             if (left && right && runs[i - 1].Class == runs[i + 1].Class)
             { runs[i - 1] = (runs[i - 1].A, runs[i + 1].B, runs[i - 1].Class, runs[i - 1].Length + run.Length + runs[i + 1].Length); runs.RemoveRange(i, 2); i--; }
             else if (left && right)

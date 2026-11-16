@@ -341,6 +341,55 @@ public sealed class AnalyticVisibilityTests
     }
 
     [Fact]
+    public void IntervalsOfRandomLinesAgreeWithTheMembershipReferenceAllAlongEachInterval()
+    {
+        // The oracle here is independent of the engine: the solids are known only as point-membership tests, marched
+        // along the view ray. Every interval is sampled every 5 cm along its whole length (not only at its middle),
+        // away from its ends by 5 mm. A Hidden interval must have cover on every sample; a Visible one must have none.
+        var random = new Random(4242); int hidden = 0, visible = 0, skipped = 0, undecided = 0;
+        for (int trial = 0; trial < 24; trial++)
+        {
+            var shapes = Enumerable.Range(0, 1 + random.Next(3)).Select(_ => Random(random, 0)).ToArray(); var scene = Scene(shapes.Select(s => s.Solid).ToArray());
+            var a = V(random.NextDouble() * 8 - 4, random.NextDouble() * 8 - 4, random.NextDouble() * 6 - 8);
+            var b = V(random.NextDouble() * 8 - 4, random.NextDouble() * 8 - 4, random.NextDouble() * 6 - 8);
+            var candidate = AnalyticCandidate.Straight(a, b); var intervals = scene.Intervals(candidate, Tol); Ordered(intervals);
+            double length = Math.Sqrt(Math.Pow(b.X - a.X, 2) + Math.Pow(b.Y - a.Y, 2) + Math.Pow(b.Z - a.Z, 2)), far = 12 + shapes.Max(s => s.Reach);
+            foreach (var interval in intervals)
+            {
+                if (interval.Class == Unresolved) { undecided++; continue; }
+                double margin = 5e-3 / length, from = interval.Start + margin, to = interval.End - margin;
+                for (double t = from; t <= to; t += 5e-2 / length)
+                {
+                    var p = candidate.At(t); const double step = 2e-3; int run = 0, longest = 0;
+                    for (double s = Tol + step; s < far; s += step)
+                    {
+                        if (shapes.Any(shape => shape.Inside(p.X, p.Y, p.Z + s))) longest = Math.Max(longest, ++run); else run = 0;
+                    }
+                    if (longest >= 3) { Assert.True(interval.Class == Hidden, $"trial {trial}: Visible interval {interval.Start}..{interval.End} has {longest * 2} mm of cover at t={t}"); hidden++; }
+                    else if (longest == 0 && shapes.All(shape => Clear(shape, p, far))) { Assert.True(interval.Class == Visible, $"trial {trial}: Hidden interval {interval.Start}..{interval.End} has no cover at t={t}"); visible++; }
+                    else skipped++;
+                }
+            }
+        }
+        Assert.True(hidden > 40 && visible > 400, $"hidden {hidden}, visible {visible}, skipped {skipped}, undecided intervals {undecided}");
+    }
+
+    [Fact]
+    public void AShortUndecidedRunIsOnlyAbsorbedAtAChangePoint()
+    {
+        // A line just above the top of a sphere by a tie's worth of cover: around the closest point the depth window
+        // is undecided. With slack (a native curve) that run lies between two Visible stretches and must stay
+        // Unresolved; it is not a change point. An exact candidate may take a run up to one tolerance as a tie.
+        var scene = Scene(new AnalyticSphere(V(0, 0, 0), 1));
+        double z = 1 - Tol - Tol * 3 / 32;   // cover beyond the tolerance: 3/32 of a tolerance at the middle (the window is 1/16..1/8)
+        var line = AnalyticCandidate.Straight(V(-.5, 0, z), V(.5, 0, z));
+        var exact = scene.Intervals(line, Tol); var native = scene.Intervals(line, Tol, slack: Tol / 2, absorb: 4 * Tol);
+        Assert.Contains(native, i => i.Class == Unresolved);
+        Assert.All(exact.Concat(native), i => Assert.NotEqual(Hidden, i.Class));
+        foreach (var run in native.Where(i => i.Class == Unresolved)) Assert.True(run.Start > 0 && run.End < 1);
+    }
+
+    [Fact]
     public void IntervalsOfRandomLinesMatchPointAnswersAtTheirMiddles()
     {
         var random = new Random(7);
