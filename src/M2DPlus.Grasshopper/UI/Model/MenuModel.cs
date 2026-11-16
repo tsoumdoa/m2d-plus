@@ -97,6 +97,7 @@ public static class ComponentMenu
         items.Add(Choice(settings, "Engine", "engine") with { Tooltip = SettingsCatalog.Spec("engine").Tooltip });
         items.Add(Toggle(settings, "Tangent edges", "tangents"));
         items.Add(Toggle(settings, "Seams", "seams"));
+        items.Add(Toggle(settings, "Joints", "joints"));
         items.Add(Choice(settings, "Min visible", "min_visible") with { Tooltip = SettingsCatalog.Spec("min_visible").Tooltip });
         items.Add(Choice(settings, "Beyond", "beyond"));
         items.Add(Choice(settings, "Far clip", "farclip"));

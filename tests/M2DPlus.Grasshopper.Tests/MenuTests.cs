@@ -18,7 +18,7 @@ public sealed class MenuTests
         var labels = Menu(ComponentUiState.Default, DrawingPhase.Running).Where(n => !n.IsSeparator).Select(n => n.Label).ToArray();
         Assert.Equal(["Convert to view boxes", "Flip view direction", "Create view from current viewport", "Select view objects",
             "Bake drawing", "Bake one", "Bake layers", "Run automatically", "Run now", "Cancel",
-            "Hidden lines", "Engine", "Tangent edges", "Seams", "Min visible", "Beyond", "Far clip", "Cut only", "Depth cueing", "Cuts", "Hatch", "Scale", "Line weights",
+            "Hidden lines", "Engine", "Tangent edges", "Seams", "Joints", "Min visible", "Beyond", "Far clip", "Cut only", "Depth cueing", "Cuts", "Hatch", "Scale", "Line weights",
             "Reset menu defaults", "Preview", "Output tree", "Copy info", "Copy settings as text", "Clear drawing cache"], labels);
         Assert.DoesNotContain(Menu(ComponentUiState.Default, DrawingPhase.Done), n => n.Label == "Cancel");
         var all = Flatten(Menu(ComponentUiState.Default)).ToArray();
@@ -94,6 +94,8 @@ public sealed class MenuTests
         Assert.Equal(MenuCommands.SetValue("hidden", "off"), hidden.Command);
         Assert.Equal("hidden = on", hidden.Hint);
         Assert.False(Item(menu, "Seams").Checked);
+        Assert.True(Item(menu, "Joints").Checked);
+        Assert.Equal(MenuCommands.SetValue("joints", "off"), Item(menu, "Joints").Command);
         Assert.Equal(["Auto"], Item(menu, "Beyond").Children.Where(c => c.Checked).Select(c => c.Label));
         Assert.Equal(["Clip without line"], Item(menu, "Far clip").Children.Where(c => c.Checked).Select(c => c.Label));
         Assert.Equal(["1:100"], Item(menu, "Scale").Children.Where(c => c.Checked).Select(c => c.Label));

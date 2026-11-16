@@ -2,14 +2,33 @@ namespace M2DPlus.Core.Visibility;
 
 /// <summary>Parallel view coordinates: larger Z is closer to the viewer.</summary>
 public readonly record struct Vertex(double X, double Y, double Z);
-public sealed record PlanarFace(Vertex[][] Loops);
-public sealed record CandidateEdge(Vertex A, Vertex B, string Source);
+public sealed record PlanarFace(Vertex[][] Loops)
+{
+    public string? Source { get; init; }
+    /// <summary>Certified outward normal of a closed, outward-oriented solid only.
+    /// Null for unoriented/open sources; loop winding must never substitute for this certificate.</summary>
+    public Vertex? OutwardNormal { get; init; }
+    /// <summary>Owned coordinates before rounded view projection, for view-independent contact certificates.</summary>
+    public Vertex[][]? WorldLoops { get; init; }
+    public Vertex? WorldOutwardNormal { get; init; }
+}
+public sealed record CandidateEdge(Vertex A, Vertex B, string Source)
+{
+    /// <summary>Indices into the solve's face list; empty for non-surface candidates.</summary>
+    public int[] AdjacentFaces { get; init; } = [];
+    public Vertex? WorldA { get; init; }
+    public Vertex? WorldB { get; init; }
+}
 public enum VisibilityClass { Visible, Hidden, Unresolved }
 public readonly record struct EdgeInterval(int Edge, double Start, double End, VisibilityClass Class);
 public sealed record VisibilityResult(IReadOnlyList<EdgeInterval> Intervals, long FaceTests, long ExactFallbacks,
-    IReadOnlyList<string> Diagnostics);
+    IReadOnlyList<string> Diagnostics)
+{
+    public IReadOnlyList<ContactInterval> Contacts { get; init; } = [];
+}
 public sealed record VisibilityOptions(double DepthTolerance, int Threads = 1, bool UseIndex = true)
 {
+    public bool Joints { get; init; } = true;
     // Deterministic per-candidate limits. Exhaustion is uncertainty, never visibility.
     public int MaxPairOperations { get; init; } = 65536;
     public int MaxFacesPerEdge { get; init; } = 65536;
@@ -18,6 +37,14 @@ public sealed record VisibilityOptions(double DepthTolerance, int Threads = 1, b
     public Action<VisibilityWork>? ObserveWork { get; init; }
 }
 public sealed record VisibilityWork(long ExactFallbacks, double ExactSeconds, int ExactFaces, int BudgetEdges);
+
+internal static class ContactGeometry
+{
+    internal static PlanarFace Face(PlanarFace face) => face.WorldLoops is null ? face : face with
+    { Loops=face.WorldLoops,OutwardNormal=face.WorldOutwardNormal,WorldLoops=null,WorldOutwardNormal=null };
+    internal static CandidateEdge Edge(CandidateEdge edge) => edge.WorldA is {} a && edge.WorldB is {} b
+        ? edge with { A=a,B=b,WorldA=null,WorldB=null } : edge;
+}
 
 internal readonly record struct P<T>(T X, T Y, T Z) where T : IScalar<T>
 {

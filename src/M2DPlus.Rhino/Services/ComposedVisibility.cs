@@ -65,6 +65,7 @@ internal static class ComposedVisibility
             phase.Next("kernel solve");
             var kernel = EdgeFaceKernel.Solve(extraction.Faces, extraction.Edges, new(tol, Math.Min(System.Environment.ProcessorCount, 8))
             {
+                Joints = view.Settings?.Joints ?? true,
                 Progress = (done, total) => NativeDrawing.ReportStep(ViewSteps.ExactLines, done, total),
                 ObserveWork = work => {
                     output.Phases.Add("kernel exact fallback CPU work",work.ExactSeconds);

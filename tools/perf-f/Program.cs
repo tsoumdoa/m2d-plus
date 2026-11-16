@@ -70,6 +70,36 @@ internal static class Program
         viewName = viewName.Replace("sidecar=", "").Replace(' ', '-');
         if (view.Error is not null) throw new ArgumentException(view.Error);
         var stem = Path.GetFileNameWithoutExtension(file) + "-" + viewName;
+        if (variants.Contains("contact-extract"))
+        {
+            var mode=Environment.GetEnvironmentVariable("PERFF_CONTACT_TRANSFORM")??"identity";
+            if(mode is not ("identity" or "offset" or "tilted" or "offset-tilted"))throw new ArgumentException("Invalid contact transform");
+            var transform=Transform.Identity;
+            if(mode.Contains("tilted",StringComparison.Ordinal))transform=Transform.Rotation(.37,new Vector3d(1,2,3),Point3d.Origin);
+            if(mode.Contains("offset",StringComparison.Ordinal))transform=Transform.Translation(5e6,5e6,5e6)*transform;
+            var plane=view.Resolve(scene.Bounds,scene.Tolerance).Plane;plane.Transform(transform);
+            var extraction=new PlanarExtraction();
+            foreach(var leaf in VisibilityInputOrder.Canonical(prepared,l=>new VisibilityInput(l.Geometry,l)))
+            {
+                using var geometry=leaf.Geometry.Duplicate();geometry.EnsurePrivateCopy();
+                if(!geometry.Transform(transform))throw new InvalidOperationException("Contact fixture transform failed");
+                // Match production: transform owned geometry first, then extract
+                // with Identity. Rigid transforms here have positive determinant.
+                extraction.Add(geometry,Transform.Identity,plane,scene.Tolerance,leaf.Identity,nativeMeshCandidates:true);
+            }
+            File.WriteAllText(Path.Combine(output,stem+"-planar-scene.json"),JsonSerializer.Serialize(new {
+                extraction.Faces,extraction.Edges,origin=new[]{plane.OriginX,plane.OriginY,plane.OriginZ},
+                x=new[]{plane.XAxis.X,plane.XAxis.Y,plane.XAxis.Z},y=new[]{plane.YAxis.X,plane.YAxis.Y,plane.YAxis.Z}}));
+            File.WriteAllText(Path.Combine(output,stem+"-contact-capture.json"),JsonSerializer.Serialize(new {
+                model=file,modelSha256=Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(file))),mode,
+                angleRadians=mode.Contains("tilted",StringComparison.Ordinal)?.37:0,
+                axis=new[]{1,2,3},offset=mode.Contains("offset",StringComparison.Ordinal)?new[]{5e6,5e6,5e6}:new double[3],
+                prepared=prepared.Count,extraction.EligibleObjects,extraction.OtherObjects,extraction.Excluded,
+                tolerance=scene.Tolerance,rhino=RhinoApp.Version.ToString(),runtime=Environment.Version.ToString(),
+                engineSha256=Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(typeof(NativeDrawing).Assembly.Location))),
+                scope="Owned prepared Rhino geometry and view rigidly transformed together; Identity extraction; no refit, visibility solve or native HLD."}));
+            return 0;
+        }
         Console.WriteLine($"{stem}: open {openSeconds:F2}s capture {captureSeconds:F2}s prepare {prepareSeconds:F2}s; {prepared.Count} leaves; bounds {bounds.Min} .. {bounds.Max}; tol {scene.Tolerance}");
         if (curved) { Curved.Run(scene, prepared, view, stem, output, variants, timeout); return 0; }
         if (spike) { Spike.Run(scene, prepared, view, stem, output, variants, timeout); return 0; }
@@ -101,6 +131,14 @@ internal static class Program
                 // Direct view solve: bypasses the in-process admission cap (L exceeds it) and the tolerance census.
                 run++;
                 var solve = typeof(NativeDrawing).GetMethod("SolveView", BindingFlags.NonPublic | BindingFlags.Static)!;
+                var runView = view;
+                if (variant is "joints-on" or "joints-off")
+                {
+                    var context = new ViewSettingsContext("contact-perf", view.Name, view.Kind, view.Cut is not null,
+                        scene.Bounds.Diagonal.Length * 2, scene.Tolerance);
+                    var resolution = Settings.Resolve([context], [["hidden=on", "beyond=off", $"joints={(variant == "joints-on" ? "on" : "off")}"]], DocumentUnits.Metres);
+                    runView = view with { Settings = resolution.Views[0] };
+                }
                 var nativeSettings = new NativeSettings();
 #if !PERFF_BASELINE
                 if (variant == "census") nativeSettings = nativeSettings with { ObserveCompositionRecord = census.Capture,
@@ -113,7 +151,7 @@ internal static class Program
                     ObservePlanarScene = (extraction,plane) => File.WriteAllText(Path.Combine(output,stem+"-planar-scene.json"),JsonSerializer.Serialize(new { extraction.Faces, extraction.Edges, origin=new[]{plane.OriginX,plane.OriginY,plane.OriginZ}, x=new[]{plane.XAxis.X,plane.XAxis.Y,plane.XAxis.Z}, y=new[]{plane.YAxis.X,plane.YAxis.Y,plane.YAxis.Z} }))
                 };
 #endif
-                var drawn = (ViewDrawing)solve.Invoke(null, new object[] { scene, prepared, view, nativeSettings, limit.Token })!;
+                var drawn = (ViewDrawing)solve.Invoke(null, new object[] { scene, prepared, runView, nativeSettings, limit.Token })!;
 #if !PERFF_BASELINE
                 if(variant=="census" && Environment.GetEnvironmentVariable("PERFF_HIDDEN_BASELINE") is { } hiddenBaseline)
                     HiddenAudit.Run(drawn,hiddenBaseline,Path.Combine(output,stem+"-hidden-audit.json"),scene.Bounds,prepared,view.Cut?.Plane);
@@ -159,7 +197,7 @@ internal static class Program
                 model = file, modelSha256 = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(file))), view = viewName,
                 engineSha256 = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(typeof(NativeDrawing).Assembly.Location))),
                 rhino = RhinoApp.Version.ToString(), runtime = Environment.Version.ToString(), logicalProcessors = Environment.ProcessorCount,
-                contention = "shared machine; two other long benchmark jobs running; see machineBusyFraction/foreignCoresEstimate per row",
+                contention = "shared machine; measured load is recorded per row in machineBusyFraction/foreignCoresEstimate",
                 openSeconds, captureSeconds, prepareSeconds, leaves = prepared.Count, tolerance = scene.Tolerance, multipleThreads = false, rows
             }, new JsonSerializerOptions { WriteIndented = true }));
         }

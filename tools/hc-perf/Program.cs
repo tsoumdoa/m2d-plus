@@ -6,7 +6,7 @@ namespace M2DPlus.HcPerf;
 
 internal static class Program
 {
-    private sealed record Case(string path, string view, string output, bool freshNative, bool publication, bool traceNative);
+    private sealed record Case(string path, string view, string output, bool freshNative, bool publication, bool traceNative, bool? joints);
     [STAThread]
     private static int Main(string[] args)
     {
@@ -22,7 +22,7 @@ internal static class Program
         using var primary = global::Rhino.RhinoDoc.CreateHeadless(null);
         global::Rhino.RhinoDoc.ActiveDoc = primary;
         foreach (var c in JsonSerializer.Deserialize<Case[]>(File.ReadAllText(request))!)
-            CompositionGate.Run(c.path,c.view,c.output,c.freshNative,c.publication,c.traceNative);
+            CompositionGate.Run(c.path,c.view,c.output,c.freshNative,c.publication,c.traceNative,c.joints??true);
         return 0;
     }
 }

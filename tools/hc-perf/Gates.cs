@@ -11,6 +11,14 @@ namespace M2DPlus.HcPerf;
 
 public static class Gates
 {
+    private static (PlanarFace[] Faces,CandidateEdge[] Edges) Subset(IReadOnlyList<PlanarFace> all,PlanarFace[] selected,CandidateEdge[] edges)
+    {
+        var selectedSet=selected.ToHashSet(ReferenceEqualityComparer.Instance);
+        var ids=all.Select((f,i)=>(f,i)).Where(p=>selectedSet.Contains(p.f)).Select(p=>p.i)
+            .Concat(edges.SelectMany(e=>e.AdjacentFaces)).Distinct().Order().ToArray();
+        var map=ids.Select((id,i)=>(id,i)).ToDictionary(p=>p.id,p=>p.i);
+        return (ids.Select(i=>all[i]).ToArray(),edges.Select(e=>e with {AdjacentFaces=e.AdjacentFaces.Select(i=>map[i]).ToArray()}).ToArray());
+    }
     public static void RoundedRigid(string path, string viewName, string output)
     {
         using var model = File3dm.Read(path);
@@ -21,7 +29,7 @@ public static class Gates
         foreach (var l in PlanarExtraction.Leaves(model)) scene.Add(l.Geometry, l.Transform, view, tolerance, l.Source);
         var original = EdgeFaceKernel.Solve(scene.Faces, scene.Edges, new(tolerance, 8));
         Vertex Move(Vertex p) => new(-p.Y + 13 * unit, p.X - 7 * unit, p.Z + 5 * unit);
-        var faces = scene.Faces.Select(f => new PlanarFace(f.Loops.Select(l => l.Select(Move).ToArray()).ToArray())).ToArray();
+        var faces = scene.Faces.Select(f => f with {Loops=f.Loops.Select(l => l.Select(Move).ToArray()).ToArray(),OutwardNormal=f.OutwardNormal is {} normal?new(-normal.Y,normal.X,normal.Z):null}).ToArray();
         var edges = scene.Edges.Select(e => e with { A = Move(e.A), B = Move(e.B) }).ToArray();
         var moved = EdgeFaceKernel.Solve(faces, edges, new(tolerance, 8));
         var a = VisibilityLoci.Create(scene.Edges, original, tolerance);
@@ -112,6 +120,7 @@ public static class Gates
             return selected.Any(e => Math.Min(e.A.X, e.B.X) <= x1 && Math.Max(e.A.X, e.B.X) >= x0
                 && Math.Min(e.A.Y, e.B.Y) <= y1 && Math.Max(e.A.Y, e.B.Y) >= y0);
         }).ToArray();
+        (retained,selected)=Subset(faces,retained,selected);
         var watch = Stopwatch.StartNew();
         var actual = EdgeFaceKernel.Solve(retained, selected, new(tolerance, 8));
         using var limit = new CancellationTokenSource(TimeSpan.FromMinutes(10));
@@ -169,6 +178,7 @@ public static class Gates
                 Vertex At(double t) => new(edge.A.X + t * (edge.B.X - edge.A.X), edge.A.Y + t * (edge.B.Y - edge.A.Y), edge.A.Z + t * (edge.B.Z - edge.A.Z));
                 edges.Add(edge with { A = At(lo), B = At(hi) });
             }
+            var subset=Subset(scene.Faces,faces,edges.ToArray());faces=subset.Faces;edges=subset.Edges.ToList();
             var watch = Stopwatch.StartNew();
             var kernel = EdgeFaceKernel.Solve(faces, edges, new(tolerance, 8));
             using var limit = new CancellationTokenSource(TimeSpan.FromMinutes(10));

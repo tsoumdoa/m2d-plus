@@ -9,7 +9,7 @@ public static partial class Settings
 {
     public const bool DefaultHidden = true;
     public static ImmutableArray<string> Keys { get; } = ["depth", "farclip", "beyond", "fade", "fade.start", "fade.end",
-        "fade.limit", "crop", "hidden", "tangents", "seams", "glass", "scale", "weights", "hatch", "cuts", "gap", "name", "tree", "tolerance", "min_visible", "engine", "cutonly", "bake"];
+        "fade.limit", "crop", "hidden", "tangents", "seams", "joints", "glass", "scale", "weights", "hatch", "cuts", "gap", "name", "tree", "tolerance", "min_visible", "engine", "cutonly", "bake"];
 
     /// <summary>Keys read only when baking (UX §8.1). A change to them alone republishes the current drawing: no
     /// visibility solve and no presentation (<see cref="RunText"/>).</summary>
@@ -35,7 +35,7 @@ public static partial class Settings
     /// <summary>The keys that change what the visibility solve computes, and so key the drawing cache (UX §12.14).
     /// Hidden is additionally keyed in fast mode by <see cref="EffectiveSettings.VisibilityKey"/>.
     /// Min-visible and styling remain presentation over the cached solve.</summary>
-    public static ImmutableArray<string> VisibilityKeys { get; } = ["depth", "farclip", "crop", "tangents", "seams", "glass", "tolerance", "engine", "cutonly"];
+    public static ImmutableArray<string> VisibilityKeys { get; } = ["depth", "farclip", "crop", "tangents", "seams", "joints", "glass", "tolerance", "engine", "cutonly"];
 
     /// <summary>Canonical key spelling: lower case, runs of spaces as one underscore, so <c>min visible</c>,
     /// <c>Min_Visible</c> and the user-text key <c>m2d.min_visible</c> all name <c>min_visible</c>.</summary>
@@ -95,7 +95,7 @@ public static partial class Settings
                 var scale = Number(scaleText);
                 if (scale <= 0) throw new FormatException("Scale denominator must be positive.");
                 return scale;
-            case "fade": case "hidden": case "tangents": case "seams": case "cutonly":
+            case "fade": case "hidden": case "tangents": case "seams": case "joints": case "cutonly":
                 return value switch { "on" or "true" or "yes" or "1" => true, "off" or "false" or "no" or "0" => false,
                     _ => throw new FormatException(Suggest(value, ["on", "off", "true", "false", "yes", "no", "1", "0"])) };
             case "farclip": return Choice(value, ("none", FarClipMode.None), ("line", FarClipMode.Line), ("noline", FarClipMode.NoLine));
@@ -165,7 +165,7 @@ public static partial class Settings
         "fade.start" => 0d, "fade.end" => 100d, "fade.limit" => 30d, "crop" => CropMode.Auto,
         "glass" => GlassMode.Opaque, "scale" => 100d, "weights" => WeightMode.Auto, "hatch" => HatchMode.Styles,
         "cuts" => CutMode.Separate, "name" => "auto", "tree" => OutputTreeMode.Auto, "tolerance" => view.DocumentTolerance,
-        "min_visible" => 0d, "engine" => EngineMode.Exact, "bake" => BakeLayout.ViewLayer,
+        "min_visible" => 0d, "engine" => EngineMode.Exact, "joints" => true, "bake" => BakeLayout.ViewLayer,
         _ => throw new ArgumentException("Unknown key.", nameof(key))
     };
 }

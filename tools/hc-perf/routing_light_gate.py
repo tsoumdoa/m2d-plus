@@ -20,11 +20,12 @@ def main():
  for directory in a.directories:
   for file in directory.glob('*.gate.json'):
    row=json.loads(file.read_text());name=stem(row['model'])+'__'+row['view']
+   if row.get('contactRuleVersion')!=1 or row['classes'].get('tieConvention',0):raise RuntimeError('Fresh contact-rule evidence required: '+str(file))
    row['evidencePrefix']=str(file.resolve())[:-10];rows[name]=row;files[name]=file
  producers={tuple(r[k].lower() for k in ('engineSha256','coreSha256','harnessSha256')) for r in rows.values()}
  if len(producers)!=1:raise RuntimeError('Mixed compiled producers')
  write(a.output/'gate.json',dict(completeInventory=False,passed=False,cases=len(rows),rows=list(rows.values()),
-  inventorySha256=digest(a.inventory),note='233-view run stopped at owner direction; raw completed rows preserved'))
+  inventorySha256=digest(a.inventory),note='Required contact-rule inventory; raw whole-output verdict preserved separately'))
  subprocess.run([sys.executable,'-B',str(Path(__file__).with_name('routing_verify.py')),str(a.output)],check=True)
  verified=json.loads((a.output/'verified-gate.json').read_text());required=[];supplemental=[]
  requiredNames={stem(c['path'])+'__'+c['view'] for c in inventory if 'perf-L-' not in stem(c['path']) and 'curved-perf-' not in stem(c['path'])}

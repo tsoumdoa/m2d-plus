@@ -13,6 +13,8 @@ import shutil
 import subprocess
 import sys
 import os
+from contextlib import nullcontext
+import rhino3dm as R
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0,str(ROOT/'tools/models'))
@@ -23,7 +25,7 @@ def read(p): return json.loads(p.read_text())
 def digest(p): return hashlib.sha256(p.read_bytes()).hexdigest()
 def write(p,v): p.write_text(json.dumps(v,indent=2))
 
-def certify(gatefile,resolver,prepare_only=False):
+def certify(gatefile,resolver,prepare_only=False,serial_mutex=False):
     prefix=str(gatefile)[:-10]; path=lambda s:Path(prefix+s); gate=read(gatefile)
     if not gate['exactContradictions'] or not gate['NativeCalls']:return
     assert gate['nativeError'] is None and gate['kernelError'] is None
@@ -34,8 +36,40 @@ def certify(gatefile,resolver,prepare_only=False):
         if r['classification'] is None and r['routedClass']=='Visible' and r['check']['Class']==1:
             disputed.append(r)
             ids.update(c['edge'] for c in r['check']['Candidates'] if 'edge' in c)
-    assert len(disputed)==gate['exactContradictions'] and ids,'Unsupported non-planar contradiction'
+    assert len(disputed)==gate['exactContradictions'],'Unsupported contradiction'
     ids=sorted(ids); edges=[scene['Edges'][i] for i in ids]
+    # Native line fragments also end at planar depth events. Certify their
+    # actual owned straight supports, rather than borrowing a distant planar
+    # candidate or forgiving a gap. General native curves remain unsupported.
+    native_pieces={}
+    output=read(path('.kernel-output.json'))
+    for r in disputed:
+        f=failures[r['sample']]
+        if f['KernelOwned']:continue
+        for index,piece in enumerate(output['Pieces']):
+            if index in native_pieces.values() or piece['Class']!=0 or piece['Source']!=f['Source'] or not piece.get('Depth'):continue
+            projected=R.CommonObject.Decode(json.loads(piece['Geometry']))
+            world_curve=R.CommonObject.Decode(json.loads(piece['Depth']))
+            if not isinstance(projected,R.LineCurve) or not isinstance(world_curve,R.LineCurve):continue
+            a,b=projected.PointAtStart,projected.PointAtEnd
+            delta=[getattr(b,k)-getattr(a,k) for k in ('X','Y','Z')]
+            offset=[f[k]-getattr(a,k) for k in ('X','Y','Z')]
+            square=sum(v*v for v in delta)
+            if not square:continue
+            t=max(0,min(1,sum(v*d for v,d in zip(offset,delta))/square))
+            if math.sqrt(sum((v-t*d)**2 for v,d in zip(offset,delta)))>gate['tolerance']/2:continue
+            def local(p):
+                d=[getattr(p,k)-scene['origin'][i] for i,k in enumerate(('X','Y','Z'))]
+                x,y=scene['x'],scene['y']
+                z=[x[1]*y[2]-x[2]*y[1],x[2]*y[0]-x[0]*y[2],x[0]*y[1]-x[1]*y[0]]
+                size=math.sqrt(sum(v*v for v in z));z=[v/size for v in z]
+                return dict(zip(('X','Y','Z'),[sum(d[i]*axis[i] for i in range(3)) for axis in (x,y,z)]))
+            ends=[local(world_curve.PointAtStart),local(world_curve.PointAtEnd)]
+            drawn=[local(a),local(b)]
+            assert all(math.hypot(p['X']-q['X'],p['Y']-q['Y'])<=gate['tolerance']/64 for p,q in zip(ends,drawn)),'Native depth support differs from drawing'
+            native_pieces[len(edges)]=index
+            edges.append(dict(A=ends[0],B=ends[1],Source=piece['Source'],AdjacentFaces=[]))
+    assert edges,'No independently certifiable straight support'
     data=dict(Faces=scene['Faces'],Edges=edges,Actual=[],Tolerance=gate['tolerance'],Spacing=gate['spacing'])
     inputfile=path('.mixed-reference-input.json'); referencefile=path('.mixed-reference.json')
     exe=ROOT/'tools/routing-audit/bin/Release/net8.0/M2DPlus.RoutingAudit.dll'
@@ -77,7 +111,7 @@ def certify(gatefile,resolver,prepare_only=False):
         p=[scene['origin'][k]+x[k]*v[0]+y[k]*v[1]+z[k]*v[2] for k in range(3)]
         world.append(p);points.append(dict(Edge=i,Parameter=t))
         proofs.append(dict(sample=r['sample'],classification='toleranceArtefact',distance=distance,
-                           edge=ids[i],parameter=t,source=edges[i]['Source'],world=p))
+                           edge=ids[i] if i<len(ids) else None,nativePiece=native_pieces.get(i),parameter=t,source=edges[i]['Source'],world=p))
     native_suffixes=[]
     if native_points:
         write(path('.native-point-requests.json'),native_points)
@@ -112,7 +146,7 @@ def certify(gatefile,resolver,prepare_only=False):
     try:
         os.environ['PERFF_RAY_POINTS']=str(rays.resolve());os.environ['PERFF_TIMEOUT']='120'
         command=['dotnet',str(ROOT/'tools/perf-f/bin/Release/net8.0-windows/M2DPlus.PerfF.dll'),str(resolver.resolve()),gate['model'],str(folder.resolve()),gate['view'],'trace-native']
-        with SerialRhino(wait_seconds=None):watch=run(command,folder/'run.log',180,8)
+        with SerialRhino(wait_seconds=None) if serial_mutex else nullcontext():watch=run(command,folder/'run.log',180,8)
     finally:
         for key,value in [('PERFF_RAY_POINTS',old),('PERFF_TIMEOUT',old_timeout)]:
             if value is None:os.environ.pop(key,None)
@@ -141,11 +175,11 @@ def certify(gatefile,resolver,prepare_only=False):
     capture=dict(timings=timings,inputs=native,bodies=evidence['bodies'],planarSceneSha256=digest(folder/(stem+'-planar-scene.json')))
     write(path('.mixed-capture.json'),capture)
     suffixes=('.gate.json','.failures.json','.planar-scene.json','.sources.json','.routed-order.json','.kernel-output.json','.native-output.json','.exact-witnesses.jsonl','.mixed-reference-input.json','.mixed-reference.json','.mixed-ray-points.json','.mixed-curved-rays.json','.mixed-capture.json','.mixed-trace-watch.json','.foreign-records.json',*native_suffixes)
-    write(path('.interval-witnesses.json'),dict(accepted=True,scope='disputed planar intervals or points on actual native-output curves; complete curved-body point rays; no full-view certificate',
+    write(path('.interval-witnesses.json'),dict(accepted=True,scope='disputed planar candidates or owned native LineCurve supports: exact planar intervals and interior points; complete curved-body point rays; points on actual native-output curves; no general curved interval or full-view certificate',
         FaceTests=reference['FaceTests'],completePairs=reference['completePairs'],coreSha256=gate['coreSha256'],generatorSha256=digest(Path(__file__)),proofs=proofs,inputs={s:digest(path(s)) for s in suffixes}))
     print(Path(prefix).name,len(proofs),'mixed interval / complete curved-ray witnesses',flush=True)
 
 if __name__=='__main__':
-    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('directory',type=Path);parser.add_argument('--resolver',type=Path,required=True);parser.add_argument('--prepare-only',action='store_true')
+    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('directory',type=Path);parser.add_argument('--resolver',type=Path,required=True);parser.add_argument('--prepare-only',action='store_true');parser.add_argument('--serial-mutex',action='store_true')
     args=parser.parse_args()
-    for file in sorted(args.directory.glob('*.gate.json')):certify(file,args.resolver,args.prepare_only)
+    for file in sorted(args.directory.glob('*.gate.json')):certify(file,args.resolver,args.prepare_only,args.serial_mutex)

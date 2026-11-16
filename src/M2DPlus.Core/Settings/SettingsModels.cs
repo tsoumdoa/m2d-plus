@@ -101,6 +101,7 @@ public sealed class EffectiveSettings
     public EngineMode Engine => Get<EngineMode>("engine");
     public bool Tangents => Get<bool>("tangents");
     public bool Seams => Get<bool>("seams");
+    public bool Joints => Get<bool>("joints");
     public GlassMode Glass => Get<GlassMode>("glass");
     public double Scale => Get<double>("scale");
     public WeightMode Weights => Get<WeightMode>("weights");
@@ -118,7 +119,7 @@ public sealed class EffectiveSettings
     /// <see cref="RequestedHidden"/> instead; that flag survives normalization and worker transport.</summary>
     public EffectiveSettings ForVisibilitySolve() => Hidden ? this
         : new(View, Values.SetItem("hidden", Values["hidden"] with { Value = true }));
-    public string VisibilityKey() => string.Join(";", Settings.VisibilityKeys.Select(k =>
+    public string VisibilityKey() => string.Join(";", Settings.VisibilityKeys.Where(k => k != "joints" || !CutOnly).Select(k =>
         k + "=" + Settings.FormatEffective(k, Values[k].Value))) + (Engine == EngineMode.Fast ? ";hidden=" + RequestedHidden : "");
     public string Describe() => string.Join(Environment.NewLine, Settings.Keys.Select(k =>
         $"{k} = {Settings.FormatEffective(k, Values[k].Value)} ({Values[k].SourceDescription})"));
