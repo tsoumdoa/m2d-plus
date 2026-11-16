@@ -76,7 +76,7 @@ internal static class AnalyticCheck
                 var (shape, refusal) = AnalyticVisibility.Examine(leaf.Geometry, tol);
                 Console.WriteLine($"    BODY {leaf.Identity[^12..]} {(shape is null ? "REFUSED: " + refusal : "recognised " + shape)}");
                 if (leaf.Geometry is not Brep brep) continue;
-                Console.WriteLine($"        faces {brep.Faces.Count}, edges {brep.Edges.Count}, solid {brep.IsSolid}, valid {brep.IsValid}, volume {brep.GetVolume():R}");
+                Console.WriteLine($"        faces {brep.Faces.Count}, edges {brep.Edges.Count}, orientation {brep.SolidOrientation}, solid {brep.IsSolid}, valid {brep.IsValid}, volume {brep.GetVolume():R}");
                 foreach (var face in brep.Faces)
                 {
                     string kind = face.TryGetPlane(out var pl, tol) ? $"plane n=({pl.Normal.X:F8}, {pl.Normal.Y:F8}, {pl.Normal.Z:F8}) at {pl.Origin}"

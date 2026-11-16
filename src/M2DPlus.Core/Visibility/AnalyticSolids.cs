@@ -324,8 +324,21 @@ public sealed class AnalyticCylinderSheet : AnalyticSolid
 
 /// <summary>A short piece of a candidate. A and B are on the curve and M is the curve's point at the middle
 /// parameter, so points are taken on a parabola that follows the curve far closer than the chord does.</summary>
-public readonly record struct AnalyticCandidate(Vertex A, Vertex M, Vertex B, int Solid = -1, int OnSurface = 0, bool Tangent = false)
+/// <param name="Solid">The solid the candidate belongs to, with the surfaces of it the candidate lies on.</param>
+/// <param name="Contacts">Other solids that share one of those surfaces (a pipe coped onto another lies on the
+/// other's outer surface; two mitred members share a rim): for each, the surfaces of it the candidate lies on. The
+/// same rule then applies as on its own solid: the start of the ray is a root on that surface by construction.</param>
+public readonly record struct AnalyticCandidate(Vertex A, Vertex M, Vertex B, int Solid = -1, int OnSurface = 0, bool Tangent = false,
+    IReadOnlyList<(int Solid, int OnSurface)>? Contacts = null)
 {
+    /// <summary>Surfaces of the given solid this candidate lies on, as its own solid or by contact.</summary>
+    public int On(int solid)
+    {
+        if (solid == Solid) return OnSurface;
+        if (Contacts is not null) foreach (var c in Contacts) if (c.Solid == solid) return c.OnSurface;
+        return 0;
+    }
+
     public static AnalyticCandidate Straight(Vertex a, Vertex b) => new(a, new((a.X + b.X) / 2, (a.Y + b.Y) / 2, (a.Z + b.Z) / 2), b);
     public Vertex At(double t)
     {
@@ -393,10 +406,10 @@ public sealed class AnalyticOccluders
         foreach (int id in near)
         {
             if (id == except) continue;
-            bool own = id == candidate.Solid; var solid = _solids[id];
+            int on = candidate.On(id); bool tangent = on != 0 && candidate.Tangent; var solid = _solids[id];
             var k = solid is AnalyticCsg csg && slack > 0
-                ? csg.Evaluate(p, slack, p.Z, p.Z, tolerance, own ? candidate.OnSurface : 0, own && candidate.Tangent)
-                : solid.Occlusion(p, tolerance, own ? candidate.OnSurface : 0, own && candidate.Tangent);
+                ? csg.Evaluate(p, slack, p.Z, p.Z, tolerance, on, tangent)
+                : solid.Occlusion(p, tolerance, on, tangent);
             for (int side = 0; slack > 0 && solid is not AnalyticCsg && side < 4 && k != VisibilityClass.Unresolved; side++)
             {
                 double dx = side == 0 ? slack : side == 1 ? -slack : 0, dy = side == 2 ? slack : side == 3 ? -slack : 0;
@@ -519,8 +532,8 @@ public sealed class AnalyticOccluders
         var result = VisibilityClass.Visible;
         foreach (int id in cut)
         {
-            bool own = id == candidate.Solid;
-            var k = ((AnalyticCsg)_solids[id]).Evaluate(p, lateral, zLow, zHigh, tolerance, own ? candidate.OnSurface : 0, own && candidate.Tangent);
+            int on = candidate.On(id);
+            var k = ((AnalyticCsg)_solids[id]).Evaluate(p, lateral, zLow, zHigh, tolerance, on, on != 0 && candidate.Tangent);
             if (k == VisibilityClass.Hidden) return VisibilityClass.Hidden;
             if (k == VisibilityClass.Unresolved) result = VisibilityClass.Unresolved;
         }

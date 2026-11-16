@@ -31,6 +31,10 @@ internal sealed class AnalyticVisibility
     internal sealed record CylinderShape(Point3d Origin, Vector3d Axis, double Radius, double InnerRadius, Plane Cap0, Plane Cap1) : Shape;
     /// <summary>Angles are measured from X towards Axis × X.</summary>
     internal sealed record SheetShape(Point3d Origin, Vector3d Axis, Vector3d X, double Radius, double Start, double Sweep, double Height0, double Height1) : Shape;
+    /// <summary>A tube cut by planes and cylinders (see <see cref="CutTubeRecognition"/>). Surfaces from index Real on are
+    /// the two planes that end the tube and are not faces. FaceBound and EdgeBound are the stated accuracy.</summary>
+    internal sealed record CutTubeShape(IReadOnlyList<CutTubeRecognition.Surface> Surfaces, BoundingBox Bounds, IReadOnlyList<CutTubeRecognition.Edge> Edges,
+        int[] FaceSurface, int Real, double FaceBound, double EdgeBound, IReadOnlyList<int> Inside, IReadOnlyList<int> Outside) : Shape;
 
     private sealed class Entry { internal double Tolerance; internal Shape? Shape; internal string? Refusal; }
     private static readonly ConditionalWeakTable<GeometryBase, Entry> Cache = new();
@@ -60,8 +64,15 @@ internal sealed class AnalyticVisibility
     private static Shape? RecogniseBrep(Brep brep, double tol, out string? why)
     {
         string? reason = null; Shape? No(string text) { reason = text; return null; }
-        var shape = Classify(brep, tol, No); why = reason; return shape;
+        var shape = Classify(brep, tol, No);
+        if (shape is null && reason != PlanarOnly && brep.IsSolid)
+        {   // Not one of the plain shapes: perhaps a tube with cut ends.
+            string? plain = reason; shape = CutTubeRecognition.Recognise(brep, tol, No);
+            if (shape is null) reason = reason == PlanarOnly ? plain : $"{plain}; as a cut tube: {reason}";
+        }
+        why = reason; return shape;
     }
+    internal const string PlanarOnlyReason = PlanarOnly;
 
     private static Shape? Classify(Brep brep, double tol, Func<string, Shape?> no)
     {
@@ -223,7 +234,9 @@ internal sealed class AnalyticVisibility
 
     // ---------------------------------------------------------------- one view
 
-    private sealed record Candidate(Curve Curve, VisibilityInput Input, int Solid, int OnSurface, bool Tangent, Func<Point3d, bool> Profile);
+    /// <param name="Slack">How far the curve may be from the surfaces it lies on (a cut tube's stored edge).</param>
+    private sealed record Candidate(Curve Curve, VisibilityInput Input, int Solid, int OnSurface, bool Tangent, Func<Point3d, bool> Profile, double Slack = 0,
+        IReadOnlyList<(int Solid, int OnSurface)>? Contacts = null);
 
     internal static readonly AnalyticVisibility None = new();
     private readonly AnalyticOccluders _removed = new([]), _all = new([]);
@@ -246,6 +259,11 @@ internal sealed class AnalyticVisibility
             _notes.Add("Analytic solids kept on native HLD: " + string.Join("; ", kept.Take(limit).Select(i =>
                 $"{curved[i].Source.Identity} (may be hidden by {(plan[i].Blocker >= 0 ? curved[plan[i].Blocker].Source.Identity : "an unbounded body")})")) +
                 (kept.Length > limit ? $"; and {kept.Length - limit} more." : "."));
+        var cut = Enumerable.Range(0, plan.Length).Where(i => plan[i].Shape is CutTubeShape).ToArray();
+        if (cut.Length != 0)
+            _notes.Add("Cut tubes drawn exactly to a stated bound (faces to their plane or cylinder; drawn edges to the surfaces they join): " +
+                string.Join("; ", cut.Take(limit).Select(i => { var t = (CutTubeShape)plan[i].Shape!; return $"{curved[i].Source.Identity} faces {t.FaceBound:G3}, edges {t.EdgeBound:G3}"; })) +
+                (cut.Length > limit ? $"; and {cut.Length - limit} more." : "."));
         var refused = Enumerable.Range(0, plan.Length).Where(i => plan[i].Shape is null)
             .Select(i => (Index: i, Why: Examine(curved[i].Geometry, tol).Refusal)).Where(r => r.Why is not null && r.Why != PlanarOnly)
             .GroupBy(r => r.Why!, StringComparer.Ordinal).OrderByDescending(g => g.Count()).ThenBy(g => g.Key, StringComparer.Ordinal).ToArray();
@@ -269,8 +287,67 @@ internal sealed class AnalyticVisibility
         CylinderShape c => new AnalyticCylinder(Project(plane, c.Origin), Direction(plane, c.Axis), c.Radius, c.InnerRadius,
             [(Project(plane, c.Cap0.Origin), Direction(plane, c.Cap0.Normal)), (Project(plane, c.Cap1.Origin), Direction(plane, c.Cap1.Normal))]),
         SheetShape s => new AnalyticCylinderSheet(Project(plane, s.Origin), Direction(plane, s.Axis), Direction(plane, s.X), s.Radius, s.Start, s.Sweep, s.Height0, s.Height1),
+        CutTubeShape t => CutSolid(t, plane),
         _ => throw new InvalidOperationException("Unknown analytic shape")
     };
+
+    private static AnalyticCsg CutSolid(CutTubeShape t, Plane plane)
+    {
+        var min = new Vertex(double.MaxValue, double.MaxValue, double.MaxValue); var max = new Vertex(double.MinValue, double.MinValue, double.MinValue);
+        foreach (var corner in t.Bounds.GetCorners())
+        {
+            var v = Project(plane, corner);
+            min = new(Math.Min(min.X, v.X), Math.Min(min.Y, v.Y), Math.Min(min.Z, v.Z)); max = new(Math.Max(max.X, v.X), Math.Max(max.Y, v.Y), Math.Max(max.Z, v.Z));
+        }
+        return new AnalyticCsg(t.Surfaces.Select(s => new CsgPrimitive(s.Cylinder, Project(plane, s.Origin), Direction(plane, s.Direction), s.Radius, s.Role, s.Slack)).ToArray(), min, max, t.Inside, t.Outside);
+    }
+
+    /// <summary>The surfaces of a shape that another solid's line can lie on, with the bit that names each to the solid.</summary>
+    private static IEnumerable<(bool Cylinder, Point3d Origin, Vector3d Direction, double Radius, int Bit)> Faces(Shape shape)
+    {
+        switch (shape)
+        {
+            case CylinderShape c:
+                yield return (true, c.Origin, c.Axis, c.Radius, AnalyticSolid.Outer);
+                if (c.InnerRadius > 0) yield return (true, c.Origin, c.Axis, c.InnerRadius, AnalyticSolid.Inner);
+                break;
+            case CutTubeShape t:
+                for (int i = 0; i < t.Real; i++) yield return (t.Surfaces[i].Cylinder, t.Surfaces[i].Origin, t.Surfaces[i].Direction, t.Surfaces[i].Radius, 1 << i);
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Contact: a line of one solid that lies on a surface another solid shares (a pipe coped onto a neighbour lies on
+    /// the neighbour's outer surface; mitred members share a rim). Only where a cut tube is involved: the plain
+    /// shapes keep their own rule for coincident members (the closed-solid convention).
+    /// </summary>
+    private void Contacts(List<Shape> shapes)
+    {
+        if (!shapes.Any(s => s is CutTubeShape)) return;
+        var faces = shapes.Select(s => Faces(s).ToArray()).ToArray();
+        for (int k = 0; k < _candidates.Count; k++)
+        {
+            var c = _candidates[k]; var mine = faces[c.Solid].Where(f => (f.Bit & c.OnSurface) != 0).ToArray(); if (mine.Length == 0) continue;
+            double near = _tol + c.Slack; List<(int, int)>? contacts = null;
+            for (int other = 0; other < shapes.Count; other++)
+            {
+                if (other == c.Solid || shapes[other] is not CutTubeShape && shapes[c.Solid] is not CutTubeShape) continue;
+                int bits = 0;
+                foreach (var f in faces[other])
+                    foreach (var m in mine)
+                    {
+                        if (f.Cylinder != m.Cylinder) continue;
+                        bool same = f.Cylinder
+                            ? Math.Abs(f.Radius - m.Radius) <= near && Vector3d.CrossProduct(f.Direction, m.Direction).Length * Math.Max(1, f.Radius) <= near && new Line(f.Origin, f.Origin + f.Direction).DistanceTo(m.Origin, false) <= near
+                            : Vector3d.CrossProduct(f.Direction, m.Direction).Length <= 1e-9 && Math.Abs(new Plane(f.Origin, f.Direction).DistanceTo(m.Origin)) <= near;
+                        if (same) bits |= f.Bit;
+                    }
+                if (bits != 0) (contacts ??= []).Add((other, bits));
+            }
+            if (contacts is not null) _candidates[k] = c with { Contacts = contacts };
+        }
+    }
 
     private AnalyticVisibility(List<VisibilityInput> curved, Plane plane, double tol, List<GeometryBase> owned, CancellationToken token)
     {
@@ -279,14 +356,14 @@ internal sealed class AnalyticVisibility
         _recognised = plan.Count(p => p.Shape is not null);
         Explain(curved, plan, tol);
         if (!plan.Any(p => p.Leaves)) return;
-        var all = new List<AnalyticSolid>(); var removed = new List<AnalyticSolid>(); var leaving = new HashSet<VisibilityInput>();
+        var all = new List<AnalyticSolid>(); var removed = new List<AnalyticSolid>(); var leaving = new HashSet<VisibilityInput>(); var shapes = new List<Shape>();
         try
         {
             for (int i = 0; i < plan.Length; i++)
             {
                 token.ThrowIfCancellationRequested();
                 if (plan[i].Shape is not { } shape) continue;
-                var solid = Solid(shape, plane); int index = all.Count; all.Add(solid);
+                var solid = Solid(shape, plane); int index = all.Count; all.Add(solid); shapes.Add(shape);
                 if (!plan[i].Leaves) continue;
                 removed.Add(solid); leaving.Add(curved[i]);
                 foreach (var candidate in Candidates(shape, curved[i], index)) { owned.Add(candidate.Curve); _candidates.Add(candidate); }
@@ -297,6 +374,7 @@ internal sealed class AnalyticVisibility
             _candidates.Clear(); return;
         }
         _all = new(all); _removed = new(removed);
+        Contacts(shapes);
         curved.RemoveAll(leaving.Contains);
     }
 
@@ -359,6 +437,41 @@ internal sealed class AnalyticVisibility
                     double angle = (Math.Atan2(k * (across * y), k * (across * s.X)) - s.Start) % (2 * Math.PI); if (angle < 0) angle += 2 * Math.PI;
                     if (full || angle <= s.Sweep) yield return new(Ruling(s.Start + angle), input, solid, AnalyticSolid.Outer, true, _ => true);
                 }
+                break;
+            case CutTubeShape t:
+                // The body's own edges between different surfaces. An edge is a profile where the two faces beside
+                // it face opposite ways.
+                Vector3d Out(CutTubeRecognition.Surface f, Point3d p)
+                {
+                    if (!f.Cylinder) return f.Direction * f.Outward;
+                    var radial = p - f.Origin; radial -= f.Direction * (radial * f.Direction); return radial * f.Outward;
+                }
+                foreach (var edge in t.Edges)
+                {
+                    var pair = Enumerable.Range(0, t.Real).Where(i => (edge.On & (1 << i)) != 0).Select(i => t.Surfaces[i]).ToArray();
+                    bool Profile(Point3d p) => pair.Length == 2 && (Out(pair[0], p) * e > 0) != (Out(pair[1], p) * e > 0);
+                    yield return new(edge.World.DuplicateCurve(), input, solid, edge.On, false, Profile, edge.Slack);
+                }
+                // Outlines of its cylindrical faces, from Rhino's silhouette of the body: each is a ruling of the face's
+                // cylinder, already cut to the face. The ray there touches that cylinder.
+                Brep? temporary = null;
+                var brep = input.Geometry as Brep ?? (temporary = input.Geometry is Extrusion x ? x.ToBrep() : (input.Geometry as Surface)?.ToBrep());
+                try
+                {
+                    if (brep is null) break;
+                    var silhouettes = Silhouette.Compute(brep, SilhouetteType.Tangent, -e, _tol, .001) ?? [];
+                    foreach (var silhouette in silhouettes)
+                    {
+                        if (silhouette?.Curve is null || silhouette.SilhouetteType != SilhouetteType.Tangent) continue;
+                        var component = silhouette.GeometryComponentIndex;
+                        if (component.ComponentIndexType != ComponentIndexType.BrepFace || component.Index < 0 || component.Index >= t.FaceSurface.Length) continue;
+                        int surface = t.FaceSurface[component.Index]; if (!t.Surfaces[surface].Cylinder) continue;
+                        if (silhouette.Curve.GetLength() <= _tol) continue;
+                        // Rhino places the outline to its tolerance; the face's own bound is added.
+                        yield return new(silhouette.Curve.DuplicateCurve(), input, solid, 1 << surface, true, _ => true, _tol + t.Surfaces[surface].Slack);
+                    }
+                }
+                finally { temporary?.Dispose(); }
                 break;
         }
     }
@@ -448,8 +561,9 @@ internal sealed class AnalyticVisibility
                 if (!endOn[i])
                 {
                     var c = _candidates[i];
-                    chords[i] = Cut(c.Curve, _all, c.Solid, c.OnSurface, c.Tangent, 0, token);
-                    solved[i] = Solve(c.Curve, chords[i], _all, 0, _tol, token);
+                    chords[i] = Cut(c.Curve, _all, c.Solid, c.OnSurface, c.Tangent, c.Slack, token, c.Contacts);
+                    // A stored edge is known to its slack: its change points are known to a few times that.
+                    solved[i] = Solve(c.Curve, chords[i], _all, c.Slack, Math.Max(_tol, 8 * c.Slack), token);
                 }
                 NativeDrawing.ReportStep(ViewSteps.ExactCurved, Interlocked.Increment(ref done), chords.Length);
             });
@@ -541,7 +655,8 @@ internal sealed class AnalyticVisibility
     private sealed record Chord(double A, double B, double Length, AnalyticCandidate Piece);
 
     /// <summary>The curve as chords in view coordinates; null when no occluder is near it; empty when it has no valid bounds.</summary>
-    private List<Chord>? Cut(Curve curve, AnalyticOccluders occluders, int solid, int onSurface, bool tangent, double slack, CancellationToken token)
+    private List<Chord>? Cut(Curve curve, AnalyticOccluders occluders, int solid, int onSurface, bool tangent, double slack, CancellationToken token,
+        IReadOnlyList<(int Solid, int OnSurface)>? contacts = null)
     {
         var toView = Transform.PlaneToPlane(_plane, Plane.WorldXY); var box = curve.GetBoundingBox(toView); var near = new List<int>();
         if (!box.IsValid) return [];
@@ -551,11 +666,11 @@ internal sealed class AnalyticVisibility
         // A candidate of an exact solid can lie on the boundary of another one (the rims of stacked columns in plan, a
         // mitre joint): its chords must follow the curve far closer than the graze width, or the boundary rule would
         // see each chord dip in and out. Native curves are only known to the tolerance and get the slack instead.
-        foreach (var (ta, tb) in Chords(curve, _tol / 8, solid >= 0 ? AnalyticSolid.Graze(_tol) / 8 : 0, _tol))
+        foreach (var (ta, tb) in Chords(curve, _tol / 8, solid >= 0 && slack == 0 ? AnalyticSolid.Graze(_tol) / 8 : 0, _tol))
         {
             token.ThrowIfCancellationRequested();
             Point3d pa = curve.PointAt(ta), pb = curve.PointAt(tb);
-            chords.Add(new(ta, tb, pa.DistanceTo(pb), new(Project(pa), Project(curve.PointAt((ta + tb) / 2)), Project(pb), solid, onSurface, tangent)));
+            chords.Add(new(ta, tb, pa.DistanceTo(pb), new(Project(pa), Project(curve.PointAt((ta + tb) / 2)), Project(pb), solid, onSurface, tangent, contacts)));
         }
         return chords;
     }

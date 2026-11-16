@@ -14,7 +14,9 @@ public sealed class AnalyticCsgTests
     private static Vertex V(double x, double y, double z) => new(x, y, z);
 
     /// <summary>The test's own description of a cut tube: independent of the engine's surface list.</summary>
-    private sealed record Cut(Vertex O, Vertex U, double R, double Ri, (Vertex P, Vertex N)[] Planes, (Vertex O, Vertex U, double R)[] Cutters)
+    /// <param name="Mitre">When set, the two cutters are mitred members: the first exists only behind this plane and
+    /// the second only in front of it, so the tube keeps material inside each cutter's cylinder beyond its end.</param>
+    private sealed record Cut(Vertex O, Vertex U, double R, double Ri, (Vertex P, Vertex N)[] Planes, (Vertex O, Vertex U, double R)[] Cutters, (Vertex P, Vertex N)? Mitre = null)
     {
         private static double Radial(Vertex x, Vertex o, Vertex u)
         {
@@ -25,6 +27,11 @@ public sealed class AnalyticCsgTests
         {
             double r = Radial(x, O, U); if (r > R || r < Ri) return false;
             foreach (var (p, n) in Planes) if ((x.X - p.X) * n.X + (x.Y - p.Y) * n.Y + (x.Z - p.Z) * n.Z > 0) return false;
+            if (Mitre is { } m)
+            {
+                bool behind = (x.X - m.P.X) * m.N.X + (x.Y - m.P.Y) * m.N.Y + (x.Z - m.P.Z) * m.N.Z <= 0;
+                return !(Radial(x, Cutters[0].O, Cutters[0].U) < Cutters[0].R && behind) && !(Radial(x, Cutters[1].O, Cutters[1].U) < Cutters[1].R && !behind);
+            }
             foreach (var c in Cutters) if (Radial(x, c.O, c.U) < c.R) return false;
             return true;
         }
@@ -34,15 +41,25 @@ public sealed class AnalyticCsgTests
             double r = Radial(x, O, U), d = Math.Min(Math.Abs(r - R), Ri > 0 ? Math.Abs(r - Ri) : double.MaxValue);
             foreach (var (p, n) in Planes) d = Math.Min(d, Math.Abs((x.X - p.X) * n.X + (x.Y - p.Y) * n.Y + (x.Z - p.Z) * n.Z));
             foreach (var c in Cutters) d = Math.Min(d, Math.Abs(Radial(x, c.O, c.U) - c.R));
+            if (Mitre is { } m) d = Math.Min(d, Math.Abs((x.X - m.P.X) * m.N.X + (x.Y - m.P.Y) * m.N.Y + (x.Z - m.P.Z) * m.N.Z));
             return d;
         }
         public AnalyticCsg Solid(double slack = 0)
         {
-            var list = new List<CsgPrimitive> { new(true, O, U, R, true, slack) };
-            if (Ri > 0) list.Add(new(true, O, U, Ri, false, slack));
-            foreach (var (p, n) in Planes) list.Add(new(false, p, n, 0, true, slack));
-            foreach (var c in Cutters) list.Add(new(true, c.O, c.U, c.R, false, slack));
-            return new AnalyticCsg(list, V(O.X - 8, O.Y - 8, O.Z - 8), V(O.X + 8, O.Y + 8, O.Z + 8));
+            var list = new List<CsgPrimitive> { new(true, O, U, R, CsgRole.Inside, slack) };
+            if (Ri > 0) list.Add(new(true, O, U, Ri, CsgRole.Outside, slack));
+            foreach (var (p, n) in Planes) list.Add(new(false, p, n, 0, CsgRole.Inside, slack));
+            if (Mitre is not { } m)
+            {
+                foreach (var c in Cutters) list.Add(new(true, c.O, c.U, c.R, CsgRole.Outside, slack));
+                return new AnalyticCsg(list, V(O.X - 8, O.Y - 8, O.Z - 8), V(O.X + 8, O.Y + 8, O.Z + 8));
+            }
+            // Free surfaces: cutter A (bit 0), cutter B (bit 1), the mitre plane (bit 2, set behind it). The solid's
+            // cells are those not in "A and behind" and not in "B and in front".
+            foreach (var c in Cutters) list.Add(new(true, c.O, c.U, c.R, CsgRole.Free, slack));
+            list.Add(new(false, m.P, m.N, 0, CsgRole.Free, slack));
+            var cells = Enumerable.Range(0, 8).ToLookup(cell => !((cell & 1) != 0 && (cell & 4) != 0) && !((cell & 2) != 0 && (cell & 4) == 0));
+            return new AnalyticCsg(list, V(O.X - 8, O.Y - 8, O.Z - 8), V(O.X + 8, O.Y + 8, O.Z + 8), cells[true], cells[false]);
         }
     }
 
@@ -72,6 +89,11 @@ public sealed class AnalyticCsgTests
             var through = At(random.NextDouble() * 4 - 2); var d = Direction(random);
             return (V(through.X + .1 * (random.NextDouble() - .5), through.Y + .1 * (random.NextDouble() - .5), through.Z), d, r * (.6 + .8 * random.NextDouble()));
         }).ToArray();
+        if (cutters.Length == 2 && random.Next(2) == 0)
+        {   // Two mitred cutters: their mitre plane passes between the points where they cross the tube.
+            var between = V((cutters[0].Item1.X + cutters[1].Item1.X) / 2, (cutters[0].Item1.Y + cutters[1].Item1.Y) / 2, (cutters[0].Item1.Z + cutters[1].Item1.Z) / 2);
+            return new Cut(o, u, r, ri, planes, cutters, (between, Direction(random)));
+        }
         return new Cut(o, u, r, ri, planes, cutters);
     }
 
@@ -238,12 +260,30 @@ public sealed class AnalyticCsgTests
     }
 
     [Fact]
+    public void ACellThatWasNeverSeenIsUnresolvedNotGuessed()
+    {
+        // A rod along X with one free cylinder across it. Only the cell "outside the cylinder" is known to be solid;
+        // "inside it" was never classified, so a ray through that part is neither Hidden nor Visible.
+        var rod = new CsgPrimitive(true, V(0, 0, 0), V(1, 0, 0), 1, CsgRole.Inside); var across = new CsgPrimitive(true, V(0, 0, 0), V(0, 1, 0), .5, CsgRole.Free);
+        var known = new AnalyticCsg([rod, across], V(-5, -1, -1), V(5, 1, 1), inside: [0], outside: [1]);
+        var partial = new AnalyticCsg([rod, across], V(-5, -1, -1), V(5, 1, 1), inside: [0]);
+        Assert.Equal(Hidden, known.Occlusion(V(2, 0, -5), Tol)); Assert.Equal(Hidden, partial.Occlusion(V(2, 0, -5), Tol));
+        // Under the crossing the rod still has material above and below the cylinder (|z| from .5 to 1): Hidden either way.
+        Assert.Equal(Hidden, known.Occlusion(V(0, 0, -5), Tol));
+        // A rod of radius .4 instead lies wholly inside the cylinder at the crossing: known gives Visible, partial cannot say.
+        var thin = rod with { Radius = .4 };
+        Assert.Equal(Visible, new AnalyticCsg([thin, across], V(-5, -1, -1), V(5, 1, 1), inside: [0], outside: [1]).Occlusion(V(0, 0, -5), Tol));
+        Assert.Equal(Unresolved, new AnalyticCsg([thin, across], V(-5, -1, -1), V(5, 1, 1), inside: [0]).Occlusion(V(0, 0, -5), Tol));
+    }
+
+    [Fact]
     public void InvalidInputIsRefusedAndHugeCoordinatesAreUnresolved()
     {
         Assert.Throws<ArgumentException>(() => new AnalyticCsg([], V(0, 0, 0), V(1, 1, 1)));
-        Assert.Throws<ArgumentException>(() => new AnalyticCsg([new(true, V(0, 0, 0), V(0, 0, 0), 1, true)], V(0, 0, 0), V(1, 1, 1)));
-        Assert.Throws<ArgumentException>(() => new AnalyticCsg([new(true, V(0, 0, 0), V(1, 0, 0), -1, true)], V(0, 0, 0), V(1, 1, 1)));
-        var far = new AnalyticCsg([new(true, V(1e13, 0, 0), V(1, 0, 0), 1, true)], V(1e13 - 5, -1, -1), V(1e13 + 5, 1, 1));
+        Assert.Throws<ArgumentException>(() => new AnalyticCsg([new(true, V(0, 0, 0), V(0, 0, 0), 1, CsgRole.Inside)], V(0, 0, 0), V(1, 1, 1)));
+        Assert.Throws<ArgumentException>(() => new AnalyticCsg([new(true, V(0, 0, 0), V(1, 0, 0), -1, CsgRole.Inside)], V(0, 0, 0), V(1, 1, 1)));
+        Assert.Throws<ArgumentException>(() => new AnalyticCsg([new(true, V(0, 0, 0), V(1, 0, 0), 1, CsgRole.Free)], V(0, 0, 0), V(1, 1, 1), [1], [1]));   // a cell both in and out
+        var far = new AnalyticCsg([new(true, V(1e13, 0, 0), V(1, 0, 0), 1, CsgRole.Inside)], V(1e13 - 5, -1, -1), V(1e13 + 5, 1, 1));
         Assert.Equal(Unresolved, far.Occlusion(V(1e13, 0, -5), Tol));
     }
 }
