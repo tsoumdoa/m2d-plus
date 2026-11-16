@@ -82,7 +82,7 @@ internal sealed class WorkerClient : IDisposable
             using var timeout=CancellationTokenSource.CreateLinkedTokenSource(token);timeout.CancelAfter(options.StartupTimeout);
             using var kill=timeout.Token.Register(client.Kill);
             await pipe.WaitForConnectionAsync(timeout.Token).ConfigureAwait(false);
-            var actual=WorkerCodec.Decode<WorkerFingerprint>(await WorkerFrames.ReadAsync(pipe,timeout.Token).ConfigureAwait(false));
+            var actual=WorkerCodec.Decode<WorkerFingerprint>(await WorkerFrames.ReadAsync(pipe,timeout.Token,16*1024).ConfigureAwait(false));
             if(!expected.Accepts(actual))throw new WorkerUnavailableException("Worker unavailable: runtime, architecture, Rhino or engine/schema fingerprint mismatch.");
             await WorkerFrames.WriteAsync(pipe,WorkerCodec.Encode(expected),timeout.Token).ConfigureAwait(false);
             return client;
@@ -95,19 +95,33 @@ internal sealed class WorkerClient : IDisposable
             throw new WorkerUnavailableException("Worker unavailable: startup/handshake failed: "+ex.Message);
         }
     }
-    internal async Task<byte[]> CallAsync(string kind,byte[] payload,TimeSpan timeout,CancellationToken token)
+    internal Task<byte[]> CallAsync(string kind,byte[] payload,TimeSpan timeout,CancellationToken token) =>
+        CallAsync(kind,payload,timeout,token,bytes=>bytes,null,WorkerCompression.MaximumExpandedBytes);
+    internal async Task<T> CallAsync<T>(string kind,byte[] payload,TimeSpan timeout,CancellationToken token,
+        Func<byte[],T> consume,SemaphoreSlim? receiveGate,long expandedLimit)
     {
         using var deadline=CancellationTokenSource.CreateLinkedTokenSource(token);deadline.CancelAfter(timeout);
         using var kill=deadline.Token.Register(Kill);
         try
         {
             await WorkerFrames.WriteAsync(_pipe,WorkerPackets.Encode(kind,payload),deadline.Token).ConfigureAwait(false);
-            var reply=WorkerPackets.Decode(await WorkerFrames.ReadAsync(_pipe,deadline.Token).ConfigureAwait(false));
-            while(reply.Kind=="started") {NativeStarted?.Invoke();reply=WorkerPackets.Decode(await WorkerFrames.ReadAsync(_pipe,deadline.Token).ConfigureAwait(false));}
-            if(reply.Kind=="memory")throw new WorkerMemoryException(System.Text.Encoding.UTF8.GetString(reply.Payload));
-            if(reply.Kind=="error")throw new IOException(System.Text.Encoding.UTF8.GetString(reply.Payload));
-            if(reply.Kind!=kind)throw new InvalidDataException("Unexpected worker response.");
-            return reply.Payload;
+            while(true)
+            {
+                // Wait for a ready frame before taking receive memory. In particular,
+                // a slow native solve must not block a sibling's scene acknowledgement.
+                var length=await WorkerFrames.ReadLengthAsync(_pipe,deadline.Token).ConfigureAwait(false);
+                if(receiveGate is not null)await receiveGate.WaitAsync(deadline.Token).ConfigureAwait(false);
+                try
+                {
+                    var reply=await WorkerPackets.ReadFrameAsync(_pipe,length,expandedLimit,deadline.Token).ConfigureAwait(false);
+                    if(reply.Kind=="started"){NativeStarted?.Invoke();continue;}
+                    if(reply.Kind=="memory")throw new WorkerMemoryException(System.Text.Encoding.UTF8.GetString(reply.Payload));
+                    if(reply.Kind=="error")throw new IOException(System.Text.Encoding.UTF8.GetString(reply.Payload));
+                    if(reply.Kind!=kind)throw new InvalidDataException("Unexpected worker response.");
+                    return consume(reply.Payload);
+                }
+                finally{receiveGate?.Release();}
+            }
         }
         catch(Exception ex)
         {

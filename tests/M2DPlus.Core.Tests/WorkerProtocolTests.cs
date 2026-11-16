@@ -70,4 +70,47 @@ public sealed class WorkerProtocolTests
         return output.ToArray();
     }
 
+    [Fact] public async Task StreamingRepliesPreserveFramesAcrossShortReads()
+    {
+        var value=new byte[1024*1024];new Random(29).NextBytes(value);
+        using var frames=new ShortReads();
+        await WorkerFrames.WriteAsync(frames,WorkerPackets.Encode("solve",value),default);
+        await WorkerFrames.WriteAsync(frames,WorkerPackets.Encode("started",[]),default);
+        frames.Position=0;
+        var reply=await WorkerPackets.ReadAsync(frames,value.Length+32L,default);
+        Assert.Equal("solve",reply.Kind);Assert.Equal(value,reply.Payload);
+        Assert.Equal("started",(await WorkerPackets.ReadAsync(frames,32,default)).Kind);
+        Assert.Equal(frames.Length,frames.Position);Assert.True(frames.CanRead);
+    }
+    [Fact] public async Task StreamingReplyRejectsDeclaredExpansionBeforeReadingPayload()
+    {
+        var raw=new byte[10];raw[0]=5;"solve"u8.CopyTo(raw.AsSpan(1));
+        BinaryPrimitives.WriteInt32LittleEndian(raw.AsSpan(6),Array.MaxLength);
+        using var frames=new MemoryStream();await WorkerFrames.WriteAsync(frames,Zip(raw),default);frames.Position=0;
+        var error=await Assert.ThrowsAsync<InvalidDataException>(()=>WorkerPackets.ReadAsync(frames,4096,default));
+        Assert.Contains("host receive reservation",error.Message);
+    }
+    [Fact] public async Task StreamingReplyChecksTruncationTrailingDataAndCancellation()
+    {
+        var raw=new byte[12];raw[0]=5;"solve"u8.CopyTo(raw.AsSpan(1));
+        foreach(var count in new[]{3,1})
+        {
+            BinaryPrimitives.WriteInt32LittleEndian(raw.AsSpan(6),count);
+            using var frames=new MemoryStream();await WorkerFrames.WriteAsync(frames,Zip(raw),default);frames.Position=0;
+            if(count==3)await Assert.ThrowsAsync<EndOfStreamException>(()=>WorkerPackets.ReadAsync(frames,64,default));
+            else await Assert.ThrowsAsync<InvalidDataException>(()=>WorkerPackets.ReadAsync(frames,64,default));
+        }
+        using var headerOnly=new MemoryStream(new byte[4]);
+        var header=new byte[4];BinaryPrimitives.WriteInt32LittleEndian(header,WorkerFrames.MaximumPayloadBytes);
+        using var absentPayload=new MemoryStream(header);
+        await Assert.ThrowsAsync<EndOfStreamException>(()=>WorkerPackets.ReadAsync(absentPayload,64,default));
+        using var cancel=new CancellationTokenSource();cancel.Cancel();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(()=>WorkerPackets.ReadAsync(headerOnly,64,cancel.Token));
+    }
+    private sealed class ShortReads : MemoryStream
+    {
+        public override ValueTask<int> ReadAsync(Memory<byte> buffer,CancellationToken token=default) =>
+            base.ReadAsync(buffer[..Math.Min(137,buffer.Length)],token);
+    }
+
 }

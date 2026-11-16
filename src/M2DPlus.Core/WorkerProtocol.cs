@@ -29,15 +29,20 @@ public static class WorkerFrames
         await pipe.FlushAsync(token).ConfigureAwait(false);
     }
 
-    public static async Task<byte[]> ReadAsync(Stream pipe, CancellationToken token)
+    public static async Task<byte[]> ReadAsync(Stream pipe, CancellationToken token, int maximumBytes = MaximumPayloadBytes)
+    {
+        int length = await ReadLengthAsync(pipe, token, maximumBytes).ConfigureAwait(false);
+        var payload = new byte[length];
+        await pipe.ReadExactlyAsync(payload, token).ConfigureAwait(false);
+        return payload;
+    }
+    public static async Task<int> ReadLengthAsync(Stream pipe, CancellationToken token, int maximumBytes = MaximumPayloadBytes)
     {
         var header = new byte[4];
         await pipe.ReadExactlyAsync(header, token).ConfigureAwait(false);
         int length = BinaryPrimitives.ReadInt32LittleEndian(header);
-        if (length < 0 || length > MaximumPayloadBytes) throw new InvalidDataException("Invalid worker frame length.");
-        var payload = new byte[length];
-        await pipe.ReadExactlyAsync(payload, token).ConfigureAwait(false);
-        return payload;
+        if (length < 0 || length > Math.Min(maximumBytes, MaximumPayloadBytes)) throw new InvalidDataException("Invalid worker frame length.");
+        return length;
     }
 }
 
@@ -46,6 +51,66 @@ public sealed record WorkerPacket(string Kind, byte[] Payload);
 /// <summary>Gzip envelope with a small operation header and raw bytes, avoiding a giant base64 JSON token.</summary>
 public static class WorkerPackets
 {
+    /// <summary>Read gzip directly from one bounded pipe frame; never allocate the compressed frame.</summary>
+    public static async Task<WorkerPacket> ReadAsync(Stream pipe, long expandedLimit, CancellationToken token)
+    {
+        var length = await WorkerFrames.ReadLengthAsync(pipe, token).ConfigureAwait(false);
+        return await ReadFrameAsync(pipe, length, expandedLimit, token).ConfigureAwait(false);
+    }
+    /// <summary>Consume a frame after its length was read, allowing the host to gate ready replies before allocation.</summary>
+    public static async Task<WorkerPacket> ReadFrameAsync(Stream pipe, int length, long expandedLimit, CancellationToken token)
+    {
+        if (expandedLimit <= 0) throw new ArgumentOutOfRangeException(nameof(expandedLimit));
+        if (length < 0 || length > WorkerFrames.MaximumPayloadBytes) throw new InvalidDataException("Invalid worker frame length.");
+        var header = new byte[4];
+        using var frame = new FrameInput(pipe, length);
+        using var zip = new System.IO.Compression.GZipStream(frame, System.IO.Compression.CompressionMode.Decompress);
+        var one = new byte[1];
+        await zip.ReadExactlyAsync(one, token).ConfigureAwait(false);
+        int kindLength = one[0];
+        if (kindLength is < 1 or > 16 || kindLength + 5L > expandedLimit) throw new InvalidDataException("Invalid worker operation header.");
+        var kindBytes = new byte[kindLength];
+        await zip.ReadExactlyAsync(kindBytes, token).ConfigureAwait(false);
+        var kind = System.Text.Encoding.ASCII.GetString(kindBytes);
+        ValidateKind(kind);
+        await zip.ReadExactlyAsync(header, token).ConfigureAwait(false);
+        var count = BinaryPrimitives.ReadInt32LittleEndian(header);
+        if (count < 0 || count > Array.MaxLength || count > expandedLimit - kindLength - 5L)
+            throw new InvalidDataException("Worker reply exceeds the host receive reservation. Close other applications or reduce the scene/view complexity.");
+        var payload = GC.AllocateUninitializedArray<byte>(count);
+        await zip.ReadExactlyAsync(payload, token).ConfigureAwait(false);
+        if (await zip.ReadAsync(one, token).ConfigureAwait(false) != 0 || frame.Remaining != 0)
+            throw new InvalidDataException("Trailing worker envelope data.");
+        return new(kind, payload);
+    }
+    private sealed class FrameInput(Stream source, int length) : Stream
+    {
+        internal int Remaining { get; private set; } = length;
+        public override int Read(byte[] buffer, int offset, int count) => Read(buffer.AsSpan(offset, count));
+        public override int Read(Span<byte> buffer)
+        {
+            if (Remaining == 0 || buffer.Length == 0) return 0;
+            var read = source.Read(buffer[..Math.Min(buffer.Length, Remaining)]);
+            if (read == 0) throw new EndOfStreamException("Truncated worker frame.");
+            Remaining -= read; return read;
+        }
+        public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken token = default)
+        {
+            if (Remaining == 0 || buffer.Length == 0) return 0;
+            var read = await source.ReadAsync(buffer[..Math.Min(buffer.Length, Remaining)], token).ConfigureAwait(false);
+            if (read == 0) throw new EndOfStreamException("Truncated worker frame.");
+            Remaining -= read; return read;
+        }
+        public override bool CanRead => true;
+        public override bool CanSeek => false;
+        public override bool CanWrite => false;
+        public override long Length => throw new NotSupportedException();
+        public override long Position { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
+        public override void Flush() { }
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+        public override void SetLength(long value) => throw new NotSupportedException();
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+    }
     public static byte[] Encode(string kind, ReadOnlySpan<byte> payload)
     {
         ValidateKind(kind);
