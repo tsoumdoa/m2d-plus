@@ -96,6 +96,16 @@ internal static class SectionDrawing
                 result.Regions.Add(new(region, (int[])source.Path.Clone()) { Source = source.Section, SourceItem = source.SourceItem }); sections.Regions.Remove(region);
             }
 
+            // Keep section certificates, validation and region ownership above unchanged.
+            // Refused-cut markers and cut uncertainty belong before this projection boundary.
+            if (view.Settings?.CutOnly == true)
+            {
+                route = "sections";
+                if (result.Regions.Count == 0 && result.Pieces.Count == 0 && uncertainSources.Count == 0 && !quarantine)
+                    result._diagnostics.Add(ViewNotices.CutOnlyEmpty);
+                return result;
+            }
+
             foreach (var source in sources)
             {
                 token.ThrowIfCancellationRequested();

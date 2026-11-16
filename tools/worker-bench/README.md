@@ -1,5 +1,17 @@
 # Worker benchmark
 
+Cut-only comparison: `cutonly <resolver> <model> <new-output-folder> [building|long|offset:<mm>]`
+runs fresh normal / cut-only / off-again solves on one retained scene. `building` uses the fixture's
+explicit Plan 1.2m and Long section planes, as in ScaleBench (named views can shadow the fixture's clipping-plane names);
+`long` uses just the section. `offset:<mm>` uses
+the ten v2 fixture plans at that translation. It records compute/presentation wall times, all phases,
+model/engine fingerprints and strict full-region (Cut/Hatch/style/provenance) byte equality; off-again
+must match the complete normal hash. Cut-only must have zero HLD/kernel calls and no verifier phase.
+Uses the same isolated 12 GiB admission as the engine comparison. Run hosts serially and keep evidence
+under `~/.t3/m2d-plus-models/evidence/`.
+`pool:<mm>` instead measures the complete ten-plan batch through the default production worker pool,
+including cold startup/transfer on the first pass, with strict Cut/Hatch and off-again hash gates.
+
 Opt-in engine comparison: `engine <resolver> <model> <new-output-folder>` measures
 exact/fast with hidden off/on, production compute and presentation, verifier
 timings and actual native options. Add `building` for eight building views, or

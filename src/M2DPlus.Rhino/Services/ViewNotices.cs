@@ -7,6 +7,7 @@ namespace M2DPlus.Rhino.Services;
 public static class ViewNotices
 {
     private const string LayerNotFound = "Layer not found '";
+    internal const string CutOnlyEmpty = "Cut only: this view cuts nothing";
 
     public static ViewOutcome Outcome(ViewDrawing view)
     {
@@ -24,7 +25,14 @@ public static class ViewNotices
         return new(view.Name, view.Error, view.Report.UncertainCount, view.Report.Quarantined, occluding, harmless, missing, view.ToleranceWarning);
     }
 
-    public static IReadOnlyList<Notice> For(ViewDrawing view) => view.FastNativeSources > 0 && view.Error is null
-        ? NoticePolicy.For(Outcome(view)).Append(new Notice(NoticeLevel.Remark, view.Name + ": " + view.EngineSummary)).ToArray()
-        : NoticePolicy.For(Outcome(view));
+    public static IReadOnlyList<Notice> For(ViewDrawing view)
+    {
+        var notices = NoticePolicy.For(Outcome(view)).ToList();
+        if (view.Error is null)
+        {
+            if (view.FastNativeSources > 0) notices.Add(new(NoticeLevel.Remark, view.Name + ": " + view.EngineSummary));
+            if (view.Diagnostics.Contains(CutOnlyEmpty)) notices.Add(new(NoticeLevel.Remark, view.Name + ": " + CutOnlyEmpty));
+        }
+        return notices;
+    }
 }

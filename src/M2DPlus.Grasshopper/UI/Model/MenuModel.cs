@@ -98,6 +98,7 @@ public static class ComponentMenu
         items.Add(Choice(settings, "Min visible", "min_visible") with { Tooltip = SettingsCatalog.Spec("min_visible").Tooltip });
         items.Add(Choice(settings, "Beyond", "beyond"));
         items.Add(Choice(settings, "Far clip", "farclip"));
+        items.Add(Toggle(settings, "Cut only", "cutonly"));
         items.Add(Toggle(settings, "Depth cueing", "fade"));
         items.Add(Choice(settings, "Cuts", "cuts"));
         items.Add(Choice(settings, "Hatch", "hatch"));

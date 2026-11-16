@@ -6,6 +6,8 @@ The Frame2D MVP (`C:/Users/tomosandego/.t3/scratch/2026-11-13-i-noticed-that-mak
 
 ## Principles
 
+Owner decision (2026-11-16, beta.4): `cutonly = on | off` (also `cut only`, default `off`) in Settings, `m2d.cutonly` view-object user text and the **Cut only** menu toggle. On keeps the section correctness pipeline, Cut/Hatch, Frame/Info and cut-related Unresolved (including refused-cut markers), and skips all projection beyond the cut: no HLD, planar visibility or verifier, and empty Visible/Hidden/Beyond/Far clip. Uncut views give Frame/Info only with a remark. It is a visibility cache key; Info says `Cut only: projection beyond the cut skipped` and the drawing footer step is `sections`. Workers use the same behavior and existing codec.
+
 1. **Simplicity first.** One main component. Few inputs, smart defaults, and rare options kept out of the way (right-click menu or an optional settings input). An architect should get a correct plan, section or elevation by wiring geometry and a view.
 2. **Never wrong without saying so.** Unresolved or uncertain output is flagged, never shown as visible. Unsupported geometry is reported, never dropped silently.
 3. **Never hang Rhino.** Work runs async in the background, shows progress, and stale runs are cancelled when inputs change.
