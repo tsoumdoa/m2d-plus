@@ -72,6 +72,8 @@ internal static class Program
             "long" => ViewRequest.Parse(new Plane(new Point3d(0, bounds.Center.Y, 0), Vector3d.XAxis, Vector3d.ZAxis)) with { Name = "Long-section" },
             "trans" => ViewRequest.Parse(new Plane(new Point3d(bounds.Center.X, 0, 0), Vector3d.YAxis, Vector3d.ZAxis)) with { Name = "Trans-section" },
             "plan" => ViewRequest.Parse(new Plane(new Point3d(0, 0, bounds.Min.Z + Math.Min(1.2, bounds.Diagonal.Z * .4)), Vector3d.XAxis, Vector3d.YAxis)) with { Name = "Plan" },
+            // The owner's pipe node: a Top-facing view box about the node, its front plane above all the geometry.
+            "nodebox" => ViewRequest.Parse(new Box(new Plane(new Point3d(65986, 40014, 14669), Vector3d.XAxis, Vector3d.YAxis), new Interval(-1500, 1500), new Interval(-1500, 1500), new Interval(-3000, 3000))) with { Name = "Node-box" },
             _ when viewName.StartsWith("sidecar=", StringComparison.Ordinal) => Sidecar(file, viewName[8..]),
             _ => ViewRequest.Parse(viewName)
         };

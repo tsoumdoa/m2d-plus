@@ -42,6 +42,7 @@ internal sealed class AnalyticVisibility
 
     private sealed class Entry { internal double Tolerance; internal Shape? Shape; internal string? Refusal; }
     private static readonly ConditionalWeakTable<GeometryBase, Entry> Cache = new();
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, (Shape? Shape, string? Refusal)> ByContent = new(StringComparer.Ordinal);
 
     /// <summary>The exact shape of a whole body, or null. Cached on the owned geometry object.</summary>
     internal static Shape? Recognise(GeometryBase geometry, double tolerance) => Examine(geometry, tolerance).Shape;
@@ -70,8 +71,17 @@ internal sealed class AnalyticVisibility
         string? reason = null; Shape? No(string text) { reason = text; return null; }
         var shape = Classify(brep, tol, No);
         if (shape is null && reason != PlanarOnly && brep.IsSolid)
-        {   // Not one of the plain shapes: perhaps a tube with cut ends.
-            string? plain = reason; shape = CutTubeRecognition.Recognise(brep, tol, No);
+        {   // Not one of the plain shapes: perhaps a tube with cut ends. That recognition asks Rhino thousands of
+            // point-in-solid questions, and a section hands over a new copy of the same clipped piece on every solve,
+            // so its result is also kept by content.
+            string? plain = reason; string key = GeometryFingerprint.Compute(brep) + "@" + tol.ToString("R", System.Globalization.CultureInfo.InvariantCulture);
+            if (!ByContent.TryGetValue(key, out var held))
+            {
+                var found = CutTubeRecognition.Recognise(brep, tol, No); held = (found, reason);
+                if (ByContent.Count >= 2048) ByContent.Clear();
+                ByContent[key] = held;
+            }
+            shape = held.Shape; reason = held.Refusal;
             if (shape is null) reason = reason == PlanarOnly ? plain : $"{plain}; as a cut tube: {reason}";
         }
         why = reason; return shape;

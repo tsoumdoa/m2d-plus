@@ -554,6 +554,9 @@ internal static class CutTubeRecognition
             if (bound <= target || !double.IsFinite(bound)) break;
             // The control net closes on the surface four times per halving; stop when that cannot reach the limit.
             if (round >= 3 && bound > limit && bound > previous * .5) break;
+            // A face that really is that far from its surface (a NURBS near-cylinder): the bound settles on the true
+            // distance and further halving only confirms it.
+            if (round >= 2 && bound > previous * .97) break;
             if ((long)surface.Points.CountU * surface.Points.CountV > 60000) break;
             previous = bound;
             // Halve every span in a direction of degree two or more (a ruled direction's control points are on the surface).
