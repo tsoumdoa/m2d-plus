@@ -315,6 +315,31 @@ internal static class CutTubeRecognition
         return null;
     }
 
+    /// <summary>
+    /// The point of the intersection of two surfaces nearest to q (the least move that puts q on both), or null when
+    /// the surfaces do not cross cleanly near q (they touch, or q is on a cylinder's axis).
+    /// </summary>
+    internal static Point3d? Onto(Surface a, Surface b, Point3d q)
+    {
+        static bool Gradient(Surface s, Point3d x, out double f, out Vector3d n)
+        {
+            f = Distance(s, x);
+            if (!s.Cylinder) { n = s.Direction; return true; }
+            n = x - s.Origin; n -= s.Direction * (n * s.Direction); return n.Unitize();
+        }
+        var x = q; double scale = 1 + Math.Max(a.Radius, b.Radius);
+        for (int step = 0; step < 12; step++)
+        {
+            if (!Gradient(a, x, out double fa, out var na) || !Gradient(b, x, out double fb, out var nb)) return null;
+            if (Math.Abs(fa) + Math.Abs(fb) <= 1e-13 * scale) return x;
+            // The least move that cancels both distances to first order.
+            double ab = na * nb, det = 1 - ab * ab; if (det < 1e-4) return null;
+            double la = (fa - ab * fb) / det, lb = (fb - ab * fa) / det;
+            x -= na * la + nb * lb;
+        }
+        return Math.Abs(Distance(a, x)) + Math.Abs(Distance(b, x)) <= 1e-9 * scale ? x : null;
+    }
+
     private static bool Clear(List<Surface> surfaces, int skip, Point3d q, double margin)
     {
         for (int i = 0; i < surfaces.Count; i++) if (i != skip && Math.Abs(Distance(surfaces[i], q)) < 2 * margin) return false;

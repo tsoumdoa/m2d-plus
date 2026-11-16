@@ -76,6 +76,8 @@ internal static class AnalyticCheck
                 var (shape, refusal) = AnalyticVisibility.Examine(leaf.Geometry, tol);
                 Console.WriteLine($"    BODY {leaf.Identity[^12..]} {(shape is null ? "REFUSED: " + refusal : "recognised " + shape)}");
                 if (leaf.Geometry is not Brep brep) continue;
+                foreach (var sil in Silhouette.Compute(brep, SilhouetteType.Tangent, view.Direction, tol, .001) ?? [])
+                    Console.WriteLine($"        SILHOUETTE type {sil?.SilhouetteType} component {sil?.GeometryComponentIndex.ComponentIndexType} {sil?.GeometryComponentIndex.Index} curve {sil?.Curve?.GetType().Name} length {sil?.Curve?.GetLength():F3}");
                 Console.WriteLine($"        faces {brep.Faces.Count}, edges {brep.Edges.Count}, orientation {brep.SolidOrientation}, solid {brep.IsSolid}, valid {brep.IsValid}, volume {brep.GetVolume():R}");
                 foreach (var face in brep.Faces)
                 {
@@ -327,6 +329,19 @@ internal static class AnalyticCheck
             // grazes its own surface). Visible when either side is clear, hidden when both are blocked; two steps agree.
             var centre = Blocked(p, tol, 20 * tol, only: own);
             if (centre == false) return 0;
+            // The ray grazes its own body. An outline of a hole (a bore) has the hole on one side, so "one side clear"
+            // says nothing there: first ask Rhino whether the ray itself runs through the body's material. A point
+            // strictly inside by a tenth of a tolerance has more than the depth rule's cover around it.
+            if (centre is null && bodies.FirstOrDefault(b => b.Id == own) is { Brep: { IsSolid: true } solid } body)
+            {
+                for (double h = 2 * tol; h < body.Box.Diagonal.Length; h *= 1.5)
+                    if (solid.IsPointInside(p + e * h, tol / 10, true)) return 1;
+                // No material found in front, but there is some on the same line behind the point: the line touches a
+                // hole from inside the material, and whatever is in front is thinner sideways than this test resolves
+                // (the ray leaves through an end cut within a fraction of a millimetre). Not judged.
+                for (double h = 2 * tol; h < body.Box.Diagonal.Length; h *= 1.5)
+                    if (solid.IsPointInside(p - e * h, tol / 10, true)) return -1;
+            }
             int? verdict = null;
             foreach (double delta in exactOwn ? new[] { .2 * tol, .4 * tol } : new[] { 4 * tol, 8 * tol })
             {
@@ -336,6 +351,28 @@ internal static class AnalyticCheck
                 if (verdict is { } old && old != v) return -1; verdict = v;
             }
             return verdict ?? -1;
+        }
+        // A cut tube's lines are its stored edges, which can be off the faces they join by the edge tolerance (0.03 mm on
+        // the owner's pipes at a model tolerance of 0.001 mm). Where a rim meets its outline that offset decides whether
+        // the ray grazes inside or outside the body, so the sample is judged at the faces' own intersection: the nearest
+        // edge between two faces is found and the point is projected onto the two faces' surfaces in turn (Rhino's
+        // closest point, nothing of the engine's). A point not near such an edge is left where it is.
+        int moved = 0;
+        Point3d OnFaces(Point3d world, string source)
+        {
+            var body = bodies.FirstOrDefault(b => b.Id == source); if (body is null || body.Brep is null || AnalyticVisibility.Recognise(body.Geometry, tol) is not AnalyticVisibility.CutTubeShape shape) return world;
+            double reach = 4 * shape.EdgeBound + 4 * tol, best = reach; BrepEdge? nearest = null;
+            foreach (var edge in body.Brep.Edges)
+            {
+                var faces = edge.AdjacentFaces(); if (faces.Length != 2 || shape.FaceSurface[faces[0]] == shape.FaceSurface[faces[1]]) continue;
+                if (edge.ClosestPoint(world, out double t, best) && edge.PointAt(t).DistanceTo(world) < best) { best = edge.PointAt(t).DistanceTo(world); nearest = edge; }
+            }
+            if (nearest is null) return world;
+            var pair = nearest.AdjacentFaces().Select(i => body.Brep.Faces[i]).ToArray(); var p = world;
+            for (int round = 0; round < 40; round++)
+                foreach (var face in pair) if (face.ClosestPoint(p, out double u, out double v)) p = face.PointAt(u, v);
+            if (p.DistanceTo(world) > reach) return world;
+            moved++; return p;
         }
         var random = new Random(20261116); var groups = new SortedDictionary<string, List<(DrawingPiece Piece, double T, int Class)>>(StringComparer.Ordinal);
         foreach (var (cls, flat, piece) in afterPieces)
@@ -366,7 +403,7 @@ internal static class AnalyticCheck
                 double span = c.Domain.Length, dt = Math.Min(.002 / Math.Max(c.GetLength(), 1e-9), .25) * span; int agreed = -2;
                 foreach (double s in new[] { t, Math.Max(c.Domain.Min, t - dt), Math.Min(c.Domain.Max, t + dt) })
                 {
-                    var world = depth.PointAt(depth.Domain.ParameterAt(c.Domain.NormalizedParameterAt(s)));
+                    var world = OnFaces(depth.PointAt(depth.Domain.ParameterAt(c.Domain.NormalizedParameterAt(s))), piece.SourceIdentity);
                     int v = Verdict(world, normal, piece.SourceIdentity, exact.Contains(piece.SourceIdentity));
                     if (agreed == -2) agreed = v; else if (agreed != v) agreed = -1;
                 }
@@ -383,6 +420,14 @@ internal static class AnalyticCheck
                                 foreach (var body in bodies)
                                     if (Blocked(where + offset, tol, 20 * tol, only: body.Id) != false)
                                         note.Append($" | {label}: {(Blocked(where + offset, tol, 20 * tol, only: body.Id) is null ? "unsure" : "blocked")} by {body.Id[^12..]}{(body.Id == piece.SourceIdentity ? " (own)" : "")} {(body.Exact ? AnalyticVisibility.Recognise(body.Geometry, tol)!.GetType().Name : body.Geometry.GetType().Name)} box z {body.Box.Min.Z:F3}..{body.Box.Max.Z:F3}");
+                        if (variants.Contains("why") && bodies.FirstOrDefault(b => b.Id == piece.SourceIdentity) is { } mine && AnalyticVisibility.Recognise(mine.Geometry, tol) is AnalyticVisibility.CutTubeShape cutShape)
+                        {   // What the engine's own solid says at this point, for each pair of its surfaces the point is near.
+                            var solid = (M2DPlus.Core.Visibility.AnalyticCsg)AnalyticVisibility.Solid(cutShape, plane); var at = OnFaces(where, piece.SourceIdentity); var v = AnalyticVisibility.Project(plane, at);
+                            var close = Enumerable.Range(0, cutShape.Surfaces.Count).Where(i => Math.Abs(CutTubeRecognition.Distance(cutShape.Surfaces[i], at)) < 1e-6).ToArray();
+                            note.Append($" | engine: on surfaces [{string.Join(",", close.Select(i => $"{i}:{(cutShape.Surfaces[i].Cylinder ? $"cyl r={cutShape.Surfaces[i].Radius:F2}" : "plane")} {cutShape.Surfaces[i].Role}{(cutShape.Surfaces[i].Virtual ? "*" : "")}"))}]; moved {at.DistanceTo(where):E2}; no own bits {solid.Occlusion(v, tol)}; all near as own {solid.Occlusion(v, tol, close.Aggregate(0, (m, i) => m | 1 << i))}; tangent {solid.Occlusion(v, tol, close.Aggregate(0, (m, i) => m | 1 << i), true)}");
+                            if (mine.Brep is not null) note.Append("; Rhino point-in-solid above the point at " + string.Join(", ", new[] { 10.0, 100, 1000, 3000 }.Select(k => $"{k * tol:G3}: {mine.Brep.IsPointInside(at + e * (k * tol), tol / 10, true)}")));
+                            foreach (int i in close) note.Append($"; n{i}·e {(cutShape.Surfaces[i].Cylinder ? "(cyl)" : (cutShape.Surfaces[i].Direction * e).ToString("F4"))}");
+                        }
                         flagged.Add($"{key}: source {piece.SourceIdentity[^12..]} drawn {(cls == 0 ? "Visible" : "Hidden")} at ({x:F4}, {y:F4}) world {where}, check says {(agreed == 0 ? "Visible" : "Hidden")}{note}");
                     }
                 }
@@ -390,6 +435,7 @@ internal static class AnalyticCheck
             adjudication[key] = new[] { list.Count, chosen.Length, counts[0], counts[1], counts[2] };
             Console.WriteLine($"    ray check [{key}]: {list.Count} samples, checked {chosen.Length}: right {counts[0]}, flagged {counts[1]}, not judged {counts[2]}");
         }
+        Console.WriteLine($"    ray check: {moved} ray starts were moved from a stored edge onto its two faces' intersection");
         foreach (var line in flagged) Console.WriteLine("    FLAGGED " + line);
         Console.WriteLine($"    rays {rays}; bodies {bodies.Count}; recognised sources {exact.Count}");
         foreach (var b in owned) b.Dispose();

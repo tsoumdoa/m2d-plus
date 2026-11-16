@@ -235,8 +235,11 @@ internal sealed class AnalyticVisibility
     // ---------------------------------------------------------------- one view
 
     /// <param name="Slack">How far the curve may be from the surfaces it lies on (a cut tube's stored edge).</param>
+    /// <param name="Snap">Takes a point of the drawn curve to the exact curve it stands for (the intersection of the
+    /// two surfaces a stored edge joins, or a cylinder's outline). What is classified is the exact curve; what is drawn
+    /// is the stored one, within the body's stated edge bound of it.</param>
     private sealed record Candidate(Curve Curve, VisibilityInput Input, int Solid, int OnSurface, bool Tangent, Func<Point3d, bool> Profile, double Slack = 0,
-        IReadOnlyList<(int Solid, int OnSurface)>? Contacts = null);
+        IReadOnlyList<(int Solid, int OnSurface)>? Contacts = null, Func<Point3d, Point3d>? Snap = null);
 
     internal static readonly AnalyticVisibility None = new();
     private readonly AnalyticOccluders _removed = new([]), _all = new([]);
@@ -450,7 +453,22 @@ internal sealed class AnalyticVisibility
                 {
                     var pair = Enumerable.Range(0, t.Real).Where(i => (edge.On & (1 << i)) != 0).Select(i => t.Surfaces[i]).ToArray();
                     bool Profile(Point3d p) => pair.Length == 2 && (Out(pair[0], p) * e > 0) != (Out(pair[1], p) * e > 0);
-                    yield return new(edge.World.DuplicateCurve(), input, solid, edge.On, false, Profile, edge.Slack);
+                    // The exact curve behind a stored edge: the intersection of its two surfaces. When every point of
+                    // the edge snaps onto it (the surfaces cross cleanly there), that is what is classified, with no
+                    // slack; otherwise the stored edge is classified with its measured slack.
+                    Func<Point3d, Point3d>? snap = null;
+                    if (pair.Length == 2)
+                    {
+                        Point3d Onto(Point3d q) => CutTubeRecognition.Onto(pair[0], pair[1], q) ?? q;
+                        bool clean = true;
+                        for (int k = 0; k <= 16 && clean; k++)
+                        {
+                            var q = edge.World.PointAt(edge.World.Domain.ParameterAt(k / 16.0));
+                            clean = CutTubeRecognition.Onto(pair[0], pair[1], q) is { } on && on.DistanceTo(q) <= 4 * edge.Slack + _tol;
+                        }
+                        if (clean) snap = Onto;
+                    }
+                    yield return new(edge.World.DuplicateCurve(), input, solid, edge.On, false, Profile, snap is null ? edge.Slack : 0, null, snap);
                 }
                 // Outlines of its cylindrical faces, from Rhino's silhouette of the body: each is a ruling of the face's
                 // cylinder, already cut to the face. The ray there touches that cylinder.
@@ -464,11 +482,28 @@ internal sealed class AnalyticVisibility
                     {
                         if (silhouette?.Curve is null || silhouette.SilhouetteType != SilhouetteType.Tangent) continue;
                         var component = silhouette.GeometryComponentIndex;
-                        if (component.ComponentIndexType != ComponentIndexType.BrepFace || component.Index < 0 || component.Index >= t.FaceSurface.Length) continue;
-                        int surface = t.FaceSurface[component.Index]; if (!t.Surfaces[surface].Cylinder) continue;
+                        // An outline that falls on a cylinder's seam is reported against the seam edge, not the face.
+                        int surface = -1;
+                        if (component.ComponentIndexType == ComponentIndexType.BrepFace && component.Index >= 0 && component.Index < t.FaceSurface.Length) surface = t.FaceSurface[component.Index];
+                        else if (component.ComponentIndexType == ComponentIndexType.BrepEdge && component.Index >= 0 && component.Index < brep.Edges.Count)
+                        {
+                            var beside = brep.Edges[component.Index].AdjacentFaces().Where(f => f < t.FaceSurface.Length).Select(f => t.FaceSurface[f]).Distinct().ToArray();
+                            if (beside.Length == 1) surface = beside[0];
+                        }
+                        if (surface < 0 || !t.Surfaces[surface].Cylinder) continue;
                         if (silhouette.Curve.GetLength() <= _tol) continue;
-                        // Rhino places the outline to its tolerance; the face's own bound is added.
-                        yield return new(silhouette.Curve.DuplicateCurve(), input, solid, 1 << surface, true, _ => true, _tol + t.Surfaces[surface].Slack);
+                        // The exact outline is a ruling of the cylinder, a radius to the side of its axis as seen. Rhino
+                        // places it to its tolerance (and the face has its own bound): the curve is snapped onto the ruling
+                        // when it is that close, and classified with that slack otherwise.
+                        var cylinder = t.Surfaces[surface]; var side = Vector3d.CrossProduct(cylinder.Direction, e); double near = 4 * (_tol + cylinder.Slack);
+                        Func<Point3d, Point3d>? onto = null;
+                        if (side.Unitize())
+                        {
+                            Point3d OnOutline(Point3d q) { var w = q - cylinder.Origin; return cylinder.Origin + side * (w * side < 0 ? -cylinder.Radius : cylinder.Radius) + cylinder.Direction * (w * cylinder.Direction); }
+                            var c = silhouette.Curve;
+                            if (new[] { 0, .25, .5, .75, 1 }.All(f => { var q = c.PointAt(c.Domain.ParameterAt(f)); return OnOutline(q).DistanceTo(q) <= near; })) onto = OnOutline;
+                        }
+                        yield return new(silhouette.Curve.DuplicateCurve(), input, solid, 1 << surface, true, _ => true, onto is null ? _tol + cylinder.Slack : 0, null, onto);
                     }
                 }
                 finally { temporary?.Dispose(); }
@@ -561,7 +596,7 @@ internal sealed class AnalyticVisibility
                 if (!endOn[i])
                 {
                     var c = _candidates[i];
-                    chords[i] = Cut(c.Curve, _all, c.Solid, c.OnSurface, c.Tangent, c.Slack, token, c.Contacts);
+                    chords[i] = Cut(c.Curve, _all, c.Solid, c.OnSurface, c.Tangent, c.Slack, token, c.Contacts, c.Snap);
                     // A stored edge is known to its slack: its change points are known to a few times that.
                     solved[i] = Solve(c.Curve, chords[i], _all, c.Slack, Math.Max(_tol, 8 * c.Slack), token);
                 }
@@ -656,8 +691,9 @@ internal sealed class AnalyticVisibility
 
     /// <summary>The curve as chords in view coordinates; null when no occluder is near it; empty when it has no valid bounds.</summary>
     private List<Chord>? Cut(Curve curve, AnalyticOccluders occluders, int solid, int onSurface, bool tangent, double slack, CancellationToken token,
-        IReadOnlyList<(int Solid, int OnSurface)>? contacts = null)
+        IReadOnlyList<(int Solid, int OnSurface)>? contacts = null, Func<Point3d, Point3d>? snap = null)
     {
+        Point3d At(double t) => snap is null ? curve.PointAt(t) : snap(curve.PointAt(t));
         var toView = Transform.PlaneToPlane(_plane, Plane.WorldXY); var box = curve.GetBoundingBox(toView); var near = new List<int>();
         if (!box.IsValid) return [];
         occluders.Near(box.Min.X - slack, box.Min.Y - slack, box.Max.X + slack, box.Max.Y + slack, box.Min.Z, _tol, near);
@@ -666,11 +702,12 @@ internal sealed class AnalyticVisibility
         // A candidate of an exact solid can lie on the boundary of another one (the rims of stacked columns in plan, a
         // mitre joint): its chords must follow the curve far closer than the graze width, or the boundary rule would
         // see each chord dip in and out. Native curves are only known to the tolerance and get the slack instead.
-        foreach (var (ta, tb) in Chords(curve, _tol / 8, solid >= 0 && slack == 0 ? AnalyticSolid.Graze(_tol) / 8 : 0, _tol))
+        // A curve that is itself only known to its slack needs chords no finer than a quarter of that.
+        foreach (var (ta, tb) in Chords(curve, Math.Max(_tol / 8, slack / 4), solid >= 0 && slack == 0 ? AnalyticSolid.Graze(_tol) / 8 : 0, _tol, snap))
         {
             token.ThrowIfCancellationRequested();
-            Point3d pa = curve.PointAt(ta), pb = curve.PointAt(tb);
-            chords.Add(new(ta, tb, pa.DistanceTo(pb), new(Project(pa), Project(curve.PointAt((ta + tb) / 2)), Project(pb), solid, onSurface, tangent, contacts)));
+            Point3d pa = At(ta), pb = At(tb);
+            chords.Add(new(ta, tb, pa.DistanceTo(pb), new(Project(pa), Project(At((ta + tb) / 2)), Project(pb), solid, onSurface, tangent, contacts)));
         }
         return chords;
     }
@@ -717,8 +754,9 @@ internal sealed class AnalyticVisibility
     }
 
     /// <summary>Parameter pieces whose chord stays within `sag` of the curve. A straight curve is one piece.</summary>
-    private static IEnumerable<(double, double)> Chords(Curve curve, double sag, double fit = 0, double shortest = 0)
+    private static IEnumerable<(double, double)> Chords(Curve curve, double sag, double fit = 0, double shortest = 0, Func<Point3d, Point3d>? snap = null)
     {
+        Point3d P(double t) => snap is null ? curve.PointAt(t) : snap(curve.PointAt(t));
         // Distance from the curve to the parabola through a chord's ends and middle (the Core candidate), measured
         // across the curve at the quarter points and doubled: a circle is within three quarters of that everywhere.
         static double Misfit(Point3d pa, Point3d p1, Point3d pm, Point3d p3, Point3d pb)
@@ -747,20 +785,20 @@ internal sealed class AnalyticVisibility
             for (int k = 3; k >= 0; k--)   // never a closed chord
             {
                 double a = d.ParameterAt(k / 4.0), b = d.ParameterAt((k + 1) / 4.0);
-                stack.Push((a, b, curve.PointAt(a), curve.PointAt(b), 0));
+                stack.Push((a, b, P(a), P(b), 0));
             }
         }
         while (stack.Count > 0)
         {
             var (a, b, pa, pb, depth) = stack.Pop(); if (!(b > a)) continue;
-            double m = (a + b) / 2; var pm = curve.PointAt(m);
+            double m = (a + b) / 2; var pm = P(m);
             var line = new Line(pa, pb); bool fine = line.Length > 0 || depth >= 40;
             if (fine && depth < 40)
             {
                 fine = line.DistanceTo(pm, true) <= sag;
                 if (fine)
                 {
-                    Point3d p1 = curve.PointAt(a + (b - a) * .25), p3 = curve.PointAt(a + (b - a) * .75);
+                    Point3d p1 = P(a + (b - a) * .25), p3 = P(a + (b - a) * .75);
                     fine = line.DistanceTo(p1, true) <= sag && line.DistanceTo(p3, true) <= sag &&
                         !(fit > 0 && line.Length > shortest && Misfit(pa, p1, pm, p3, pb) > fit);
                 }
