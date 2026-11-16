@@ -91,6 +91,26 @@ public sealed class ProgressModelTests
     }
 
     [Fact]
+    public void InnerStepFractionsMoveTheBarWithinAView()
+    {
+        // Exact lines (the planar kernel) and checking (ray verification) report their own fraction, like hidden lines.
+        var model = new JobProgressModel(null, loading: false);
+        var exact = model.Update(new(JobPhase.Drawing, 0, 1) { Step = ViewSteps.ExactLines, StepFraction = .5 }, 1);
+        Assert.False(exact.Indeterminate);
+        var checking = model.Update(new(JobPhase.Drawing, 0, 1) { Step = ViewSteps.Checking, StepFraction = .5 }, 2);
+        Assert.True(checking.Fraction > exact.Fraction);
+        // One worker forwards its one view's steps: determinate too. Parallel workers keep whole views.
+        var single = new JobProgressModel(null, loading: false);
+        var one = single.Update(new(JobPhase.Drawing, 0, 1) { Workers = 1, Step = ViewSteps.HiddenLines, StepFraction = .5 }, 1);
+        Assert.False(one.Indeterminate);
+        Assert.True(one.Fraction > single.Update(new(JobPhase.Preparing, 1, 1), 1).Fraction - 1e-9);
+        var parallel = new JobProgressModel(null, loading: false);
+        var many = parallel.Update(new(JobPhase.Drawing, 0, 4) { Workers = 3, Step = ViewSteps.HiddenLines, StepFraction = .5 }, 1);
+        Assert.True(many.Indeterminate);
+        Assert.True(one.Fraction > many.Fraction);
+    }
+
+    [Fact]
     public void TheEstimateNeedsEnoughHistory()
     {
         // No history: nothing until a quarter of the way and four seconds in.

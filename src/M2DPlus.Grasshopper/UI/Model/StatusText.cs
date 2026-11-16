@@ -56,6 +56,11 @@ public static class StatusText
     /// whole: waiting with two-digit queue, or loading / preparing with five-digit counts.</summary>
     public const string WidestCore = "Waiting for another drawing (99 ahead)";
 
+    /// <summary>Row 2's step: "hidden lines 45 %" when the step reports how far it is, else the step alone.</summary>
+    private static string? Step(JobProgress progress) => progress.Step is { } step
+        ? progress.StepFraction is double f ? $"{step} {(int)Math.Floor(Math.Clamp(f, 0, 1) * 100)} %" : step
+        : null;
+
     public static StatusLine Of(JobProgress progress, double? remainingSeconds = null)
     {
         var eta = remainingSeconds is double s ? JobProgressModel.Eta(s) : null;
@@ -69,15 +74,13 @@ public static class StatusText
             case JobPhase.Preparing:
                 return new(progress.Total > 0 ? Pair("Preparing geometry") : "Preparing geometry", Eta: eta);
             case JobPhase.Drawing when progress.Workers > 0:
+                // A worker's own step comes with the view it is drawing (one view at a time is shown).
                 return new($"Drawing {Count(Math.Min(progress.Done, progress.Total))} / {Count(progress.Total)} · {Count(progress.Workers)} worker{(progress.Workers == 1 ? "" : "s")}",
-                    Detail: progress.Step, Eta: eta);
+                    progress.View, Step(progress), eta);
             case JobPhase.Drawing:
             {
                 var current = Math.Min(progress.Done + 1, Math.Max(1, progress.Total));
-                var detail = progress.Step is { } step
-                    ? progress.StepFraction is double f ? $"{step} {(int)Math.Floor(Math.Clamp(f, 0, 1) * 100)} %" : step
-                    : null;
-                return new($"Drawing {Count(current)} / {Count(progress.Total)}", progress.View, detail, eta);
+                return new($"Drawing {Count(current)} / {Count(progress.Total)}", progress.View, Step(progress), eta);
             }
             case JobPhase.Output or JobPhase.Complete:
                 return new("Building output", Eta: eta);

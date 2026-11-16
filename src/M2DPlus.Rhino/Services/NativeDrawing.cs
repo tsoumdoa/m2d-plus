@@ -126,21 +126,50 @@ public static class NativeDrawing
     // Internal deterministic lifecycle instrumentation; never exposed through the product UI.
     internal static IProgress<double>? NativeProgress { get; set; }
 
-    /// <summary>The view being drawn on this flow reports its user-facing step here (UX §5.2 status).</summary>
-    private static readonly AsyncLocal<Action<string, double?>?> StepSink = new();
-    private static readonly AsyncLocal<string?> CurrentStep = new();
+    /// <summary>The view being drawn on this flow reports its user-facing step here (UX §5.2 status). Parallel managed
+    /// work (the planar kernel) inherits it; there is no process-global view state.</summary>
+    private static readonly AsyncLocal<StepStatus?> Steps = new();
     /// <summary>An engine phase started (PhaseTimings): report its step once when it changes.</summary>
     internal static void ReportPhase(string phase)
     {
-        if (StepSink.Value is not { } sink || ViewSteps.Of(phase) is not { } step || step == CurrentStep.Value) return;
-        CurrentStep.Value = step; sink(step, null);
+        if (Steps.Value is { } steps && ViewSteps.Of(phase) is { } step) steps.Report(step, null);
     }
-    private sealed class StepProgress(Action<string, double?> sink) : IProgress<double>
+    /// <summary>Inner-phase progress of the current view (planar kernel, ray verification): <paramref name="done"/> of
+    /// <paramref name="total"/> within <paramref name="step"/>. Safe from any thread; only whole-percent changes go out.</summary>
+    internal static void ReportStep(string step, long done, long total)
     {
-        public void Report(double value) { NativeProgress?.Report(value); sink(ViewSteps.HiddenLines, value); }
+        if (Steps.Value is { } steps && total > 0) steps.Report(step, (double)done / total);
+    }
+    private sealed class StepProgress(StepStatus steps) : IProgress<double>
+    {
+        public void Report(double value) { NativeProgress?.Report(value); if (double.IsFinite(value)) steps.Report(ViewSteps.HiddenLines, value); }
     }
     /// <summary>Rhino's own HLD progress: the test hook, and the hidden-lines fraction of the current view.</summary>
-    internal static IProgress<double>? HldProgress => StepSink.Value is { } sink ? new StepProgress(sink) : NativeProgress;
+    internal static IProgress<double>? HldProgress => Steps.Value is { } steps ? new StepProgress(steps) : NativeProgress;
+
+    /// <summary>One view's step and that step's percentage. Reports go out only when the step or its whole percent
+    /// changes, so per-edge kernel callbacks from many threads never flood the UI or a worker pipe.</summary>
+    private sealed class StepStatus(Action<string, double?> sink)
+    {
+        private readonly object _gate = new();
+        private volatile string? _step;
+        private volatile int _percent = -1;
+        internal void Report(string step, double? fraction)
+        {
+            var percent = fraction is double f ? (int)Math.Floor(Math.Clamp(f, 0, 1) * 100) : -1;
+            if (ReferenceEquals(step, _step) && (fraction is null || percent == _percent)) return;
+            lock (_gate)
+            {
+                if (step == _step && (fraction is null || percent == _percent)) return;
+                // A new step starts without a percentage until its own work reports one.
+                if (step != _step) _percent = -1;
+                _step = step;
+                if (fraction is null) { sink(step, null); return; }
+                if (percent < _percent) return; // a step's percentage never goes back
+                _percent = percent; sink(step, percent / 100d);
+            }
+        }
+    }
     internal static Action? BeforeCompletion { get; set; }
     private static long _hldCalls;
     private static long _visibilitySolves;
@@ -178,13 +207,13 @@ public static class NativeDrawing
                         ct.ThrowIfCancellationRequested();
                         var name = views[index].Name; var at = index;
                         progress?.Report(new(JobPhase.Drawing, index, views.Count) { View = name });
-                        StepSink.Value = progress is null ? null : (step, fraction) => progress.Report(new(JobPhase.Drawing, at, views.Count) { View = name, Step = step, StepFraction = fraction });
-                        CurrentStep.Value = null;
+                        Steps.Value = progress is null ? null : new StepStatus((step, fraction) => progress.Report(new(JobPhase.Drawing, at, views.Count) { View = name, Step = step, StepFraction = fraction }));
                         ViewDrawing drawing;
                         try { drawing = SolveView(scene, prepared, views[index], settings, ct); }
-                        finally { StepSink.Value = null; CurrentStep.Value = null; }
+                        finally { Steps.Value = null; }
                         drawing.Phases.Add("normalisation", preparationSeconds / views.Count);
                         results.Add(drawing);
+                        using var censusPhase = drawing.Phases.Start("tolerance census");
                         if (!edgeCensus.TryGetValue(drawing.Tolerance, out var census))
                             edgeCensus[drawing.Tolerance] = census = ToleranceDiagnostics.SourceEdgeCensus(prepared, drawing.Tolerance, ct);
                         ToleranceDiagnostics.Apply(drawing, prepared, census, ct);
@@ -258,11 +287,8 @@ public static class NativeDrawing
             {
             using var phase = result.Phases.Start("native setup");
             using var viewport = new ViewportInfo();
-            var frame = result.Frame; var radius = scene.Bounds.IsValid ? Math.Max(scene.Bounds.Diagonal.Length, 1) : 1;
-            viewport.IsParallelProjection = true;
-            viewport.SetCameraLocation(frame.Plane.Origin + frame.Plane.ZAxis * (radius * 4 + 10));
-            viewport.SetCameraDirection(view.Direction); viewport.SetCameraUp(frame.Plane.YAxis);
-            viewport.SetFrustum(frame.X.Min, frame.X.Max, frame.Y.Min, frame.Y.Max, .001, radius * 10 + 100);
+            var frame = result.Frame;
+            NativeViewport.Configure(viewport,frame,view.Direction,scene.Bounds,tolerance);
             var parameters = new HiddenLineDrawingParameters { AbsoluteTolerance = tolerance, Flatten = false,
                 IncludeHiddenCurves = true, IncludeTangentEdges = view.Settings?.Tangents ?? false, IncludeTangentSeams = view.Settings?.Seams ?? false };
             parameters.SetViewport(viewport);
@@ -355,6 +381,7 @@ public static class NativeDrawing
         catch (Exception ex) { result.Dispose(); result.Error = ex.Message; quarantine = true; }
         finally
         {
+            using var completionPhase = result.Phases.Start("uncertainty and ordering");
             if (quarantine || uncertainSources.Count != 0 || uncertainRegions.Count != 0)
             {
                 try { NativeUncertainty.ApplyFootprints(result, sources, quarantine, uncertainSources, uncertainRegions, tolerance, token, !settings.NativeOnly, localSources); }

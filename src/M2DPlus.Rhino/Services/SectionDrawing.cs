@@ -187,11 +187,8 @@ internal static class SectionDrawing
             {
             var occluders = registered.Where(p => !p.Tag.Far && p.Geometry is Brep or Mesh).Select(p => p.Geometry).ToArray();
             using var viewport = new ViewportInfo(); var frame = result.Frame;
-            var radius = Math.Max(1, scene.Bounds.IsValid ? scene.Bounds.Diagonal.Length : 1);
-            viewport.IsParallelProjection = true;
-            viewport.SetCameraLocation(frame.Plane.Origin + frame.Plane.ZAxis * (radius * 4 + 10));
-            viewport.SetCameraDirection(view.Direction); viewport.SetCameraUp(frame.Plane.YAxis);
-            viewport.SetFrustum(frame.X.Min, frame.X.Max, frame.Y.Min, frame.Y.Max, .001, radius * 10 + 100);
+            var radius = Math.Max(scene.Bounds.IsValid ? scene.Bounds.Diagonal.Length : 0,16*tol);
+            NativeViewport.Configure(viewport,frame,view.Direction,scene.Bounds,tol);
             var parameters = new HiddenLineDrawingParameters { AbsoluteTolerance = tol, Flatten = false,
                 IncludeHiddenCurves = true, IncludeTangentEdges = view.Settings?.Tangents ?? false, IncludeTangentSeams = view.Settings?.Seams ?? false };
             parameters.SetViewport(viewport);

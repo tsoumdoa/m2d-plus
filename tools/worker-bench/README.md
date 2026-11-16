@@ -1,5 +1,22 @@
 # Worker benchmark
 
+Unit/offset investigation: see `docs/research/units-and-solve-latency.md`.
+`scale <resolver> <model.3dm> <new-output-folder> [indices=5]` records capture,
+production/local/native timings, complete Info and all eight worker requests.
+Use `production:all` for eight production views, `0,1,2,3,5` for paired
+elevation/axo controls, `raw:0,1,2,3` for a direct serial HLD proxy, or
+`threaded:0` for an explicitly labelled threaded proxy. `generate` creates a
+millimetre model (scale 1,000; tolerance .01 mm) under the chosen stable model
+folder, refusing to overwrite; `generate:10000000` also translates its top-level
+objects. `capture6k` supplements the open model to 6,000 drawable objects in
+memory and measures capture without a solve. `SCALE_BENCH_TOLERANCE` is an
+explicit benchmark-only override in document units. Preserve the generated
+`.generation.json` beside offset models so the plan follows their translation.
+`scale-report.py [evidence-root]` writes measurement tables, phase CSV and a
+comparison chart outside Git. Run local exports before workers; use `pool ... 1 2`
+for one cold two-worker set with no RhinoCore in the coordinator. A failed hash
+is recorded and returns nonzero after the complete batch has been recorded.
+
 `Run.ps1 -Models <read-only model folder> -Resolver <existing Rhino.Inside resolver> -Output <new folder>` builds Release and records the small single-view startup control and eight-view M/L in-process/1/2/4-worker matrix, fresh-process cold then retained-scene warm. The exporter terminates before the coordinator starts workers: at most four owned RhinoCore processes, including the in-process baseline host. No process enumeration, attachment or unrelated termination is used.
 
 The benchmark uses production native/composed/section compute, native threading off, hidden lines on and document tolerance. Its local reference bypasses product admission using the machine memory budget; this does not change the interactive host's 512 MiB threshold. Fixed-count experiments use the automatic scene cap and the same managed processor allowance as production, and refuse a reservation above the memory budget. The named long section and a z=1.2 plan join North/South/East/West/Top/SW. Capture/scene encoding are separate observations. Worker wall includes startup, handshake, shipping/preparation, solve, compression and reply transfer; warm passes retain scenes/processes when sizing stays unchanged. Hash verification is outside batch wall.

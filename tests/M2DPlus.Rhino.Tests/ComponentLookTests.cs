@@ -183,6 +183,9 @@ public sealed class ComponentLookTests(RhinoHost host, Xunit.Abstractions.ITestO
             ("drawing-long-name", new(M2DPlus.Core.JobPhase.Drawing, 6, 12) { View = "North elevation, courtyard side, level 3", Step = M2DPlus.Core.ViewSteps.Sections }, .64, true, .66, 95,
                 "Drawing 7 / 12 · North…", "sections", "~2 min left"),
             ("workers", new(M2DPlus.Core.JobPhase.Drawing, 5, 8) { Workers = 3 }, .69, true, .95, 12, "Drawing 5 / 8 · 3 workers", null, "~12 s left"),
+            // A worker's inner step crosses the pipe with its view: the view in row 1, the step's percentage in row 2.
+            ("workers-step", new(M2DPlus.Core.JobPhase.Drawing, 5, 8) { Workers = 3, View = "Section A", Step = M2DPlus.Core.ViewSteps.ExactLines, StepFraction = .37 }, .69, true, .95, 12,
+                "Drawing 5 / 8 · 3 workers · Section A", "exact lines 37 %", "~12 s left"),
             ("workers-sending", new(M2DPlus.Core.JobPhase.Drawing, 0, 8) { Workers = 3, Step = "sending scene" }, .3, true, .5, null, "Drawing 0 / 8 · 3 workers", "sending scene", null),
             ("output", new(M2DPlus.Core.JobPhase.Output, 0, 0), .95, true, 1, null, "Building output", null, null),
         };
