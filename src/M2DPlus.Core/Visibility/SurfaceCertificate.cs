@@ -82,32 +82,34 @@ public sealed class SurfaceCertificate
         for (int i = 0; i < nv; i++) if (!(breaksV[i + 1] > breaksV[i])) throw new ArgumentException("Breaks must increase.", nameof(breaksV));
         for (int i = 3; i < homogeneous.Length; i += 4) if (!(homogeneous[i] > 0) || !double.IsFinite(homogeneous[i])) throw new ArgumentException("Weights must be positive.", nameof(homogeneous));
         var cert = new SurfaceCertificate(p, q, rational, (double[])breaksU.Clone(), (double[])breaksV.Clone(), (double[])kinksU.Clone(), (double[])kinksV.Clone());
-        var h = new double[(p + 1) * (q + 1) * 4];
-        for (int a = 0; a < nu; a++)
-            for (int b = 0; b < nv; b++)
-            {
-                for (int i = 0; i <= p; i++)
-                    for (int j = 0; j <= q; j++)
-                        Array.Copy(homogeneous, ((a * p + i) * countV + b * q + j) * 4, h, (i * (q + 1) + j) * 4, 4);
-                double lenU = 0, lenV = 0;
-                for (int i = 0; i <= p; i++)
-                    for (int j = 0; j <= q; j++)
-                    {
-                        if (i < p) lenU = Math.Max(lenU, Distance(h, i * (q + 1) + j, (i + 1) * (q + 1) + j) * p);
-                        if (j < q) lenV = Math.Max(lenV, Distance(h, i * (q + 1) + j, i * (q + 1) + j + 1) * q);
-                    }
-                int lu = Halvings(lenU, cellSize, maxHalvings), lv = Halvings(lenV, cellSize, maxHalvings), ku = 1 << lu, kv = 1 << lv, patch = a * nv + b;
-                cert._start[patch] = cert._cells.Count; cert._ku[patch] = ku; cert._kv[patch] = kv;
-                var strips = new List<double[]> { (double[])h.Clone() };
-                for (int n = 1; n < ku; n *= 2) strips = Halve(strips, p, q, true);
-                double u0 = breaksU[a], u1 = breaksU[a + 1], v0 = breaksV[b], v1 = breaksV[b + 1];
-                for (int iu = 0; iu < ku; iu++)
+        // Patches are independent: cut and bounded in parallel, then listed in order.
+        var cells = new Cell[nu * nv][];
+        Parallel.For(0, nu * nv, patch =>
+        {
+            int a = patch / nv, b = patch % nv; var h = new double[(p + 1) * (q + 1) * 4];
+            for (int i = 0; i <= p; i++)
+                for (int j = 0; j <= q; j++)
+                    Array.Copy(homogeneous, ((a * p + i) * countV + b * q + j) * 4, h, (i * (q + 1) + j) * 4, 4);
+            double lenU = 0, lenV = 0;
+            for (int i = 0; i <= p; i++)
+                for (int j = 0; j <= q; j++)
                 {
-                    var row = new List<double[]> { strips[iu] };
-                    for (int n = 1; n < kv; n *= 2) row = Halve(row, p, q, false);
-                    for (int iv = 0; iv < kv; iv++) cert._cells.Add(MakeCell(row[iv], p, q, rational, (u1 - u0) / ku, (v1 - v0) / kv));
+                    if (i < p) lenU = Math.Max(lenU, Distance(h, i * (q + 1) + j, (i + 1) * (q + 1) + j) * p);
+                    if (j < q) lenV = Math.Max(lenV, Distance(h, i * (q + 1) + j, i * (q + 1) + j + 1) * q);
                 }
+            int ku = 1 << Halvings(lenU, cellSize, maxHalvings), kv = 1 << Halvings(lenV, cellSize, maxHalvings);
+            cert._ku[patch] = ku; cert._kv[patch] = kv; var made = cells[patch] = new Cell[ku * kv];
+            var strips = new List<double[]> { h };
+            for (int n = 1; n < ku; n *= 2) strips = Halve(strips, p, q, true);
+            double spanU = (breaksU[a + 1] - breaksU[a]) / ku, spanV = (breaksV[b + 1] - breaksV[b]) / kv;
+            for (int iu = 0; iu < ku; iu++)
+            {
+                var row = new List<double[]> { strips[iu] };
+                for (int n = 1; n < kv; n *= 2) row = Halve(row, p, q, false);
+                for (int iv = 0; iv < kv; iv++) made[iu * kv + iv] = MakeCell(row[iv], p, q, rational, spanU, spanV);
             }
+        });
+        for (int patch = 0; patch < cells.Length; patch++) { cert._start[patch] = cert._cells.Count; cert._cells.AddRange(cells[patch]); }
         return cert;
     }
 

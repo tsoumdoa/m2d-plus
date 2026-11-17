@@ -54,6 +54,19 @@ public sealed class DenseNativeAuditTests(RhinoHost host)
         }
     });
 
+    [RhinoFact] public void VertexParametersComeFromTheMeshWhereTheyAreTheSurfaces() => host.Run(() =>
+    {
+        // A NURBS face: Rhino's unpacked texture coordinates are its parameters, so nothing is pulled back by closest
+        // point, and every triangle still has a parameter box and a proved band.
+        using var sheet = Freeform(); long before = CertifiedMesh.PulledBack;
+        var mesh = CertifiedMesh.Build(sheet, Tol, 10 * Tol, default); Assert.NotNull(mesh);
+        Assert.Equal(before, CertifiedMesh.PulledBack); Assert.Equal(0, mesh.Uncertified);
+        Assert.All(Enumerable.Range(0, mesh.Count), t => Assert.False(double.IsNaN(mesh.Parameters[t * 4])));
+        // A revolved face is meshed in other parameters than its NURBS form has: there the vertices are pulled back.
+        using var sphere = new Sphere(Point3d.Origin, 1).ToBrep(); before = CertifiedMesh.PulledBack;
+        Assert.NotNull(CertifiedMesh.Build(sphere, Tol, 10 * Tol, default)); Assert.True(CertifiedMesh.PulledBack > before);
+    });
+
     [RhinoFact] public void OneMeshServesEveryInstanceOfADefinition() => host.Run(() =>
     {
         using var local = new Sphere(Point3d.Origin, 1).ToBrep(); var leaves = new List<PreparedLeaf>(); var worlds = new List<Brep>();

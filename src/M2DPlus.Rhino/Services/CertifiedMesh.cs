@@ -10,8 +10,9 @@ namespace M2DPlus.Rhino.Services;
 /// surface is further from the mesh than the band of the triangle it maps to.
 ///
 /// Rhino's mesher is asked for a fraction of the wanted band, but its answer is not trusted (it does not hold its
-/// tolerance, and its texture coordinates are not surface parameters). Every vertex is pulled back onto its face to
-/// learn its parameters, and each triangle's band is then a bound from the face's control net
+/// tolerance). It is asked for texture coordinates that are the surface's parameters; each is checked by evaluating
+/// the surface there, and a vertex it does not fit is pulled back onto the face by closest point instead. Each
+/// triangle's band is then a bound from the face's control net
 /// (<see cref="SurfaceCertificate.Deviation"/>) plus how far its corners are from the surface. A triangle with no
 /// such bound (a face whose NURBS form has other parameters, a triangle across a seam or a crease) is measured at
 /// four points instead and takes a quarter more than the worst found on its face; <see cref="Uncertified"/> counts
@@ -45,7 +46,11 @@ internal sealed class CertifiedMesh
 
     private static readonly ConditionalWeakTable<GeometryBase, Dictionary<(double, double), CertifiedMesh?>> ByObject = new();
     private static readonly Dictionary<string, (CertifiedMesh? Mesh, long Used)> ByDefinition = new(StringComparer.Ordinal);
-    private static long _clock, _builds;
+    private static long _clock, _builds, _pulled;
+    /// <summary>Harness only: seconds spent meshing, on certificates, on vertices, on triangle bands and on measuring.</summary>
+    internal static readonly double[] BuildSeconds = new double[5];
+    /// <summary>Vertices whose parameters had to be found by closest point since the process started.</summary>
+    internal static long PulledBack => Interlocked.Read(ref _pulled);
     private const int Capacity = 4096;
     /// <summary>Meshes built since the process started (cache misses).</summary>
     internal static long Builds => Interlocked.Read(ref _builds);
@@ -110,9 +115,12 @@ internal sealed class CertifiedMesh
             var parameters = new MeshingParameters
             {
                 Tolerance = band * MeshFraction, RelativeTolerance = 0, MinimumEdgeLength = 0, MaximumEdgeLength = 0, GridAngle = RhinoMath.ToRadians(20), GridAspectRatio = 6,
-                GridAmplification = 1, GridMinCount = 16, GridMaxCount = 0, RefineAngle = 0, RefineGrid = true, SimplePlanes = true, JaggedSeams = false, DoublePrecision = true
+                GridAmplification = 1, GridMinCount = 16, GridMaxCount = 0, RefineAngle = 0, RefineGrid = true, SimplePlanes = true, JaggedSeams = false, DoublePrecision = true,
+                // Texture coordinates that are the surface's own parameters over its whole domain, not packed per face.
+                TextureRange = MeshingParameterTextureRange.UnpackedUnscaledNormalized
             };
-            var meshes = Mesh.CreateFromBrep(brep, parameters);
+            var watch = System.Diagnostics.Stopwatch.StartNew(); void Lap(int k) { lock (BuildSeconds) BuildSeconds[k] += watch.Elapsed.TotalSeconds; watch.Restart(); }
+            var meshes = Mesh.CreateFromBrep(brep, parameters); Lap(0);
             if (meshes is null) return null;
             try
             {
@@ -126,14 +134,25 @@ internal sealed class CertifiedMesh
                     bool planar = face.IsPlanar(tolerance);
                     // Parameters are the face's own, or those of its NURBS form where the two differ (a revolved surface).
                     Surface? form = null; var certificate = planar ? null : certificates[f] = Certificate(face, tolerance, band * CellBands, out form);
-                    using var keep = form; Surface pull = form ?? face;
-                    int count = mesh.Vertices.Count; var map = new int[count]; var uv = new Point2d[count]; var off = new double[count]; var pole = new byte[count];
+                    using var keep = form; Surface pull = form ?? face; Lap(1);
+                    int count = mesh.Vertices.Count; bool textured = mesh.TextureCoordinates.Count == count; Interval domainU = face.Domain(0), domainV = face.Domain(1); var map = new int[count]; var uv = new Point2d[count]; var off = new double[count]; var pole = new byte[count];
                     for (int v = 0; v < count; v++)
                     {
                         var p = mesh.Vertices.Point3dAt(v);
                         if (!lookup.TryGetValue(p, out int w)) { w = vertices.Count; vertices.Add(p); lookup.Add(p, w); }
                         map[v] = w; uv[v] = new(double.NaN, double.NaN); off[v] = double.PositiveInfinity;
-                        if (!planar && pull.ClosestPoint(p, out double pu, out double pv) && pull.Evaluate(pu, pv, 1, out var on, out var ders))
+                        if (planar) continue;
+                        // The mesh's own parameters where they are the surface's (checked by evaluating there: single
+                        // precision costs a few parts in ten million of the domain, which goes into the band). Only a
+                        // vertex they do not fit, or a face meshed in its NURBS form's parameters, is pulled back.
+                        double pu = double.NaN, pv = double.NaN; Point3d on = Point3d.Unset; Vector3d[]? ders = null;
+                        if (form is null && textured)
+                        {
+                            var tc = mesh.TextureCoordinates[v]; pu = domainU.ParameterAt(tc.X); pv = domainV.ParameterAt(tc.Y);
+                            if (!pull.Evaluate(pu, pv, 1, out on, out ders) || !(on.DistanceTo(p) <= band)) ders = null;
+                        }
+                        if (ders is null) { Interlocked.Increment(ref _pulled); if (!pull.ClosestPoint(p, out pu, out pv) || !pull.Evaluate(pu, pv, 1, out on, out ders)) ders = null; }
+                        if (ders is not null)
                         {
                             uv[v] = new(pu, pv); off[v] = on.DistanceTo(p);
                             // At a pole one parameter does not move the point: any value of it is this vertex.
@@ -141,16 +160,17 @@ internal sealed class CertifiedMesh
                             if (lu <= 1e-9 * lv) pole[v] = 1; else if (lv <= 1e-9 * lu) pole[v] = 2;
                         }
                     }
-                    int first = bands.Count; double measured = 0; var pending = new List<int>();
+                    Lap(2); int first = bands.Count; double measured = 0; var pending = new List<int>(); double measuring = 0;
                     for (int t = 0; t < mesh.Faces.Count; t++)
                     {
                         var mf = mesh.Faces[t]; int a = map[mf.A], b = map[mf.B], c = map[mf.C];
                         if (a == b || b == c || a == c) continue;
                         triangles.Add(a); triangles.Add(b); triangles.Add(c); faces.Add(f); flat.Add(planar);
+                        Point2d qa = default, qb = default, qc = default;
                         double bound = planar ? 0 : double.NaN, u0 = double.NaN, u1 = double.NaN, v0 = double.NaN, v1 = double.NaN;
                         if (!planar)
                         {
-                            Point2d qa = uv[mf.A], qb = uv[mf.B], qc = uv[mf.C];
+                            qa = uv[mf.A]; qb = uv[mf.B]; qc = uv[mf.C];
                             if (pole[mf.A] != 0) qa = AtPole(qa, qb, qc, pole[mf.A]); if (pole[mf.B] != 0) qb = AtPole(qb, qa, qc, pole[mf.B]); if (pole[mf.C] != 0) qc = AtPole(qc, qa, qb, pole[mf.C]);
                             u0 = Math.Min(qa.X, Math.Min(qb.X, qc.X)); u1 = Math.Max(qa.X, Math.Max(qb.X, qc.X)); v0 = Math.Min(qa.Y, Math.Min(qb.Y, qc.Y)); v1 = Math.Max(qa.Y, Math.Max(qb.Y, qc.Y));
                             // Corners pulled to either side of a seam: the triangle has no parameter box.
@@ -162,15 +182,21 @@ internal sealed class CertifiedMesh
                             }
                             if (double.IsNaN(bound))
                             {   // measured, not proved
+                                var m0 = watch.Elapsed.TotalSeconds;
                                 Point3d pa = mesh.Vertices.Point3dAt(mf.A), pb = mesh.Vertices.Point3dAt(mf.B), pc = mesh.Vertices.Point3dAt(mf.C);
-                                foreach (var q in new[] { (pa + pb + pc) / 3, (pa + pb) / 2, (pb + pc) / 2, (pa + pc) / 2 })
-                                    measured = Math.Max(measured, face.ClosestPoint(q, out double mu, out double mv) ? face.PointAt(mu, mv).DistanceTo(q) : band);
-                                pending.Add(bands.Count); uncertified++;
+                                foreach (var (x, y, z) in new[] { (1 / 3d, 1 / 3d, 1 / 3d), (.5, .5, 0d), (0d, .5, .5), (.5, 0d, .5) })
+                                {   // with parameters: the surface point at the same parameters; without: the closest one
+                                    var q = pa * x + pb * y + pc * z;
+                                    measured = Math.Max(measured, !double.IsNaN(u0) ? pull.PointAt(qa.X * x + qb.X * y + qc.X * z, qa.Y * x + qb.Y * y + qc.Y * z).DistanceTo(q)
+                                        : pull.ClosestPoint(q, out double mu, out double mv) ? pull.PointAt(mu, mv).DistanceTo(q) : band);
+                                }
+                                pending.Add(bands.Count); uncertified++; measuring += watch.Elapsed.TotalSeconds - m0;
                             }
                         }
                         bands.Add(bound); boxes.Add(u0); boxes.Add(u1); boxes.Add(v0); boxes.Add(v1);
                     }
                     foreach (int t in pending) bands[t] = Math.Max(band, 1.25 * measured);
+                    lock (BuildSeconds) { BuildSeconds[3] += watch.Elapsed.TotalSeconds - measuring; BuildSeconds[4] += measuring; } watch.Restart();
                 }
                 // Flat faces: as loose as the curved triangles they touch.
                 var reach = new double[vertices.Count];
