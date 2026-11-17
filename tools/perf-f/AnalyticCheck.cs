@@ -45,6 +45,35 @@ internal static class AnalyticCheck
         return flat;
     }
 
+    /// <summary>A second hash that does not go through Rhino's polyline approximation of a curve: class, source,
+    /// profile flag and the curve's own definition (degree, knots, control points and weights of its NURBS form).
+    /// When the first hash differs between two runs and this one does not, the drawings are the same curves.</summary>
+    private static string HashExact(ViewDrawing drawing)
+    {
+        var lines = new List<string>(); var invariant = System.Globalization.CultureInfo.InvariantCulture;
+        foreach (var item in drawing.Items)
+        {
+            using var g = item.CopyGeometry(); var text = new StringBuilder($"{item.Class}|{item.SourceIdentity}|{item.Profile}|");
+            if (g is global::Rhino.Geometry.Point q) text.Append(FormattableString.Invariant($"{q.Location.X:R},{q.Location.Y:R},{q.Location.Z:R}"));
+            else if (g is Curve c)
+            {
+                using var n = c.ToNurbsCurve();
+                if (n is null) text.Append("no NURBS form");
+                else
+                {
+                    text.Append(n.Degree).Append('|');
+                    for (int k = 0; k < n.Knots.Count; k++) text.Append(n.Knots[k].ToString("R", invariant)).Append(',');
+                    text.Append('|');
+                    foreach (var point in n.Points) text.Append(FormattableString.Invariant($"{point.Location.X:R},{point.Location.Y:R},{point.Location.Z:R},{point.Weight:R};"));
+                }
+            }
+            lines.Add(text.ToString());
+        }
+        lines.Sort(StringComparer.Ordinal);
+        if (Environment.GetEnvironmentVariable("M2D_DUMP") is { Length: > 0 } dump) File.WriteAllLines(dump + "-exact-" + lines.Count + ".txt", lines);
+        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(string.Join("\n", lines))))[..16];
+    }
+
     private static string Hash(ViewDrawing drawing, Plane plane, double tol)
     {
         var lines = new List<string>();
@@ -55,6 +84,8 @@ internal static class AnalyticCheck
             lines.Add($"{item.Class}|{item.SourceIdentity}|{item.Profile}|{string.Join(",", p.Select(v => v.ToString("R", System.Globalization.CultureInfo.InvariantCulture)))}");
         }
         lines.Sort(StringComparer.Ordinal);
+        // M2D_DUMP=<path prefix> writes the hashed lines to <prefix>-<count>.txt, to compare two runs line by line.
+        if (Environment.GetEnvironmentVariable("M2D_DUMP") is { Length: > 0 } dump) File.WriteAllLines(dump + "-" + lines.Count + ".txt", lines);
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(string.Join("\n", lines))))[..16];
     }
 
@@ -204,6 +235,7 @@ internal static class AnalyticCheck
         Console.WriteLine($"    phases after: {string.Join(", ", after.Phases.Seconds.Where(p => p.Value >= .005).Select(p => $"{p.Key} {p.Value:F2}"))}");
         string hashBefore = Hash(before, plane, tol), hashAfter = Hash(after, plane, tol), hashAfter1 = Hash(after1, plane, tol);
         Console.WriteLine($"    drawing hash before {hashBefore} after {hashAfter} ({(hashBefore == hashAfter ? "identical" : "different")}); repeat of after {(hashAfter == hashAfter1 ? "identical" : "DIFFERENT")}");
+        Console.WriteLine($"    exact hash (curve definitions, no polyline approximation) before {HashExact(before)} after {HashExact(after)}; repeat of after {(HashExact(after) == HashExact(after1) ? "identical" : "DIFFERENT")}");
 
         if (variants.Contains("why"))
             foreach (var item in after.Items.Where(p => p.Class == LineClass.Unresolved).Select(p => { using var g = p.CopyGeometry(); var c = g as Curve; return (p, Length: c?.GetLength() ?? 0, Mid: c?.PointAt(c.Domain.Mid) ?? Point3d.Unset, Linear: c?.IsLinear(tol) ?? false); }).OrderByDescending(x => x.Length).Take(10))
