@@ -42,20 +42,22 @@ internal static class DenseAuditCheck
         var on = new NativeSettings { DenseAudit = true, DenseAuditOptions = options };
         (ViewDrawing Drawing, double Wall) Timed(NativeSettings settings) { var timer = Stopwatch.StartNew(); var d = Solve(scene, prepared, view, settings, timeout); return (d, timer.Elapsed.TotalSeconds); }
 
-        using (Solve(scene, prepared, view, off, timeout)) { }                                    // cold
+        // quick: no cold solve and no repeats (for views where one native solve takes minutes).
+        bool quick = variants.Contains("quick");
+        if (!quick) using (Solve(scene, prepared, view, off, timeout)) { }                        // cold
         var (plain, plainWall) = Timed(off);
         long builds = CertifiedMesh.Builds;
         var (first, firstWall) = Timed(on with { ObserveDenseAuditSpan = c => spans.Add(c.DuplicateCurve()) });
         builds = CertifiedMesh.Builds - builds;
-        var (second, secondWall) = Timed(on);
-        var (again, againWall) = Timed(off);
-        using (plain) using (first) using (second) using (again)
+        var (second, secondWall) = quick ? (first, firstWall) : Timed(on);
+        var (again, againWall) = quick ? (plain, plainWall) : Timed(off);
+        try
         {
             double[] before = Lengths(plain), after = Lengths(second);
             string info = first.Diagnostics.FirstOrDefault(d => d.StartsWith("Dense native audit", StringComparison.Ordinal)) ?? "(no audit line)";
             double moved = spans.Sum(s => s.GetLength());
             Console.WriteLine($"=== {stem} dense audit: off {plainWall:F2}s / {againWall:F2}s, on first {firstWall:F2}s (meshes built {builds}), on again {secondWall:F2}s; added {secondWall - Math.Min(plainWall, againWall):F2}s; route {second.Report.Route}; native calls {second.NativeCalls}; error {second.Error}");
-            Console.WriteLine($"    off: Visible {before[0]:F1} Hidden {before[1]:F1} Unresolved {before[2]:F1} | on: Visible {after[0]:F1} Hidden {after[1]:F1} Unresolved {after[2]:F1}; moved world length {moved:F2} in {spans.Count} spans; phase {second.Phases.Seconds.GetValueOrDefault("dense native audit"):F2}s; native solve {second.Phases.Seconds.GetValueOrDefault("native solve"):F2}s");
+            Console.WriteLine($"    off: Visible {before[0]:F1} Hidden {before[1]:F1} Unresolved {before[2]:F1} | on: Visible {after[0]:F1} Hidden {after[1]:F1} Unresolved {after[2]:F1}; moved world length {moved:F2} in {spans.Count} spans; phase {second.Phases.Seconds.GetValueOrDefault("dense native audit"):F2}s (meshes and index {second.Phases.Seconds.GetValueOrDefault("dense native audit meshes"):F2}s; first run {first.Phases.Seconds.GetValueOrDefault("dense native audit"):F2}s, {first.Phases.Seconds.GetValueOrDefault("dense native audit meshes"):F2}s); native solve {second.Phases.Seconds.GetValueOrDefault("native solve"):F2}s");
             Console.WriteLine($"    {info}");
 
             // ---- Direct ray check of the moved stretches: is something really more than a tolerance in front?
@@ -109,11 +111,12 @@ internal static class DenseAuditCheck
             {
                 view = view.Name, tolerance = tol, plainWall, againWall, firstWall, secondWall, added = secondWall - Math.Min(plainWall, againWall), builds,
                 route = second.Report.Route, nativeCalls = second.NativeCalls, before, after, moved, spans = spans.Count, info,
-                phase = second.Phases.Seconds.GetValueOrDefault("dense native audit"), nativeSolve = second.Phases.Seconds.GetValueOrDefault("native solve"),
+                phase = second.Phases.Seconds.GetValueOrDefault("dense native audit"), meshPhase = second.Phases.Seconds.GetValueOrDefault("dense native audit meshes"), firstPhase = first.Phases.Seconds.GetValueOrDefault("dense native audit"), firstMeshPhase = first.Phases.Seconds.GetValueOrDefault("dense native audit meshes"), quick, nativeSolve = second.Phases.Seconds.GetValueOrDefault("native solve"),
                 check = new { points = checkedPoints, hidden, thin, clear, failed, clearNotes }, witnesses, covered, options
             }, new JsonSerializerOptions { WriteIndented = true }));
             foreach (var (geometry, _, owned) in bodies) if (owned) geometry.Dispose();
         }
+        finally { plain.Dispose(); first.Dispose(); if (!quick) { second.Dispose(); again.Dispose(); } }
         foreach (var span in spans) span.Dispose();
     }
 }

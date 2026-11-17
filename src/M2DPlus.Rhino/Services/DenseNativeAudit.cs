@@ -30,7 +30,9 @@ internal sealed class DenseNativeAudit
     private readonly Plane _plane; private readonly double _tol, _band, _chord;
     private readonly int _sheets, _uncertified; private readonly long _triangles;
     private readonly string? _skipped;
-    private readonly Stopwatch _clock = new();
+    private readonly Stopwatch _clock = new(); private double _setup;
+    // Working storage is as large as the index: kept between curves, one per thread that has been used.
+    private readonly System.Collections.Concurrent.ConcurrentBag<BandedMeshIndex.Scratch> _scratch = new();
     private int _curves, _spans, _uncut; private double _moved, _looked;
 
     internal bool Active => _index is not null;
@@ -79,7 +81,7 @@ internal sealed class DenseNativeAudit
             _sheets = sheets.Count;
             if (sheets.Count > 0) _index = new(sheets, token);
         }
-        finally { _clock.Stop(); }
+        finally { _clock.Stop(); _setup = _clock.Elapsed.TotalSeconds; }
     }
 
     private bool PlanarQuads(Mesh mesh)
@@ -126,10 +128,10 @@ internal sealed class DenseNativeAudit
             var pieces = new List<BandedMeshIndex.Piece>[chords.Count];
             double error = 1.5 * _tol, least = Math.Max(_band / 2, 2 * _tol);
             Parallel.For(0, chords.Count, new ParallelOptions { MaxDegreeOfParallelism = Math.Min(Environment.ProcessorCount, 8), CancellationToken = token },
-                () => new BandedMeshIndex.Scratch(_index), (i, _, scratch) =>
+                () => _scratch.TryTake(out var held) ? held : new BandedMeshIndex.Scratch(_index), (i, _, scratch) =>
                 {
                     var list = new List<BandedMeshIndex.Piece>(2); _index.Classify(chords[i].Pa, chords[i].Pb, _tol, error, least, scratch, list); pieces[i] = list; return scratch;
-                }, _ => { });
+                }, _scratch.Add);
             for (int i = 0; i < chords.Count; i++)
                 foreach (var piece in pieces[i])
                 {
@@ -166,7 +168,7 @@ internal sealed class DenseNativeAudit
 
     internal void Report(ViewDrawing output)
     {
-        output.Phases.Add("dense native audit", _clock.Elapsed.TotalSeconds);
+        output.Phases.Add("dense native audit", _clock.Elapsed.TotalSeconds); output.Phases.Add("dense native audit meshes", _setup);
         output._diagnostics.Add(_skipped is not null
             ? $"Dense native audit not run: {_skipped}. Native Visible lines keep the sampled audit only."
             : FormattableString.Invariant($"Dense native audit: native Visible proved Hidden by certified meshes and moved to Unresolved: spans={_spans}; world length={_moved:R}; Visible curves looked at={_curves} (length={_looked:R}); bodies={_sheets}; triangles={_triangles}; band={_band:R}; triangles with a measured band={_uncertified}; curves left whole because a stretch could not be cut out={_uncut}. It moves lines to Unresolved only and proves nothing about Hidden lines."));
