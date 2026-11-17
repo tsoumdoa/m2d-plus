@@ -74,8 +74,23 @@ internal static class WorkerCodec
         catch { foreach(var l in leaves)l.Geometry.Dispose(); throw; }
         finally { foreach(var owner in owners.Values)owner.Dispose(); }
     }
-    /// <summary>DenseAudit and its limits travel with every solve: the host decides, never the worker's own environment.</summary>
-    internal sealed record Request(RequestIdentity Identity, int ViewIndex, ViewRequest View, bool NativeOnly, bool DenseAudit = false, DenseAuditOptions? DenseAuditOptions = null, bool CullSources = true);
+    /// <summary>Compute options come from the host. Appended optional fields preserve older/default request behavior;
+    /// the exact engine fingerprint still prevents mixed host/worker implementations.</summary>
+    internal sealed record Request(RequestIdentity Identity, int ViewIndex, ViewRequest View, bool NativeOnly,
+        bool DenseAudit = false, DenseAuditOptions? DenseAuditOptions = null, bool CullSources = true,
+        bool MultipleThreads = false, NativeVerificationOptions? Verification = null)
+    {
+        // Use the same representation for solve payloads and timing-history keys.
+        internal static Request FromSettings(RequestIdentity identity, int viewIndex, ViewRequest view, NativeSettings settings) =>
+            new(identity, viewIndex, view, settings.NativeOnly, settings.DenseAudit, settings.DenseAuditOptions,
+                settings.CullSources, settings.MultipleThreads, settings.Verification);
+
+        internal NativeSettings ToSettings(NativeScheduler scheduler) => new(MultipleThreads, NativeOnly)
+        {
+            Verification = Verification ?? new(), Scheduler = scheduler, IsWorker = true,
+            DenseAudit = DenseAudit, DenseAuditOptions = DenseAuditOptions ?? new(), CullSources = CullSources
+        };
+    }
     internal sealed record Reply(RequestIdentity Identity, int ViewIndex, byte[] Drawing);
     internal sealed record Piece(string Geometry, string? Depth, string SourceIdentity, int[] SourcePath, int SourceItem, SourceSection Source,
         LineClass Class, LineClass SolvedClass, bool Profile, bool KernelOwned, bool FarCandidate, DepthInterval Depths, double Intensity);
