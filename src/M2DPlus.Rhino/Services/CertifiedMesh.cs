@@ -63,12 +63,13 @@ internal sealed class CertifiedMesh : IDisposable
     /// Any other body (a clipped piece, a glass substitute, a sheared instance) is meshed by itself and kept with
     /// that object.
     /// </summary>
-    /// <param name="failed">True when meshing threw: nothing is remembered, so a later solve tries again.</param>
+    /// <param name="failed">True when a Brep-like body got no mesh: meshing threw (nothing is remembered, so a later
+    /// solve tries again), or Rhino returned none for it (remembered).</param>
     internal static Placed? For(GeometryBase geometry, PreparedLeaf source, double tolerance, double band, CancellationToken token, out bool failed)
     {
         failed = false;
         if (geometry is not (Brep or Extrusion or Surface)) return null;
-        try { return Find(geometry, source, tolerance, band, token); }
+        try { var found = Find(geometry, source, tolerance, band, token); failed = found is null; return found; }
         // A failure to mesh one body costs the audit that body's proofs, never the view. Running out of memory and
         // cancellation are not failures of the body.
         catch (Exception ex) when (ex is not (OperationCanceledException or OutOfMemoryException)) { failed = true; return null; }
@@ -154,7 +155,7 @@ internal sealed class CertifiedMesh : IDisposable
                         if (form is null && textured)
                         {
                             var tc = mesh.TextureCoordinates[v]; pu = domainU.ParameterAt(tc.X); pv = domainV.ParameterAt(tc.Y);
-                            if (!pull.Evaluate(pu, pv, 1, out on, out ders) || !(on.DistanceTo(p) <= band)) ders = null;
+                            if (!pull.Evaluate(pu, pv, 1, out on, out ders) || !(on.DistanceTo(p) <= Math.Min(band, tolerance))) ders = null;
                         }
                         if (ders is null) { Interlocked.Increment(ref _pulled); if (!pull.ClosestPoint(p, out pu, out pv) || !pull.Evaluate(pu, pv, 1, out on, out ders)) ders = null; }
                         if (ders is not null)

@@ -193,4 +193,33 @@ public sealed class DenseNativeAuditTests(RhinoHost host)
         for (int i = 0; i < whole.Count; i++) { Assert.Equal(whole[i].Class, strips[i].Class); Assert.Equal(whole[i].A, strips[i].A, 9); Assert.Equal(whole[i].B, strips[i].B, 9); }
         foreach (var s in spheres) s.Dispose();
     });
+
+    private sealed record RequestBeforeTheAudit(RequestIdentity Identity, int ViewIndex, ViewRequest View, bool NativeOnly);
+
+    [RhinoFact] public void TheSolveMessageCarriesTheSwitchAndItsLimitsAndAnOlderMessageMeansOff() => host.Run(() =>
+    {
+        var identity = new RequestIdentity("scene", "views", "settings", 7); var view = ViewRequest.Parse("Top");
+        var options = new DenseAuditOptions(BandTolerances: 25, FloorTolerances: 3, TileTriangles: 123_456, MaxTileTriangles: 654_321);
+        var sent = new WorkerCodec.Request(identity, 2, view, false, true, options);
+        var received = WorkerCodec.Decode<WorkerCodec.Request>(WorkerCodec.Encode(sent));
+        Assert.True(received.DenseAudit); Assert.Equal(options, received.DenseAuditOptions);
+        Assert.Equal(identity, received.Identity); Assert.Equal(2, received.ViewIndex); Assert.False(received.NativeOnly);
+        var plain = WorkerCodec.Decode<WorkerCodec.Request>(WorkerCodec.Encode(new WorkerCodec.Request(identity, 2, view, true)));
+        Assert.False(plain.DenseAudit); Assert.Null(plain.DenseAuditOptions); Assert.True(plain.NativeOnly);
+        // A message with neither field (as written before the audit existed) decodes as off.
+        var older = WorkerCodec.Decode<WorkerCodec.Request>(WorkerCodec.Encode(new RequestBeforeTheAudit(identity, 2, view, false)));
+        Assert.False(older.DenseAudit); Assert.Null(older.DenseAuditOptions); Assert.Equal(2, older.ViewIndex);
+        // The two requests differ in what the pool keys a view by.
+        Assert.NotEqual(WorkerCodec.Hash(WorkerCodec.Encode(sent)), WorkerCodec.Hash(WorkerCodec.Encode(sent with { DenseAudit = false, DenseAuditOptions = null })));
+    });
+
+    [RhinoFact] public void ABodyRhinoGivesNoMeshForCountsAsNotMeshed() => host.Run(() =>
+    {
+        // A Brep with no faces: nothing comes back, it takes no part, and Info counts it.
+        using var empty = new Brep(); using var sphere = new Sphere(Point3d.Origin, 1).ToBrep(); using var output = Output();
+        Assert.Null(CertifiedMesh.For(empty, Input(empty).Source, Tol, 10 * Tol, default, out bool failed)); Assert.True(failed);
+        using var audit = new DenseNativeAudit([Input(sphere), Input(empty, 1)], output, new(), default); audit.Report(output);
+        Assert.True(audit.Active);
+        Assert.Contains(output.Diagnostics, d => d.Contains("bodies that got no mesh and take no part=1;", StringComparison.Ordinal));
+    });
 }
