@@ -125,12 +125,6 @@ internal static class CutTubeRecognition
             int index = surfaces.FindIndex(k => k.Cylinder == s.Cylinder && (s.Cylinder
                 ? Math.Abs(k.Radius - s.R) <= same && Vector3d.CrossProduct(k.Direction, s.D).Length * span <= same && new Line(k.Origin, k.Origin + k.Direction).DistanceTo(s.O, false) <= same
                 : Vector3d.CrossProduct(k.Direction, s.D).Length * span <= same && Math.Abs(new Plane(k.Origin, k.Direction).DistanceTo(s.O)) <= same));
-            // Or the face itself lies on an existing surface to within that looseness, by the certified bound: two
-            // fitted axes can differ in direction by more than the whole body's extent allows and still be the same
-            // surface as far as this face reaches.
-            if (index < 0 && same > tol)
-                index = surfaces.FindIndex(k => k.Cylinder == s.Cylinder && Math.Abs(k.Radius - s.R) <= same && Vector3d.CrossProduct(k.Direction, s.D).Length <= 1e-3 &&
-                    Math.Abs(Distance(k, at)) <= 4 * same && Deviation(face, k.Cylinder, k.Origin, k.Direction, k.Radius, same / 4, same) <= same);
             if (index < 0)
             {
                 bool tube = OnAxis(s, 0);
@@ -391,7 +385,7 @@ internal static class CutTubeRecognition
         catch (ArgumentException) { return no("cells the exact solid refuses"); }
 
         // ---- The description against the body once more: both sides of every face, and the volume.
-        int uncompared = 0; double uncomparedArea = 0;
+        int uncompared = 0; double uncomparedArea = 0; var slivers = new List<int>();
         foreach (var face in brep.Faces)
         {
             token.ThrowIfCancellationRequested();
@@ -420,6 +414,7 @@ internal static class CutTubeRecognition
             // gives the count and area.
             // Or some points are clear but the cells beside them are unknown: let through only when the face is small
             // (no more than sixteen margins square), refused otherwise.
+            slivers.Add(face.FaceIndex);
             if (clear != 0 && areas[face.FaceIndex] > 256 * margin * margin)
                 return no($"face {face.FaceIndex} could not be checked against the cells (area {areas[face.FaceIndex]:G4}, margin {margin:G3}, interior points {points}, clear of other surfaces {clear}, behind/front{seen})");
             uncompared++; uncomparedArea += areas[face.FaceIndex];
@@ -442,7 +437,9 @@ internal static class CutTubeRecognition
             int a = faceSurface[faces[0]], b = faceSurface[faces[1]]; if (a == b) continue;
             using var whole = edge.DuplicateCurve();
             // The edge's distance from each of its two surfaces, bounded through its control points like a face's.
-            double da = Deviation(whole, surfaces[a], tol / 8, limit), db = Deviation(whole, surfaces[b], tol / 8, limit), slack = Math.Max(da, db);
+            // (No finer than a sixty-fourth of the body's own looseness: the stored tolerances are added to it anyway.)
+            double fine = Math.Max(tol / 8, loose / 64);
+            double da = Deviation(whole, surfaces[a], fine, limit), db = Deviation(whole, surfaces[b], fine, limit), slack = Math.Max(da, db);
             if (!(slack <= limit)) return no($"an edge further than {limit:G3} from the surfaces it joins (certified bound {slack:G3})");
             double stored = edge.Tolerance + Math.Max(edge.StartVertex?.Tolerance ?? 0, edge.EndVertex?.Tolerance ?? 0);
             if (!(stored >= 0) || slack + stored > limit) return no($"an edge whose distance from its surfaces and stored tolerance together exceed {limit:G3}");
@@ -487,9 +484,36 @@ internal static class CutTubeRecognition
             }
         }
         for (int i = 0; i < real; i++) if (grow[i] > surfaces[i].Slack) surfaces[i] = surfaces[i] with { Slack = grow[i] };
+
+        // ---- Faces the point-in-solid comparison could not reach are compared with the body's own orientation instead.
+        // A valid oriented solid has material immediately behind each face and none immediately in front: that is a
+        // fact of the Brep, not an answer near two surfaces. Just clear of the face's own slack on each side, the
+        // description (every surface known to its slack, so a surface that close may have the point on either side)
+        // must allow material behind and must allow void in front. If it says "void behind" or "solid in front" for
+        // certain, it is not this body. What the description can then still have wrong beside such a face lies within
+        // the slack of the surface the face hugs, where every ray is undecided anyway.
+        if (slivers.Count != 0)
+        {
+            AnalyticCsg stated;
+            try { stated = new AnalyticCsg(surfaces.Select(k => new CsgPrimitive(k.Cylinder, W(k.Origin), D(k.Direction), k.Radius, k.Role, k.Slack)).ToArray(), W(box.Min), W(box.Max), inside, outside); }
+            catch (ArgumentException) { return no("cells the exact solid refuses"); }
+            bool inward = brep.SolidOrientation == BrepSolidOrientation.Inward;
+            foreach (int index in slivers)
+            {
+                token.ThrowIfCancellationRequested();
+                var face = brep.Faces[index]; int found = 0; double off = surfaces[faceSurface[index]].Slack + 4 * tol;
+                foreach (var (at, normal) in InteriorPoints(face, 65))
+                {
+                    found++; var behind = inward ? at + normal * off : at - normal * off; var front = inward ? at - normal * off : at + normal * off;
+                    if (!stated.May(W(behind)).Solid) return no($"material missing behind face {index}, by the body's orientation (a face too close to another surface for point-in-solid answers)");
+                    if (!stated.May(W(front)).Void) return no($"material in front of face {index}, by the body's orientation (a face too close to another surface for point-in-solid answers)");
+                }
+                if (found == 0 && areas[index] > 256 * margin * margin) return no($"face {index} has no point to compare the cells at (area {areas[index]:G4})");
+            }
+        }
         int unknownKinds = count.Keys.Count(k => !inside.Contains(k) && !outside.Contains(k)) + mixed.Count(k => !count.ContainsKey(k));
         return new AnalyticVisibility.CutTubeShape(surfaces, box, edges, faceSurface, real, faceBound, edgeBound, inside, outside)
-            { Note = $"cells: {inside.Count} solid, {outside.Count} void, {unknownKinds} unknown holding {100.0 * unknownCells / cells:F3} % of the tube's wall; {asked} points asked; {mixed.Count} cells left unknown because weak answers disagreed; {uncompared} faces ({uncomparedArea:G3} in area) too close to another surface, or too small, to be compared with the cells; surface slack up to {surfaces.Max(k => k.Slack):G3}",
+            { Note = $"cells: {inside.Count} solid, {outside.Count} void, {unknownKinds} unknown holding {100.0 * unknownCells / cells:F3} % of the tube's wall; {asked} points asked; {mixed.Count} cells left unknown because weak answers disagreed; {uncompared} faces ({uncomparedArea:G3} in area) too close to another surface for point-in-solid answers, compared with the body's orientation instead; surface slack up to {surfaces.Max(k => k.Slack):G3}",
               Unchecked = uncompared, SurfaceBound = surfaces.Max(k => k.Slack) };
     }
 
@@ -692,7 +716,7 @@ internal static class CutTubeRecognition
             if (bound <= target || !s.Cylinder && nurbs.Degree == 1) break;          // against a plane a polyline's bound is exact
             if (round >= 3 && bound > limit && bound > previous * .5) break;
             if (round >= 2 && bound > previous * .97) break;
-            if (n > 20000) break;
+            if (n > 4096) break;
             previous = bound;
             var values = new List<double>();
             for (int k = 0; k < nurbs.Knots.Count; k++) if (values.Count == 0 || nurbs.Knots[k] > values[^1]) values.Add(nurbs.Knots[k]);

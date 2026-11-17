@@ -402,13 +402,17 @@ internal static class AnalyticCheck
             {
                 // (For a plain shape the bound is what Rhino itself stores on the body's edges.)
                 double bound = tol + Math.Max(material.Edges.Max(edge => edge.Tolerance), AnalyticVisibility.Recognise(mine.Geometry, tol) is AnalyticVisibility.CutTubeShape loose ? loose.SurfaceBound : 0);
-                bool last = false;
+                // (Rhino's test with a large tolerance is not "inside by that much": with one it reports points inside
+                // that it reports outside with a small one. So: strictly inside at the point and at the four points
+                // one bound to each side of the ray.)
+                bool last = false; var across = Vector3d.CrossProduct(e, normal);
                 for (double h = 2 * tol; h < mine.Box.Diagonal.Length; h *= 1.15)
                 {
-                    bool inside = material.IsPointInside(p + e * h, bound, true);
-                    if (inside && last) return 1;
-                    last = inside;
-                    if (!inside && !thin && h < 64 * bound + 64) thin = material.IsPointInside(p + e * h, tol / 10, true);
+                    var q = p + e * h; bool inside = material.IsPointInside(q, tol / 10, true);
+                    bool deep = inside && material.IsPointInside(q + normal * bound, tol / 10, true) && material.IsPointInside(q - normal * bound, tol / 10, true) &&
+                        material.IsPointInside(q + across * bound, tol / 10, true) && material.IsPointInside(q - across * bound, tol / 10, true);
+                    if (deep && last) return 1;
+                    last = deep; thin |= inside && !deep;
                 }
             }
             // Material in front that is thinner than the body's bound: the real body may or may not cover the point.
@@ -486,12 +490,27 @@ internal static class AnalyticCheck
                 using var g = piece.CopyGeometry(); var c = (Curve)g; var depth = (Curve)piece.DepthGeometry!;
                 var tangent = c.TangentAt(t); var normal = Vector3d.CrossProduct(e, tangent); if (!normal.Unitize()) { counts[2]++; continue; }
                 // The same parameter on the world-depth curve; the verdict must also hold 2 mm either way along the line.
-                double span = c.Domain.Length, dt = Math.Min(.002 / Math.Max(c.GetLength(), 1e-9), .25) * span; int agreed = -2;
+                // For a cut tube, sixteen of its stated bounds either way: its change points are placed no better.
+                double along = bodies.FirstOrDefault(b => b.Id == piece.SourceIdentity) is { } known && AnalyticVisibility.Recognise(known.Geometry, tol) is AnalyticVisibility.CutTubeShape tube
+                    ? Math.Max(.002, 16 * (tol + Math.Max(tube.SurfaceBound, tube.EdgeBound))) : .002;
+                double span = c.Domain.Length, dt = Math.Min(along / Math.Max(c.GetLength(), 1e-9), .25) * span; int agreed = -2;
                 foreach (double s in new[] { t, Math.Max(c.Domain.Min, t - dt), Math.Min(c.Domain.Max, t + dt) })
                 {
                     var world = OnFaces(depth.PointAt(depth.Domain.ParameterAt(c.Domain.NormalizedParameterAt(s))), piece.SourceIdentity);
                     int v = Verdict(world, normal, piece.SourceIdentity, exact.Contains(piece.SourceIdentity));
                     if (agreed == -2) agreed = v; else if (agreed != v) agreed = -1;
+                }
+                // A cut tube's lines are drawn to its stated bound, and the body is known no better than that: the
+                // verdict must not be turned by another body when the ray is moved two bounds to either side of the line.
+                // (Its own body is on one side of most of its lines; that is the own-material test's business.)
+                if (agreed >= 0 && bodies.FirstOrDefault(b => b.Id == piece.SourceIdentity) is { } loose && AnalyticVisibility.Recognise(loose.Geometry, tol) is AnalyticVisibility.CutTubeShape stated)
+                {
+                    double bound = tol + Math.Max(stated.SurfaceBound, stated.EdgeBound); var at = OnFaces(depth.PointAt(depth.Domain.ParameterAt(c.Domain.NormalizedParameterAt(t))), piece.SourceIdentity);
+                    foreach (double side in new[] { -2.0, 2.0 })
+                    {
+                        var beside = Blocked(at + normal * (side * bound), tol, 20 * tol, except: piece.SourceIdentity);
+                        if (beside is null || beside.Value && agreed == 0) { agreed = -1; break; }
+                    }
                 }
                 if (agreed < 0) counts[2]++;
                 else if (agreed == cls) counts[0]++;
@@ -522,6 +541,12 @@ internal static class AnalyticCheck
                                 var k = AnalyticVisibility.Solid(AnalyticVisibility.Recognise(body.Geometry, tol)!, plane).Occlusion(v, tol);
                                 var inside = new List<double>();
                                 if (body.Brep is { IsSolid: true } solidBrep) for (double h = 2 * tol; h < 4 * body.Box.Diagonal.Length; h *= 1.15) if (solidBrep.IsPointInside(at + e * h, tol / 10, true)) inside.Add(h);
+                                if (body.Id == piece.SourceIdentity && body.Brep is { IsSolid: true } ownBrep)
+                                {
+                                    double bound = tol + Math.Max(ownBrep.Edges.Max(edge => edge.Tolerance), AnalyticVisibility.Recognise(body.Geometry, tol) is AnalyticVisibility.CutTubeShape ls ? ls.SurfaceBound : 0);
+                                    var thick = new List<double>(); for (double h = 2 * tol; h < body.Box.Diagonal.Length; h *= 1.15) if (ownBrep.IsPointInside(at + e * h, bound, true)) thick.Add(h);
+                                    note.Append($" | own bound {bound:G3}: inside by more than it at {thick.Count} steps{(thick.Count == 0 ? "" : $" from {thick[0]:G4} to {thick[^1]:G4}")}; others block the ray: {Blocked(at, tol, 20 * tol, except: body.Id)?.ToString() ?? "unsure"}; own blocks: {Blocked(at, tol, 20 * tol, only: body.Id)?.ToString() ?? "unsure"}");
+                                }
                                 if (k != M2DPlus.Core.Visibility.VisibilityClass.Visible || inside.Count != 0)
                                     note.Append($" | replay {body.Id[^12..]}{(body.Id == piece.SourceIdentity ? " (own)" : "")}: engine {k}; Rhino inside along the ray at {inside.Count} steps{(inside.Count == 0 ? "" : $" from {inside[0]:G4} to {inside[^1]:G4}")}");
                             }

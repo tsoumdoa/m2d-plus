@@ -273,6 +273,36 @@ public sealed class AnalyticCsg : AnalyticSolid
         return cell;
     }
 
+    /// <summary>
+    /// Which answers are possible for a point when each surface is only known to its slack: a surface the point is
+    /// within the slack of may have it on either side, and an unknown cell may be either. Used by recognition to
+    /// compare the description with the body's own orientation right beside a face.
+    /// </summary>
+    public (bool Solid, bool Void) May(Vertex x)
+    {
+        int value = 0, unknown = 0; bool required = true, doubt = false;
+        for (int i = 0; i < _primitives.Length; i++)
+        {
+            double depth = Depth(i, x), slack = _primitives[i].Slack; bool near = Math.Abs(depth) <= slack;
+            switch (_primitives[i].Role)
+            {
+                case CsgRole.Inside: if (near) doubt = true; else if (depth < 0) required = false; break;
+                case CsgRole.Outside: if (near) doubt = true; else if (depth > 0) required = false; break;
+                default: if (near) unknown |= 1 << _bit[i]; else if (depth > 0) value |= 1 << _bit[i]; break;
+            }
+        }
+        if (!required) return (false, true);
+        if (System.Numerics.BitOperations.PopCount((uint)unknown) > 12) return (true, true);
+        bool solid = false, empty = doubt;
+        for (int sub = unknown; ; sub = (sub - 1) & unknown)
+        {
+            int cell = value | sub;
+            if (_in.Contains(cell)) solid = true; else if (_out.Contains(cell)) empty = true; else { solid = true; empty = true; }
+            if (sub == 0) break;
+        }
+        return (solid, empty);
+    }
+
     /// <summary>Is the point in the solid? null when it is within <paramref name="margin"/> of a surface or in an
     /// unknown cell. Used by recognition to compare with the body, never by the visibility predicate.</summary>
     public bool? Contains(Vertex x, double margin)

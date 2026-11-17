@@ -466,22 +466,17 @@ internal sealed class AnalyticVisibility
                 int bits = 0;
                 foreach (var f in faces[other])
                 {
-                    // The same surface as one the candidate lies on (a coped end lies on the neighbour's cylinder). Two
-                    // bodies' surfaces that agree to within what each is known to (their slacks) cannot be told apart:
-                    // they are one surface, in contact, and contact is not cover.
-                    bool same = mine.Any(m =>
-                    {
-                        double close = near + f.Slack + m.Slack;
-                        return f.Cylinder == m.Cylinder && (f.Cylinder
-                            ? Math.Abs(f.Radius - m.Radius) <= close && Vector3d.CrossProduct(f.Direction, m.Direction).Length * Math.Max(1, f.Radius) <= close && new Line(f.Origin, f.Origin + f.Direction).DistanceTo(m.Origin, false) <= close
-                            : Vector3d.CrossProduct(f.Direction, m.Direction).Length <= 1e-9 && Math.Abs(new Plane(f.Origin, f.Direction).DistanceTo(m.Origin)) <= close);
-                    });
+                    // The same surface as one the candidate lies on (a coped end lies on the neighbour's cylinder): the
+                    // same to a tolerance, not merely to within the two bodies' slacks.
+                    bool same = mine.Any(m => f.Cylinder == m.Cylinder && (f.Cylinder
+                        ? Math.Abs(f.Radius - m.Radius) <= near && Vector3d.CrossProduct(f.Direction, m.Direction).Length * Math.Max(1, f.Radius) <= near && new Line(f.Origin, f.Origin + f.Direction).DistanceTo(m.Origin, false) <= near
+                        : Vector3d.CrossProduct(f.Direction, m.Direction).Length <= 1e-9 && Math.Abs(new Plane(f.Origin, f.Direction).DistanceTo(m.Origin)) <= near));
                     // Or a different surface the exact curve lies on all the same (the rim of a mitre lies on both
                     // members' cylinders): every point within the graze width of it. Not for an outline: its ray is
                     // tangent to its own cylinder, not to this surface.
                     if (!same && !c.Tangent && c.Slack == 0)
                     {
-                        double reach = Math.Max(Math.Max(AnalyticSolid.Graze(_tol), f.Slack), 1e-12 * (1 + f.Radius + Math.Abs(f.Origin.X) + Math.Abs(f.Origin.Y) + Math.Abs(f.Origin.Z)));
+                        double reach = Math.Max(AnalyticSolid.Graze(_tol), 1e-12 * (1 + f.Radius + Math.Abs(f.Origin.X) + Math.Abs(f.Origin.Y) + Math.Abs(f.Origin.Z)));
                         same = points.All(q =>
                         {
                             var w = q - f.Origin;

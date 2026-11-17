@@ -286,4 +286,41 @@ public sealed class AnalyticCsgTests
         var far = new AnalyticCsg([new(true, V(1e13, 0, 0), V(1, 0, 0), 1, CsgRole.Inside)], V(1e13 - 5, -1, -1), V(1e13 + 5, 1, 1));
         Assert.Equal(Unresolved, far.Occlusion(V(1e13, 0, -5), Tol));
     }
+
+    [Fact]
+    public void ASurfaceOnlyKnownToItsSlackGivesUnresolvedNeverTheOtherAnswer()
+    {
+        // A rod along X between x = 0 and x = 2, radius 1, seen from above. A ray a thousandth inside its outline is
+        // covered and one a thousandth outside is not. If the real body's surface may be five thousandths from the
+        // cylinder, neither is known: the answer must become Unresolved, and must never turn into the other class.
+        AnalyticCsg Rod(double slack) => new(
+            [new CsgPrimitive(true, V(0, 0, 0), V(1, 0, 0), 1, CsgRole.Inside, slack), new CsgPrimitive(false, V(2, 0, 0), V(1, 0, 0), 0, CsgRole.Inside), new CsgPrimitive(false, V(0, 0, 0), V(-1, 0, 0), 0, CsgRole.Inside)],
+            V(0, -1, -1), V(2, 1, 1));
+        var inside = V(1, 1 - 1e-3, -5); var outside = V(1, 1 + 1e-3, -5); var through = V(1, .3, -5); var clear = V(1, 1.2, -5);
+        Assert.Equal(Hidden, Rod(0).Occlusion(inside, Tol)); Assert.Equal(Visible, Rod(0).Occlusion(outside, Tol));
+        Assert.Equal(Unresolved, Rod(5e-3).Occlusion(inside, Tol)); Assert.Equal(Unresolved, Rod(5e-3).Occlusion(outside, Tol));
+        // Well clear of the doubt the answers stand.
+        Assert.Equal(Hidden, Rod(5e-3).Occlusion(through, Tol)); Assert.Equal(Visible, Rod(5e-3).Occlusion(clear, Tol));
+        Assert.Equal(5e-3, Rod(5e-3).Slack); Assert.Equal(5e-3, new AnalyticOccluders([Rod(5e-3), Rod(0)]).Slack);
+        // The same for a line known only to a sideways radius: within it of the outline, undecided.
+        Assert.Equal(Unresolved, Rod(0).Evaluate(inside, 5e-3, -5, -5, Tol)); Assert.Equal(Hidden, Rod(0).Evaluate(through, 5e-3, -5, -5, Tol));
+        // And along the view: a point that may be in front of the rod or behind it.
+        Assert.Equal(Hidden, Rod(0).Evaluate(through, 0, -5, -4, Tol)); Assert.Equal(Unresolved, Rod(0).Evaluate(through, 0, -5, 5, Tol));
+    }
+
+    [Fact]
+    public void IntervalsCoverTheWholeCandidateWhenClosedFormAndCutSolidsAreUnited()
+    {
+        // A sphere (closed-form change points) and a cut rod (bisection) over one line: the united intervals run from
+        // 0 to exactly 1 without a gap, whatever rounding the two lists carry in their last ends.
+        var rod = new AnalyticCsg([new CsgPrimitive(true, V(0, 0, 0), V(1, 0, 0), 1, CsgRole.Inside), new CsgPrimitive(false, V(2, 0, 0), V(1, 0, 0), 0, CsgRole.Inside), new CsgPrimitive(false, V(0, 0, 0), V(-1, 0, 0), 0, CsgRole.Inside)], V(0, -1, -1), V(2, 1, 1));
+        var both = new AnalyticOccluders([new AnalyticSphere(V(3.3, .1, 0), .7), rod]);
+        foreach (double y in new[] { -.4, .05, .37, .9 })
+        {
+            var found = both.Intervals(AnalyticCandidate.Straight(V(-1.1, y, -3), V(4.7, y + .13, -3)), Tol);
+            Assert.Equal(0, found[0].Start); Assert.Equal(1, found[^1].End);
+            for (int i = 1; i < found.Count; i++) Assert.Equal(found[i - 1].End, found[i].Start);
+            Assert.Contains(found, f => f.Class == Hidden); Assert.Contains(found, f => f.Class == Visible);
+        }
+    }
 }

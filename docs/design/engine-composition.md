@@ -129,15 +129,40 @@ each cutter, six sector planes) split cells that would otherwise hold both mater
 
 Faces need not be exact. A face that is a NURBS surface is fitted to the nearest plane or circular cylinder and its
 distance from that surface is **bounded, not sampled**: the face is refined by knot insertion and the bound is taken
-from the convex hulls of its control points, so it holds for every point of the face. The body is accepted only if
-every bound is under min(256 tolerances, a sixteenth of the wall or radius). Each surface carries its bound as slack:
-the certified test (`AnalyticCsg.Evaluate`) shrinks sure stretches and grows possible ones by it. Stored edges are
-drawn as stored; what is classified is the exact intersection of the two surfaces an edge joins, and the edge's
-measured distance from it is the edge bound. Body-level bounds come from the faces and edges themselves, never from
-the document tolerance and never from stored edge tolerances alone (those only widen the learning margins).
-Info states both bounds for each cut tube: `Cut tubes drawn exactly to a stated bound (...): <id> faces F, edges E`.
-Outlines of cylindrical faces come from Rhino's silhouette of the body and are moved onto the exact ruling when
-within four times (tolerance + bound) of it; otherwise they are classified as foreign curves with that slack.
+from the convex hulls of its control points, so it holds for every point of the face. Edges are bounded against their
+two surfaces the same way. The body is accepted only if every bound is under min(256 tolerances, a sixteenth of the
+wall or radius), and if no edge reaches beyond the tube's outer cylinder.
+
+What the real body may differ from the exact one by is carried, not assumed away:
+
+* **Each surface has a slack**: its faces' bound, or, if larger, the distance of the edges on it from their surfaces
+  plus their stored edge and vertex tolerances (a real face runs on to the stored edge, not to the exact
+  intersection). The certified test shrinks sure stretches and grows possible ones by it, so a ray that passes within
+  the slack of a surface is Unresolved unless both answers agree.
+* **Each drawn line has a gap**: stored edges are drawn as stored, and the exact intersection of their two surfaces is
+  what is classified; outlines are Rhino's silhouette curves, and the exact ruling is what is classified. The gap
+  between the two (across the view and along it) is the candidate's lateral radius and depth range, so a decision is
+  one that holds for the drawn line too. A point that does not snap onto its exact curve is Unresolved. For an outline
+  the gap is bounded through the curve's control points (it is linear in the point); for an edge it is measured at 65
+  points and taken a quarter larger.
+* **Change points** against such bodies are known to a few times that: an undecided run up to eight times (gap +
+  largest slack) between decided neighbours of different classes is shared between them; anything else stays
+  Unresolved.
+* **Contact.** Surfaces of two bodies that agree to within their slacks are one surface: a line on it is in contact
+  with the other body, and contact is not cover. The exact rim where two mitred cutters meet is also on their mitre
+  plane by construction.
+* **Coincident lines.** A Hidden piece under another piece of this class is not drawn twice, and neither is an
+  Unresolved piece that lies under a Visible piece of the same source no nearer the viewer than it: that source draws
+  a Visible line there whichever class it has (the far edge of a cope seen square-on). Two drawn curves are one locus
+  when they agree to half a tolerance plus their gaps.
+
+Recognition is **evidence, not proof**: cells are labelled from Rhino's point-in-solid answers at sample points, the
+both-sides check of a face is skipped where every point of it is within two margins of another surface (a sliver that
+hugs it; counted and reported), and the volume check is 1 %. Info says so and gives, for each cut tube, its face
+bound, edge bound and largest surface slack. At most `NativeSettings.CutTubeBudget` (128) possible cut tubes are
+examined per view, the first in input order whatever is cached, so that the drawing does not depend on earlier
+solves; the rest stay on native HLD and Info counts them. Recognition runs in parallel over distinct geometry objects
+and honours cancellation; results are kept by content, least recently used first out.
 
 The class reports its own progress step, `exact curved`. `engine = fast` does not touch it: fast only changes what
 still goes to native HLD.

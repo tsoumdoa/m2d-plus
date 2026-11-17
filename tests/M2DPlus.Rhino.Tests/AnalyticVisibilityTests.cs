@@ -225,12 +225,10 @@ public sealed class AnalyticVisibilityTests(RhinoHost host, ITestOutputHelper ou
         return result;
     }
 
-    [RhinoFact] public void CutTubesAreRecognisedAndDrawnExactlyByTheWitness() => host.Run(() =>
+    /// <summary>Round members cut by planes and cylinders, at a tolerance of 0.1 mm.</summary>
+    private static Dictionary<string, Func<Brep>> CutBodies()
     {
-        // Bodies that are a round member cut by planes and cylinders. Each is recognised as a cut tube, drawn with no
-        // native call, and every drawn class is checked by marching up from the line and asking Rhino whether the
-        // point is in the solid.
-        var bodies = new Dictionary<string, Func<Brep>>
+        return new Dictionary<string, Func<Brep>>
         {
             ["half a cylinder, cut along its axis"] = () =>
             {
@@ -265,6 +263,14 @@ public sealed class AnalyticVisibilityTests(RhinoHost host, ITestOutputHelper ou
                 return Brep.CreateBooleanDifference(first, b1, BodyTol).OrderByDescending(x => Math.Abs(x.GetVolume())).First();
             },
         };
+    }
+
+    [RhinoFact] public void CutTubesAreRecognisedAndDrawnExactlyByTheWitness() => host.Run(() =>
+    {
+        // Bodies that are a round member cut by planes and cylinders. Each is recognised as a cut tube, drawn with no
+        // native call, and every drawn class is checked by marching up from the line and asking Rhino whether the
+        // point is in the solid.
+        var bodies = CutBodies();
         var failures = new List<string>();
         foreach (var (name, make) in bodies)
         {
@@ -284,6 +290,108 @@ public sealed class AnalyticVisibilityTests(RhinoHost host, ITestOutputHelper ou
         Assert.Empty(failures);
     });
 
+    [RhinoFact] public void CutTubesSeenFromOtherSidesAgreeWithTheWitness() => host.Run(() =>
+    {
+        // The same check with each body turned, which is the same as other views: on its side (outlines of its
+        // cylinders, a cope seen square-on with its far edge exactly under its near one), and at a general angle. Five
+        // points of every drawn piece. A body whose face is only near its cylinder (the dented one) has outlines that
+        // Rhino places off the exact ruling: seen from the side that used to end the whole view with an exception.
+        var bodies = CutBodies();
+        bodies["hollow pipe with an oblique end and a cross hole"] = () =>
+        {   // Looking into the oblique end: the bore's outline is behind the wall right up to the rim.
+            using var pipe = Pipe(new Point3d(-3, 0, 0), Vector3d.XAxis, .5, .44, 3);
+            using var kept = pipe.Trim(new Plane(new Point3d(-.4, 0, 0), new Vector3d(1, 0, .8)), BodyTol).OrderByDescending(b => b.GetArea()).First();
+            using var capped = kept.CapPlanarHoles(BodyTol);
+            return Drilled(capped, new Point3d(-2, -3, 0), Vector3d.YAxis, .2, 6);
+        };
+        bodies["pipe drilled by two skew holes of different radii"] = () =>
+        {
+            using var pipe = Pipe(new Point3d(-3, 0, 0), Vector3d.XAxis, .5, .44, 3.5);
+            using var once = Drilled(pipe, new Point3d(-2, -3, .15), new Vector3d(.2, 1, .1), .3, 6);
+            return Drilled(once, new Point3d(-.9, -3, -.1), new Vector3d(-.3, 1, 0), .18, 6);
+        };
+        var turns = new (string Name, Transform Turn)[]
+        {
+            ("on its side", Transform.Rotation(Math.PI / 2, Vector3d.XAxis, Point3d.Origin)),
+            ("end towards the viewer, tilted", Transform.Rotation(1.1, new Vector3d(.2, 1, 0), Point3d.Origin)),
+            ("at a general angle", Transform.Rotation(.9, new Vector3d(1, 1, .3), Point3d.Origin)),
+        };
+        var failures = new List<string>();
+        foreach (var (name, make) in bodies)
+            foreach (var (turned, turn) in turns)
+            {
+                using var body = make(); Assert.True(body.Transform(turn), name); Assert.True(body.IsValid, name);
+                var (shape, refusal) = AnalyticVisibility.Examine(body, BodyTol);
+                if (shape is not AnalyticVisibility.CutTubeShape) { output.WriteLine($"{name}, {turned}: NOT a cut tube: {shape?.GetType().Name ?? refusal}"); failures.Add($"{name}, {turned} (not recognised)"); continue; }
+                using var view = DrawAlone(body, out string route);
+                var (judged, wrong) = Witness(view, [body], body.GetBoundingBox(true).Max.Z + 1, [.1, .3, .5, .7, .9]);
+                double unresolved = Length(view, LineClass.Unresolved), total = Length(view, LineClass.Visible) + Length(view, LineClass.Hidden) + unresolved;
+                output.WriteLine($"{name}, {turned}: native calls {view.NativeCalls}; lines {total:F3}, Unresolved {unresolved:F4}; witness judged {judged}, wrong {wrong}");
+                if (view.NativeCalls != 0 || wrong != 0 || judged < 8 || unresolved > .05 * total) failures.Add($"{name}, {turned}");
+            }
+        Assert.Empty(failures);
+    });
+
+    [RhinoFact] public void BodiesThatAreMoreThanACutTubeAreRefusedOrDrawnRight() => host.Run(() =>
+    {
+        // What recognition must not get wrong. A body either is refused (it stays on native HLD) or, if its cells can
+        // describe it, is drawn so that the witness agrees: never recognised and drawn wrongly.
+        var bodies = new Dictionary<string, (Func<Brep> Make, string? Refusal)>
+        {
+            // Material outside the tube's outer cylinder: the exact solid is inside it by construction.
+            ["pipe with a branch stub welded on"] = (() =>
+            {
+                using var pipe = Pipe(new Point3d(-2, 0, 0), Vector3d.XAxis, .5, .44, 4); using var branch = new Cylinder(new Circle(new Plane(new Point3d(0, 0, .2), Vector3d.ZAxis), .25), 1).ToBrep(true, true);
+                return Brep.CreateBooleanUnion([pipe, branch], BodyTol).OrderByDescending(b => Math.Abs(b.GetVolume())).First();
+            }, "beyond the tube's outer cylinder"),
+            ["rod with a lug on its side"] = (() =>
+            {
+                using var rod = Column(Point3d.Origin, .5, 3); using var lug = Brep.CreateFromBox(new BoundingBox(new Point3d(.3, -.1, 1), new Point3d(.9, .1, 1.4)));
+                return Brep.CreateBooleanUnion([rod, lug], BodyTol).OrderByDescending(b => Math.Abs(b.GetVolume())).First();
+            }, "beyond the tube's outer cylinder"),
+            // A cutter larger than the pipe severs it: two lumps in one Brep, a stub left beyond the cut.
+            ["pipe cut in two by a larger pipe, both pieces in one Brep"] = (() =>
+            {
+                using var pipe = Pipe(new Point3d(-3, 0, 0), Vector3d.XAxis, .5, .44, 4); using var cutter = new Cylinder(new Circle(new Plane(new Point3d(0, -3, 0), Vector3d.YAxis), .7), 6).ToBrep(true, true);
+                var pieces = Brep.CreateBooleanDifference(pipe, cutter, BodyTol); Assert.Equal(2, pieces.Length);
+                pieces[0].Append(pieces[1]); pieces[1].Dispose(); return pieces[0];
+            }, null),
+            // A notch through one wall only: the same planes do not cut the opposite wall.
+            ["pipe with a notch in one wall"] = (() =>
+            {
+                using var pipe = Pipe(new Point3d(-2, 0, 0), Vector3d.XAxis, .5, .44, 4); using var notch = Brep.CreateFromBox(new BoundingBox(new Point3d(-.3, -.2, .3), new Point3d(.3, .2, 1)));
+                return Brep.CreateBooleanDifference(pipe, notch, BodyTol).OrderByDescending(b => Math.Abs(b.GetVolume())).First();
+            }, null),
+            // A hole through one wall only.
+            ["pipe with a hole through one wall"] = (() => { using var pipe = Pipe(new Point3d(-2, 0, 0), Vector3d.XAxis, .5, .44, 4); return Drilled(pipe, new Point3d(0, 0, 0), Vector3d.ZAxis, .15, 2); }, null),
+            // Inside out, as a mirrored instance is.
+            ["coped pipe turned inside out"] = (() =>
+            {
+                using var pipe = Pipe(new Point3d(-3, 0, 0), Vector3d.XAxis, .5, .44, 3.2); var coped = Drilled(pipe, new Point3d(0, -3, .1), Vector3d.YAxis, .5, 6);
+                coped.Flip(); return coped;
+            }, null),
+        };
+        var failures = new List<string>();
+        foreach (var (name, (make, why)) in bodies)
+        {
+            using var body = make(); Assert.True(body.IsValid, name);
+            var (shape, refusal) = AnalyticVisibility.Examine(body, BodyTol);
+            output.WriteLine($"{name}: {(shape is AnalyticVisibility.CutTubeShape cut ? "cut tube; " + cut.Note : shape?.GetType().Name ?? refusal)}");
+            if (why is not null) { if (shape is not null || refusal?.Contains(why, StringComparison.Ordinal) != true) failures.Add(name + " (not refused for that reason)"); continue; }
+            if (shape is null) continue;                         // refused: native HLD draws it
+            foreach (var turn in new[] { Transform.Identity, Transform.Rotation(Math.PI / 2, Vector3d.XAxis, Point3d.Origin), Transform.Rotation(.9, new Vector3d(1, 1, .3), Point3d.Origin) })
+            {
+                using var turned = body.DuplicateBrep(); turned.Transform(turn);
+                if (AnalyticVisibility.Recognise(turned, BodyTol) is null) continue;
+                using var view = DrawAlone(turned, out _);
+                var (judged, wrong) = Witness(view, [turned], turned.GetBoundingBox(true).Max.Z + 1, [.1, .3, .5, .7, .9]);
+                output.WriteLine($"    native calls {view.NativeCalls}; Unresolved {Length(view, LineClass.Unresolved):F4}; witness judged {judged}, wrong {wrong}");
+                if (wrong != 0) failures.Add(name);
+            }
+        }
+        Assert.Empty(failures);
+    });
+
     // ---------------------------------------------------------------- pipe nodes
 
     private static Brep Pipe(Point3d from, Vector3d along, double radius, double inner, double length)
@@ -299,13 +407,13 @@ public sealed class AnalyticVisibilityTests(RhinoHost host, ITestOutputHelper ou
     /// point is inside any solid. A Visible point must have no cover; a Hidden one must have some. Points whose ray
     /// only grazes something are not judged. Returns (judged, wrong).
     /// </summary>
-    private (int Judged, int Wrong) Witness(ViewDrawing view, IReadOnlyList<Brep> solids, double top)
+    private (int Judged, int Wrong) Witness(ViewDrawing view, IReadOnlyList<Brep> solids, double top, double[]? at = null)
     {
         int judged = 0, wrong = 0; const double step = 4e-3;
         foreach (var piece in view.Items.Where(p => p.Class is LineClass.Visible or LineClass.Hidden))
         {
             if (piece.DepthGeometry is not Curve world || world.GetLength() < 5e-2) continue;
-            foreach (double f in new[] { .3, .7 })
+            foreach (double f in at ?? [.3, .7])
             {
                 var w = world.PointAt(world.Domain.ParameterAt(f)); int run = 0, longest = 0, grazed = 0;
                 for (double z = w.Z + step; z < top; z += step)
