@@ -146,7 +146,7 @@ public sealed class BakeLayoutTests(RhinoHost host, ITestOutputHelper output)
             };
             Assert.All(must, path => Assert.Contains(path, expected.Keys));
 
-            // Category styling on creation: the line-type level (classic: it and its source sublayers); grouping levels plain.
+            // Category widths on creation; source grouping levels mirror source colours.
             var preset = new LineWeightPreset(100);
             foreach (var path in Tree(doc))
             {
@@ -167,7 +167,9 @@ public sealed class BakeLayoutTests(RhinoHost host, ITestOutputHelper output)
                 else
                 {
                     Assert.Null(layer.GetUserString(BakeTags.Weights));
-                    Assert.Equal(Color.Black.ToArgb(), layer.Color.ToArgb());
+                    var source = path.EndsWith("::Arch", StringComparison.Ordinal) || path.EndsWith("::Walls", StringComparison.Ordinal) ? Color.Red
+                        : path.EndsWith("::Structure", StringComparison.Ordinal) ? Color.Blue : Color.Black;
+                    Assert.Equal(source.ToArgb(), layer.Color.ToArgb());
                 }
             }
             Assert.All(first.Added, id =>
@@ -190,6 +192,109 @@ public sealed class BakeLayoutTests(RhinoHost host, ITestOutputHelper output)
         }
     });
 
+    [RhinoFact] public void NewLayersMirrorSourceColoursAndPrintColoursAndFadeFromThemWithoutRestylingExistingLayers() => host.Run(() =>
+    {
+        foreach (var layout in BakeNames.Layouts)
+        foreach (var weights in new[] { "auto", "layers" })
+        {
+            using var doc = RhinoDoc.CreateHeadless(null);
+            var arch = doc.Layers.Add(new Layer { Name = "Arch", Color = Color.Green, PlotColor = Color.Purple });
+            var walls = doc.Layers.Add(new Layer { Name = "Walls", ParentLayerId = doc.Layers[arch].Id, Color = Color.Red, PlotColor = Color.Blue });
+            var source = SourceSection.Plain with { LayerPath = "Arch::Walls", LayerColour = unchecked((uint)Color.Red.ToArgb()) };
+            using var view = new ViewDrawing { Settings = SettingsFor(ViewRequest.Parse(Plane.WorldXY), "weights=" + weights).Settings };
+            void Add(LineClass kind, double intensity, SourceSection style, string id)
+            {
+                var line = new LineCurve(Point3d.Origin, new Point3d(1, 0, 0));
+                view.Pieces.Add(new(line, new PreparedLeaf(id, [0], line) { Section = style }, kind) { Intensity = intensity });
+            }
+            LineClass[] classes = [LineClass.Visible, LineClass.Hidden, LineClass.Beyond, LineClass.FarClip, LineClass.Cut, LineClass.Hatch, LineClass.Ignored, LineClass.Unresolved];
+            foreach (var kind in classes)
+                Add(kind, kind == LineClass.Visible ? .4 : 1, source, kind.ToString());
+            Add(LineClass.Beyond, .4, source, "Beyond-faded");
+            Add(LineClass.Ignored, .4, source, "Ignored-faded");
+            Add(LineClass.Visible, 1, SourceSection.Plain, "gh");
+            Add(LineClass.Beyond, 1, SourceSection.Plain, "gh-beyond");
+            Add(LineClass.Ignored, .4, SourceSection.Plain, "gh-ignored");
+            var owner = Guid.NewGuid();
+            var result = DrawingBake.Bake(doc, owner, [new(view, "Plan", layout)]);
+            Layer Layer(string path) => doc.Layers[doc.Layers.FindByFullPath(path, -1)];
+            void Colours(Layer layer, Color colour, Color print)
+            {
+                Assert.Equal(colour.ToArgb(), layer.Color.ToArgb());
+                Assert.Equal(print.ToArgb(), layer.PlotColor.ToArgb());
+                Assert.Equal(DrawingBake.Style(layer).Signature, layer.GetUserString(BakeLayerStyle.Tag));
+            }
+            Color Shade(Color colour, LineClass kind) => Color.FromArgb(unchecked((int)BakeColours.Shade(unchecked((uint)colour.ToArgb()), kind)));
+            foreach (var kind in classes)
+            {
+                var path = BakeNames.Layer(layout, "Plan", kind, source.LayerPath);
+                Colours(Layer(path.FullPath), Shade(Color.Red, kind), Shade(Color.Blue, kind));
+                if (kind == LineClass.Cut) Assert.Equal(Color.FromArgb(153, 0, 0).ToArgb(), Layer(path.FullPath).Color.ToArgb());
+                if (kind == LineClass.Visible) Assert.Equal(Color.Red.ToArgb(), Layer(path.FullPath).Color.ToArgb());
+                if (kind == LineClass.Beyond) Assert.Equal(Color.FromArgb(255, 115, 115).ToArgb(), Layer(path.FullPath).Color.ToArgb());
+                for (var i = 0; i < path.Segments.Length; i++)
+                    if (path.SourceLayerPrefix(i) is { } prefix)
+                    {
+                        var colour = prefix == "Arch" ? Color.Green : Color.Red;
+                        var print = prefix == "Arch" ? Color.Purple : Color.Blue;
+                        Colours(Layer(string.Join("::", path.Segments.Take(i + 1))), path.IsStyled(i) ? Shade(colour, kind) : colour,
+                            path.IsStyled(i) ? Shade(print, kind) : print);
+                    }
+                    else if (layout == BakeLayout.ViewType && path.IsStyled(i))
+                    {
+                        var neutral = kind == LineClass.Unresolved ? Color.FromArgb(224, 122, 0) : Color.Black;
+                        Colours(Layer(string.Join("::", path.Segments.Take(i + 1))), neutral, neutral);
+                    }
+            }
+            if (layout != BakeLayout.ViewType)
+            {
+                var gh = BakeNames.Layer(layout, "Plan", LineClass.Visible);
+                Colours(Layer(gh.FullPath), Color.Black, Color.Black);
+                Colours(Layer(string.Join("::", gh.Segments.Take(gh.SourceFrom + 1))), Color.Black, Color.Black);
+            }
+            foreach (var id in result.Added)
+            {
+                var attributes = doc.Objects.FindId(id).Attributes;
+                var piece = view.Items.Single(p => p.SourceIdentity == attributes.GetUserString(BakeTags.Source));
+                var orange = Color.FromArgb(224, 122, 0);
+                var gh = piece.SourceLayer.Length == 0;
+                var objectClassShade = weights == "layers" || layout == BakeLayout.ViewType && gh;
+                var intensity = ViewRange.QuantizeForBake(piece.Intensity) * (objectClassShade ? view.Weights[piece.Class].InkIntensity : 1);
+                var sourceColour = gh ? Color.Black : Color.Red;
+                var sourcePrint = gh ? Color.Black : Color.Blue;
+                var colour = piece.Class == LineClass.Unresolved ? orange : objectClassShade ? sourceColour : Shade(sourceColour, piece.Class);
+                var print = piece.Class == LineClass.Unresolved ? orange : objectClassShade ? sourceColour : Shade(sourcePrint, piece.Class);
+                Assert.Equal(DrawingBake.Blend(colour, Color.White, intensity).ToArgb(), attributes.DrawColor(doc).ToArgb());
+                Assert.Equal(DrawingBake.Blend(print, Color.White, intensity).ToArgb(), attributes.ComputedPlotColor(doc).ToArgb());
+            }
+            // Source edits and user/earlier-beta colours on existing target layers never restyle the bake.
+            var visible = Layer(BakeNames.Layer(layout, "Plan", LineClass.Visible, source.LayerPath).FullPath);
+            visible.Color = Color.Gold; visible.PlotColor = Color.Purple; visible.SetUserString(BakeLayerStyle.Tag, null);
+            var legacyHidden = Layer(BakeNames.Layer(layout, "Plan", LineClass.Hidden, source.LayerPath).FullPath);
+            legacyHidden.Color = Color.Black; legacyHidden.PlotColor = Color.Black; legacyHidden.SetUserString(BakeLayerStyle.Tag, null);
+            legacyHidden.SetUserString(BakeColours.ShadeTag, null);
+            // A Beyond layer as an earlier beta left it: black, no style or shade tag. Its lines must still be lightened per object.
+            var legacyBeyond = Layer(BakeNames.Layer(layout, "Plan", LineClass.Beyond, source.LayerPath).FullPath);
+            legacyBeyond.Color = Color.Black; legacyBeyond.PlotColor = Color.Black; legacyBeyond.SetUserString(BakeLayerStyle.Tag, null);
+            legacyBeyond.SetUserString(BakeColours.ShadeTag, null);
+            doc.Layers[walls].Color = Color.Cyan; doc.Layers[walls].PlotColor = Color.Magenta;
+            doc.Layers[arch].Color = Color.Yellow;
+            var before = Tree(doc).ToDictionary(p => p, p => DrawingBake.Style(Layer(p)));
+            var rebake = DrawingBake.Bake(doc, owner, [new(view, "Plan", layout)]);
+            Assert.All(before, pair => Assert.Equal(pair.Value, DrawingBake.Style(Layer(pair.Key))));
+            Assert.Null(visible.GetUserString(BakeLayerStyle.Tag));
+            var hidden = rebake.Added.Select(id => doc.Objects.FindId(id).Attributes).Single(a => a.GetUserString(BakeTags.Source) == "Hidden");
+            Assert.Equal((weights == "layers" ? Color.Red : Color.Black).ToArgb(), hidden.DrawColor(doc).ToArgb());
+            Assert.Equal((weights == "layers" ? Color.Red : Color.Black).ToArgb(), hidden.ComputedPlotColor(doc).ToArgb());
+            var beyond = rebake.Added.Select(id => doc.Objects.FindId(id).Attributes).Single(a => a.GetUserString(BakeTags.Source) == "Beyond");
+            var lightened = DrawingBake.Blend(weights == "layers" ? Color.Red : Color.Black, Color.White,
+                ViewRange.QuantizeForBake(1) * view.Weights[LineClass.Beyond].InkIntensity);
+            Assert.NotEqual(Color.Black.ToArgb(), lightened.ToArgb());
+            Assert.Equal(lightened.ToArgb(), beyond.DrawColor(doc).ToArgb());
+            Assert.Equal(lightened.ToArgb(), beyond.ComputedPlotColor(doc).ToArgb());
+        }
+    });
+
     [RhinoFact] public void SwitchingLayoutReplacesTheOldBakeAndKeepsUserLayers() => host.Run(() =>
     {
         using var doc = RhinoDoc.CreateHeadless(null); var model = Build(doc);
@@ -199,9 +304,14 @@ public sealed class BakeLayoutTests(RhinoHost host, ITestOutputHelper output)
         BakeResult Bake(BakeLayout layout) { var r = DrawingBake.Bake(doc, owner, [new BakeDrawing(view, "Section A", layout)]); output.WriteLine(string.Join("\n", r.Messages)); return r; }
         int Index(string path) { var i = doc.Layers.FindByFullPath(path, -1); Assert.True(i >= 0, path); return i; }
 
-        // 1. A classic bake as beta.3 left it: no m2d.style on its layers.
+        // 1. A classic bake as beta.3 left it: black display/print colours, no m2d.style.
         var classic = Bake(BakeLayout.ViewType);
-        foreach (var path in Tree(doc)) doc.Layers[Index(path)].SetUserString(BakeLayerStyle.Tag, null);
+        foreach (var path in Tree(doc))
+        {
+            var legacy = doc.Layers[Index(path)];
+            legacy.Color = Color.Black; legacy.PlotColor = Color.Black;
+            legacy.SetUserString(BakeLayerStyle.Tag, null);
+        }
         Assert.All(Tree(doc), path => Assert.Null(doc.Layers[Index(path)].GetUserString(BakeLayerStyle.Tag)));
         // The user recolours one classic layer, adds a layer of their own and edits one baked hatch.
         const string recoloured = "M2D+::Section A::Visible::Structure";

@@ -605,6 +605,27 @@ never changes the Frame, the gap or hatch pattern scale (§4, §3.7). Default **
 Rhino's viewport colour. `weights = layers` overrides the preset: each line takes its **source layer's** print width and
 colour instead, and `scale` then changes nothing.
 
+**Bake layer colours (owner decision, 2026-11-17).** New layers shade the source layer's display and print colours
+independently; source grouping levels keep their corresponding source prefix's exact colours (§8.1).
+
+| Class | New bake layer colour / print colour |
+|---|---|
+| Cut | 60 % of source RGB (darker) |
+| Visible / profile, Far clip | source colour |
+| Hidden | half desaturated, then 60 % + 40 % white (and dashed) |
+| Hatch layer (hatch objects keep their own colours) | 40 % source + 60 % white |
+| Beyond | 55 % source + 45 % white |
+| Ignored | 25 % source + 75 % white |
+| Unresolved | orange `#E07A00` |
+
+Depth fade blends from that layer shade toward white once per object. Section-style Cut/Hatch object colours still
+override the layer. `weights = layers` keeps its previous per-object source colour (display colour for display and
+print), without layer shading, plus its existing class/depth fading; this also works on earlier black bake layers.
+Every layer created with a shade records it (`m2d.shade = v1`). Objects on such a layer get only the depth fade, so the
+class shade is never applied twice; on any other layer (earlier-beta black layers, classic type parents, which stay
+black except orange Unresolved) they still get the class's ink rule (Beyond 55 %, Ignored 25 %) per object, as before.
+Preview colours below are unchanged.
+
 **Preview colours (owner decision 2026-11-15).** With *Preview ▸ Object colours* (the default) the canvas preview draws
 each line in its **source object's display colour**, the colour Rhino shows the object in: `ObjectAttributes.DrawColor(doc)`
 (object colour, else layer colour, else material), with *By Parent* resolved through the block instance path, exactly
@@ -1109,7 +1130,7 @@ Select view objects               Double-click
 ────────────────
 Bake drawing                      Shift-click: add as a copy
 Bake one ▸        Section A · Section B · South elevation · …
-Bake layers ▸     View › Layer ✓ · Layer › View · Layer only · View › Type (classic)   bake = view-layer | layer-view | layer | view-type   (§8.1)
+Bake layers ▸     Per drawing ✓ · Merged   bake = view-layer | layer   (§8.1; layer-view and view-type are text-only)
 ────────────────
 Run automatically            ✓
 Run now
@@ -1148,16 +1169,16 @@ command does the same, and its layer dialog is ignored, with a remark saying so.
 
 ### 8.1 Layers
 
-Owner decision, 2026-11-16 (beta.4): **`bake`** chooses how the layers are arranged under the `M2D+` root. Set it in
-the Settings input, as `m2d.bake` view-object user text, or from *Bake layers ▸ View › Layer · Layer › View · Layer
-only · View › Type (classic)*; normal precedence applies (§6), so each view can bake its own way.
+Owner decisions, 2026-11-16 and 2026-11-17 (beta.4): **`bake`** chooses how the layers are arranged under the `M2D+`
+root. *Bake layers ▸ Per drawing · Merged* offers the two common layouts; all four remain available in the
+Settings input and `m2d.bake` view-object user text, including saved files. Normal precedence applies (§6).
 
 | `bake` | Menu | Layer path |
 |---|---|---|
-| **`view-layer`** (default) | View › Layer | `M2D+ › <drawing> › <source layer path…> › <line type>` |
-| `layer-view` | Layer › View | `M2D+ › <source layer path…> › <drawing> › <line type>` |
-| `layer` | Layer only | `M2D+ › <source layer path…> › <line type>`: every drawing shares these layers |
-| `view-type` | View › Type (classic) | `M2D+ › <drawing> › <line type> › <source layer path…>`: the layout of beta.3 and earlier |
+| **`view-layer`** (default) | Per drawing | `M2D+ › <drawing> › <source layer path…> › <line type>` |
+| `layer-view` | Text only | `M2D+ › <source layer path…> › <drawing> › <line type>` |
+| `layer` | Merged | `M2D+ › <source layer path…> › <line type>`: every drawing shares these layers |
+| `view-type` | Text only (classic) | `M2D+ › <drawing> › <line type> › <source layer path…>`: the layout of beta.3 and earlier |
 
 The examples bake *Section A* and *Plan +3.00* of walls on `Arch::Walls`, columns on `Structure`, and one Grasshopper curve.
 
@@ -1221,7 +1242,7 @@ M2D+
    └─ Visible
 ```
 
-**`view-type`** (classic): line type first, then source layer, as Make2D does. Kept unchanged for existing files,
+**`view-type`** (classic): line type first, then source layer, as Make2D does. The layout is kept for existing files,
 including GH geometry going straight onto the line-type layer.
 
 ```
@@ -1242,13 +1263,19 @@ M2D+
   for example, furniture; a line type is hidden per source layer (or with Rhino's layer search).
 - **GH geometry** has no source layer: it goes under a `Grasshopper (no layer)` group at the source-layer level (the owner asked for `(Grasshopper)`, but Rhino refuses layer names that start with `(` or `[`), so the layout
   stays the same shape. Classic keeps putting it straight onto the line-type layer.
-- **Line-type layers** get the styles in §3.6, with the print widths of the drawing's `scale` preset, when they are
-  **created**: the leaf in the new layouts, the line-type layer and its source sublayers in classic. Drawing and
-  source-layer grouping layers stay plain (black, default width). **Re-baking never restyles a layer the user has
-  changed,** so the user's own layer styling survives. One exception keeps `scale` working: each line-type layer
+- **Line-type layers** get the print widths and linetypes in §3.6 when **created**: the leaf in the new layouts,
+  the line-type layer and its source sublayers in classic. **Owner decision, 2026-11-17:** their colour and print
+  colour follow the source-colour shading table in §3.6. Grouping levels mirroring source layers copy each
+  corresponding source prefix's exact colours, with default width. Classic type parents stay black; only their source
+  sublayers use the source shades. Drawing/root and GH grouping levels stay black; Unresolved stays
+  orange. Existing layers keep their colours, including layers from earlier betas. One exception keeps `scale`
+  working: each line-type layer
   records the widths M2D+ gave it (user string `m2d.weights = 1:100`); if the drawing's preset has changed and the
   layer still has exactly those widths, re-bake updates them to the new preset. A layer the user restyled is kept, and
-  the result says so. Depth-cue fading is per object (object colour + print colour), so it never touches layers.
+  the result says so. Depth-cue fading blends each object's layer shade and computed print colour toward white;
+  Beyond/Ignored class lightening is already on layers tagged `m2d.shade`; objects on untagged layers (earlier
+  betas, classic type parents) get it per object instead, so it is never applied twice and never lost. `weights = layers` retains
+  its per-object source-colour override (§3.6); section-style cut/hatch colours remain per object (§3.7).
 - Cut fills that come from the object's colour are per object too (object colour + print colour, §3.7), so the
   Hatch layer's own colour doesn't matter and one Hatch layer can hold every material colour.
 - Every layer M2D+ creates records it (`m2d.created = <component id>`) and its style as created (`m2d.style`), so a

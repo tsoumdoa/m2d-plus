@@ -45,20 +45,31 @@ public sealed class MenuTests
     }
 
     [Fact]
-    public void BakeLayersOffersFourLayoutsDefaultsToViewLayerAndInputLocksIt()
+    public void BakeLayersOffersTwoLayoutsKeepsTextOnlyValuesAndInputLocksIt()
     {
         var menu = Menu(ComponentUiState.Default);
         var labels = menu.Select(n => n.Label).ToList();
         Assert.Equal(labels.IndexOf("Bake one") + 1, labels.IndexOf("Bake layers"));
         var bake = Item(menu, "Bake layers");
-        Assert.Equal(["View › Layer", "Layer › View", "Layer only", "View › Type (classic)"], bake.Children.Select(n => n.Label));
-        Assert.Equal([true, false, false, false], bake.Children.Select(n => n.Checked));
+        Assert.Equal(["Per drawing", "Merged"], bake.Children.Select(n => n.Label));
+        Assert.Equal([true, false], bake.Children.Select(n => n.Checked));
         Assert.Equal("bake = view-layer", bake.Hint);
-        Assert.Equal(MenuCommands.SetValue("bake", "layer"), bake.Children[2].Command);
+        Assert.Equal(MenuCommands.SetValue("bake", "layer"), bake.Children[1].Command);
         Assert.Contains("never redraws", bake.Tooltip);
-        Assert.True(Item(Menu(ComponentUiState.Default.With("bake", "view-type")), "Bake layers").Children[3].Checked);
+        Assert.Contains("Text-only", bake.Tooltip);
+        Assert.Equal([false, true], Item(Menu(ComponentUiState.Default.With("bake", "layer")), "Bake layers").Children.Select(n => n.Checked));
+        foreach (var text in new[] { "view-type", "layer-view" })
+        {
+            var saved = Item(Menu(ComponentUiState.Default.With("bake", text)), "Bake layers");
+            Assert.Equal([text, "Per drawing", "Merged"], saved.Children.Select(n => n.Label));
+            Assert.Equal([true, false, false], saved.Children.Select(n => n.Checked));
+            Assert.False(saved.Children[0].Enabled); Assert.Null(saved.Children[0].Command);
+        }
         var locked = Item(Menu(ComponentUiState.Default, DrawingPhase.Done, ["bake = layer-view"]), "Bake layers");
-        Assert.False(locked.Enabled); Assert.Contains("set by input", locked.Label); Assert.True(locked.Children[1].Checked);
+        Assert.False(locked.Enabled); Assert.Contains("set by input", locked.Label);
+        Assert.Equal(["layer-view", "Per drawing", "Merged"], locked.Children.Select(n => n.Label));
+        Assert.Equal([true, false, false], locked.Children.Select(n => n.Checked));
+        Assert.All(locked.Children, n => Assert.False(n.Enabled));
         // Reset menu defaults clears it like any other menu value.
         Assert.False(ComponentUiState.Default.With("bake", "layer").ResetMenu().HasMenuValues);
     }
