@@ -36,7 +36,7 @@ internal static class DenseAuditCheck
         double tol = scene.Tolerance; var invariant = CultureInfo.InvariantCulture;
         var options = new DenseAuditOptions();
         if (Environment.GetEnvironmentVariable("PERFF_DA_BAND") is { Length: > 0 } band) options = options with { BandTolerances = double.Parse(band, invariant) };
-        if (Environment.GetEnvironmentVariable("PERFF_DA_TRIANGLES") is { Length: > 0 } triangles) options = options with { StripTriangles = long.Parse(triangles, invariant) };
+        if (Environment.GetEnvironmentVariable("PERFF_DA_TRIANGLES") is { Length: > 0 } triangles) options = options with { TileTriangles = long.Parse(triangles, invariant) };
         int samples = 600; foreach (var v in variants) if (v.StartsWith("samples:", StringComparison.Ordinal)) samples = int.Parse(v[8..], invariant);
         var off = new NativeSettings { DenseAudit = false }; var spans = new List<Curve>();
         var on = new NativeSettings { DenseAudit = true, DenseAuditOptions = options };
@@ -119,5 +119,54 @@ internal static class DenseAuditCheck
         }
         finally { plain.Dispose(); first.Dispose(); if (!quick) { second.Dispose(); again.Dispose(); } }
         foreach (var span in spans) span.Dispose();
+    }
+
+    /// <summary>
+    /// dp:<view> — the same audit through the production worker pool (one worker): off, on, on again. Reports wall time,
+    /// class lengths, the worker's cap, its peak private bytes while each solve ran (sampled every 50 ms) and the Job
+    /// Object's peak commit. `check` also solves in this process with the audit on and compares the two drawings' bytes.
+    /// </summary>
+    internal static void RunPool(PreparedScene scene, ViewRequest view, string stem, string output, string[] variants, string resolver)
+    {
+        var invariant = CultureInfo.InvariantCulture; var options = new DenseAuditOptions();
+        if (Environment.GetEnvironmentVariable("PERFF_DA_TRIANGLES") is { Length: > 0 } triangles) options = options with { TileTriangles = long.Parse(triangles, invariant) };
+        string configuration = Path.GetFileName(Path.GetDirectoryName(AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar))!);
+        string directory = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../../src/M2DPlus.Worker/bin", configuration, "net" + Environment.Version.Major + ".0-windows"));
+        using var pool = new DrawingWorkerPool(new WorkerOptions { Count = 1, Directory = directory, IdleTimeout = TimeSpan.FromMinutes(30), SolveTimeout = TimeSpan.FromHours(2) });
+        if (!pool.Installed) throw new InvalidOperationException("No worker at " + directory + ": build src/M2DPlus.Worker in the same configuration first.");
+        long generation = 0; var rows = new List<object>(); byte[]? pooled = null;
+        (double Wall, double[] Lengths, long Sampled, long JobPeak, string Info, double Phase) Pooled(bool audit, string label)
+        {
+            long peak = 0; using var stop = new CancellationTokenSource();
+            var sampler = new Thread(() =>
+            {
+                while (!stop.IsCancellationRequested)
+                {
+                    long sum = 0;
+                    foreach (int pid in pool.ProcessIds) { try { using var process = Process.GetProcessById(pid); sum += process.PrivateMemorySize64; } catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or System.ComponentModel.Win32Exception) { } }
+                    peak = Math.Max(peak, sum); Thread.Sleep(50);
+                }
+            }) { IsBackground = true };
+            sampler.Start(); var timer = Stopwatch.StartNew();
+            using var batch = pool.SolveAsync(scene, new RequestIdentity(scene.Revision, "views", label, ++generation), [view], new NativeSettings { DenseAudit = audit, DenseAuditOptions = options }, default).GetAwaiter().GetResult();
+            double wall = timer.Elapsed.TotalSeconds; stop.Cancel(); sampler.Join();
+            var drawing = batch.Views[0]; if (audit) pooled = WorkerCodec.CaptureDrawing(drawing, true);
+            string info = drawing.Diagnostics.FirstOrDefault(d => d.StartsWith("Dense native audit", StringComparison.Ordinal)) ?? "";
+            var result = (wall, Lengths(drawing), peak, pool.PeakBytes, info, drawing.Phases.Seconds.GetValueOrDefault("dense native audit"));
+            Console.WriteLine($"    pool {label}: {wall:F2}s; Visible {result.Item2[0]:F1} Hidden {result.Item2[1]:F1} Unresolved {result.Item2[2]:F1}; worker private bytes peak {peak / 1048576.0:F0} MiB; job peak commit {pool.PeakBytes / 1048576.0:F0} MiB; cap {pool.LastSizing?.CapBytes / 1048576.0:F0} MiB; audit phase {result.Item6:F2}s; error {drawing.Error}");
+            if (info.Length > 0) Console.WriteLine("    " + info);
+            rows.Add(new { label, wall, lengths = result.Item2, sampledPeak = peak, jobPeak = pool.PeakBytes, cap = pool.LastSizing?.CapBytes, info, phase = result.Item6, error = drawing.Error });
+            return result;
+        }
+        Console.WriteLine($"=== {stem} dense audit through one worker, runtime {Environment.Version}, worker {directory}");
+        var off = Pooled(false, "off"); var first = Pooled(true, "on first"); var again = Pooled(true, "on again");
+        bool? identical = null;
+        if (variants.Contains("check"))
+        {
+            using var local = Solve(scene, scene.Prepare(CancellationToken.None), view, new NativeSettings { DenseAudit = true, DenseAuditOptions = options }, 3600);
+            identical = WorkerCodec.CaptureDrawing(local, true).AsSpan().SequenceEqual(pooled);
+            Console.WriteLine($"    in-process drawing with the audit on is byte-identical to the worker's: {identical}");
+        }
+        File.WriteAllText(Path.Combine(output, stem + "-dp.json"), JsonSerializer.Serialize(new { view = view.Name, runtime = Environment.Version.ToString(), rows, identical, options }, new JsonSerializerOptions { WriteIndented = true }));
     }
 }

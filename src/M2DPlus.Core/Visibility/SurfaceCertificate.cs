@@ -20,7 +20,8 @@ public readonly record struct Enclosure(double Lo, double Hi)
     public bool HasZero => Lo <= 0 && Hi >= 0;
     /// <summary>Largest magnitude in the interval.</summary>
     public double Magnitude => Math.Max(Math.Abs(Lo), Math.Abs(Hi));
-    /// <summary>Widened by a relative and an absolute amount: a guard for the rounding of the arithmetic that made it.</summary>
+    /// <summary>Widened by 1e-12 of its own magnitude plus <paramref name="scale"/>, the size of the operands it was computed
+    /// from: a guard for the rounding of that arithmetic (about 4,500 ulps of the operands), not directed rounding.</summary>
     public Enclosure Padded(double scale) { double pad = 1e-12 * (Magnitude + scale); return new(Lo - pad, Hi + pad); }
 }
 
@@ -185,7 +186,16 @@ public sealed class SurfaceCertificate
                 cell.Suv[c] = (buv[c] - cell.Su[c] * bv[3] - cell.Sv[c] * bu[3] - s0 * buv[3]) * inverse;
             }
         }
-        foreach (var box in new[] { cell.Su, cell.Sv, cell.Suu, cell.Suv, cell.Svv }) for (int c = 0; c < 3; c++) box[c] = box[c].Padded(0);
+        // Rounding. The differences above are of coordinates that may be large next to the cell (a model far from the
+        // origin): each loses about an ulp of the largest coordinate, times the factor it is scaled by. The pad is
+        // taken from those operands, not from the result, which cancellation can make small.
+        double largest = 0; for (int i = 0; i < h.Length; i += 4) for (int c = 0; c < 3; c++) largest = Math.Max(largest, Math.Abs(h[i + c] / h[i + 3]));
+        double first = largest * Math.Max(su, sv) / 10, second = largest * Math.Max(su, sv) * Math.Max(su, sv) / 10;
+        for (int c = 0; c < 3; c++)
+        {
+            cell.Su[c] = cell.Su[c].Padded(first); cell.Sv[c] = cell.Sv[c].Padded(first);
+            cell.Suu[c] = cell.Suu[c].Padded(second); cell.Suv[c] = cell.Suv[c].Padded(second); cell.Svv[c] = cell.Svv[c].Padded(second);
+        }
         cell.Muu = Norm(cell.Suu); cell.Muv = Norm(cell.Suv); cell.Mvv = Norm(cell.Svv);
         return cell;
     }

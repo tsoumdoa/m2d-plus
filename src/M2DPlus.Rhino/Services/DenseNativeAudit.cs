@@ -8,9 +8,10 @@ namespace M2DPlus.Rhino.Services;
 /// <summary>Deterministic limits of the dense audit. Internal: there is no user setting.</summary>
 /// <param name="BandTolerances">The band asked of the certified meshes, in model tolerances.</param>
 /// <param name="FloorTolerances">The least band used, in model tolerances.</param>
-/// <param name="StripTriangles">Triangles aimed at per strip of the drawing; one strip is indexed at a time.</param>
-/// <param name="MaxStripTriangles">A strip that needs more than this is not audited.</param>
-internal sealed record DenseAuditOptions(double BandTolerances = 10, double FloorTolerances = 5, long StripTriangles = 4_000_000, long MaxStripTriangles = 24_000_000);
+/// <param name="TileTriangles">Triangles aimed at per tile of the drawing; one tile is indexed at a time.</param>
+/// <param name="MaxTileTriangles">A tile that needs more than this is not audited. Indexing a tile takes about 250
+/// bytes a triangle, so this bounds the audit at about a gigabyte, in a worker as in the host.</param>
+internal sealed record DenseAuditOptions(double BandTolerances = 10, double FloorTolerances = 5, long TileTriangles = 1_500_000, long MaxTileTriangles = 4_000_000);
 
 /// <summary>
 /// Dense audit of native Visible lines (mesh tier, step C). Every curved body native HLD saw becomes a certified
@@ -24,18 +25,24 @@ internal sealed record DenseAuditOptions(double BandTolerances = 10, double Floo
 /// body is found too. It says nothing where a curve is within a band of a surface or of an open boundary, and
 /// nothing about native Hidden lines.
 ///
-/// Memory is bounded by working through the drawing in vertical strips. A strip holds every body whose extent
-/// reaches it, whole (the proof needs whole bodies), and the chords whose middle lies in it; strips are cut so that
-/// each holds about <see cref="DenseAuditOptions.StripTriangles"/> triangles. A strip that would need more than
-/// <see cref="DenseAuditOptions.MaxStripTriangles"/> is left unaudited and Info says how much of the drawing that
-/// is. Both depend on the scene alone, never on time or memory at hand.
+/// Memory is bounded by working through the drawing in tiles. A tile holds the chords whose middle lies in it and
+/// every body whose extent reaches it, whole (the proof needs whole bodies); the chords are halved until a tile's
+/// bodies hold about <see cref="DenseAuditOptions.TileTriangles"/> triangles. A tile that would still need more than
+/// <see cref="DenseAuditOptions.MaxTileTriangles"/> is left unaudited and Info says how much of the drawing that
+/// is. Both depend on the scene alone, never on time or memory at hand, so a worker with a memory cap and the host
+/// draw the same thing.
+///
+/// What is measured, not proved (Info says so): bands of triangles with no control-net bound (four points, a
+/// quarter more); that a face's NURBS form is the face (25 points); a chord's distance from its curve (three points);
+/// and a trimmed face's rim is taken to follow its mesh. These bear on how much is found, and could at worst move a
+/// truly Visible stretch to Unresolved; they cannot draw a wrong line.
 /// </summary>
 internal sealed class DenseNativeAudit : IDisposable
 {
     private readonly List<LeaseEntry<CertifiedMesh>.Lease> _leases = [];
     /// <summary>Releases the cached meshes this audit used.</summary>
     public void Dispose() { foreach (var lease in _leases) lease.Dispose(); _leases.Clear(); }
-    private sealed record Body(CertifiedMesh? Mesh, Transform Placement, double Scale, Mesh? Plain, double X0, double X1, long Triangles);
+    private sealed record Body(CertifiedMesh? Mesh, Transform Placement, double Scale, Mesh? Plain, double X0, double X1, double Y0, double Y1, long Triangles);
     private readonly record struct Chord(int Curve, double A, double B, Vertex Pa, Vertex Pb);
 
     private readonly List<Body> _bodies = [];
@@ -44,7 +51,7 @@ internal sealed class DenseNativeAudit : IDisposable
     private readonly Dictionary<Curve, List<(double A, double B)>> _proven = new(ReferenceEqualityComparer.Instance);
     private readonly Stopwatch _clock = new(); private double _setup;
     private readonly long _triangles; private readonly int _uncertified;
-    private int _curves, _spans, _uncut, _strips, _skippedStrips, _failed; private double _moved, _looked, _skippedLength; private long _largest;
+    private int _curves, _spans, _uncut, _tiles, _skippedTiles, _failed; private double _moved, _looked, _skippedLength; private long _largest;
 
     internal bool Active => _bodies.Count > 0;
 
@@ -61,16 +68,16 @@ internal sealed class DenseNativeAudit : IDisposable
                 if (input.Geometry is Mesh plain)
                 {   // A mesh is its own surface: its triangles are exact. A non-planar quad is not its two triangles: no say.
                     if (plain.Faces.Count == 0 || plain.Faces.QuadCount > 0 && !PlanarQuads(plain)) continue;
-                    var (x0, x1) = Extent(plain.GetBoundingBox(false), Transform.Identity);
-                    _bodies.Add(new(null, Transform.Identity, 1, plain, x0, x1, plain.Faces.Count + plain.Faces.QuadCount));
+                    var (x0, x1, y0, y1) = Extent(plain.GetBoundingBox(false), Transform.Identity);
+                    _bodies.Add(new(null, Transform.Identity, 1, plain, x0, x1, y0, y1, plain.Faces.Count + plain.Faces.QuadCount));
                 }
                 else if (CertifiedMesh.For(input.Geometry, input.Source, _tol, _band, token, out bool failed) is not { } found) { if (failed) _failed++; }
                 else
                 {
                     if (found.Lease is not null) _leases.Add(found.Lease);
                     if (found.Mesh.Count == 0) continue;
-                    var (x0, x1) = Extent(found.Mesh.Box, found.Placement);
-                    _bodies.Add(new(found.Mesh, found.Placement, found.Scale, null, x0, x1, found.Mesh.Count)); _uncertified += found.Mesh.Uncertified;
+                    var (x0, x1, y0, y1) = Extent(found.Mesh.Box, found.Placement);
+                    _bodies.Add(new(found.Mesh, found.Placement, found.Scale, null, x0, x1, y0, y1, found.Mesh.Count)); _uncertified += found.Mesh.Uncertified;
                 }
             }
             _triangles = _bodies.Sum(b => b.Triangles);
@@ -79,12 +86,16 @@ internal sealed class DenseNativeAudit : IDisposable
         finally { _clock.Stop(); _setup = _clock.Elapsed.TotalSeconds; }
     }
 
-    /// <summary>The drawing X range of a box under a placement.</summary>
-    private (double, double) Extent(BoundingBox box, Transform placement)
+    /// <summary>The drawing X and Y ranges of a box under a placement.</summary>
+    private (double, double, double, double) Extent(BoundingBox box, Transform placement)
     {
-        double x0 = double.MaxValue, x1 = double.MinValue;
-        foreach (var corner in box.GetCorners()) { var p = corner; p.Transform(placement); double x = (p - _plane.Origin) * _plane.XAxis; x0 = Math.Min(x0, x); x1 = Math.Max(x1, x); }
-        return (x0, x1);
+        double x0 = double.MaxValue, x1 = double.MinValue, y0 = double.MaxValue, y1 = double.MinValue;
+        foreach (var corner in box.GetCorners())
+        {
+            var p = corner; p.Transform(placement); double x = (p - _plane.Origin) * _plane.XAxis, y = (p - _plane.Origin) * _plane.YAxis;
+            x0 = Math.Min(x0, x); x1 = Math.Max(x1, x); y0 = Math.Min(y0, y); y1 = Math.Max(y1, y);
+        }
+        return (x0, x1, y0, y1);
     }
 
     private bool PlanarQuads(Mesh mesh)
@@ -150,36 +161,46 @@ internal sealed class DenseNativeAudit : IDisposable
             }
             if (chords.Count == 0) return;
             double error = 1.5 * _tol, least = Math.Max(_band / 2, 2 * _tol);
-            // Strips by the chords' middles, cut where the triangles of the bodies whose centre has been passed add up.
-            static double Middle(in Chord c) => (c.Pa.X + c.Pb.X) / 2;
-            var order = Enumerable.Range(0, chords.Count).OrderBy(i => Middle(chords[i])).ThenBy(i => i).ToArray();
-            var cuts = new List<double>(); long running = 0;
-            foreach (var body in _bodies.OrderBy(b => b.X0 + b.X1)) { running += body.Triangles; if (running >= _options.StripTriangles) { cuts.Add((body.X0 + body.X1) / 2); running = 0; } }
-            cuts.Add(double.PositiveInfinity);
-            // A chord's triangles are within half its length, its error and a band of its middle. Bands are not bounded
-            // from above, so every body's extent is widened by its own largest band when it is matched to a strip.
+            // Tiles: the chords are halved by their middles, along the longer side of their box, until the bodies that
+            // reach a tile hold few enough triangles (or the tile cannot usefully be cut further). A chord's triangles
+            // are within half its length, its error and a band of its middle; bands are not bounded from above, so
+            // every body's extent is widened by its own largest band when it is matched to a tile.
             double reach = _chord / 2 + error;
-            var pieces = new List<BandedMeshIndex.Piece>?[chords.Count]; int at = 0;
-            foreach (double to in cuts)
+            var pieces = new List<BandedMeshIndex.Piece>?[chords.Count];
+            var work = new Stack<(int[] Chords, Body[] Bodies, int Depth)>(); work.Push((Enumerable.Range(0, chords.Count).ToArray(), _bodies.ToArray(), 0));
+            while (work.Count > 0)
             {
                 token.ThrowIfCancellationRequested();
-                int first = at; while (at < order.Length && Middle(chords[order[at]]) <= to) at++;
-                if (at == first) continue;
-                double lo = Middle(chords[order[first]]) - reach, hi = Middle(chords[order[at - 1]]) + reach;
-                var members = _bodies.Where(b => b.X1 + Widest(b) >= lo && b.X0 - Widest(b) <= hi).ToArray(); long count = members.Sum(b => b.Triangles);
-                _strips++; _largest = Math.Max(_largest, count);
-                if (count > _options.MaxStripTriangles)
+                var (tile, candidates, depth) = work.Pop();
+                double x0 = double.MaxValue, x1 = double.MinValue, y0 = double.MaxValue, y1 = double.MinValue;
+                foreach (int i in tile)
                 {
-                    _skippedStrips++;
-                    for (int k = first; k < at; k++) { var c = chords[order[k]]; _skippedLength += fresh[c.Curve].GetLength(new Interval(c.A, c.B)); }
+                    double mx = (chords[i].Pa.X + chords[i].Pb.X) / 2, my = (chords[i].Pa.Y + chords[i].Pb.Y) / 2;
+                    x0 = Math.Min(x0, mx); x1 = Math.Max(x1, mx); y0 = Math.Min(y0, my); y1 = Math.Max(y1, my);
+                }
+                var members = candidates.Where(b => b.X1 + Widest(b) >= x0 - reach && b.X0 - Widest(b) <= x1 + reach && b.Y1 + Widest(b) >= y0 - reach && b.Y0 - Widest(b) <= y1 + reach).ToArray();
+                long count = members.Sum(b => b.Triangles);
+                if (count > _options.TileTriangles && tile.Length > 16 && depth < 40 && Math.Max(x1 - x0, y1 - y0) > 4 * reach)
+                {
+                    bool alongX = x1 - x0 >= y1 - y0;
+                    double Key(int i) => alongX ? chords[i].Pa.X + chords[i].Pb.X : chords[i].Pa.Y + chords[i].Pb.Y;
+                    var sorted = tile.OrderBy(Key).ThenBy(i => i).ToArray(); int half = sorted.Length / 2;
+                    work.Push((sorted[half..], members, depth + 1)); work.Push((sorted[..half], members, depth + 1));
+                    continue;
+                }
+                _tiles++; _largest = Math.Max(_largest, count);
+                if (count > _options.MaxTileTriangles)
+                {
+                    _skippedTiles++;
+                    foreach (int i in tile) _skippedLength += fresh[chords[i].Curve].GetLength(new Interval(chords[i].A, chords[i].B));
                     continue;
                 }
                 if (members.Length == 0) continue;
-                var index = new BandedMeshIndex(members.Select((b, id) => Sheet(b, id)).ToArray(), token); var slice = order.AsMemory(first, at - first);
-                Parallel.For(0, slice.Length, new ParallelOptions { MaxDegreeOfParallelism = Math.Min(Environment.ProcessorCount, 8), CancellationToken = token },
+                var index = new BandedMeshIndex(members.Select((b, id) => Sheet(b, id)).ToArray(), token);
+                Parallel.For(0, tile.Length, new ParallelOptions { MaxDegreeOfParallelism = Math.Min(Environment.ProcessorCount, 8), CancellationToken = token },
                     () => new BandedMeshIndex.Scratch(index), (k, _, scratch) =>
                     {
-                        int i = slice.Span[k]; var list = new List<BandedMeshIndex.Piece>(2);
+                        int i = tile[k]; var list = new List<BandedMeshIndex.Piece>(2);
                         index.Classify(chords[i].Pa, chords[i].Pb, _tol, error, least, scratch, list); pieces[i] = list; return scratch;
                     }, _ => { });
             }
@@ -227,7 +248,7 @@ internal sealed class DenseNativeAudit : IDisposable
         output.Phases.Add("dense native audit", _clock.Elapsed.TotalSeconds); output.Phases.Add("dense native audit meshes", _setup);
         output._diagnostics.Add(!Active
             ? "Dense native audit: no curved body to audit against."
-            : FormattableString.Invariant($"Dense native audit: native Visible proved Hidden by certified meshes and moved to Unresolved: spans={_spans}; world length={_moved:R}; Visible curves looked at={_curves} (length={_looked:R}); bodies={_bodies.Count}; triangles={_triangles}; band={_band:R}; triangles with a measured band={_uncertified}; bodies that failed to mesh and take no part={_failed}; strips={_strips} (largest {_largest} triangles); strips over the limit and not audited={_skippedStrips} (length={_skippedLength:R}); curves left whole because a stretch could not be cut out={_uncut}. It moves lines to Unresolved only and proves nothing about Hidden lines."));
+            : FormattableString.Invariant($"Dense native audit: native Visible proved Hidden by certified meshes and moved to Unresolved: spans={_spans}; world length={_moved:R}; Visible curves looked at={_curves} (length={_looked:R}); bodies={_bodies.Count}; triangles={_triangles}; band={_band:R}; triangles with a measured band={_uncertified}; bodies that failed to mesh and take no part={_failed}; tiles={_tiles} (largest {_largest} triangles); tiles over the limit and not audited={_skippedTiles} (length={_skippedLength:R}); curves left whole because a stretch could not be cut out={_uncut}. It moves lines to Unresolved only and proves nothing about Hidden lines. Measured, not proved: those bands, each face against its NURBS form, each chord against its curve; trimmed rims are taken to follow their mesh."));
     }
 
     /// <summary>The native fallback route: audits the drawing's native Visible pieces in place.</summary>

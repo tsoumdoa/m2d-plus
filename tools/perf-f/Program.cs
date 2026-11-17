@@ -65,6 +65,7 @@ internal static class Program
         var engine = viewName.StartsWith("ce:", StringComparison.Ordinal); if (engine) viewName = viewName[3..];
         var analytic = viewName.StartsWith("av:", StringComparison.Ordinal); if (analytic) viewName = viewName[3..];
         var dense = viewName.StartsWith("da:", StringComparison.Ordinal); if (dense) viewName = viewName[3..];
+        var densePool = viewName.StartsWith("dp:", StringComparison.Ordinal); if (densePool) viewName = viewName[3..];
         ViewRequest view = viewName switch
         {
             "North" => ViewRequest.Parse(-Vector3d.YAxis) with { Name = "North" },
@@ -120,6 +121,7 @@ internal static class Program
         if (engine) { CurvedEngine.Run(scene, prepared, view, stem, output, variants, timeout); return 0; }
         if (analytic) { AnalyticCheck.Run(scene, prepared, view, stem, output, variants, timeout); return 0; }
         if (dense) { DenseAuditCheck.Run(scene, prepared, view, stem, output, variants, timeout); return 0; }
+        if (densePool) { DenseAuditCheck.RunPool(scene, view, stem, output, variants, args[0]); return 0; }
         if (variants.Contains("audit-verdicts")) { Verdicts.Audit(scene, prepared, stem, output); return 0; }
         if (variants.Contains("stress-parallel")) { Verdicts.Stress(scene, prepared, stem, output); return 0; }
 #endif

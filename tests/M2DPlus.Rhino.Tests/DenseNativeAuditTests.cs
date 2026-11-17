@@ -166,29 +166,29 @@ public sealed class DenseNativeAuditTests(RhinoHost host)
         Assert.Contains(on.Diagnostics, d => d.StartsWith("Dense native audit: native Visible proved Hidden", StringComparison.Ordinal) && d.Contains("spans=1;", StringComparison.Ordinal));
     });
 
-    [RhinoFact] public void AStripWithTooManyTrianglesIsNotAuditedAndSaysSo() => host.Run(() =>
+    [RhinoFact] public void ATileWithTooManyTrianglesIsNotAuditedAndSaysSo() => host.Run(() =>
     {
         using var sphere = new Sphere(Point3d.Origin, 1).ToBrep(); using var line = new LineCurve(new Point3d(-2, 0, -2), new Point3d(2, 0, -2)); using var output = Output();
-        var audit = new DenseNativeAudit([Input(sphere)], output, new(MaxStripTriangles: 10), default);
+        var audit = new DenseNativeAudit([Input(sphere)], output, new(MaxTileTriangles: 10), default);
         Assert.True(audit.Active);
         Assert.Equal(LineClass.Visible, Assert.Single(audit.Spans(line, LineClass.Visible, default)).Class);
         audit.Report(output);
-        Assert.Contains(output.Diagnostics, d => d.Contains("strips over the limit and not audited=1 (length=4)", StringComparison.Ordinal));
+        Assert.Contains(output.Diagnostics, d => d.Contains("tiles over the limit and not audited=1 (length=4)", StringComparison.Ordinal));
     });
 
-    [RhinoFact] public void StripsGiveTheSameAnswerAsOneIndex() => host.Run(() =>
+    [RhinoFact] public void TilesGiveTheSameAnswerAsOneIndex() => host.Run(() =>
     {
-        // A row of spheres and a line behind them all: cut into many strips or none, the same stretches are moved.
+        // A row of spheres and a line behind them all: cut into many tiles or none, the same stretches are moved.
         var spheres = Enumerable.Range(0, 6).Select(i => new Sphere(new Point3d(-3.75 + 1.5 * i, 0, 0), .6).ToBrep()).ToArray();
         using var line = new LineCurve(new Point3d(-4.9, .05, -2), new Point3d(4.9, .05, -2));
         List<(double A, double B, LineClass Class)> Run(DenseAuditOptions options)
         {
             using var output = Output(); var audit = new DenseNativeAudit(spheres.Select((s, i) => Input(s, i)).ToArray(), output, options, default);
             var spans = audit.Spans(line, LineClass.Visible, default); audit.Report(output);
-            if (options.StripTriangles < 1000) Assert.DoesNotContain(output.Diagnostics, d => d.Contains("strips=1 ", StringComparison.Ordinal));
+            Assert.Equal(options.TileTriangles >= 1000, output.Diagnostics.Any(d => d.Contains("tiles=1 ", StringComparison.Ordinal)));
             return spans;
         }
-        var whole = Run(new()); var strips = Run(new(StripTriangles: 500));
+        var whole = Run(new()); var strips = Run(new(TileTriangles: 500));
         Assert.Equal(13, whole.Count); Assert.Equal(whole.Count, strips.Count);
         for (int i = 0; i < whole.Count; i++) { Assert.Equal(whole[i].Class, strips[i].Class); Assert.Equal(whole[i].A, strips[i].A, 9); Assert.Equal(whole[i].B, strips[i].B, 9); }
         foreach (var s in spheres) s.Dispose();

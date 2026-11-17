@@ -24,8 +24,8 @@ public sealed record NativeSettings(bool MultipleThreads = false, bool NativeOnl
     /// are examined per view. Each costs about a second the first time it is seen; the rest stay on native HLD.</summary>
     internal int CutTubeBudget { get; init; } = 128;
     /// <summary>Dense audit of native Visible lines against certified meshes of the curved bodies (mesh tier, step C):
-    /// what they prove Hidden goes to Unresolved. Off by default; M2D_DENSE_AUDIT=1 turns it on for a process and the
-    /// workers it starts, for trials. See hillclimb/mesh-tier/FINDINGS.md.</summary>
+    /// what they prove Hidden goes to Unresolved. Off by default; M2D_DENSE_AUDIT=1 turns it on for a process, for
+    /// trials, and the solve message carries it to that process's workers. See hillclimb/mesh-tier/FINDINGS.md.</summary>
     internal bool DenseAudit { get; init; } = System.Environment.GetEnvironmentVariable("M2D_DENSE_AUDIT") == "1";
     /// <summary>Harness only: every world stretch the dense audit moved to Unresolved.</summary>
     internal Action<Curve>? ObserveDenseAuditSpan { get; init; }
