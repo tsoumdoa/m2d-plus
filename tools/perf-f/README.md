@@ -92,6 +92,13 @@ dotnet $EXE $R <model.3dm> <out> "av:sidecar=Section transverse" why
 python tools/perf-f/av_report.py <out>                        # markdown tables from every *-av.json in the folder
 ```
 
+`av:SW exact-repeat` is a correctness-only determinism check: two analytic solves (cold and warm), with separate
+`cold-exact-<count>.txt` and `warm-exact-<count>.txt` dumps, exact hashes in `exact-repeat.json`, and the recognised
+dimensions and source fingerprints in `recognition.json`. It skips native comparison, ray sampling and timing.
+For fresh-process coverage, invoke it sequentially about 30 times with a different output folder each time and compare
+the complete dump SHA-256 hashes, including cold versus warm. No timing mutex is needed; keep one owned Rhino host
+at a time. Recognition includes sphere centres/radii: their last bits can move another source's split parameters.
+
 ## Comparing against main
 
 The same sources build against a tree without the section-reuse internals:
@@ -106,6 +113,10 @@ sh tools/perf-f/pair.sh <label> <model.3dm> <view>     # main, then this tree: c
 
 `PERFF_TIMEOUT` (seconds, default 1500) bounds one view solve. The harness calls the view solver
 directly, so it bypasses the in-process admission cap and the tolerance census.
+
+`dotnet $exe $r round-cover-bench <output folder>` generates 400 stacked round columns in memory, solves Top three
+times and checks 200 different-seam coincident circle pairs. It writes `round-cover-bench.json`; hold the shared
+`Local\M2DPlusLocalModelSuiteRhino` timing mutex for this benchmark. No model or document is saved.
 
 Native verification measurements (one owned Rhino process at a time):
 

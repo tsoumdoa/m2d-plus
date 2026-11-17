@@ -32,9 +32,12 @@ internal static class CutTubeRecognition
     internal sealed record Surface(bool Cylinder, Point3d Origin, Vector3d Direction, double Radius, CsgRole Role, double Slack, bool Virtual, int Outward);
     /// <param name="Exact">The stored edge stands for the exact intersection of its two surfaces: every point of it
     /// snaps onto that curve (<see cref="Onto"/>), which is what is classified. Otherwise (where the two surfaces meet
-    /// at too flat an angle to snap reliably) the stored curve is classified with its slack.</param>
+    /// at too flat an angle to bound reliably) it is Unresolved.</param>
     /// <param name="Gap">How far the stored curve, which is what is drawn, may be from the curve that is classified.</param>
-    internal sealed record Edge(Curve World, int On, double Slack, bool Exact, double Gap);
+    internal sealed record Edge(Curve World, int On, double Slack, bool Exact, double Gap)
+    {
+        internal string Diagnostic { get; init; } = "";
+    }
 
     /// <summary>Faces may be this far from their surface, and edges from the surfaces they join: 256 tolerances, and
     /// never more than a sixteenth of the wall thickness or radius. Beyond that the body is not a cut tube here.</summary>
@@ -429,92 +432,293 @@ internal static class CutTubeRecognition
         // the stored edge (and to its own trim, within the edge's stored tolerance of that). So the real body can
         // differ from the exact one, next to a surface, by the edge's distance from that surface plus the stored
         // tolerances: that is added to the surface's slack, beside its faces' own bound.
-        var edges = new List<Edge>(); double edgeBound = 0; var grow = new double[surfaces.Count];
-        foreach (var edge in brep.Edges)
+        var edges = new List<Edge>(); double edgeBound = 0; var grow = new double[surfaces.Count]; bool transferred = false;
+        try
         {
-            token.ThrowIfCancellationRequested();
-            var faces = edge.AdjacentFaces(); if (faces.Length != 2) { if (edge.Valence == EdgeAdjacency.Interior) continue; return no("an edge that is not shared by two faces"); }
-            int a = faceSurface[faces[0]], b = faceSurface[faces[1]]; if (a == b) continue;
-            using var whole = edge.DuplicateCurve();
-            // The edge's distance from each of its two surfaces, bounded through its control points like a face's.
-            // (No finer than a sixty-fourth of the body's own looseness: the stored tolerances are added to it anyway.)
-            double fine = Math.Max(tol / 8, loose / 64);
-            double da = Deviation(whole, surfaces[a], fine, limit), db = Deviation(whole, surfaces[b], fine, limit), slack = Math.Max(da, db);
-            if (!(slack <= limit)) return no($"an edge further than {limit:G3} from the surfaces it joins (certified bound {slack:G3})");
-            double stored = edge.Tolerance + Math.Max(edge.StartVertex?.Tolerance ?? 0, edge.EndVertex?.Tolerance ?? 0);
-            if (!(stored >= 0) || slack + stored > limit) return no($"an edge whose distance from its surfaces and stored tolerance together exceed {limit:G3}");
-            grow[a] = Math.Max(grow[a], slack + stored); grow[b] = Math.Max(grow[b], slack + stored);
-            // A smooth join between two faces is not a line of the drawing (tangent edges are off whenever this class runs).
-            if (edge.IsSmoothManifoldEdge(Math.PI / 180)) continue;
-            edgeBound = Math.Max(edgeBound, slack);
-            // Where the two surfaces cross cleanly the edge is exact: its points snap onto their intersection, moving
-            // by no more than the limit. Runs of the edge where they do not (two cylinders touching where a cope
-            // pinches out) stay as stored. The edge is cut into such runs.
-            const int parts = 64; var clean = new bool[parts + 1]; double move = 0;
-            for (int k = 0; k <= parts; k++)
-            {
-                var q = whole.PointAt(whole.Domain.ParameterAt((double)k / parts));
-                clean[k] = Onto(surfaces[a], surfaces[b], q) is { } on && on.DistanceTo(q) <= limit;
-                if (clean[k]) move = Math.Max(move, Onto(surfaces[a], surfaces[b], q)!.Value.DistanceTo(q));
-            }
-            edgeBound = Math.Max(edgeBound, move);
-            for (int from = 0; from < parts;)
-            {
-                bool exact = clean[from] && clean[from + 1]; int to = from + 1;
-                while (to < parts && (clean[to] && clean[to + 1]) == exact) to++;
-                var piece = from == 0 && to == parts ? whole.DuplicateCurve() : whole.Trim(whole.Domain.ParameterAt((double)from / parts), whole.Domain.ParameterAt((double)to / parts));
-                // The drawn piece is the stored edge. An exact piece stands for the intersection curve, at most the
-                // largest move seen away (measured at 65 points, taken a quarter larger, and never less than the
-                // certified distance from the two surfaces); any other piece is classified as it is, with its slack.
-                // An exact piece can also lie in one of the separating planes (the rim where two mitred cutters meet lies
-                // in their mitre plane). The exact curve is then on that plane by construction, like on its own two
-                // surfaces, and which side of it a ray leaves on is a matter of the ray's direction, not of a distance.
-                int on = (1 << a) | (1 << b);
-                if (exact)
-                    for (int k = real; k < surfaces.Count; k++)
-                    {
-                        if (surfaces[k].Cylinder || surfaces[k].Role != CsgRole.Free) continue;
-                        bool lies = true;
-                        for (int m = from; m <= to && lies; m++)
-                            lies = Onto(surfaces[a], surfaces[b], whole.PointAt(whole.Domain.ParameterAt((double)m / parts))) is { } x && Math.Abs(Distance(surfaces[k], x)) <= 1e-9 * (1 + span);
-                        if (lies) on |= 1 << k;
-                    }
-                if (piece is not null) edges.Add(new(piece, on, exact ? 0 : slack * 1.25, exact, exact ? Math.Max(slack, move * 1.25) : slack * 1.25));
-                from = to;
-            }
-        }
-        for (int i = 0; i < real; i++) if (grow[i] > surfaces[i].Slack) surfaces[i] = surfaces[i] with { Slack = grow[i] };
-
-        // ---- Faces the point-in-solid comparison could not reach are compared with the body's own orientation instead.
-        // A valid oriented solid has material immediately behind each face and none immediately in front: that is a
-        // fact of the Brep, not an answer near two surfaces. Just clear of the face's own slack on each side, the
-        // description (every surface known to its slack, so a surface that close may have the point on either side)
-        // must allow material behind and must allow void in front. If it says "void behind" or "solid in front" for
-        // certain, it is not this body. What the description can then still have wrong beside such a face lies within
-        // the slack of the surface the face hugs, where every ray is undecided anyway.
-        if (slivers.Count != 0)
-        {
-            AnalyticCsg stated;
-            try { stated = new AnalyticCsg(surfaces.Select(k => new CsgPrimitive(k.Cylinder, W(k.Origin), D(k.Direction), k.Radius, k.Role, k.Slack)).ToArray(), W(box.Min), W(box.Max), inside, outside); }
-            catch (ArgumentException) { return no("cells the exact solid refuses"); }
-            bool inward = brep.SolidOrientation == BrepSolidOrientation.Inward;
-            foreach (int index in slivers)
+            foreach (var edge in brep.Edges)
             {
                 token.ThrowIfCancellationRequested();
-                var face = brep.Faces[index]; int found = 0; double off = surfaces[faceSurface[index]].Slack + 4 * tol;
-                foreach (var (at, normal) in InteriorPoints(face, 65))
+                var faces = edge.AdjacentFaces(); if (faces.Length != 2) { if (edge.Valence == EdgeAdjacency.Interior) continue; return no("an edge that is not shared by two faces"); }
+                int a = faceSurface[faces[0]], b = faceSurface[faces[1]]; if (a == b) continue;
+                using var whole = edge.DuplicateCurve();
+                // The edge's distance from each of its two surfaces, bounded through its control points like a face's.
+                // (No finer than a sixty-fourth of the body's own looseness: the stored tolerances are added to it anyway.)
+                double fine = Math.Max(tol / 8, loose / 64);
+                double da = Deviation(whole, surfaces[a], fine, limit), db = Deviation(whole, surfaces[b], fine, limit), slack = Math.Max(da, db);
+                if (!(slack <= limit)) return no($"an edge further than {limit:G3} from the surfaces it joins (certified bound {slack:G3})");
+                double stored = edge.Tolerance + Math.Max(edge.StartVertex?.Tolerance ?? 0, edge.EndVertex?.Tolerance ?? 0);
+                if (!(stored >= 0) || slack + stored > limit) return no($"an edge whose distance from its surfaces and stored tolerance together exceed {limit:G3}");
+                grow[a] = Math.Max(grow[a], slack + stored); grow[b] = Math.Max(grow[b], slack + stored);
+                // A smooth join between two faces is not a line of the drawing (tangent edges are off whenever this class runs).
+                if (edge.IsSmoothManifoldEdge(Math.PI / 180)) continue;
+                edgeBound = Math.Max(edgeBound, slack);
+                // Where the two surfaces cross cleanly the edge is exact: its points snap onto their intersection, moving
+                // by no more than the limit. Runs of the edge where they do not (two cylinders touching where a cope
+                // pinches out) stay as stored. The edge is cut into such runs.
+                const int parts = 64; var clean = new bool[parts + 1];
+                for (int k = 0; k <= parts; k++)
                 {
-                    found++; var behind = inward ? at + normal * off : at - normal * off; var front = inward ? at - normal * off : at + normal * off;
-                    if (!stated.May(W(behind)).Solid) return no($"material missing behind face {index}, by the body's orientation (a face too close to another surface for point-in-solid answers)");
-                    if (!stated.May(W(front)).Void) return no($"material in front of face {index}, by the body's orientation (a face too close to another surface for point-in-solid answers)");
+                    var q = whole.PointAt(whole.Domain.ParameterAt((double)k / parts));
+                    clean[k] = Onto(surfaces[a], surfaces[b], q, limit) is { } on && on.DistanceTo(q) <= limit;
                 }
-                if (found == 0 && areas[index] > 256 * margin * margin) return no($"face {index} has no point to compare the cells at (area {areas[index]:G4})");
+                for (int from = 0; from < parts;)
+                {
+                    bool exact = clean[from] && clean[from + 1]; int to = from + 1;
+                    while (to < parts && (clean[to] && clean[to + 1]) == exact) to++;
+                    Emit(from, to, exact); from = to;
+                }
+                void Emit(int from, int to, bool exact)
+                {
+                    var piece = from == 0 && to == parts ? whole.DuplicateCurve() : whole.Trim(whole.Domain.ParameterAt((double)from / parts), whole.Domain.ParameterAt((double)to / parts));
+                    if (piece is null) return;
+                    // Surface residuals alone do not bound distance to their intersection: divide their SUM by a lower
+                    // bound on the crossing sine over the whole piece and its gap neighbourhood. Pinch-outs refuse this
+                    // certificate; sampled snap distances are never a substitute for it.
+                    double pieceDa = from == 0 && to == parts ? da : Math.Min(da, Deviation(piece, surfaces[a], fine, limit));
+                    double pieceDb = from == 0 && to == parts ? db : Math.Min(db, Deviation(piece, surfaces[b], fine, limit));
+                    double lowerSine = 0;
+                    bool squareRoot = false;
+                    double gap = exact ? CylinderGap(piece, surfaces[a], surfaces[b], pieceDa, pieceDb, limit, out squareRoot) : double.PositiveInfinity;
+                    bool closedForm = double.IsFinite(gap);
+                    if (exact && !closedForm) gap = IntersectionGap(piece, surfaces[a], surfaces[b], pieceDa, pieceDb, limit, out lowerSine, token);
+                    if (exact && (!double.IsFinite(gap) || squareRoot) && to - from > 1)
+                    {
+                        // A pinch-out may be between the initial samples. Localise the failure instead of withholding
+                        // the entire otherwise clean rim; even the smallest piece still needs the whole-piece bound.
+                        piece.Dispose(); int mid = (from + to) / 2; Emit(from, mid, true); Emit(mid, to, true); return;
+                    }
+                    exact &= double.IsFinite(gap);
+                    if (exact) edgeBound = Math.Max(edgeBound, gap);
+                    // An exact piece can also lie in one of the separating planes (the rim where two mitred cutters meet lies
+                    // in their mitre plane). The exact curve is then on that plane by construction, like on its own two
+                    // surfaces, and which side of it a ray leaves on is a matter of the ray's direction, not of a distance.
+                    int on = (1 << a) | (1 << b);
+                    if (exact)
+                        for (int k = real; k < surfaces.Count; k++)
+                        {
+                            if (surfaces[k].Cylinder || surfaces[k].Role != CsgRole.Free) continue;
+                            bool lies = true;
+                            for (int m = from; m <= to && lies; m++)
+                                lies = Onto(surfaces[a], surfaces[b], whole.PointAt(whole.Domain.ParameterAt((double)m / parts))) is { } x && Math.Abs(Distance(surfaces[k], x)) <= 1e-9 * (1 + span);
+                            if (lies) on |= 1 << k;
+                        }
+                    edges.Add(new(piece, on, 0, exact, exact ? gap : 0) { Diagnostic = FormattableString.Invariant(
+                        $"edge {edge.EdgeIndex}, parts {from}..{to}/64, surfaces {a}/{b}, da {pieceDa:R}, db {pieceDb:R}, sin lower {lowerSine:R}, gap {gap:R}, exact {exact}, closed form {closedForm}, sqrt bound {squareRoot}") });
+                }
             }
+            for (int i = 0; i < real; i++) if (grow[i] > surfaces[i].Slack) surfaces[i] = surfaces[i] with { Slack = grow[i] };
+
+            // ---- Faces the point-in-solid comparison could not reach are compared with the body's own orientation instead.
+            // A valid oriented solid has material immediately behind each face and none immediately in front: that is a
+            // fact of the Brep, not an answer near two surfaces. Just clear of the face's own slack on each side, the
+            // description (every surface known to its slack, so a surface that close may have the point on either side)
+            // must allow material behind and must allow void in front. If it says "void behind" or "solid in front" for
+            // certain, it is not this body. What the description can then still have wrong beside such a face lies within
+            // the slack of the surface the face hugs, where every ray is undecided anyway.
+            var uncertainFaces = new List<(int Surface, BoundingBox Bounds, double Slack)>(); var localNotes = new List<string>();
+            if (slivers.Count != 0)
+            {
+                AnalyticCsg stated;
+                try { stated = new AnalyticCsg(surfaces.Select(k => new CsgPrimitive(k.Cylinder, W(k.Origin), D(k.Direction), k.Radius, k.Role, k.Slack)).ToArray(), W(box.Min), W(box.Max), inside, outside); }
+                catch (ArgumentException) { return no("cells the exact solid refuses"); }
+                foreach (int index in slivers)
+                {
+                    token.ThrowIfCancellationRequested();
+                    if (SliverFailure(InteriorPoints(brep.Faces[index], 65), faceSurface[index], surfaces, stated, tol) is not { } failure) continue;
+                    if (failure == OrientationContradiction) return no($"face {index}: {failure}");
+                    // No evidence for this face is no evidence for this face, not a reason to discard the other
+                    // faces and their learned cells. Quarantine its complete positive-NURBS control hull, inflated
+                    // through at least the entire wall on both sides, as well as stored face/edge slack. Failed
+                    // orientation evidence cannot certify adjacent cell labels anywhere inside that box.
+                    int own = faceSurface[index]; var footprint = FaceHull(brep.Faces[index]);
+                    if (!footprint.IsValid) footprint = box;
+                    footprint.Inflate((ri > 0 ? ro - ri : 2 * ro) + surfaces.Max(s => s.Slack) + 4 * tol);
+                    uncertainFaces.Add((own, footprint, surfaces[own].Slack + 4 * tol));
+                    localNotes.Add($"face {index} locally uncertain: {failure}");
+                }
+            }
+            int unknownKinds = count.Keys.Count(k => !inside.Contains(k) && !outside.Contains(k)) + mixed.Count(k => !count.ContainsKey(k));
+            var result = new AnalyticVisibility.CutTubeShape(surfaces, box, edges, faceSurface, real, faceBound, edgeBound, inside, outside)
+                { Note = $"cells: {inside.Count} solid, {outside.Count} void, {unknownKinds} unknown holding {100.0 * unknownCells / cells:F3} % of the tube's wall; {asked} points asked; {mixed.Count} cells left unknown because weak answers disagreed; {uncompared} faces ({uncomparedArea:G3} in area) too close to another surface for point-in-solid answers, orientation evidence only, not proof; surface slack up to {surfaces.Max(k => k.Slack):G3}",
+                  Unchecked = uncompared, SurfaceBound = surfaces.Max(k => k.Slack), UncertainFaces = uncertainFaces };
+            if (localNotes.Count != 0) result = result with { Note = result.Note + "; " + string.Join("; ", localNotes) };
+            transferred = true; return result;
         }
-        int unknownKinds = count.Keys.Count(k => !inside.Contains(k) && !outside.Contains(k)) + mixed.Count(k => !count.ContainsKey(k));
-        return new AnalyticVisibility.CutTubeShape(surfaces, box, edges, faceSurface, real, faceBound, edgeBound, inside, outside)
-            { Note = $"cells: {inside.Count} solid, {outside.Count} void, {unknownKinds} unknown holding {100.0 * unknownCells / cells:F3} % of the tube's wall; {asked} points asked; {mixed.Count} cells left unknown because weak answers disagreed; {uncompared} faces ({uncomparedArea:G3} in area) too close to another surface for point-in-solid answers, compared with the body's orientation instead; surface slack up to {surfaces.Max(k => k.Slack):G3}",
-              Unchecked = uncompared, SurfaceBound = surfaces.Max(k => k.Slack) };
+        finally { if (!transferred) foreach (var edge in edges) edge.World.Dispose(); }
+    }
+
+    private static BoundingBox FaceHull(BrepFace face)
+    {
+        using var copy = face.DuplicateFace(false); if (copy is null) return BoundingBox.Unset;
+        copy.Faces.ShrinkFaces(); using var n = copy.Faces[0].UnderlyingSurface()?.ToNurbsSurface();
+        if (n is null) return BoundingBox.Unset;
+        var points = new List<Point3d>();
+        for (int i = 0; i < n.Points.CountU; i++)
+            for (int j = 0; j < n.Points.CountV; j++)
+            {
+                var point = n.Points.GetControlPoint(i, j); if (!(point.Weight > 0) || !double.IsFinite(point.Weight)) return BoundingBox.Unset;
+                points.Add(point.Location);
+            }
+        return new BoundingBox(points);
+    }
+
+    private static (Vector3d Side, Vector3d Normal, double Along)? CylinderFrame(Surface a, Surface b)
+    {
+        if (!a.Cylinder || !b.Cylinder) return null;
+        var side = Vector3d.CrossProduct(a.Direction, b.Direction); if (!side.Unitize()) return null;
+        var normal = Vector3d.CrossProduct(side, b.Direction); if (!normal.Unitize()) return null;
+        double along = normal * a.Direction; if (Math.Abs(along) < 1e-6) return null;
+        return (side, normal, along);
+    }
+
+    /// <summary>Closed-form cylinder/cylinder certificate, including tangent branch endpoints. First put q on A
+    /// radially (move at most da), then move along A's axis. In B's perpendicular frame this changes only x:
+    /// x' = +/-sqrt(rb^2-y^2). With e=da+db, |x^2-x'^2| <= e(2rb+e), hence the correction is bounded by both
+    /// N/(|x|+|x'|) and sqrt(N). The latter remains finite at a pinch-out; there is no inverse crossing-angle
+    /// assumption. Positive NURBS control hulls bound y and x over the complete piece. Both axes are tried.</summary>
+    internal static double CylinderGap(Curve curve, Surface a, Surface b, double da, double db, double limit)
+        => CylinderGap(curve, a, b, da, db, limit, out _);
+
+    internal static double CylinderGap(Curve curve, Surface a, Surface b, double da, double db, double limit, out bool squareRoot)
+    {
+        double One(Surface first, Surface second, double residual, out bool rootBound)
+        {
+            rootBound = false;
+            if (CylinderFrame(first, second) is not { } frame) return double.PositiveInfinity;
+            using var n = curve.ToNurbsCurve();
+            if (n is null || n.Points.Any(p => !(p.Weight > 0) || !double.IsFinite(p.Weight))) return double.PositiveInfinity;
+            double y0 = double.PositiveInfinity, y1 = double.NegativeInfinity, x0 = y0, x1 = y1;
+            foreach (var p in n.Points)
+            {
+                var w = p.Location - second.Origin; double y = w * frame.Side, x = w * frame.Normal;
+                y0 = Math.Min(y0, y); y1 = Math.Max(y1, y); x0 = Math.Min(x0, x); x1 = Math.Max(x1, x);
+            }
+            double extent = n.Points.Max(p => p.Location.DistanceTo(first.Origin) + p.Location.DistanceTo(second.Origin));
+            double guard = 1e-12 * (1 + first.Origin.DistanceTo(Point3d.Origin) + second.Origin.DistanceTo(Point3d.Origin) + first.Radius + second.Radius + extent);
+            double shift = (first.Origin - second.Origin) * frame.Side;
+            // A's radial projection is exactly on its circle; intersect that range with the moved hull's range.
+            y0 = Math.Max(y0 - residual - guard, shift - first.Radius - guard);
+            y1 = Math.Min(y1 + residual + guard, shift + first.Radius + guard);
+            if (!(y0 <= y1)) return double.PositiveInfinity;
+            double far = Math.Max(Math.Abs(y0), Math.Abs(y1));
+            // Coincident exact side extents need no floating padding beyond B's radius: the circle itself proves
+            // this domain when both axes have the identical stored origin and the first radius is no larger.
+            // A rounded zero dot product of two different origins is not an incidence certificate.
+            if (first.Origin == second.Origin && first.Radius <= second.Radius) far = Math.Min(far, first.Radius);
+            if (!(far <= second.Radius)) return double.PositiveInfinity;
+            double root = Math.Sqrt(Math.Max(0, (second.Radius - far) * (second.Radius + far)));
+            x0 -= residual + guard; x1 += residual + guard;
+            double near = x0 > 0 ? x0 : x1 < 0 ? -x1 : 0;
+            double e = da + db + guard, numerator = e * (2 * second.Radius + e);
+            double quotient = near + root > 0 ? numerator / (near + root) : double.PositiveInfinity;
+            rootBound = Math.Sqrt(numerator) <= quotient;
+            double delta = Math.Min(Math.Sqrt(numerator), quotient);
+            return residual + delta / Math.Abs(frame.Along) + guard;
+        }
+        squareRoot = false;
+        if (!(da >= 0 && db >= 0)) return double.PositiveInfinity;
+        double ga = One(a, b, da, out bool ra), gb = One(b, a, db, out bool rb);
+        double gap = Math.Min(ga, gb); squareRoot = ga <= gb ? ra : rb;
+        return gap <= limit ? gap : double.PositiveInfinity;
+    }
+
+    private static Point3d? CylinderPoint(Surface a, Surface b, Point3d q)
+    {
+        if (CylinderFrame(a, b) is not { } frame) return null;
+        var radial = q - a.Origin; radial -= a.Direction * (radial * a.Direction); if (!radial.Unitize()) return null;
+        var on = q + radial * -Distance(a, q); var w = on - b.Origin;
+        double y = w * frame.Side, x = w * frame.Normal, square = (b.Radius - Math.Abs(y)) * (b.Radius + Math.Abs(y));
+        if (square < 0) return null;
+        double root = Math.CopySign(Math.Sqrt(square), x);
+        var p = on + a.Direction * ((root - x) / frame.Along);
+        return Math.Abs(Distance(a, p)) + Math.Abs(Distance(b, p)) <= 1e-10 * (1 + a.Radius + b.Radius) ? p : null;
+    }
+
+    /// <summary>No interior point, or a probe that can still be in another surface's slack band, supplies no
+    /// orientation evidence. In particular May=(true,true) in that band must not let an unchecked sliver through.</summary>
+    internal static bool CheckSliver(IEnumerable<(Point3d At, Vector3d Normal)> points, int own,
+        IReadOnlyList<Surface> surfaces, AnalyticCsg stated, double tol) => SliverFailure(points, own, surfaces, stated, tol) is null;
+
+    internal static string? SliverFailure(IEnumerable<(Point3d At, Vector3d Normal)> points, int own,
+        IReadOnlyList<Surface> surfaces, AnalyticCsg stated, double tol)
+    {
+        int found = 0; double off = surfaces[own].Slack + 4 * tol; string? noEvidence = null;
+        foreach (var (at, normal) in points)
+        {
+            found++;
+            var behind = at - normal * off; var front = at + normal * off;
+            for (int i = 0; i < surfaces.Count; i++)
+            {
+                if (i == own || surfaces[i].Virtual) continue;
+                double db = Math.Abs(Distance(surfaces[i], behind)), df = Math.Abs(Distance(surfaces[i], front));
+                double guard = 1e-12 * (1 + at.DistanceTo(surfaces[i].Origin) + surfaces[i].Radius);
+                // Test the actual probes against the other surface's certified band. The scalar sum-of-slacks
+                // test is only a broad phase: at an oblique crossing it can reject probes that are both clear.
+                if (Math.Min(db, df) <= surfaces[i].Slack + guard)
+                    noEvidence ??= FormattableString.Invariant($"overlapping slack bands at sample {found}, surfaces {own}/{i}, distance {Math.Abs(Distance(surfaces[i], at)):R}, own slack {surfaces[own].Slack:R}, other slack {surfaces[i].Slack:R}, threshold {off + surfaces[i].Slack:R}, probe distances {db:R}/{df:R}");
+            }
+            if (!stated.May(new(behind.X, behind.Y, behind.Z)).Solid || !stated.May(new(front.X, front.Y, front.Z)).Void) return OrientationContradiction;
+        }
+        return found == 0 ? "no interior sample (found=0)" : noEvidence;
+    }
+    internal const string OrientationContradiction = "orientation contradicts cells";
+
+    /// <summary>Certified edge-to-intersection distance. For unit signed-distance gradients, the least correction
+    /// has speed at most (|da|+|db|)/sin(theta). Plane curvature is zero, cylinder curvature is 1/rho. Bound the
+    /// closed-form gradient cross product between samples by that curvature and the positive NURBS control hull.
+    /// The same bound holds in the returned distance's neighbourhood, so integrating the correction to zero residual
+    /// cannot escape that neighbourhood. An angle below asin(.01), an axis, or a work-cap hit fails closed.</summary>
+    internal static double IntersectionGap(Curve curve, Surface a, Surface b, double da, double db, double limit,
+        CancellationToken token = default) => IntersectionGap(curve, a, b, da, db, limit, out _, token);
+
+    private static double IntersectionGap(Curve curve, Surface a, Surface b, double da, double db, double limit,
+        out double lowerSine, CancellationToken token)
+    {
+        lowerSine = 0;
+        const double threshold = .01;
+        if (!(da >= 0 && db >= 0 && double.IsFinite(da + db))) return double.PositiveInfinity;
+        static Vector3d Normal(Surface s, Point3d q)
+        {
+            if (!s.Cylinder) return s.Direction;
+            var n = q - s.Origin; n -= s.Direction * (n * s.Direction); n.Unitize(); return n;
+        }
+        double Sine(double neighbourhood)
+        {
+            double minimum = 1; int samples = 0;
+            var stack = new Stack<Interval>(); stack.Push(curve.Domain);
+            while (stack.TryPop(out var interval))
+            {
+                token.ThrowIfCancellationRequested(); if (++samples > 16384) return 0;
+                var at = curve.PointAt(interval.Mid); var na = Normal(a, at); var nb = Normal(b, at);
+                double sine = Vector3d.CrossProduct(na, nb).Length;
+                if (!(na.SquareLength > .5 && nb.SquareLength > .5 && sine >= threshold)) return 0;
+                using var part = curve.Trim(interval); using var n = part?.ToNurbsCurve();
+                if (n is null || n.Points.Any(p => !(p.Weight > 0) || !double.IsFinite(p.Weight))) return 0;
+                double travel = n.Points.Max(p => p.Location.DistanceTo(at));
+                double rhoA = a.Radius - da - travel - neighbourhood, rhoB = b.Radius - db - travel - neighbourhood;
+                double curvature = (a.Cylinder ? rhoA > 0 ? 1 / rhoA : double.PositiveInfinity : 0) +
+                    (b.Cylinder ? rhoB > 0 ? 1 / rhoB : double.PositiveInfinity : 0);
+                double variation = curvature * (travel + neighbourhood), lower = sine - variation - 1e-12;
+                // Refine the along-curve part; subdivision cannot reduce the neighbourhood's contribution.
+                if (lower >= threshold && curvature * travel <= .01 * sine)
+                { minimum = Math.Min(minimum, lower); continue; }
+                if (double.IsFinite(curvature) && curvature * neighbourhood > sine - threshold) return 0;
+                double mid = interval.Mid; if (!(mid > interval.Min && mid < interval.Max)) return 0;
+                stack.Push(new(mid, interval.Max)); stack.Push(new(interval.Min, mid));
+            }
+            return minimum;
+        }
+        double lower = Sine(0); lowerSine = lower; if (!(lower >= threshold)) return double.PositiveInfinity;
+        double gap = (da + db) / lower;
+        for (int round = 0; round < 12; round++)
+        {
+            if (!(gap <= limit)) return double.PositiveInfinity;
+            lower = Sine(gap); lowerSine = lower; if (!(lower >= threshold)) return double.PositiveInfinity;
+            double floor = (da + db) / lower;
+            if (floor <= gap) return gap;
+            gap = floor * 1.0625;
+        }
+        return double.PositiveInfinity;
     }
 
     /// <summary>Signed distance to a surface: negative inside a cylinder or behind a plane.</summary>
@@ -572,8 +776,14 @@ internal static class CutTubeRecognition
     /// The point of the intersection of two surfaces nearest to q (the least move that puts q on both), or null when
     /// the surfaces do not cross cleanly near q (they touch, or q is on a cylinder's axis).
     /// </summary>
-    internal static Point3d? Onto(Surface a, Surface b, Point3d q)
+    internal static Point3d? Onto(Surface a, Surface b, Point3d q, double maxMove = double.PositiveInfinity)
     {
+        if (a.Cylinder && b.Cylinder)
+        {
+            var ca = CylinderPoint(a, b, q); var cb = CylinderPoint(b, a, q);
+            if (ca is { } pa && pa.DistanceTo(q) <= maxMove && (cb is not { } pb || pa.DistanceTo(q) <= pb.DistanceTo(q))) return pa;
+            if (cb is { } second && second.DistanceTo(q) <= maxMove) return second;
+        }
         static bool Gradient(Surface s, Point3d x, out double f, out Vector3d n)
         {
             f = Distance(s, x);

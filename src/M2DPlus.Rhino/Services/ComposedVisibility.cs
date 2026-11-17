@@ -303,6 +303,7 @@ internal static class ComposedVisibility
             {   // Its own step: on a scene of tubes this is most of the view's time.
                 phase.Next("exact curved");
                 analytic.Append(nativeCurves, owned, token);
+                output._diagnostics.AddRange(analytic.LateDiagnostics);
                 phase.Next("output construction");
             }
             foreach (var c in nativeCurves)
