@@ -40,6 +40,9 @@ internal static class Program
     private static int Run(string[] args)
     {
         using var core = new RhinoCore(new[] { "/nosplash", "/notemplate" }, WindowStyle.NoWindow);
+#if !PERFF_BASELINE
+        if (args[1] == "round-cover-bench") { RoundCoverBench.Run(Path.GetFullPath(args[2])); return 0; }
+#endif
         if (args[1] == "native-point-witness") { NativePointWitnesses.Run(args[2]); return 0; }
         var file = args[1]; var output = Path.GetFullPath(args[2]); Directory.CreateDirectory(output);
         var viewName = args[3]; var variants = args.Skip(4).ToArray();
@@ -57,12 +60,15 @@ internal static class Program
         var prepareSeconds = timer.Elapsed.TotalSeconds;
         var bounds = scene.Bounds;
 #if !PERFF_BASELINE
+        if (viewName == "mt-census") { MeshTier.Census(scene, prepared, Path.GetFileNameWithoutExtension(file), output, args.Skip(4).ToArray()); return 0; }
         if (viewName == "ce-census") { CurvedCensus.Run(scene, prepared, Path.GetFileNameWithoutExtension(file), output); return 0; }
 #endif
         var curved = viewName.StartsWith("curved:", StringComparison.Ordinal); if (curved) viewName = viewName[7..];
         var spike = viewName.StartsWith("spike:", StringComparison.Ordinal); if (spike) viewName = viewName[6..];
         var engine = viewName.StartsWith("ce:", StringComparison.Ordinal); if (engine) viewName = viewName[3..];
         var analytic = viewName.StartsWith("av:", StringComparison.Ordinal); if (analytic) viewName = viewName[3..];
+        var dense = viewName.StartsWith("da:", StringComparison.Ordinal); if (dense) viewName = viewName[3..];
+        var densePool = viewName.StartsWith("dp:", StringComparison.Ordinal); if (densePool) viewName = viewName[3..];
         ViewRequest view = viewName switch
         {
             "North" => ViewRequest.Parse(-Vector3d.YAxis) with { Name = "North" },
@@ -117,6 +123,8 @@ internal static class Program
         if (variants.Contains("section-probe")) { SectionProbe.Run(prepared, view, scene.Tolerance, Path.Combine(output, stem + "-section-probe.json")); return 0; }
         if (engine) { CurvedEngine.Run(scene, prepared, view, stem, output, variants, timeout); return 0; }
         if (analytic) { AnalyticCheck.Run(scene, prepared, view, stem, output, variants, timeout); return 0; }
+        if (dense) { DenseAuditCheck.Run(scene, prepared, view, stem, output, variants, timeout); return 0; }
+        if (densePool) { DenseAuditCheck.RunPool(scene, view, stem, output, variants, args[0]); return 0; }
         if (variants.Contains("audit-verdicts")) { Verdicts.Audit(scene, prepared, stem, output); return 0; }
         if (variants.Contains("stress-parallel")) { Verdicts.Stress(scene, prepared, stem, output); return 0; }
 #endif

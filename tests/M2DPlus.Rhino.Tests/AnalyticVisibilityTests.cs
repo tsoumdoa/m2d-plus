@@ -182,6 +182,21 @@ public sealed class AnalyticVisibilityTests(RhinoHost host, ITestOutputHelper ou
         Assert.Equal((null, null), AnalyticVisibility.Examine(mesh, BodyTol)); Assert.Equal((null, null), AnalyticVisibility.Examine(curve, BodyTol));
     });
 
+    [RhinoFact] public void DentedCylinderWithoutSliverEvidenceIsLocallyUncertainInEveryOrientation() => host.Run(() =>
+    {
+        foreach (var turn in new[] { Transform.Identity, Transform.Rotation(Math.PI / 2, Vector3d.XAxis, Point3d.Origin),
+            Transform.Rotation(1.1, new Vector3d(.2, 1, 0), Point3d.Origin), Transform.Rotation(.9, new Vector3d(1, 1, .3), Point3d.Origin) })
+        {
+            using var body = Dented(20 * BodyTol); Assert.True(body.Transform(turn));
+            var (shape, refusal) = AnalyticVisibility.Examine(body, BodyTol);
+            var cut = Assert.IsType<AnalyticVisibility.CutTubeShape>(shape); Assert.NotEmpty(cut.UncertainFaces);
+            Assert.Contains("locally uncertain", cut.Note);
+            using var view = DrawAlone(body, out _); Assert.Equal(0, view.NativeCalls);
+            var (judged, wrong) = Witness(view, [body], body.GetBoundingBox(true).Max.Z + 1);
+            Assert.Equal(0, wrong); Assert.True(judged > 0 || Length(view, LineClass.Unresolved) > 0, refusal);
+        }
+    });
+
     [RhinoFact] public void PlainShapesDescribedDifferentlyAreStillPlainShapes() => host.Run(() =>
     {
         const double tol = BodyTol;
@@ -245,7 +260,6 @@ public sealed class AnalyticVisibilityTests(RhinoHost host, ITestOutputHelper ou
                 using var column = Column(Point3d.Origin, .5, 4); var plane = new Plane(new Point3d(0, 0, .1), new Vector3d(1, 0, .3));
                 using var kept = column.Trim(plane, BodyTol).OrderBy(b => b.GetArea()).First(); return kept.CapPlanarHoles(BodyTol);
             },
-            ["NURBS cylinder dented by twenty tolerances"] = () => Dented(20 * BodyTol),
             ["pipe coped by a pipe across it"] = () =>
             {
                 using var pipe = Pipe(new Point3d(-3, 0, 0), Vector3d.XAxis, .5, .44, 3.2);
@@ -288,6 +302,32 @@ public sealed class AnalyticVisibilityTests(RhinoHost host, ITestOutputHelper ou
             if (view.NativeCalls != 0 || wrong != 0 || judged < 8 || unresolved > .02 * total) failures.Add(name);
         }
         Assert.Empty(failures);
+    });
+
+    [RhinoFact] public void CopeFarRimIsCoveredByTheUnionOfNearRimPiecesDownTheCutterAxis() => host.Run(() =>
+    {
+        using var pipe = Pipe(new Point3d(-3, 0, 0), Vector3d.XAxis, .5, .44, 3.2);
+        using var body = Drilled(pipe, new Point3d(0, -3, .1), Vector3d.YAxis, .5, 6);
+        Assert.True(body.Transform(Transform.Rotation(Vector3d.YAxis, Vector3d.ZAxis, Point3d.Origin)));
+        var (shape, refusal) = AnalyticVisibility.Examine(body, BodyTol);
+        Assert.True(shape is AnalyticVisibility.CutTubeShape, refusal);
+        using var view = DrawAlone(body, out _);
+        Assert.Equal(0, view.NativeCalls);
+        // The cope rim lies on the cutter's circle in projection. All its far ink has a nearer Visible witness,
+        // but that witness changes pieces where the projected far curve doubles back at their join.
+        double hiddenCope = 0, visibleCope = 0;
+        foreach (var item in view.Items.Where(p => p.Class is LineClass.Hidden or LineClass.Visible))
+        {
+            using var geometry = item.CopyGeometry(); if (geometry is not Curve c) continue;
+            var p = item.DepthGeometry is Curve w ? w.PointAt(w.Domain.Mid) : c.PointAt(c.Domain.Mid);
+            if (Math.Abs(Math.Sqrt(p.X * p.X + (p.Y + .1) * (p.Y + .1)) - .5) < 4 * BodyTol)
+            {
+                if (item.Class == LineClass.Hidden) hiddenCope += c.GetLength(); else visibleCope += c.GetLength();
+            }
+        }
+        output.WriteLine($"Far cope Hidden {hiddenCope:R}; V {Length(view, LineClass.Visible):R}; U {Length(view, LineClass.Unresolved):R}");
+        Assert.InRange(hiddenCope, 0, .01);
+        Assert.True(visibleCope > .5, $"Expected the near cope rim, got {visibleCope:R}");
     });
 
     [RhinoFact] public void CutTubesOnTheirSideAgreeWithTheWitness() => host.Run(() => Turned(0));

@@ -23,6 +23,13 @@ public sealed record NativeSettings(bool MultipleThreads = false, bool NativeOnl
     /// <summary>How many possible cut tubes (closed bodies of planes and cylinders that are none of the plain shapes)
     /// are examined per view. Each costs about a second the first time it is seen; the rest stay on native HLD.</summary>
     internal int CutTubeBudget { get; init; } = 128;
+    /// <summary>Dense audit of native Visible lines against certified meshes of the curved bodies (mesh tier, step C):
+    /// what they prove Hidden goes to Unresolved. Off by default; M2D_DENSE_AUDIT=1 turns it on for a process, for
+    /// trials, and the solve message carries it to that process's workers. See hillclimb/mesh-tier/FINDINGS.md.</summary>
+    internal bool DenseAudit { get; init; } = System.Environment.GetEnvironmentVariable("M2D_DENSE_AUDIT") == "1";
+    /// <summary>Harness only: every world stretch the dense audit moved to Unresolved.</summary>
+    internal Action<Curve>? ObserveDenseAuditSpan { get; init; }
+    internal DenseAuditOptions DenseAuditOptions { get; init; } = new();
     internal Action<IReadOnlyList<VisibilityInput>>? ObserveNativeInputs { get; init; }
     internal Action<NativeHldOptions>? ObserveHldOptions { get; init; }
     /// <summary>Harness only: the sources that left native HLD as exact analytic solids. They are occluders that
@@ -403,7 +410,9 @@ public static class NativeDrawing
                 result.Pieces.Add(new(new Point(location), source, LineClass.Visible, new Point(world)));
             }
             phase.Next("native ray verification");
-            NativeVisibilityVerifier.Apply(sources.Select(s => new VisibilityInput(s.Geometry,s)).ToArray(), result, settings, token);
+            var audited = sources.Select(s => new VisibilityInput(s.Geometry,s)).ToArray();
+            NativeVisibilityVerifier.Apply(audited, result, settings, token);
+            DenseNativeAudit.Apply(audited, result, settings, token);
             }
         }
         catch (OperationCanceledException) { result.Dispose(); throw; }
