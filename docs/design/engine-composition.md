@@ -49,15 +49,14 @@ Native camera placement uses the same full-scene bounds in both adapters, includ
 route C; clipped-input bounds must not change the native camera.
 All engines use the same parallel frame, larger view Z toward the viewer, and
 model tolerance. In the default `engine = exact`, HLD receives IncludeHiddenCurves=true
-and serial computation; hidden-off is a downstream presentation filter. Owner decision
-2026-11-16 adds opt-in `engine = fast`: only native calls enable multithreading and follow
-the view's hidden-generation flag. The planar and analytic kernels, composition proofs,
-quarantine rules and verifier budgets do not change. Residual Hidden fragments returned
-by native are still audited; omitted hidden curves cannot receive false-Hidden checks,
-and Info states that limitation. Fast native output is unverified and can differ between
-runs. A scene consisting entirely of kernel-eligible planar sources still makes zero
-HLD calls and retains the same geometry/classes, including hidden evidence for min-visible
-presentation. Engine always keys visibility; hidden additionally keys it in fast mode.
+and serial computation; hidden-off is a downstream presentation filter.
+Owner decision 2026-11-17 replaces fast with `engine = native`: **all** sources go to threaded Rhino HLD,
+with hidden curves requested only when enabled. This bypasses the entire exact composition/analytic/verifier
+contract below. Native sections use HLD clipping planes and SectionCut curves (cut lines only, no hatches),
+and Unresolved is empty. Info says `native: Rhino HiddenLineDrawing, not certified`; output may vary between runs.
+`fast` remains a saved-value alias with a component remark. Engine always keys visibility; hidden additionally keys
+it in native mode. Per-object clipping lists are passed through, but Rhino 8.36 can clip excluded curves; Info
+discloses this native limitation without own visibility correction. See UX §3.8 for native setting behaviour.
 
 ## Exact analytic solids (third class)
 
@@ -90,8 +89,7 @@ H(c) stays a union over all occluders. A recognised source S leaves HLD only whe
   drawn); otherwise Visible only where every side says Visible. A stretch HLD returns nothing for, or that either
   side cannot decide, is Unresolved. HLD's pieces are placed on the candidate by closest point (ends and middle,
   within four tolerances); a piece that cannot be placed counts as no answer. The native ray audit and Unset
-  handling apply to these curves as to any native curve. In `engine = fast` native hidden curves can be off, so
-  there S stays in HLD whole. It is off by default because it was measured to change which lines native HLD gets
+  handling apply to these curves as to any native curve. It is off by default because it was measured to change which lines native HLD gets
   wrong among the bodies that stay (curved S, SW: new wrong-Visible samples and four times the Unresolved length,
   for 15 % less time); see `hillclimb/curved-engine/FINDINGS.md`, section 9.
 
@@ -165,8 +163,7 @@ examined per view, the first in input order whatever is cached, so that the draw
 solves; the rest stay on native HLD and Info counts them. Recognition runs in parallel over distinct geometry objects
 and honours cancellation; results are kept by content, least recently used first out.
 
-The class reports its own progress step, `exact curved`. `engine = fast` does not touch it: fast only changes what
-still goes to native HLD.
+The class reports its own progress step, `exact curved`. `engine = native` bypasses this class entirely.
 
 ## Contacts, coincident pieces and ownership
 
@@ -240,12 +237,10 @@ polygon boundaries otherwise occlude only with a strict view-depth gap above
 tolerance. The tie is retired **between source objects only**. Same-source and
 self-face tolerance ties remain, including contacts within one mesh building or
 multi-lump Brep. These intra-object contacts are not certified; Info says so.
-Joints is omitted from the effective visibility key for cut-only views. Fast mode
-still runs the exact planar kernel, so its joints value must remain keyed.
+Joints is omitted from the effective visibility key for cut-only views. Native mode ignores joints with an Info note.
 
 Native/freeform candidates keep native contact behaviour and the existing audit;
-Info explicitly says that planar joint suppression does not certify them. Fast
-native determinism remains outside the contract. No analytic contact certificate
+Info explicitly says that planar joint suppression does not certify them. Native-mode determinism remains outside the contract. No analytic contact certificate
 is inferred before the analytic engine supplies one. The gate's `contactEdge`
 exception requires independently checked foreign-face incidence and Visible
 coverage; self-faces and merely within-tolerance gaps cannot supply it.

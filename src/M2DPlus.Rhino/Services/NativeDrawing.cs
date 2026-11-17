@@ -103,14 +103,14 @@ public sealed class ViewDrawing : IDisposable
     public string IgnoredSummary => MinVisible <= 0 ? "Ignored: off (min visible = off)." :
         FormattableString.Invariant($"Ignored (min visible {MinVisible:G6}): {IgnoredObjects} objects, {IgnoredPieces} pieces. Their lines are in the Ignored output; nothing is deleted.");
     public PhaseTimings Phases { get; } = new();
+    // Retain the stored/wire member name so exact result archives remain byte-identical.
     public int FastNativeSources { get; internal set; }
-    public string EngineSummary => FastNativeSources > 0
-        ? $"Engine: fast — Make2D-like shortcuts on {FastNativeSources} curved/freeform sources; their lines are not certified and may differ slightly between runs."
-        : Settings?.Engine == EngineMode.Fast ? "Engine: fast — no native shortcuts used; planar/analytic sources remain exact."
+    public string EngineSummary => Settings?.Engine == EngineMode.Native
+        ? "native: Rhino HiddenLineDrawing, not certified; lines may differ between runs."
         : "Engine: exact";
     public string Info => $"{Name}: {(Error ?? "finished")} · {Seconds:F3} s\n" +
         EngineSummary + "\n" +
-        (Settings?.CutOnly == true ? "Cut only: projection beyond the cut skipped\n" : "") +
+        (Settings?.CutOnly == true ? Settings.Engine == EngineMode.Native ? "Cut only: HLD output filtered to near-section lines\n" : "Cut only: projection beyond the cut skipped\n" : "") +
         $"{Report.Route}; deterministic={!MultipleThreads}; tolerance={Tolerance:R}; validation: {Report.ValidationDomain}\n" +
         $"Visible={Pieces.Count(p => p.Class == LineClass.Visible)}, hidden={Pieces.Count(p => p.Class == LineClass.Hidden)}, unresolved={Report.UncertainCount}, hidden points={HiddenPoints}; " +
         $"invalid extraction={Report.InvalidExtractionCount}; duplicate={DuplicateSegments}; projecting={ProjectingSegments}; empty slots={EmptyNativeSlots}; zero length={ZeroLengthNativeSegments}; quarantined={Report.Quarantined}\n" +
@@ -169,14 +169,14 @@ public static class NativeDrawing
 
     /// <summary>One view's step and that step's percentage. Reports go out only when the step or its whole percent
     /// changes, so per-edge kernel callbacks from many threads never flood the UI or a worker pipe.</summary>
-    private sealed class StepStatus(Action<string, double?> sink, bool fast)
+    private sealed class StepStatus(Action<string, double?> sink, bool native)
     {
         private readonly object _gate = new();
         private volatile string? _step;
         private volatile int _percent = -1;
         internal void Report(string step, double? fraction)
         {
-            if (fast && step == ViewSteps.HiddenLines) step = ViewSteps.Fast;
+            if (native && step == ViewSteps.HiddenLines) step = ViewSteps.Native;
             var percent = fraction is double f ? (int)Math.Floor(Math.Clamp(f, 0, 1) * 100) : -1;
             if (ReferenceEquals(step, _step) && (fraction is null || percent == _percent)) return;
             lock (_gate)
@@ -228,7 +228,7 @@ public static class NativeDrawing
                         ct.ThrowIfCancellationRequested();
                         var name = views[index].Name; var at = index;
                         progress?.Report(new(JobPhase.Drawing, index, views.Count) { View = name });
-                        Steps.Value = progress is null ? null : new StepStatus((step, fraction) => progress.Report(new(JobPhase.Drawing, at, views.Count) { View = name, Step = step, StepFraction = fraction }), views[index].Settings?.Engine == EngineMode.Fast);
+                        Steps.Value = progress is null ? null : new StepStatus((step, fraction) => progress.Report(new(JobPhase.Drawing, at, views.Count) { View = name, Step = step, StepFraction = fraction }), views[index].Settings?.Engine == EngineMode.Native);
                         ViewDrawing drawing;
                         try { drawing = SolveView(scene, prepared, views[index], settings, ct); }
                         finally { Steps.Value = null; }
@@ -263,6 +263,7 @@ public static class NativeDrawing
             }
             if (view.Cut is { } cut) view = view with { Cut = cut with { SourceDepth = effective.Depth, FarClip = effective.FarClip } };
         }
+        if (view.Settings?.Engine == EngineMode.Native) return NativeModeDrawing.Solve(scene, sources, view, settings, token);
         if (view.Cut is not null && view.Error is null) return SectionDrawing.Solve(scene, sources, view, settings, token);
         var result = new ViewDrawing { Name = view.Name, Settings = view.Settings, MultipleThreads = settings.MultipleThreads, Tolerance = tolerance };
         var timer = Stopwatch.StartNew();

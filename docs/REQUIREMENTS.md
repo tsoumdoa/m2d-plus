@@ -95,7 +95,7 @@ See [UX revision 4](design/ux.md) §2.2 and §6.
 
 - **Engine pivot (conditional on the A2 native locus validation passing):** our own exact visibility kernel becomes the core engine. It handles planes now and analytic cylinders next. Rhino's native HiddenLineDrawing is kept only for true freeform. The worker, disk cache and tiling work in M4/M5 shrink accordingly; tiling is dropped (S3: no equivalence).
 - **Live view boxes:** build them on Fable's "scrub stack": one solve per view direction, after which every cut depth is a lookup. First prove the section-fill (cap parity) rule against route C.
-- **Hidden lines are off by default** (superseded by beta.2's hidden-on default). In the default exact engine this is a presentation choice only: native HLD loses visible geometry when hidden curves are disabled, so exact solves with hidden lines and discards them. The opt-in fast engine below follows the requested hidden setting in native HLD.
+- **Hidden lines are off by default** (superseded by beta.2's hidden-on default). In the default exact engine this is a presentation choice only: native HLD loses visible geometry when hidden curves are disabled, so exact solves with hidden lines and discards them. The native engine below follows the requested hidden setting in native HLD.
 - **Test data:** no owner project models. Use the campus model and the generated suites, and treat the census results as optimistic.
 
 ## Engine composition decisions (2026-11-15)
@@ -104,8 +104,8 @@ See [UX revision 4](design/ux.md) §2.2 and §6.
 - **Camera invariance:** contact certificates use owned world coordinates before rounded projection. Exact world incidence cannot become an approximate contact just because the view changes; its supporting face cannot hide it through projection roundoff. The usual union still includes all other occluding faces.
 - **Approximate contacts:** a straight support whose two endpoints lie within the contact tolerance band, but whose incidence/continuity cannot be certified, is Unresolved (or Hidden where independent occlusion is proved), never confidently Visible or silently dropped with joints off. An Approximate contact in the same cell as an exact Flush contact prevents suppression of that uncertain cell. Rounded source-geometry transformations can therefore increase uncertainty. The conservative normal-residual band uses tolerance times the normal's L1 norm; it can include Euclidean gaps up to √3 tolerances. A transverse plane crossing has no positive-length contact interval and retains ordinary occlusion, including its depth-tolerance transition. Same-source/self-face tolerance ties remain, including contacts within one mesh building or multi-lump Brep; they are not certified by the inter-object rule, and Info discloses this.
 - **Hidden coverage and contact cost:** complete Hidden coverage ends budgeted occlusion clipping for either joints setting. With joints off, only contact predicates remain, behind a conservative world-space plane-distance prefilter; they do not consume `MaxFacesPerEdge`. World contact polygons are prepared lazily inside that band. An inconclusive suppression check retains independently proved Hidden coverage rather than making it Unresolved.
-- **Native/curved contacts:** keep deterministic serial native tie behaviour in exact mode and reconcile native shared edges when coverage is proved. General freeform contact and joint suppression are not certified; Info discloses this. Analytic engines may opt into a contact certificate separately; planar rules do not claim analytic support by proximity. Fast native mode retains its documented nondeterminism.
-- **Joints setting:** a visibility/cache key in Settings, view-object Attribute User Text `m2d.joints`, and the right-click menu next to Tangents and Seams, with normal precedence. Changing it re-solves when projection runs, including fast mode's exact planar path. With `cutonly=on` it is omitted from the effective visibility key. No new drawing-result/worker fields are required; the existing single-source provenance keeps the stable owner.
+- **Native/curved contacts:** keep deterministic serial native tie behaviour in exact mode and reconcile native shared edges when coverage is proved. General freeform contact and joint suppression are not certified; Info discloses this. Analytic engines may opt into a contact certificate separately; planar rules do not claim analytic support by proximity. Native mode retains Rhino contact behaviour and its documented nondeterminism.
+- **Joints setting:** a visibility/cache key in Settings, view-object Attribute User Text `m2d.joints`, and the right-click menu next to Tangents and Seams, with normal precedence. Changing it re-solves when projection runs, in exact mode. With `cutonly=on` it is omitted from the effective visibility key. No new drawing-result/worker fields are required; the existing single-source provenance keeps the stable owner.
 - **Correctness gate:** where the native reference is itself Unresolved/Unset, M2D+'s independent exact check is the judge. The gate stays strict everywhere else (0 unexplained, 0 bugs).
 
 ## Ignoring objects seen only through small gaps (owner, 2026-11-15)
@@ -184,24 +184,20 @@ From the owner's first real use of v0.1.0-beta.1 on a ~6,000-object model.
   step, workers, output), with a progress bar that only moves forward, a shimmer for stages without sub-progress and a
   rough estimate when there is enough history. See §5.2.
 
-## Opt-in fast engine (owner decision, 2026-11-16)
+## Exact and native engines (owner decision, 2026-11-17; replaces opt-in fast)
 
-- **Setting:** `engine = exact | fast`, default **exact**, from Settings, view-object `m2d.engine` user text, or
-  *Engine ▸ Exact · Fast (Make2D-like)*. Normal precedence applies.
-- **Scope:** fast changes only native HLD: the remaining curved/freeform composition route, native fallback and
-  physically clipped route C use multithreading and request hidden curves only when `hidden = on`. Planar exact
-  and analytic engines retain their algorithms and certificates. Exact retains serial, hidden-on native computation.
-- **Verification:** budgets and contradiction rules are unchanged; detected contradictions go to Unresolved.
-  Info states that false-Hidden checking is skipped for hidden curves not generated. Residual native Hidden
-  fragments, when Rhino returns any despite hidden-off, are still audited.
-- **Disclosure:** when native shortcuts touch sources, Info says `Engine: fast — Make2D-like shortcuts on N
-  curved/freeform sources; their lines are not certified and may differ slightly between runs.` The component
-  adds a **remark**, not a warning. The footer may show `fast` while native work runs. No fast remark for a
-  planar/analytic-only view that never uses native HLD.
-- **Cache and determinism:** engine always keys visibility. Hidden also keys visibility in fast mode; exact
-  still treats hidden as presentation. Fast native output is not promised byte-identical across runs or workers;
-  exact-mode worker equality tests retain their strict gate. Transporting one result remains lossless in either
-  mode. `min visible` and styling remain presentation; they do not change verifier or visibility budgets.
+- `engine = exact | native`, default exact. Settings, view-object `m2d.engine`, and *Engine ▸ Exact · Native (Rhino Make2D)* use normal precedence.
+- Saved `fast` is an accepted native alias with a component remark: `engine = fast is now engine = native`.
+- Exact retains its engines, sections, verifier and Unresolved. Native submits all sources to threaded Rhino HLD,
+  including planar/analytic ones, computing hidden curves only when requested. No own visibility engines or verifier;
+  Unresolved is empty. Info: `native: Rhino HiddenLineDrawing, not certified`; lines may differ between runs.
+- Native sections are HLD clipping-plane cut lines only, with aligned null Hatch slots. No material regions/hatches;
+  merge/hatch settings are ignored with Info. Crop, cut-only and far-clip line selection are output filters.
+- Clipping participation is passed to HLD; Rhino 8.36 can still clip excluded curves. Info discloses this native limitation.
+- Native ignores joints and clear glass with Info. Min-visible post-filters hidden-on results; hidden-off ignores it
+  with Info because the required hidden evidence was not computed. Styling/placement/bake/output contracts remain.
+- Engine always keys visibility; hidden additionally keys native. Exact retains strict geometry/worker equality gates.
+  Both modes retain lossless worker transport. See UX §3.8 for the complete setting behaviour.
 
 ## View box depth pop-up and Auto depth by view type (owner decision, 2026-11-16, beta.4)
 

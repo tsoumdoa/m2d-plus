@@ -676,9 +676,6 @@ public sealed class AnalyticVisibilityTests(RhinoHost host, ITestOutputHelper ou
         output.WriteLine($"column V {Length(view, LineClass.Visible, "0"):F4} H {Length(view, LineClass.Hidden, "0"):F4} U {Length(view, LineClass.Unresolved, "0"):F4}");
         Assert.Equal(0, Length(view, LineClass.Visible, "0"), 3); Assert.Equal(0, Length(view, LineClass.Unresolved, "0"), 3);
         Assert.Equal(2 * Math.PI, Length(view, LineClass.Hidden, "0"), 3);
-        // In fast mode native hidden curves may be off: the column stays in HLD whole, as before.
-        using var fast = Route([column, above], new NativeSettings { AnalyticMixed = true }, SettingsFor(ViewRequest.Parse("Top"), "engine=fast"));
-        Assert.DoesNotContain("exact analytic solids", fast.Report.Route);
     });
 
     // ---------------------------------------------------------------- whole pipeline: uncut, sections, crop, glass
@@ -816,10 +813,8 @@ public sealed class AnalyticVisibilityTests(RhinoHost host, ITestOutputHelper ou
     private sealed class Sink(List<JobProgress> values) : IProgress<JobProgress>
     { public void Report(JobProgress value) { lock (values) values.Add(value); } }
 
-    [RhinoFact] public void FastEngineLeavesExactSolidsExactAndReportsTheirStep() => host.Run(() =>
+    [RhinoFact] public void NativeUsesHldForAnalyticSourcesWhileExactRetainsItsResults() => host.Run(() =>
     {
-        // engine = fast only changes what still goes to native. A column and a plate never go there: the drawing is
-        // the exact one, no source is counted as fast, and the view reports the "exact curved" step.
         using var doc = RhinoDoc.CreateHeadless(null); doc.ModelAbsoluteTolerance = 1e-4;
         using var column = Column(Point3d.Origin, 1, 2); using var under = Plate(-3, 0, -1.2, 3, 3, -1);
         doc.Objects.AddBrep(under); doc.Objects.AddBrep(column);
@@ -832,15 +827,16 @@ public sealed class AnalyticVisibilityTests(RhinoHost host, ITestOutputHelper ou
                 new(), default, new Sink(reports)).GetAwaiter().GetResult();
             return Assert.Single(batch.Views);
         }
-        var fastReports = new List<JobProgress>(); var exactReports = new List<JobProgress>();
-        using var fast = Draw("fast", fastReports); using var exact = Draw("exact", exactReports);
-        Assert.Null(fast.Error); Assert.Null(exact.Error);
-        Assert.Equal(0, fast.NativeCalls); Assert.Equal(0, fast.FastNativeSources); Assert.Contains("exact analytic solids=1", fast.Report.Route);
-        foreach (var kind in new[] { LineClass.Visible, LineClass.Hidden, LineClass.Unresolved })
-            Assert.Equal(Length(exact, kind), Length(fast, kind), 9);
-        Assert.Equal(2 * Math.PI, fast.Items.Where(p => p.Class == LineClass.Visible).Sum(p => { using var g = p.CopyGeometry(); return g is Curve c && !c.IsLinear() ? c.GetLength() : 0; }), 5);
-        Assert.Contains(fastReports, p => p.Step == ViewSteps.ExactCurved); Assert.Contains(exactReports, p => p.Step == ViewSteps.ExactCurved);
-        Assert.DoesNotContain(fastReports, p => p.Step == ViewSteps.Fast);
+        var nativeReports = new List<JobProgress>(); var exactReports = new List<JobProgress>();
+        using var native = Draw("native", nativeReports); using var exact = Draw("exact", exactReports);
+        Assert.Null(native.Error); Assert.Null(exact.Error);
+        Assert.Equal(1, native.NativeCalls);Assert.Equal(2, native.FastNativeSources);Assert.Equal(0,native.KernelEdges);
+        Assert.DoesNotContain("exact analytic solids",native.Report.Route);Assert.Equal(0,native.Report.UncertainCount);
+        Assert.Equal(0,exact.NativeCalls);Assert.Contains("exact analytic solids=1",exact.Report.Route);
+        Assert.Equal(2 * Math.PI, exact.Items.Where(p => p.Class == LineClass.Visible).Sum(p => { using var g = p.CopyGeometry(); return g is Curve c && !c.IsLinear() ? c.GetLength() : 0; }), 5);
+        Assert.DoesNotContain(nativeReports,p=>p.Step==ViewSteps.ExactCurved);Assert.Contains(exactReports,p=>p.Step==ViewSteps.ExactCurved);
+        Assert.Contains(nativeReports,p=>p.Step==ViewSteps.Native);
+
     });
 
     [RhinoFact] public void CutOnlyViewsAreTheSameWithAndWithoutTheClass() => host.Run(() =>

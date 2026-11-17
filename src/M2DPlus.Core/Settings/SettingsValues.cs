@@ -33,7 +33,7 @@ public static partial class Settings
         .Where(p => !BakeTimeKeys.Contains(NormalizeKey(p.Key))).OrderBy(p => p.Key, StringComparer.Ordinal).Select(p => p.Key + "=" + p.Value));
 
     /// <summary>The keys that change what the visibility solve computes, and so key the drawing cache (UX §12.14).
-    /// Hidden is additionally keyed in fast mode by <see cref="EffectiveSettings.VisibilityKey"/>.
+    /// Hidden is additionally keyed in native mode by <see cref="EffectiveSettings.VisibilityKey"/>.
     /// Min-visible and styling remain presentation over the cached solve.</summary>
     public static ImmutableArray<string> VisibilityKeys { get; } = ["depth", "farclip", "crop", "tangents", "seams", "joints", "glass", "tolerance", "engine", "cutonly"];
 
@@ -101,7 +101,7 @@ public static partial class Settings
             case "farclip": return Choice(value, ("none", FarClipMode.None), ("line", FarClipMode.Line), ("noline", FarClipMode.NoLine));
             case "crop": return Choice(value, ("auto", CropMode.Auto), ("off", CropMode.Off));
             case "glass": return Choice(value, ("opaque", GlassMode.Opaque), ("clear", GlassMode.Clear));
-            case "engine": return Choice(value, ("exact", EngineMode.Exact), ("fast", EngineMode.Fast));
+            case "engine": return value == "fast" ? EngineMode.Native : Choice(value, ("exact", EngineMode.Exact), ("native", EngineMode.Native));
             case "bake": return Choice(value, Bake.BakeNames.Layouts.Select(l => (Bake.BakeNames.LayoutText(l), l)).ToArray());
             case "weights": return Choice(value, ("auto", WeightMode.Auto), ("layers", WeightMode.Layers));
             case "hatch": return Choice(value, ("styles", HatchMode.Styles), ("colour", HatchMode.Colour), ("black", HatchMode.Black), ("none", HatchMode.None));

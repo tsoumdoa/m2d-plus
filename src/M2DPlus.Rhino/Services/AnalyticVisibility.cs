@@ -316,11 +316,7 @@ internal sealed class AnalyticVisibility
 
     /// <summary>Would any source of this view leave HLD? Used to choose the composed route for scenes with no planar source.</summary>
     internal static bool Applies(IEnumerable<GeometryBase> geometries, Plane plane, double tolerance, ViewRequest view, NativeSettings settings, CancellationToken token = default) =>
-        Enabled(view, settings) && Plan(geometries.ToArray(), plane, tolerance, Mixed(view, settings), settings.CutTubeBudget, token).Any(p => p.Leaves);
-
-    /// <summary>Fast mode may switch native hidden curves off; the mixed route needs HLD's answer for every stretch of a
-    /// line, so in fast mode a recognised solid that an unrecognised body may hide stays in HLD as before.</summary>
-    private static bool Mixed(ViewRequest view, NativeSettings settings) => settings.AnalyticMixed && view.Settings?.Engine != EngineMode.Fast;
+        Enabled(view, settings) && Plan(geometries.ToArray(), plane, tolerance, settings.AnalyticMixed, settings.CutTubeBudget, token).Any(p => p.Leaves);
 
     // ---------------------------------------------------------------- one view
 
@@ -621,7 +617,7 @@ internal sealed class AnalyticVisibility
     {
         if (!Enabled(view, settings) || curved.Count == 0) return None;
         var before = settings.ObserveExactSolids is null ? null : curved.ToArray();
-        var taken = new AnalyticVisibility(curved, plane, tolerance, Mixed(view, settings), settings.CutTubeBudget, owned, token);
+        var taken = new AnalyticVisibility(curved, plane, tolerance, settings.AnalyticMixed, settings.CutTubeBudget, owned, token);
         if (before is not null && taken.Any) settings.ObserveExactSolids!(before.Except(curved).ToArray());
         return taken;
     }
