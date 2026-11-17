@@ -37,7 +37,7 @@ public sealed class DrawingCache : IDisposable
             await _solve.WaitAsync(token).ConfigureAwait(false);
             try
             {
-                // Exact reuses hidden-on visibility. Fast native hidden generation follows the view setting.
+                // Exact reuses hidden-on visibility. Native hidden generation follows the view setting.
                 var key = scene.Value.VisibilityRevision + "/" + settings + "/" + string.Join("|", views.Select(v => (v with { Cut = v.Cut is { } cut ? cut with { SectionerStyle = null } : null }).Revision + "/" +
                     v.Settings?.VisibilityKey()));
                 LeaseEntry<DrawingBatch>.Lease? lease;
@@ -46,7 +46,7 @@ public sealed class DrawingCache : IDisposable
                 if (lease is null)
                 {
                     // The supplied scene lease stays alive throughout native work.
-                    // Every kernel keeps hidden-on evidence. Fast native reads
+                    // Exact keeps hidden-on evidence. Native reads
                     // RequestedHidden, preserved in the entry's authored value.
                     var solveViews = views.Select(v => v.Settings is { } s ? v with { Settings = s.ForVisibilitySolve() } : v).ToArray();
                     var raw = await DrawingExecution.SolveBorrowedAsync(scene.Value, identity, solveViews, settings, token, progress).ConfigureAwait(false);
@@ -117,6 +117,11 @@ public static class DrawingPresentation
                 if (settings is not null) result._diagnostics.Add(settings.Describe());
                 var range = settings is null ? null : new ViewRange(settings);
                 var minVisible = settings?.MinVisible ?? 0;
+                if (settings?.Engine == EngineMode.Native && !settings.RequestedHidden && minVisible > 0)
+                {
+                    minVisible = 0;
+                    result._diagnostics.Add("native: min visible ignored with hidden = off; HLD did not compute the hidden evidence required to identify partly hidden sources.");
+                }
                 var plane2d = original.Frame.Plane; var toPlane2d = Transform.PlaneToPlane(plane2d, Plane.WorldXY);
                 var rule = new List<(int Piece, MinVisiblePiece Line)>();
                 var droppedUnresolved = 0;
@@ -124,8 +129,7 @@ public static class DrawingPresentation
                 {
                     phase.Next("Beyond/fade splitting");
                     // Keep all available solved-hidden evidence for min visible.
-                    // Exact kernels retain it in both modes; fast native may omit
-                    // unrequested hidden curves, as its Info disclosure states.
+                    // Native may omit unrequested hidden curves.
                     if (item.SolvedClass == LineClass.Hidden && settings?.Hidden == false)
                     {
                         if (item.Class == LineClass.Unresolved) droppedUnresolved++;
@@ -202,7 +206,18 @@ public static class DrawingPresentation
                     result.IgnoredObjects = ignored.Count;
                 }
                 phase.Next("section restyle and output");
-                var freshRegions = original.Regions.Select(r =>
+                if (settings?.Engine == EngineMode.Native)
+                    foreach (var entry in original.Regions)
+                    {
+                        var source = metadata?.GetValueOrDefault(entry.Region.SourceIds[0]) ?? entry.Source;
+                        var style = source.FromSectioner && views[i].Cut?.SectionerStyle is { HasStyle: true } sectioner ?
+                            sectioner with { ObjectColour = source.Style.ObjectColour, ObjectPrintColour = source.Style.ObjectPrintColour } : source.Style;
+                        var loops = entry.Region.Loops.Select(l => new SectionLoop(Move(l.Curve), false, [])).ToArray();
+                        result.Regions.Add(new(entry.Region with { Loops = loops, Hatch = null, Style = style }, (int[])entry.SourcePath.Clone())
+                        { Source = source, SourceItem = entry.SourceItem });
+                    }
+                // Raw native cut lines do not enter the certified region restyler (or acquire Unresolved on a style refusal).
+                var freshRegions = (settings?.Engine == EngineMode.Native ? Enumerable.Empty<DrawingRegion>() : original.Regions).Select(r =>
                 {
                     if (metadata is null) return r.Region;
                     var source = metadata.GetValueOrDefault(r.Region.SourceIds[0]) ?? r.Source;

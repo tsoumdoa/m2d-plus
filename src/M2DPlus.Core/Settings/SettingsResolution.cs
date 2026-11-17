@@ -142,7 +142,13 @@ public static partial class Settings
     private static bool TryValue(string key, string text, DocumentUnits units, List<SettingsDiagnostic> diagnostics,
         int? view, int? branch, int? line, out object? value)
     {
-        try { value = ParseValue(key, text, units); return true; }
+        try
+        {
+            value = ParseValue(key, text, units);
+            if (key == "engine" && text.Trim().Equals("fast", StringComparison.OrdinalIgnoreCase))
+                diagnostics.Add(new(DiagnosticSeverity.Remark, "engine = fast is now engine = native", view, branch, line, key));
+            return true;
+        }
         catch (Exception e) when (e is FormatException or JsonException)
         {
             var hint = key is "depth" or "beyond" or "gap" ? " Use auto or a nonnegative distance (for example 3 m)."

@@ -30,7 +30,7 @@ public static class ViewNotices
         var notices = NoticePolicy.For(Outcome(view)).ToList();
         if (view.Error is null)
         {
-            if (view.FastNativeSources > 0) notices.Add(new(NoticeLevel.Remark, view.Name + ": " + view.EngineSummary));
+            if (view.Settings?.Engine == EngineMode.Native) notices.Add(new(NoticeLevel.Remark, view.Name + ": " + view.EngineSummary));
             if (view.Diagnostics.Contains(CutOnlyEmpty)) notices.Add(new(NoticeLevel.Remark, view.Name + ": " + CutOnlyEmpty));
         }
         return notices;

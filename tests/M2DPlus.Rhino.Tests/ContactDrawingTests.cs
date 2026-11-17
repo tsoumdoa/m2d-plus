@@ -147,7 +147,7 @@ public sealed class ContactDrawingTests(RhinoHost host)
         Assert.Equal(Regions(on.Views[0]),Regions(off.Views[0]));
     });
 
-    [RhinoFact] public void FastStillRunsPlanarJointVisibilityAndMustKeepItsCacheKey() => host.Run(()=>
+    [RhinoFact] public void NativeIgnoresJointsAndReportsIt() => host.Run(()=>
     {
         using var doc=RhinoDoc.CreateHeadless(null);doc.ModelAbsoluteTolerance=1e-6;
         using var a=Box(-2,0,0,0,2,1);using var b=Box(0,0,0,2,2,1);doc.Objects.AddBrep(a);doc.Objects.AddBrep(b);
@@ -158,8 +158,12 @@ public sealed class ContactDrawingTests(RhinoHost host)
         using var drawings=new DrawingCache();var identity=new RequestIdentity(lease.Value.Revision,"fast contact","joints",1);
         using var on=drawings.SolveAsync(BaselineTests.Capture(doc,cache),identity,[View(true)],new(),[],default).GetAwaiter().GetResult();
         using var off=drawings.SolveAsync(BaselineTests.Capture(doc,cache),identity,[View(false)],new(),[],default).GetAwaiter().GetResult();
-        Assert.Single(At(on.Views[0],on.Views[0].Frame.Plane.ClosestPoint(new(0,1,1))));
-        Assert.Empty(At(off.Views[0],off.Views[0].Frame.Plane.ClosestPoint(new(0,1,1))));
+        foreach(var view in new[]{on.Views[0],off.Views[0]})
+        {
+            Assert.Null(view.Error);Assert.Equal(1,view.NativeCalls);Assert.Equal(0,view.KernelEdges);
+            Assert.Contains("native: joints ignored",view.Info);Assert.Equal(0,view.Report.UncertainCount);
+        }
+
     });
 
     [RhinoFact] public void CutOnlyJointsChangesReuseTheVisibilityCache() => host.Run(()=>

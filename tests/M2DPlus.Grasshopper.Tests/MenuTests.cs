@@ -32,11 +32,13 @@ public sealed class MenuTests
     [Fact] public void EngineChoiceDefaultsToExactAndSettingsInputLocksIt()
     {
         var engine=Item(Menu(ComponentUiState.Default),"Engine");
-        Assert.Equal(["Exact","Fast (Make2D-like)"],engine.Children.Select(n=>n.Label));
+        Assert.Equal(["Exact","Native (Rhino Make2D)"],engine.Children.Select(n=>n.Label));
         Assert.True(engine.Children[0].Checked);Assert.False(engine.Children[1].Checked);
         var fast=Item(Menu(ComponentUiState.Default.With("engine","fast")),"Engine");
         Assert.True(fast.Children[1].Checked);
-        Assert.Equal(MenuCommands.SetValue("engine","fast"),fast.Children[1].Command);
+        Assert.Contains("not certified",engine.Tooltip);Assert.Contains("differ between runs",engine.Tooltip);
+        Assert.True(Item(Menu(ComponentUiState.Default.With("engine","native")),"Engine").Children[1].Checked);
+        Assert.Equal(MenuCommands.SetValue("engine","native"),fast.Children[1].Command);
         var locked=Item(Menu(ComponentUiState.Default,DrawingPhase.Done,["engine=fast"]),"Engine");
         Assert.False(locked.Enabled);Assert.Contains("set by input",locked.Label);
         Assert.True(locked.Children[1].Checked);Assert.All(locked.Children,n=>Assert.False(n.Enabled));

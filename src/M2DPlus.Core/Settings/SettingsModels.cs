@@ -12,7 +12,7 @@ public enum DiagnosticSeverity { Remark, Warning, Error }
 public enum FarClipMode { None, Line, NoLine }
 public enum CropMode { Auto, Off }
 public enum GlassMode { Opaque, Clear }
-public enum EngineMode { Exact, Fast }
+public enum EngineMode { Exact, Native }
 public enum WeightMode { Auto, Layers }
 /// <summary>How outputs are split into branches (UX §1.3). Auto is by layer for document mode or an all-referenced
 /// Geometry input, else by object; see <see cref="Output.OutputTree.Effective"/>.</summary>
@@ -115,12 +115,12 @@ public sealed class EffectiveSettings
     public double Tolerance => Get<double>("tolerance");
     /// <summary>The <c>min visible</c> threshold in document units; 0 = off (REQUIREMENTS, "small gaps").</summary>
     public double MinVisible => Get<double>("min_visible");
-    /// <summary>Every kernel retains hidden evidence for reuse/min-visible. Only fast native HLD reads
+    /// <summary>Exact retains hidden evidence for reuse/min-visible. Native HLD reads
     /// <see cref="RequestedHidden"/> instead; that flag survives normalization and worker transport.</summary>
     public EffectiveSettings ForVisibilitySolve() => Hidden ? this
         : new(View, Values.SetItem("hidden", Values["hidden"] with { Value = true }));
     public string VisibilityKey() => string.Join(";", Settings.VisibilityKeys.Where(k => k != "joints" || !CutOnly).Select(k =>
-        k + "=" + Settings.FormatEffective(k, Values[k].Value))) + (Engine == EngineMode.Fast ? ";hidden=" + RequestedHidden : "");
+        k + "=" + Settings.FormatEffective(k, Values[k].Value))) + (Engine == EngineMode.Native ? ";hidden=" + RequestedHidden : "");
     public string Describe() => string.Join(Environment.NewLine, Settings.Keys.Select(k =>
         $"{k} = {Settings.FormatEffective(k, Values[k].Value)} ({Values[k].SourceDescription})"));
 }
