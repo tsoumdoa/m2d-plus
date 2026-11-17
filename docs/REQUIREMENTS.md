@@ -78,7 +78,7 @@ See [UX revision 4](design/ux.md) §2.2 and §6.
    along the look direction (−Z of the frame); its length is the depth, edited by dragging the back face. Default
    depth: to the back of the scene plus a margin (superseded on 2026-11-16 by the depth pop-up and Auto by view type,
    below). **Flip view direction** reverses it. Per-view settings are
-   Attribute User Text `m2d.*` keys (`m2d.view = 1` marks the object); Convert to view boxes writes `default` for missing keys
+   Attribute User Text `m2d.*` keys (`m2d.view = 2` marks new boxes; version 1 retains its legacy anchor); Convert to view boxes writes `default` for missing keys
    and never overwrites a value. The component reacts to object and attribute changes.
 2. **Create view from current viewport** bakes a view box matching the active parallel viewport, named
    `M2D View 01`…, on an `M2D+::Views` layer (now `$M2D Views`, see 2026-11-15 below), and adds it to View.
@@ -146,7 +146,7 @@ Unset points are suppressed with per-source diagnostics without view quarantine.
 - **Placement:** the component lives in **Params ▸ Util** (its own group, `quarternary`), beside Panel+ and HopperFormat.
   There is no M2D+ tab. The component GUID is unchanged, so saved definitions load.
 - **Look (layout B, owner's choice from rendered mockups, 2026-11-16):** no icon in the body; a slim name strip in the
-  centre; the five inputs at GH's even spacing snapped to the 20-unit row grid, so every label shares a row with an
+  centre; the six inputs at GH's even spacing snapped to the 20-unit row grid, so every label shares a row with an
   output; a full-width footer with the status on the left, a fixed-width Bake / Cancel / Run button flush right (equal
   inset) and the progress bar along its top edge; one 4-unit margin throughout. See [UX](design/ux.md) §1.
 - **Severity:** a warning (orange) means the user has to act: a quarantined view, objects not drawn that could hide
@@ -172,7 +172,7 @@ From the owner's first real use of v0.1.0-beta.1 on a ~6,000-object model.
   (by its serial number) and, with normalisation and the scene build, on background threads over owned copies; block
   parts are resolved once per definition; the scene identity is a streamed hash; interactive documents rely on Rhino's
   events instead of re-snapshotting every object. See the capture profile in [UX](design/ux.md) §5.4.
-- **Changing settings never reloads objects.** Settings, Depth, Target, menu and view-object changes re-solve from the
+- **Changing settings never reloads objects.** Settings, Depth, Target, Source, menu and view-object changes re-solve from the
   kept scene (no capture, normalisation or preparation); presentation-only settings make no HLD call. See §5.1, §5.1a.
 - **View boxes and M2D+ bakes are never scene geometry**, in every mode, recognised by their user text markers (which
   move with them) or their layers; explicitly referenced ones are reported in Info. See §3.1.
@@ -256,3 +256,9 @@ From the owner's first real use of v0.1.0-beta.1 on a ~6,000-object model.
   (`<component id>/<drawing>`).
 - **Bake time only:** changing `bake` never re-solves (0 HLD calls) and does not re-run presentation; the component
   republishes the drawing it has and the next Bake uses the new layout. See [UX](design/ux.md) §8.1, §8.2.
+
+## Surface view orientation and Source placement (owner, 2026-11-17)
+
+- Untrimmed rectangular planar surfaces (one face, referenced or supplied as geometry) look against their actual face normal. The source plane is centred on the surface, X follows U and Y follows V. A reversed face keeps V up and reverses U to stay right-handed. Frame axes follow the boundary edge closest to U, with an orthogonal Y aligned with V, accepting slight skew within document angle tolerance. Normal and derivatives use the same face parameter space. Frames that cannot be established fall back to model-facing behavior with a remark. Rhino Flip chooses the viewing side; a section removes the normal side. Existing definitions using these surfaces may change direction and placement.
+- Trimmed rectangular surfaces and closed rectangle curves retain model-facing behaviour, with a grey remark suggesting an untrimmed surface for normal control. Convert to view boxes preserves an untrimmed surface’s centre, U/V frame and viewing side; existing view boxes keep their orientation. New boxes store the origin schema in Attribute User Text (`m2d.view = 2`), preserving placement through Move, Copy and extrusion rebuilds; legacy version 1 boxes retain their lower-left anchors.
+- Sixth optional input **Source (Src)** is a Plane list appended after Depth at index 5. The first five input indices, GUIDs and eleven output indices stay fixed. It acts as Orient A, Target as B: use the Source → Target transform as given without flattening, for every view kind, including a one-Target row. One Source applies to all views or one per view; other counts are an error. Without Target the drawing stays in place, with a grey remark. Empty Source uses the view’s own plane. Source is placement-only and never re-solves visibility; preview, Bake, Frame and Info share placement and Key stays associated with each group.

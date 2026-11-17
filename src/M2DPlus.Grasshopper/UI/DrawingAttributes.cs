@@ -13,7 +13,7 @@ namespace M2DPlus.Grasshopper.UI;
 /// The M2D+ Drawing component's look, layout B (owner choice 2026-11-16, UX §1). One row grid (<see cref="Row"/>) and one
 /// margin (<see cref="Margin"/>) for everything:
 /// <list type="bullet">
-/// <item>Outputs on the rows; the five inputs at GH's even spacing snapped to the grid (rows 1, 3, 5, 7, 9 beside the
+/// <item>Outputs on the rows; the six inputs at GH's even spacing snapped to the grid (rows 0, 2, 4, 6, 8, 10 beside the
 /// eleven outputs), so every input label shares a row with an output. Labels and state tags are GH's own.</item>
 /// <item>A slim name strip in the centre by default. An explicit right-click <i>Display ▸ Name</i> or <i>Icon</i> works
 /// the GH way (the full nickname capsule, or the icon).</item>

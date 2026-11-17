@@ -9,9 +9,11 @@ using Rhino.Geometry;
 namespace M2DPlus.Rhino.Views;
 
 /// <summary>A view frame established from geometry. <see cref="Frame"/>'s plane Z points toward the viewer, so the
-/// view looks along −Z (UX §2). Its origin is the frame's lower-left corner. <see cref="Depth"/> is set for a box.</summary>
+/// view looks along −Z (UX §2). Untrimmed surfaces use centre + U/V; other new frames use the lower-left corner.
+/// <see cref="Depth"/> is set for a box.</summary>
 public sealed record ViewFrameCheck(Rectangle3d? Frame, double? Depth, string? Reason)
 {
+    public bool UsesSurfaceAxes { get; init; }
     public bool IsValid => Frame is not null && Reason is null;
     public static ViewFrameCheck Fail(string reason) => new(null, null, reason);
 }
@@ -26,11 +28,13 @@ public sealed record ViewObjectResult(Guid Id, string Label, bool Ok, bool Chang
 /// <summary>M2D+ view boxes (UX rev. 4 §2.2): editable Rhino objects that define a view. A view box is an
 /// <see cref="Extrusion"/> whose profile is the view frame (its front face, and the cut plane when it passes through
 /// the model) and whose path runs into the model along the look direction; the path length is the depth. Per-view
-/// settings are Attribute User Text keys <c>m2d.&lt;setting&gt;</c>; <c>m2d.view = 1</c> marks the object.
+/// settings are Attribute User Text keys <c>m2d.&lt;setting&gt;</c>; <c>m2d.view</c> records the box schema.
 /// Host-thread only. No document reference is kept.</summary>
 public static class ViewBoxes
 {
-    public const string Marker = "m2d.view", MarkerVersion = "1", Prefix = "m2d.", Inherit = "default";
+    // Version 2 keeps the path-start origin; version 1 retains the legacy lower-left anchor. Attributes survive
+    // Rhino operations that rebuild the extrusion, so geometry user strings must not carry this schema.
+    public const string Marker = "m2d.view", MarkerVersion = "2", Prefix = "m2d.", Inherit = "default";
     /// <summary>The single top-level layer view boxes live on (owner decision 2026-11-15). Older files may still have
     /// an <c>M2D+::Views</c> layer; it is left alone.</summary>
     public const string LayerName = "$M2D Views";
@@ -53,7 +57,7 @@ public static class ViewBoxes
     /// <summary>Checks that geometry can establish a view frame: one planar surface (trimmed is fine) or a closed
     /// planar curve whose outline is a rectangle (4 straight edges at right angles, not degenerate), or an
     /// extrusion read as a view box. The frame's normal is the surface normal or the curve's plane normal;
-    /// <see cref="Face"/> then points it at the model.</summary>
+    /// Untrimmed surfaces keep their U/V axes and actual face normal; other frames are faced at the model.</summary>
     public static ViewFrameCheck Establish(GeometryBase? geometry, double tolerance, double angleTolerance)
     {
         switch (geometry)
@@ -63,6 +67,7 @@ public static class ViewBoxes
                 if (brep.Faces.Count != 1)
                     return ViewFrameCheck.Fail($"it is a polysurface with {brep.Faces.Count} faces. Reference one planar surface.");
                 return FromFace(brep.Faces[0], tolerance, angleTolerance);
+            case BrepFace face: return FromFace(face, tolerance, angleTolerance);
             case Surface surface:
                 using (var single = surface.ToBrep()) return single is null ? ViewFrameCheck.Fail("the surface is invalid.") : FromFace(single.Faces[0], tolerance, angleTolerance);
             case Curve curve:
@@ -79,10 +84,30 @@ public static class ViewBoxes
     {
         if (!face.IsPlanar(tolerance) || !face.TryGetPlane(out _, tolerance)) return ViewFrameCheck.Fail("the surface is not planar.");
         var u = face.Domain(0).Mid; var v = face.Domain(1).Mid;
-        var normal = face.NormalAt(u, v);
-        if (face.OrientationIsReversed) normal.Reverse();
         using var outline = face.OuterLoop.To3dCurve();
-        return outline is null ? ViewFrameCheck.Fail("the surface has no outer boundary.") : FromOutline(outline, normal, tolerance, angleTolerance);
+        if (outline is null) return ViewFrameCheck.Fail("the surface has no outer boundary.");
+        var legacyNormal = face.NormalAt(u, v);
+        if (face.OrientationIsReversed) legacyNormal.Reverse();
+        ViewFrameCheck Legacy() => FromOutline(outline, legacyNormal, tolerance, angleTolerance);
+        if (!face.IsSurface) return Legacy();
+        var corners = Corners(outline, tolerance, angleTolerance, out var reason);
+        if (corners is null) return ViewFrameCheck.Fail(reason!);
+        if (!face.Evaluate(u, v, 1, out _, out var derivatives) || derivatives.Length < 2)
+            return Legacy();
+        // Derivatives and normal share the face proxy's parameter space (including a transposed proxy).
+        var normal = Vector3d.CrossProduct(derivatives[0], derivatives[1]);
+        if (face.OrientationIsReversed) normal.Reverse();
+        var centre = new Point3d(corners.Average(p => p.X), corners.Average(p => p.Y), corners.Average(p => p.Z));
+        try
+        {
+            var plane = DrawingPresentation.RhinoPlane(M2DPlus.Core.Placement.AnchorRules.FromSurface(
+                new(centre.X, centre.Y, centre.Z), new(derivatives[0].X, derivatives[0].Y, derivatives[0].Z),
+                new(derivatives[1].X, derivatives[1].Y, derivatives[1].Z), new(normal.X, normal.Y, normal.Z),
+                corners.Select((p, i) => corners[(i + 1) % corners.Length] - p)
+                    .Select(e => new M2DPlus.Core.Placement.Vector3(e.X, e.Y, e.Z)).ToArray()));
+            return new(Bounds(plane, corners), null, null) { UsesSurfaceAxes = true };
+        }
+        catch (ArgumentException) { return Legacy(); }
     }
 
     private static ViewFrameCheck FromOutline(Curve outline, Vector3d normal, double tolerance, double angleTolerance)
@@ -160,6 +185,12 @@ public static class ViewBoxes
         return new(plane, new Interval(0, uv.Max(p => p.u) - u0), new Interval(0, uv.Max(p => p.v) - v0));
     }
 
+    private static Rectangle3d Bounds(Plane plane, IEnumerable<Point3d> corners)
+    {
+        var uv = corners.Select(p => { plane.ClosestParameter(p, out var u, out var v); return (u, v); }).ToArray();
+        return new(plane, new Interval(uv.Min(p => p.u), uv.Max(p => p.u)), new Interval(uv.Min(p => p.v), uv.Max(p => p.v)));
+    }
+
     /// <summary>Points a new frame at the model: a horizontal frame looks down (a plan); any other frame looks toward
     /// the middle of the scene. <see cref="Flip"/> reverses either choice.</summary>
     public static Rectangle3d Face(Rectangle3d frame, BoundingBox scene, double tolerance)
@@ -171,9 +202,10 @@ public static class ViewBoxes
     }
 
     /// <summary>The same rectangle looking the other way: Z and X reverse, Y stays up, origin stays lower-left.</summary>
-    public static Rectangle3d Flip(Rectangle3d frame)
+    public static Rectangle3d Flip(Rectangle3d frame, bool keepOrigin = false)
     {
         var plane = frame.Plane;
+        if (keepOrigin) return new(new Plane(plane.Origin, -plane.XAxis, plane.YAxis), new Interval(-frame.X.Max, -frame.X.Min), frame.Y);
         var flipped = new Plane(plane.PointAt(frame.X.Max, frame.Y.Min), -plane.XAxis, plane.YAxis);
         return new(flipped, new Interval(0, frame.X.Length), new Interval(0, frame.Y.Length));
     }
@@ -204,7 +236,7 @@ public static class ViewBoxes
     }
 
     /// <summary>Reads a view box: frame from the profile at the path start, depth = path length.</summary>
-    public static ViewFrameCheck ReadBox(Extrusion extrusion, double tolerance, double angleTolerance)
+    public static ViewFrameCheck ReadBox(Extrusion extrusion, double tolerance, double angleTolerance, ObjectAttributes? attributes = null)
     {
         if (!extrusion.IsValid) return ViewFrameCheck.Fail("the view box geometry is invalid.");
         if (extrusion.ProfileCount != 1) return ViewFrameCheck.Fail("the view box has holes. Its profile must be one rectangle.");
@@ -218,7 +250,7 @@ public static class ViewBoxes
         using var profile = extrusion.Profile3d(0, 0);
         var corners = profile is null ? null : Corners(profile, tolerance, angleTolerance, out var reason);
         if (corners is null) return ViewFrameCheck.Fail("the view box's profile is not a rectangle.");
-        return new(Anchor(plane, corners), depth, null);
+        return new(attributes?.GetUserString(Marker) == MarkerVersion ? Bounds(plane, corners) : Anchor(plane, corners), depth, null);
     }
 
     // ---------------------------------------------------------------- user text
@@ -304,7 +336,7 @@ public static class ViewBoxes
         var obj = document.Objects.FindId(id);
         if (obj is null || obj is ClippingPlaneObject || IsViewBox(obj) || obj.Geometry is Extrusion) return null;
         var frame = Establish(obj.Geometry, document.ModelAbsoluteTolerance, document.ModelAngleToleranceRadians);
-        return frame.IsValid ? Face(frame.Frame!.Value, scene, document.ModelAbsoluteTolerance) : null;
+        return frame.IsValid ? frame.UsesSurfaceAxes ? frame.Frame!.Value : Face(frame.Frame!.Value, scene, document.ModelAbsoluteTolerance) : null;
     }
 
     /// <summary>Everything Convert to view boxes does except a new conversion: not found, clipping planes, existing view
@@ -320,7 +352,7 @@ public static class ViewBoxes
         {
             if (obj.Geometry is not Extrusion box)
                 return new(id, label, false, false, $"is no longer a view box: Rhino turned it into a {Describe(obj.Geometry)}. Undo that edit, or reference a planar surface and convert it again.");
-            var check = ReadBox(box, tolerance, angle);
+            var check = ReadBox(box, tolerance, angle, obj.Attributes);
             if (!check.IsValid) return new(id, label, false, false, check.Reason!);
             var attributes = obj.Attributes.Duplicate();
             var added = WriteDefaults(attributes);
@@ -375,9 +407,10 @@ public static class ViewBoxes
                         ? "flip a clipping plane in Rhino (Flip command)." : "not a view box yet. Convert to view boxes first."));
                     continue;
                 }
-                var check = ReadBox(box, document.ModelAbsoluteTolerance, document.ModelAngleToleranceRadians);
+                var check = ReadBox(box, document.ModelAbsoluteTolerance, document.ModelAngleToleranceRadians, obj.Attributes);
                 if (!check.IsValid) { results.Add(new(id, Label(obj), false, false, check.Reason!)); continue; }
-                var flipped = Flip(check.Frame!.Value);
+                var keepOrigin = obj.Attributes.GetUserString(Marker) == MarkerVersion;
+                var flipped = Flip(check.Frame!.Value, keepOrigin);
                 using var extrusion = Build(flipped, check.Depth!.Value);
                 results.Add(document.Objects.Replace(id, extrusion)
                     ? new(id, Label(obj), true, true, $"now looking {Direction(-flipped.Plane.ZAxis)}.")

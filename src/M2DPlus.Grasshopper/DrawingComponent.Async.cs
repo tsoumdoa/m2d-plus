@@ -29,14 +29,14 @@ public sealed partial class DrawingComponent
     /// <summary>SolveInstance calls, scene captures and republished drawings, for the re-run and capture-count tests.</summary>
     private int _solveCount, _captureCount, _restoreCount;
     /// <summary>What a run draws from, without bake-time keys (UX §8.1): inputs, views, Settings text, menu and view-object
-    /// rows, Depth, Target, units and tolerance. The published drawing keeps the key it was drawn with.</summary>
+    /// rows, Depth, Target, Source, units and tolerance. The published drawing keeps the key it was drawn with.</summary>
     private string? _runKey, _drawingRunKey;
     private long _drawingGeneration;
     /// <summary>The successful drawing taken down by the last expiry. If the next run's key and the document are unchanged (only
     /// <c>bake</c> changed), it is published again as it is: no visibility solve and no presentation.</summary>
     private sealed record Parked(DrawingBatch Batch, TreeSources Sources, string RunKey, long Generation);
     private Parked? _parked;
-    /// <summary>The captured scene, kept across runs (owner feedback on beta.1): a Settings, Depth, Target, menu or
+    /// <summary>The captured scene, kept across runs (owner feedback on beta.1): a Settings, Depth, Target, Source, menu or
     /// view-object change re-solves from it, and only a change to what it read (the capture key, or a scene change in the
     /// document) reads the objects again. The component holds one lease; each job gets its own share.</summary>
     private LeaseEntry<PreparedScene>.Lease? _scene;
@@ -63,6 +63,7 @@ public sealed partial class DrawingComponent
     private sealed record TreeSources(GeometryInputKind Kind, IReadOnlyDictionary<string, SourceGroupInfo> Groups, IReadOnlyDictionary<string, uint> Colours);
     private readonly DrawingCache _drawingCache = new();
     private Plane[] _targets = Array.Empty<Plane>();
+    private Plane[] _sources = Array.Empty<Plane>();
     private List<CaptureInput>? _inputs;
     private ViewRequest[] _views = Array.Empty<ViewRequest>();
     private NativeSettings _settings = new();
@@ -153,7 +154,14 @@ public sealed partial class DrawingComponent
         var targets = new List<Plane>(); da.GetDataList(2, targets); _targets = targets.ToArray();
         if (_targets.Length != 0 && _targets.Length != 1 && _targets.Length != _views.Length)
         { _error = "Give 1 target, or one per view"; AddRuntimeMessage(GH_RuntimeMessageLevel.Error, _error); return; }
+        var sources = new List<Plane>();
+        if (Params.Input.Count > ComponentInputs.Source) da.GetDataList(ComponentInputs.Source, sources);
+        _sources = sources.ToArray();
+        if (_sources.Length != 0 && _sources.Length != 1 && _sources.Length != _views.Length)
+        { _error = "Give 1 source, or one per view"; AddRuntimeMessage(GH_RuntimeMessageLevel.Error, _error); return; }
         _settingsWarnings.Clear(); _settings = new();
+        if (_sources.Length > 0 && _targets.Length == 0)
+            _settingsWarnings.Add((GH_RuntimeMessageLevel.Remark, "Source is given without Target; the drawing stays in place."));
         da.GetDataTree(3, out GH_Structure<GH_String> settings);
         var branches = new List<IReadOnlyList<string>>();
         if (settings is not null)
@@ -196,12 +204,13 @@ public sealed partial class DrawingComponent
         Previews(BoundingBox.Empty);
         // The progress weights of the next run come from this one when the inputs, views and settings are the same.
         _historyKey = _captureKey + "|" + string.Join("|", _views.Select(v => v.Revision)) + "|" + string.Join("\n", branches.Select(Settings.RunText)) +
-            "|" + string.Join(",", depth.Select(d => d?.Value)) + "|" + Settings.RunText(Ui.State.Menu) + "|" + string.Join(",", _targets);
+            "|" + string.Join(",", depth.Select(d => d?.Value)) + "|" + Settings.RunText(Ui.State.Menu) + "|" + string.Join(",", _targets) + "|" + string.Join(",", _sources);
         const char Unit = '\u001f';
         _runKey = string.Join(Unit, [_captureKey ?? "", string.Join(Unit, _views.Select(v => v.Revision)),
             string.Join(Unit, branches.Select(Settings.RunText)), string.Join(Unit, depth.Select(d => d?.Value)), Settings.RunText(Ui.State.Menu),
             string.Join(Unit, rows.OrderBy(r => r.Key, StringComparer.Ordinal).Select(r => r.Key + "=" + Settings.RunText(r.Value))),
-            string.Join(Unit, _targets), _settings.ToString(), _context.Units.ToString(), _tolerance.ToString("R", System.Globalization.CultureInfo.InvariantCulture)]);
+            string.Join(Unit, _targets.Select(PlaneRevision)), string.Join(Unit, _sources.Select(PlaneRevision)),
+            _settings.ToString(), _context.Units.ToString(), _tolerance.ToString("R", System.Globalization.CultureInfo.InvariantCulture)]);
         _started = true; _uiSeconds = 0; _jobClock.Restart(); Array.Clear(_stageSeen); _reused = false; _loadingEnd = 0;
         _model = null; _state = default; _status = new("Starting…"); Message = _status.Full;
         _timer ??= CreateTimer(); _timer.Interval = _parked is null ? 250 : 1; _timer.Start();
@@ -210,6 +219,8 @@ public sealed partial class DrawingComponent
     {
         var timer = new System.Windows.Forms.Timer(); timer.Tick += CaptureTick; return timer;
     }
+    // Keep placement edits smaller than Rhino's display precision distinct when deciding whether to restore a parked drawing.
+    private static string PlaneRevision(Plane plane) => new NamedFrame(plane, new(0, 1), new(0, 1)).Revision;
     private void CaptureTick(object? sender, EventArgs args)
     {
         var uiSince = System.Diagnostics.Stopwatch.GetTimestamp();
@@ -396,7 +407,7 @@ public sealed partial class DrawingComponent
         try
         {
             batch = await _drawingCache.SolveAsync(scene, identity, views, settings, _targets, token,
-                new ProgressSink(p => _requests.TryUpdate(identity, () => { lock (_progressSync) _progress = MergeProgress(_progress, p); }))).ConfigureAwait(false);
+                new ProgressSink(p => _requests.TryUpdate(identity, () => { lock (_progressSync) _progress = MergeProgress(_progress, p); })), _sources).ConfigureAwait(false);
         }
         catch (OperationCanceledException) { }
         catch (Exception ex) { error = ex.Message; }

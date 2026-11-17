@@ -37,7 +37,7 @@ public sealed partial class ViewObjectTests
 
     /// <summary>A vertical surface in the plane y = <paramref name="y"/> over x ∈ [x0, x1], z ∈ [z0, z1].</summary>
     private static Guid FrontalSurface(RhinoDoc doc, double y, double x0, double x1, double z0, double z1) =>
-        doc.Objects.AddSurface(new PlaneSurface(new Plane(new Point3d(0, y, 0), Vector3d.ZAxis, Vector3d.XAxis), new Interval(z0, z1), new Interval(x0, x1)));
+        doc.Objects.AddSurface(new PlaneSurface(new Plane(new Point3d(0, y, 0), Vector3d.XAxis, Vector3d.ZAxis), new Interval(x0, x1), new Interval(z0, z1)));
 
     private static (double Depth, Vector3d Look) ReadDepth(RhinoDoc doc, Guid id)
     {
@@ -120,7 +120,7 @@ public sealed partial class ViewObjectTests
         Solid(doc, 0, -60, 0, 10, -50, 6);                    // in front of the frame: not inside
         Solid(doc, 0, 30, 0, 10, 32, 3);                      // a garden wall behind, inside the frame
         var section = FrontalSurface(doc, 5, 0, 10, 0, 7);
-        // Look north (toward the scene's middle) through the building.
+        // Look north (against the surface normal) through the building.
         var result = Assert.Single(ViewBoxes.Validate(doc, [section]));
         Assert.True(result.Ok, result.Message);
         Assert.Contains("auto: section", result.Message);

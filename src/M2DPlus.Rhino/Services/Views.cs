@@ -38,8 +38,9 @@ public sealed record ViewRequest(string Name, Vector3d Direction, string? Error 
             var label = value is Extrusion ? "View box" : value is Curve ? "Rectangle curve" : "Surface";
             if (!check.IsValid) return new(label, default, $"{label}: {check.Reason}");
             if (value is Extrusion) return FromBox(check.Frame!.Value, check.Depth!.Value, label);
-            var faced = Faced(check.Frame!.Value, document, scene, []);
-            return FromPlane(faced.Plane, label, faced) with { Kind = ViewSourceKind.Rectangle };
+            var faced = check.UsesSurfaceAxes ? check.Frame!.Value : Faced(check.Frame!.Value, document, scene, []);
+            return FromPlane(faced.Plane, label, faced) with { Kind = ViewSourceKind.Rectangle,
+                Note = check.UsesSurfaceAxes ? null : SurfaceDirectionRemark };
         }
         if (value is Plane plane) return FromPlane(plane, "Plane") with { Kind = ViewSourceKind.Plane };
         if (value is Rectangle3d rectangle) return rectangle.IsValid ? FromPlane(rectangle.Plane, "Rectangle", rectangle) with { Kind = ViewSourceKind.Rectangle } : new("Rectangle", default, "Invalid view rectangle.");
@@ -74,7 +75,7 @@ public sealed record ViewRequest(string Name, Vector3d Direction, string? Error 
     }
     /// <summary>A referenced Rhino object: an M2D+ view box (resolves exactly like a Box: cut at the front face,
     /// crop to the profile, far limit at the back), or a planar rectangle surface/curve that is not converted yet
-    /// (resolves like a Rectangle, faced at the model, with a remark).</summary>
+    /// (untrimmed surfaces keep centre + U/V/normal; other rectangles face the model, with a remark).</summary>
     private static ViewRequest FromViewObject(RhinoObject obj, RhinoDoc? document, BoundingBox? scene)
     {
         var tolerance = document?.ModelAbsoluteTolerance ?? .001;
@@ -84,7 +85,7 @@ public sealed record ViewRequest(string Name, Vector3d Direction, string? Error 
         {
             if (obj.Geometry is not Extrusion extrusion)
                 return new(name, default, $"View '{name}' is no longer a view box: Rhino turned it into a polysurface. Undo that edit, or reference a planar surface and use Convert to view boxes.") { ObjectId = obj.Id };
-            var box = ViewBoxes.ReadBox(extrusion, tolerance, angle);
+            var box = ViewBoxes.ReadBox(extrusion, tolerance, angle, obj.Attributes);
             return box.IsValid ? FromBox(box.Frame!.Value, box.Depth!.Value, name) with { ObjectId = obj.Id }
                 : new(name, default, $"View box '{name}': {box.Reason}") { ObjectId = obj.Id };
         }
@@ -92,10 +93,12 @@ public sealed record ViewRequest(string Name, Vector3d Direction, string? Error 
             return new(name, default, $"View '{name}' is an extrusion, not an M2D+ view box. Reference a planar surface or a closed rectangle and use Convert to view boxes.") { ObjectId = obj.Id };
         var check = ViewBoxes.Establish(obj.Geometry, tolerance, angle);
         if (!check.IsValid) return new(name, default, $"View '{name}' can't frame a view: {check.Reason}") { ObjectId = obj.Id };
-        var frame = Faced(check.Frame!.Value, document, scene, [obj.Id]);
+        var frame = check.UsesSurfaceAxes ? check.Frame!.Value : Faced(check.Frame!.Value, document, scene, [obj.Id]);
         return FromPlane(frame.Plane, name, frame) with { Kind = ViewSourceKind.Rectangle, ObjectId = obj.Id,
-            Note = $"'{name}' is drawn as a rectangle view. Right-click View > Convert to view boxes to make it an editable view box (depth, look direction, settings)." };
+            Note = (check.UsesSurfaceAxes ? "" : SurfaceDirectionRemark + " ") +
+                $"'{name}' is drawn as a rectangle view. Right-click View > Convert to view boxes to make it an editable view box (depth, look direction, settings)." };
     }
+    private const string SurfaceDirectionRemark = "Use an untrimmed rectangular surface to control the view direction with its normal.";
     private static Rectangle3d Faced(Rectangle3d frame, RhinoDoc? document, BoundingBox? scene, Guid[] excluded) =>
         ViewBoxes.Face(frame, scene ?? (document is null ? BoundingBox.Empty : ViewBoxes.SceneBounds(document, excluded)), document?.ModelAbsoluteTolerance ?? .001);
     private static ViewRequest FromBox(Rectangle3d frame, double depth, string name) =>

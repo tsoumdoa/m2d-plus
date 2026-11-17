@@ -87,7 +87,7 @@ public sealed class ComponentLookTests(RhinoHost host, Xunit.Abstractions.ITestO
         Assert.Equal(11 * Row + footerHeight, body.Height, 3);
         for (var i = 0; i < outputs.Count; i++) Assert.Equal(body.Top + (i + .5f) * Row, outputs[i].Attributes.OutputGrip.Y, 1);
         // Inputs: GH's even spacing snapped to the grid, every label on an output row.
-        Assert.Equal([1, 3, 5, 7, 9], inputs.Select(p => (int)Math.Round((p.Attributes.InputGrip.Y - body.Top - Row / 2) / Row)));
+        Assert.Equal([0, 2, 4, 6, 8, 10], inputs.Select(p => (int)Math.Round((p.Attributes.InputGrip.Y - body.Top - Row / 2) / Row)));
         foreach (var p in inputs) Assert.Contains(outputs, o => Math.Abs(o.Attributes.OutputGrip.Y - p.Attributes.InputGrip.Y) < .51f);
         // One margin: labels end / start two margins from the centre column, which is inset one margin top and bottom.
         Assert.Equal(centreWidth, centre.Width, 3);

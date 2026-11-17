@@ -22,17 +22,18 @@ public sealed partial class DrawingComponent : GH_Component
 
     protected override void RegisterInputParams(GH_InputParamManager p)
     {
-        p.AddGenericParameter("Geometry", "G", "Scene to draw, shared by every view. Leave empty to draw the visible Rhino model. Also accepts layer names such as Walls or Structure::*, and block instances (repeats are drawn once and reused).", GH_ParamAccess.tree);
-        p.AddParameter(new UI.ViewParam(), "View", "V", "What to draw. A referenced planar surface, rectangle or M2D+ view box (right-click Convert to view boxes to make one), a named view, clipping plane name or direction (Top, Front, SW…), a referenced clipping plane, a Plane, a Rectangle (its plane is the view plane and it crops; if it cuts the model you get a section), a Box (cut, crop and depth) or a Vector (look along it). A list gives one drawing per view.", GH_ParamAccess.list);
-        p.AddPlaneParameter("Target", "T", "Optional plane per view. The view's own plane is moved onto it 1:1 (View[i] → Target[i]). One plane for several views lays them out in a row. Leave empty to show each drawing in place.", GH_ParamAccess.list);
-        p.AddTextParameter("Settings", "S", "Optional key = value lines, for example hidden = off or farclip = line. They override view-object user text (m2d.*) and the right-click menu. One branch applies to all views; one branch per view, or [View name] headers, set views separately.", GH_ParamAccess.tree);
-        // Appended in UX rev. 4. Never reorder inputs: saved definitions match them by index.
-        p.AddTextParameter("Depth", "D", "Optional view depth for Plane, Rectangle and clipping-plane views: a number in document units or text such as 8 m. One value for all views, or one per view. Beats depth in Settings. Boxes and view boxes take their depth from their geometry.", GH_ParamAccess.list);
-        p[0].Optional = true;
-        p[1].Optional = false;
-        p[2].Optional = true;
-        p[3].Optional = true;
-        p[4].Optional = true;
+        foreach (var input in UI.Model.ComponentInputs.All)
+        {
+            var access = Enum.Parse<GH_ParamAccess>(input.Access);
+            var index = input.Type switch
+            {
+                "View" => p.AddParameter(new UI.ViewParam(), input.Name, input.NickName, input.Description, access),
+                "Plane" => p.AddPlaneParameter(input.Name, input.NickName, input.Description, access),
+                "Text" => p.AddTextParameter(input.Name, input.NickName, input.Description, access),
+                _ => p.AddGenericParameter(input.Name, input.NickName, input.Description, access)
+            };
+            p[index].Optional = input.Optional;
+        }
     }
 
     protected override void RegisterOutputParams(GH_OutputParamManager p)
