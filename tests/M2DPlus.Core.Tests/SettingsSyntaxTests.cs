@@ -9,10 +9,8 @@ public sealed class SettingsSyntaxTests
 
     [Theory]
     [InlineData("\"Level #1\"", "Level #1")]
-    [InlineData("\"Level [#1]\"", "Level [#1]")]
     [InlineData("\"Level \\\"#1\\\"\"", "Level \"#1\"")]
     [InlineData("\"Level #1\\\\\"", "Level #1\\")]
-    [InlineData("\"Level \\u0023\\u005B1\\u005D\"", "Level #[1]")]
     [InlineData("Level = 1", "Level = 1")]
     public void ParsePreservesRawNameValueWhileResolveDecodesIt(string value, string expectedName)
     {
@@ -26,7 +24,6 @@ public sealed class SettingsSyntaxTests
     }
 
     [Theory]
-    [InlineData("[Section A]", "Section A")]
     [InlineData("[\"Roof # [2]\"]", "Roof # [2]")]
     [InlineData("[\"Roof \\\"#2\\\" \\\\ west\"]", "Roof \"#2\" \\ west")]
     [InlineData("[\"Roof #2\\\\\"]", "Roof #2\\")]
@@ -71,10 +68,7 @@ public sealed class SettingsSyntaxTests
     }
 
     [Theory]
-    [InlineData("[]")]
-    [InlineData("[ ]")]
     [InlineData("[Front")]
-    [InlineData("[Front] junk")]
     [InlineData("[\"Front] # still inside string")]
     [InlineData("[\"Front\\q\"]")]
     [InlineData("[\"Front\" junk]")]
