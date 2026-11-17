@@ -35,7 +35,7 @@ public sealed class DenseNativeAuditTests(RhinoHost host)
         })
         {
             var mesh = CertifiedMesh.Build(body, Tol, 10 * Tol, default); Assert.NotNull(mesh);
-            Assert.True(mesh.Count > 0); double worst = 0, loosest = 0; int proved = 0;
+            Assert.True(mesh.Count > 0); double worst = 0, loosest = 0;
             for (int t = 0; t < mesh.Count; t++)
             {
                 Point3d a = mesh.Vertices[mesh.Triangles[t * 3]], b = mesh.Vertices[mesh.Triangles[t * 3 + 1]], c = mesh.Vertices[mesh.Triangles[t * 3 + 2]];
@@ -43,50 +43,79 @@ public sealed class DenseNativeAuditTests(RhinoHost host)
                 {
                     double d = distance(q); Assert.True(d <= mesh.Bands[t] + 1e-12, $"triangle {t}: {d} over its band {mesh.Bands[t]}"); worst = Math.Max(worst, d);
                 }
-                loosest = Math.Max(loosest, mesh.Bands[t]); if (!double.IsNaN(mesh.Parameters[t * 4])) proved++;
+                loosest = Math.Max(loosest, mesh.Bands[t]);
             }
             // Useful, not only safe: most triangles proved from the control net, and bands of the order asked for.
             // (Rhino's mesher misses its tolerance by a factor of two to three here; the bands say so.)
             Assert.True(mesh.Uncertified < .2 * mesh.Count, $"{mesh.Uncertified} of {mesh.Count} measured");
             var sorted = mesh.Bands.OrderBy(x => x).ToArray();
             Assert.True(sorted[sorted.Length / 2] <= 10 * Tol && loosest <= 30 * Tol, $"median {sorted[sorted.Length / 2]}, loosest {loosest}, measured worst {worst}");
-            Assert.True(proved > .8 * mesh.Count);
         }
     });
 
     [RhinoFact] public void VertexParametersComeFromTheMeshWhereTheyAreTheSurfaces() => host.Run(() =>
     {
         // A NURBS face: Rhino's unpacked texture coordinates are its parameters, so nothing is pulled back by closest
-        // point, and every triangle still has a parameter box and a proved band.
+        // point, and every triangle still has a proved band.
         using var sheet = Freeform(); long before = CertifiedMesh.PulledBack;
         var mesh = CertifiedMesh.Build(sheet, Tol, 10 * Tol, default); Assert.NotNull(mesh);
         Assert.Equal(before, CertifiedMesh.PulledBack); Assert.Equal(0, mesh.Uncertified);
-        Assert.All(Enumerable.Range(0, mesh.Count), t => Assert.False(double.IsNaN(mesh.Parameters[t * 4])));
         // A revolved face is meshed in other parameters than its NURBS form has: there the vertices are pulled back.
         using var sphere = new Sphere(Point3d.Origin, 1).ToBrep(); before = CertifiedMesh.PulledBack;
         Assert.NotNull(CertifiedMesh.Build(sphere, Tol, 10 * Tol, default)); Assert.True(CertifiedMesh.PulledBack > before);
     });
 
-    [RhinoFact] public void OneMeshServesEveryInstanceOfADefinition() => host.Run(() =>
+    [RhinoFact] public void OneMeshServesEveryInstanceOfADefinitionAndLivesInTheSceneCache() => host.Run(() =>
     {
-        using var local = new Sphere(Point3d.Origin, 1).ToBrep(); var leaves = new List<PreparedLeaf>(); var worlds = new List<Brep>();
+        using var local = new Sphere(Point3d.Origin, 1).ToBrep(); using var cache = new SceneCache(); var leaves = new List<PreparedLeaf>(); var worlds = new List<Brep>();
         string key = "dense-audit-test-" + Guid.NewGuid().ToString("N");
         foreach (var move in new[] { Transform.Translation(3, 0, 0), Transform.Translation(-3, 1, 0), Transform.Rotation(1, Vector3d.XAxis, Point3d.Origin) })
         {
             var world = local.DuplicateBrep(); world.Transform(move); worlds.Add(world);
-            leaves.Add(new(leaves.Count.ToString(), [leaves.Count], world) { Canonical = new(key, 1, () => local.DuplicateBrep()), Placement = move });
+            leaves.Add(new(leaves.Count.ToString(), [leaves.Count], world) { KernelClassifiedGeometry = world, Canonical = new(key, 1, () => local.DuplicateBrep()), Placement = move, DefinitionKey = key, MeshCache = cache });
         }
         long before = CertifiedMesh.Builds;
-        var found = leaves.Select(l => CertifiedMesh.For(l.Geometry, l, Tol, 10 * Tol, default)).ToArray();
-        Assert.Equal(before + 1, CertifiedMesh.Builds);
-        Assert.All(found, f => Assert.Same(found[0]!.Value.Mesh, f!.Value.Mesh));
-        // Placed, the first instance's mesh is around (3, 0, 0).
-        var sheet = found[0]!.Value.Mesh.Place(found[0]!.Value.Placement, 1, Plane.WorldXY, 0, 0);
+        var found = leaves.Select(l => CertifiedMesh.For(l.Geometry, l, Tol, 10 * Tol, default, out _)!.Value).ToArray();
+        Assert.Equal(before + 1, CertifiedMesh.Builds); Assert.Equal(2, cache.MeshHits);
+        Assert.All(found, f => { Assert.Same(found[0].Mesh, f.Mesh); Assert.NotNull(f.Lease); });
+        Assert.Equal(found[0].Mesh.Bytes, cache.RetainedMeshBytes);
+        // Placed, the first instance is around (3, 0, 0).
+        var sheet = found[0].Mesh.Place(found[0].Placement, 1, Plane.WorldXY, 0, 0);
         Assert.All(sheet.Vertices, v => Assert.InRange(Math.Sqrt((v.X - 3) * (v.X - 3) + v.Y * v.Y + v.Z * v.Z), 1 - 1e-9, 1 + 1e-9));
-        // A body that is not the leaf's own geometry (a clipped piece) is meshed by itself.
-        using var other = new Sphere(Point3d.Origin, .5).ToBrep();
-        Assert.NotSame(found[0]!.Value.Mesh, CertifiedMesh.For(other, leaves[0], Tol, 10 * Tol, default)!.Value.Mesh);
+        // Clearing the cache retires the entry; the leases still hold the mesh, and the next request builds again.
+        cache.Clear(); Assert.Equal(0, cache.RetainedMeshBytes);
+        Assert.Equal(sheet.Vertices.Length, found[1].Lease!.Value.Vertices.Length);
+        using (var again = CertifiedMesh.For(leaves[0].Geometry, leaves[0], Tol, 10 * Tol, default, out _)!.Value.Lease) Assert.Equal(before + 2, CertifiedMesh.Builds);
+        foreach (var f in found) f.Lease!.Dispose();
         foreach (var w in worlds) w.Dispose();
+    });
+
+    [RhinoFact] public void ABodyThatIsNotTheLeafsOwnPlacedGeometryIsMeshedByItself() => host.Run(() =>
+    {
+        // A clipped piece, and a copy of the leaf made with other geometry (as glass substitution does): both keep the
+        // leaf's definition and placement, neither is that definition.
+        using var local = new Sphere(Point3d.Origin, 1).ToBrep(); using var world = local.DuplicateBrep(); using var cache = new SceneCache();
+        using var other = new Sphere(new Point3d(5, 0, 0), .5).ToBrep(); string key = "dense-audit-test-" + Guid.NewGuid().ToString("N");
+        var leaf = new PreparedLeaf("0", [0], world) { KernelClassifiedGeometry = world, Canonical = new(key, 1, () => local.DuplicateBrep()), Placement = Transform.Identity, DefinitionKey = key, MeshCache = cache };
+        var own = CertifiedMesh.For(world, leaf, Tol, 10 * Tol, default, out _)!.Value; using var lease = own.Lease;
+        var piece = CertifiedMesh.For(other, leaf, Tol, 10 * Tol, default, out _)!.Value;
+        var copied = CertifiedMesh.For(other, leaf with { Geometry = other }, Tol, 10 * Tol, default, out _)!.Value;
+        Assert.NotNull(own.Lease); Assert.Null(piece.Lease); Assert.Null(copied.Lease);
+        Assert.NotSame(own.Mesh, piece.Mesh); Assert.Same(piece.Mesh, copied.Mesh);
+        Assert.All(copied.Mesh.Vertices, v => Assert.InRange(v.DistanceTo(new Point3d(5, 0, 0)), .5 - 1e-9, .5 + 1e-9));
+    });
+
+    [RhinoFact] public void AFailureToMeshIsNotRememberedAsNothingToMesh() => host.Run(() =>
+    {
+        using var local = new Sphere(Point3d.Origin, 1).ToBrep(); using var world = local.DuplicateBrep(); using var cache = new SceneCache();
+        string key = "dense-audit-test-" + Guid.NewGuid().ToString("N"); bool fail = true;
+        var leaf = new PreparedLeaf("0", [0], world) { KernelClassifiedGeometry = world, Canonical = new(key, 1, () => fail ? throw new InvalidOperationException("copy failed") : local.DuplicateBrep()), Placement = Transform.Identity, DefinitionKey = key, MeshCache = cache };
+        Assert.Null(CertifiedMesh.For(world, leaf, Tol, 10 * Tol, default, out bool failed)); Assert.True(failed);
+        fail = false;
+        var found = CertifiedMesh.For(world, leaf, Tol, 10 * Tol, default, out failed); Assert.False(failed); Assert.NotNull(found); found!.Value.Lease!.Dispose();
+        // Cancellation is not swallowed.
+        using var cancelled = new CancellationTokenSource(); cancelled.Cancel(); using var fresh = new SceneCache();
+        Assert.Throws<OperationCanceledException>(() => CertifiedMesh.For(world, leaf with { MeshCache = fresh }, Tol, 10 * Tol, cancelled.Token, out _));
     });
 
     [RhinoTheory]

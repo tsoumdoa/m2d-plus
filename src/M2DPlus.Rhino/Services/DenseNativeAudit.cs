@@ -30,8 +30,11 @@ internal sealed record DenseAuditOptions(double BandTolerances = 10, double Floo
 /// <see cref="DenseAuditOptions.MaxStripTriangles"/> is left unaudited and Info says how much of the drawing that
 /// is. Both depend on the scene alone, never on time or memory at hand.
 /// </summary>
-internal sealed class DenseNativeAudit
+internal sealed class DenseNativeAudit : IDisposable
 {
+    private readonly List<LeaseEntry<CertifiedMesh>.Lease> _leases = [];
+    /// <summary>Releases the cached meshes this audit used.</summary>
+    public void Dispose() { foreach (var lease in _leases) lease.Dispose(); _leases.Clear(); }
     private sealed record Body(CertifiedMesh? Mesh, Transform Placement, double Scale, Mesh? Plain, double X0, double X1, long Triangles);
     private readonly record struct Chord(int Curve, double A, double B, Vertex Pa, Vertex Pb);
 
@@ -41,7 +44,7 @@ internal sealed class DenseNativeAudit
     private readonly Dictionary<Curve, List<(double A, double B)>> _proven = new(ReferenceEqualityComparer.Instance);
     private readonly Stopwatch _clock = new(); private double _setup;
     private readonly long _triangles; private readonly int _uncertified;
-    private int _curves, _spans, _uncut, _strips, _skippedStrips; private double _moved, _looked, _skippedLength; private long _largest;
+    private int _curves, _spans, _uncut, _strips, _skippedStrips, _failed; private double _moved, _looked, _skippedLength; private long _largest;
 
     internal bool Active => _bodies.Count > 0;
 
@@ -61,14 +64,18 @@ internal sealed class DenseNativeAudit
                     var (x0, x1) = Extent(plain.GetBoundingBox(false), Transform.Identity);
                     _bodies.Add(new(null, Transform.Identity, 1, plain, x0, x1, plain.Faces.Count + plain.Faces.QuadCount));
                 }
-                else if (CertifiedMesh.For(input.Geometry, input.Source, _tol, _band, token) is { } found && found.Mesh.Count > 0)
+                else if (CertifiedMesh.For(input.Geometry, input.Source, _tol, _band, token, out bool failed) is not { } found) { if (failed) _failed++; }
+                else
                 {
+                    if (found.Lease is not null) _leases.Add(found.Lease);
+                    if (found.Mesh.Count == 0) continue;
                     var (x0, x1) = Extent(found.Mesh.Box, found.Placement);
                     _bodies.Add(new(found.Mesh, found.Placement, found.Scale, null, x0, x1, found.Mesh.Count)); _uncertified += found.Mesh.Uncertified;
                 }
             }
             _triangles = _bodies.Sum(b => b.Triangles);
         }
+        catch { Dispose(); throw; }
         finally { _clock.Stop(); _setup = _clock.Elapsed.TotalSeconds; }
     }
 
@@ -220,17 +227,18 @@ internal sealed class DenseNativeAudit
         output.Phases.Add("dense native audit", _clock.Elapsed.TotalSeconds); output.Phases.Add("dense native audit meshes", _setup);
         output._diagnostics.Add(!Active
             ? "Dense native audit: no curved body to audit against."
-            : FormattableString.Invariant($"Dense native audit: native Visible proved Hidden by certified meshes and moved to Unresolved: spans={_spans}; world length={_moved:R}; Visible curves looked at={_curves} (length={_looked:R}); bodies={_bodies.Count}; triangles={_triangles}; band={_band:R}; triangles with a measured band={_uncertified}; strips={_strips} (largest {_largest} triangles); strips over the limit and not audited={_skippedStrips} (length={_skippedLength:R}); curves left whole because a stretch could not be cut out={_uncut}. It moves lines to Unresolved only and proves nothing about Hidden lines."));
+            : FormattableString.Invariant($"Dense native audit: native Visible proved Hidden by certified meshes and moved to Unresolved: spans={_spans}; world length={_moved:R}; Visible curves looked at={_curves} (length={_looked:R}); bodies={_bodies.Count}; triangles={_triangles}; band={_band:R}; triangles with a measured band={_uncertified}; bodies that failed to mesh and take no part={_failed}; strips={_strips} (largest {_largest} triangles); strips over the limit and not audited={_skippedStrips} (length={_skippedLength:R}); curves left whole because a stretch could not be cut out={_uncut}. It moves lines to Unresolved only and proves nothing about Hidden lines."));
     }
 
     /// <summary>The native fallback route: audits the drawing's native Visible pieces in place.</summary>
     internal static void Apply(IReadOnlyList<VisibilityInput> inputs, ViewDrawing output, NativeSettings settings, CancellationToken token)
     {
         if (!settings.DenseAudit || settings.NativeOnly) return;
-        var audit = new DenseNativeAudit(inputs, output, settings.DenseAuditOptions, token);
+        using var audit = new DenseNativeAudit(inputs, output, settings.DenseAuditOptions, token);
         if (audit.Active)
         {
             var candidates = output.Pieces.Where(p => !p.KernelOwned && p.DepthGeometry is Curve && p.Class == LineClass.Visible).ToArray();
+            var sources = new Dictionary<string, PreparedLeaf>(StringComparer.Ordinal); foreach (var input in inputs) sources.TryAdd(input.Source.Identity, input.Source);
             audit.Prepare(candidates.Select(p => (Curve)p.DepthGeometry!).ToArray(), token);
             foreach (var piece in candidates)
             {
@@ -239,7 +247,8 @@ internal sealed class DenseNativeAudit
                 if (spans.Count == 1 && spans[0].Class == piece.Class) continue;
                 using var geometry = piece.CopyGeometry();
                 if (geometry is not Curve projected) continue;
-                var source = inputs.First(i => i.Source.Identity == piece.SourceIdentity).Source; List<(DrawingPiece Piece, Curve Deep)>? parts = [];
+                if (!sources.TryGetValue(piece.SourceIdentity, out var source)) continue;
+                List<(DrawingPiece Piece, Curve Deep)>? parts = [];
                 foreach (var (a, b, kind) in spans)
                 {
                     var flat = projected.Trim(a, b); var deep = world.Trim(a, b);

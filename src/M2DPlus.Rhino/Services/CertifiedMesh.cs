@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using M2DPlus.Core;
 using M2DPlus.Core.Visibility;
 using Rhino;
 using Rhino.Geometry;
@@ -19,19 +20,17 @@ namespace M2DPlus.Rhino.Services;
 /// them. Flat faces take the largest band of the curved triangles they share a corner with: a flat face's mesh is
 /// exact except where its rim is curved, and there it is as far out as its neighbour's chord.
 ///
-/// One mesh is made per definition and kept; instances place it with <see cref="Place"/>.
+/// One mesh is made per definition and kept in the scene cache; instances place it with <see cref="Place"/>.
 /// </summary>
-internal sealed class CertifiedMesh
+internal sealed class CertifiedMesh : IDisposable
 {
+    /// <summary>Owned managed data only; disposal is what a cache lease needs, nothing is released.</summary>
+    public void Dispose() { }
+    // Vertices, three indices and a band per triangle. The certificates the bands came from are not kept.
+    internal long Bytes => 24L * Vertices.Length + 20L * Bands.Length + 256;
     internal Point3d[] Vertices { get; private init; } = [];
     internal int[] Triangles { get; private init; } = [];
     internal double[] Bands { get; private init; } = [];
-    /// <summary>Face index per triangle.</summary>
-    internal int[] Faces { get; private init; } = [];
-    /// <summary>Per triangle: its parameter box (u0, u1, v0, v1) in the parameters of its face's certificate, NaN where it has none.</summary>
-    internal double[] Parameters { get; private init; } = [];
-    /// <summary>Per face: its control-net certificate in the body's own coordinates, or null.</summary>
-    internal SurfaceCertificate?[] Certificates { get; private init; } = [];
     internal int Uncertified { get; private init; }
     /// <summary>The vertices' box, and the largest band.</summary>
     internal BoundingBox Box { get; private init; }
@@ -45,48 +44,53 @@ internal sealed class CertifiedMesh
     internal const double CellBands = 12.5;
 
     private static readonly ConditionalWeakTable<GeometryBase, Dictionary<(double, double), CertifiedMesh?>> ByObject = new();
-    private static readonly Dictionary<string, (CertifiedMesh? Mesh, long Used)> ByDefinition = new(StringComparer.Ordinal);
-    private static long _clock, _builds, _pulled;
-    /// <summary>Harness only: seconds spent meshing, on certificates, on vertices, on triangle bands and on measuring.</summary>
-    internal static readonly double[] BuildSeconds = new double[5];
+    private static long _builds, _pulled;
     /// <summary>Vertices whose parameters had to be found by closest point since the process started.</summary>
     internal static long PulledBack => Interlocked.Read(ref _pulled);
-    private const int Capacity = 4096;
+    /// <summary>Harness only: seconds spent meshing, on certificates, on vertices, on triangle bands and on measuring.</summary>
+    internal static readonly double[] BuildSeconds = new double[5];
     /// <summary>Meshes built since the process started (cache misses).</summary>
     internal static long Builds => Interlocked.Read(ref _builds);
 
+    /// <summary>A mesh in use: where it is in the world, and the cache lease that keeps it (none for a body meshed by itself).</summary>
+    internal readonly record struct Placed(CertifiedMesh Mesh, Transform Placement, double Scale, LeaseEntry<CertifiedMesh>.Lease? Lease);
+
     /// <summary>
-    /// The certified mesh of a source's body and its placement in the world, or null when there is none (not a
-    /// Brep-like body, or meshing failed). <paramref name="geometry"/> is the owned world geometry; when it is the
-    /// leaf's own and the leaf has a definition, the definition's mesh is shared between its instances.
+    /// The certified mesh of a source body and its placement in the world, or null when there is none (not a
+    /// Brep-like body, or meshing failed). <paramref name="geometry"/> is the owned world geometry. When it is the
+    /// leaf geometry itself and the leaf has a definition, the mesh of the definition is taken from the scene cache
+    /// under the definition key and shared between its instances, views and solves; the caller disposes the lease.
+    /// Any other body (a clipped piece, a glass substitute, a sheared instance) is meshed by itself and kept with
+    /// that object.
     /// </summary>
-    internal static (CertifiedMesh Mesh, Transform Placement, double Scale)? For(GeometryBase geometry, PreparedLeaf source, double tolerance, double band, CancellationToken token)
+    /// <param name="failed">True when meshing threw: nothing is remembered, so a later solve tries again.</param>
+    internal static Placed? For(GeometryBase geometry, PreparedLeaf source, double tolerance, double band, CancellationToken token, out bool failed)
     {
+        failed = false;
         if (geometry is not (Brep or Extrusion or Surface)) return null;
-        if (ReferenceEquals(geometry, source.Geometry) && source.Canonical is { } canonical && source.Placement is { } placement)
+        try { return Find(geometry, source, tolerance, band, token); }
+        // A failure to mesh one body costs the audit that body's proofs, never the view. Running out of memory and
+        // cancellation are not failures of the body.
+        catch (Exception ex) when (ex is not (OperationCanceledException or OutOfMemoryException)) { failed = true; return null; }
+    }
+
+    private static Placed? Find(GeometryBase geometry, PreparedLeaf source, double tolerance, double band, CancellationToken token)
+    {
+        // The definition stands for this body only if the body is the leaf's own placed geometry. A copy of the leaf
+        // with other geometry (a glass substitute made with `with`) keeps Canonical and Placement but not this.
+        if (ReferenceEquals(geometry, source.Geometry) && ReferenceEquals(geometry, source.KernelClassifiedGeometry) && source.Canonical is { } canonical && source.Placement is { } placement)
         {
             double local = band / canonical.Scale, localTolerance = tolerance / canonical.Scale;
-            string key = FormattableString.Invariant($"{canonical.Key.Split("|scale=")[0]}@{localTolerance:R}@{local:R}");
-            CertifiedMesh? mesh; bool held;
-            lock (ByDefinition) { held = ByDefinition.TryGetValue(key, out var entry); mesh = entry.Mesh; if (held) ByDefinition[key] = (mesh, ++_clock); }
-            if (!held)
-            {
-                using var definition = canonical.CopyLocal();
-                mesh = Build(definition, localTolerance, local, token);
-                lock (ByDefinition)
-                {
-                    if (ByDefinition.Count >= Capacity && !ByDefinition.ContainsKey(key))
-                        foreach (var old in ByDefinition.OrderBy(k => k.Value.Used).Take(Capacity / 4).Select(k => k.Key).ToArray()) ByDefinition.Remove(old);
-                    ByDefinition[key] = (mesh, ++_clock);
-                }
-            }
-            return mesh is null ? null : (mesh, placement, canonical.Scale);
+            string key = FormattableString.Invariant($"{source.DefinitionKey ?? canonical.Key.Split("|scale=")[0]}/certified-mesh-v1/{localTolerance:R}/{local:R}");
+            var lease = (source.MeshCache ?? SceneCache.Shared).Mesh(key, () => { using var definition = canonical.CopyLocal(); return Build(definition, localTolerance, local, token); });
+            return lease is null ? null : new(lease.Value, placement, canonical.Scale, lease);
         }
         var table = ByObject.GetOrCreateValue(geometry);
         lock (table)
         {
+            // Build throws on failure, before anything is stored.
             if (!table.TryGetValue((tolerance, band), out var mesh)) table[(tolerance, band)] = mesh = Build(geometry, tolerance, band, token);
-            return mesh is null ? null : (mesh, Transform.Identity, 1);
+            return mesh is null ? null : new(mesh, Transform.Identity, 1, null);
         }
     }
 
@@ -104,6 +108,7 @@ internal sealed class CertifiedMesh
         return new() { Id = id, Vertices = vertices, Triangles = Triangles, Bands = bands };
     }
 
+    /// <summary>Null means the body has nothing to mesh (no faces, or Rhino returned no mesh for it). A failure throws.</summary>
     internal static CertifiedMesh? Build(GeometryBase geometry, double tolerance, double band, CancellationToken token)
     {
         Brep? temporary = null;
@@ -125,15 +130,15 @@ internal sealed class CertifiedMesh
             try
             {
                 if (meshes.Length != brep.Faces.Count) return null;
-                var lookup = new Dictionary<Point3d, int>(); var vertices = new List<Point3d>(); var triangles = new List<int>(); var faces = new List<int>();
-                var bands = new List<double>(); var boxes = new List<double>(); var flat = new List<bool>(); var certificates = new SurfaceCertificate?[brep.Faces.Count]; int uncertified = 0;
+                var lookup = new Dictionary<Point3d, int>(); var vertices = new List<Point3d>(); var triangles = new List<int>();
+                var bands = new List<double>(); var flat = new List<bool>(); int uncertified = 0;
                 for (int f = 0; f < meshes.Length; f++)
                 {
                     token.ThrowIfCancellationRequested();
                     var mesh = meshes[f]; var face = brep.Faces[f]; mesh.Faces.ConvertQuadsToTriangles();
                     bool planar = face.IsPlanar(tolerance);
                     // Parameters are the face's own, or those of its NURBS form where the two differ (a revolved surface).
-                    Surface? form = null; var certificate = planar ? null : certificates[f] = Certificate(face, tolerance, band * CellBands, out form);
+                    Surface? form = null; var certificate = planar ? null : Certificate(face, tolerance, band * CellBands, out form);
                     using var keep = form; Surface pull = form ?? face; Lap(1);
                     int count = mesh.Vertices.Count; bool textured = mesh.TextureCoordinates.Count == count; Interval domainU = face.Domain(0), domainV = face.Domain(1); var map = new int[count]; var uv = new Point2d[count]; var off = new double[count]; var pole = new byte[count];
                     for (int v = 0; v < count; v++)
@@ -165,7 +170,7 @@ internal sealed class CertifiedMesh
                     {
                         var mf = mesh.Faces[t]; int a = map[mf.A], b = map[mf.B], c = map[mf.C];
                         if (a == b || b == c || a == c) continue;
-                        triangles.Add(a); triangles.Add(b); triangles.Add(c); faces.Add(f); flat.Add(planar);
+                        triangles.Add(a); triangles.Add(b); triangles.Add(c); flat.Add(planar);
                         Point2d qa = default, qb = default, qc = default;
                         double bound = planar ? 0 : double.NaN, u0 = double.NaN, u1 = double.NaN, v0 = double.NaN, v1 = double.NaN;
                         if (!planar)
@@ -193,7 +198,7 @@ internal sealed class CertifiedMesh
                                 pending.Add(bands.Count); uncertified++; measuring += watch.Elapsed.TotalSeconds - m0;
                             }
                         }
-                        bands.Add(bound); boxes.Add(u0); boxes.Add(u1); boxes.Add(v0); boxes.Add(v1);
+                        bands.Add(bound);
                     }
                     foreach (int t in pending) bands[t] = Math.Max(band, 1.25 * measured);
                     lock (BuildSeconds) { BuildSeconds[3] += watch.Elapsed.TotalSeconds - measuring; BuildSeconds[4] += measuring; } watch.Restart();
@@ -204,13 +209,11 @@ internal sealed class CertifiedMesh
                 for (int t = 0; t < bands.Count; t++) if (flat[t]) bands[t] = Math.Max(reach[triangles[t * 3]], Math.Max(reach[triangles[t * 3 + 1]], reach[triangles[t * 3 + 2]]));
                 return new()
                 {
-                    Vertices = vertices.ToArray(), Triangles = triangles.ToArray(), Bands = bands.ToArray(), Faces = faces.ToArray(), Parameters = boxes.ToArray(),
-                    Certificates = certificates, Uncertified = uncertified, Band = band, Box = new BoundingBox(vertices), Widest = bands.Count == 0 ? 0 : bands.Max()
+                    Vertices = vertices.ToArray(), Triangles = triangles.ToArray(), Bands = bands.ToArray(), Uncertified = uncertified, Band = band, Box = new BoundingBox(vertices), Widest = bands.Count == 0 ? 0 : bands.Max()
                 };
             }
             finally { foreach (var mesh in meshes) mesh.Dispose(); }
         }
-        catch (Exception ex) when (ex is not OperationCanceledException) { return null; }
         finally { temporary?.Dispose(); }
     }
 

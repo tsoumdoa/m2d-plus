@@ -197,7 +197,7 @@ internal static class ComposedVisibility
                 else output._diagnostics.Add("Native ray verifier disabled by sample budget; native confidence unverified.");
                 if (settings.DenseAudit)
                 {   // Like the ray audit, this sees the curved bodies HLD saw; the exact planar union comes after.
-                    var audit = new DenseNativeAudit(curved, output, settings.DenseAuditOptions, token);
+                    using var audit = new DenseNativeAudit(curved, output, settings.DenseAuditOptions, token);
                     if (audit.Active)
                     {
                         audit.Prepare(records.Where(r => r.Class == LineClass.Visible && !r.Duplicate).Select(r => r.World).ToArray(), token);

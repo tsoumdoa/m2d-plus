@@ -196,7 +196,8 @@ Fully planar scenes never instantiate the verifier and preserve their output.
 
 **Dense audit (internal switch, off by default).** `NativeSettings.DenseAudit` (or `M2D_DENSE_AUDIT=1` for a
 process and its workers) adds a second audit after the sampled one, in exact mode only. Each curved body HLD saw
-becomes a welded mesh made once per definition (`CertifiedMesh`), every triangle with a band: a bound on its
+becomes a welded mesh made once per definition and kept in the scene cache under the definition's key, with its own
+byte budget and leases (`CertifiedMesh`), every triangle with a band: a bound on its
 distance from the surface taken from the surface's control net (`SurfaceCertificate`), or, where there is none, a
 measured one. A stretch of a native Visible curve is moved to Unresolved when a group of triangles of one body,
 connected in depth, lies wholly more than a tolerance in front of it, has no open boundary near it and is crossed
