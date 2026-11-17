@@ -4,7 +4,7 @@ Research date: 2026-11-15/16. Base: `main` at `28d232d`. Nothing committed, push
 code changed; everything is in the harness (`tools/perf-f/CurvedCore.cs`, `CurvedEngine.cs`, `CurvedCensus.cs`,
 `ce_report.py`, `ce_picture.py`, and a `ce:` / `ce-census` switch in `Program.cs`). `CurvedCore.cs` has no Rhino types.
 
-**Update 2026-11-16:** stage 1 is now built as product code and verified; see [section 7](#7-stage-1-in-production-2026-11-16).
+**Update 2026-11-16:** stage 1 is now built as product code and verified; see [section 7](#7-stage-1-in-production-2026-11-16). **Update 2026-11-17:** stage 2 (cut tubes, the owner's pipe node, the mixed route) is in [section 9](#9-stage-2-cut-tubes-and-the-mixed-route-2026-11-17). It was then reviewed and changed: [section 10](#10-stage-2-after-review-2026-11-17) supersedes section 9's owner-model numbers.
 Sections 1–6 are the research as it stood before that.
 
 **Answer.** Yes for analytic shapes, now. Not yet for freeform.
@@ -701,6 +701,325 @@ is changing, and it needs its own gate pass. It is sound in the same sense as th
   gate's reference must treat these loci as mixed. Tests: the node and elbow cases above with a freeform body added.
 - **For the owner's model** it would free one pipe of five. The other four need recognition of coped tubes (a tube
   minus other cylinders) or of near-cylinders at a looser, certified tolerance; both are separate questions.
+
+## 9. Stage 2: cut tubes and the mixed route (2026-11-17)
+
+Branch `feat/analytic-stage2`, on top of the stage 1 candidate `d8ca210` (which is untouched). Local commits only.
+
+### Answer
+
+- **The owner's node is exact in Top and SW.** All five pipes leave HLD (four as cut tubes, one as a plain tube); no
+  native call. Unresolved falls from 6.50 m to 12 mm (Top) and from 9.32 m to 6 mm (SW). The independent ray check
+  finds no wrong Visible; in SW three samples are drawn Hidden where the check says Visible (bore-outline tips; see
+  below).
+- **The node box is not there yet, and the remainder is outside this class.** Three of the five pipes reach the class
+  and are exact. The section route rejects the other two before the class sees them (`6aaf0a84`: provenance interval
+  extraction failed; `7072d67a`: self-intersecting); 17.8 m stays Unresolved for that reason. That is the native /
+  section side, being changed on another branch.
+- **The mixed route is built and sound on our side, and is off by default.** Measured on the curved models it changes
+  which lines native HLD gets wrong among the bodies that stay, and the composed route it switches those scenes to
+  keeps several times the Unresolved length. It gives the owner's model nothing (no body there is unrecognised). It
+  is one internal switch (`NativeSettings.AnalyticMixed`).
+
+### Recognition of cut tubes
+
+`CutTubeRecognition` (Rhino side) and `AnalyticCsg` (Core, no Rhino types).
+
+1. **Faces to surfaces.** Each face is a plane or a circular cylinder: Rhino's own test at the model tolerance, else
+   a fit for a NURBS face ruled between two circles. Faces on one surface share it; a loosely fitted face joins an
+   existing cylinder it agrees with to a quarter of the limit.
+2. **A stated bound per face, not a sample.** The face is refined by knot insertion and its distance from its
+   surface is bounded through the convex hulls of its control points, so the bound holds at every point. The body is
+   refused if any bound exceeds min(256 tolerances, a sixteenth of the wall or radius). The owner's four cut pipes
+   have face bounds of 0.00011, 0.00011, 0.00012 and 0.0876 mm (the last is the pipe whose bore is one NURBS face).
+3. **The tube.** The axis with the most cylindrical area is the tube: its outer cylinder is "inside", its bore
+   "outside". Every other surface is a cutter and gets one bit. Two virtual end planes close the tube.
+4. **Cells.** Inside the wall the cutters make cells; the body is a union of cells. Each cell is labelled solid or
+   void by Rhino's point-in-solid test at points clear of every surface by a margin that includes the face bound
+   and the stored edge and vertex tolerances. Four times the looseness is strong evidence, twice is weak. Two strong
+   answers that disagree in one cell refuse the body (a stub, a notch, a hole through one wall). A strong answer
+   overrules a weak one. Weak answers that disagree, and cells never reached, leave the cell **unknown**.
+5. **Derived planes.** Mitre planes for pairs of equal cutters whose axes meet, a plane across the tube at each
+   cutter, and six sector planes through the tube's axis split cells that would otherwise hold material and void.
+6. **Checks.** Both sides of every face and the volume (1 %) are compared with the cell model afterwards.
+7. **Edges.** An edge between two different surfaces is a line of the drawing unless it is smooth. It is cut into
+   runs: where it snaps onto the exact intersection of its two surfaces within the limit it is *exact* (classified
+   as that curve, no slack); a run where the surfaces are near-tangent keeps its measured distance as slack.
+
+The certified test. `AnalyticCsg.Evaluate` answers for every ray within a sideways radius and a depth range at once:
+surely in the solid, possibly, or surely not. Each surface's sure stretch is shrunk and its possible stretch grown by
+its slack plus the sideways radius plus a numeric term (the surfaces are Lipschitz-1 in distance). Unknown cells are
+tried both ways. A line on one of the solid's own surfaces is handled structurally (which side of a plane the ray
+leaves on; the two roots of its own cylinder), not by a tolerance. `Certify` bisects a candidate until every piece
+has one certificate or is shorter than the step, which is then Unresolved or decided at its middle with slack.
+
+### Is a body-level bound from stored edge tolerances acceptable? No; and it is not needed.
+
+Stored edge tolerances say how far an edge curve may be from its faces. They say nothing certain about how far a
+face is from a cylinder, and Rhino does not guarantee them as bounds. So:
+
+- The **face bound** is computed from the face's own control net (item 2). It is a bound, and Info states it.
+- The **edge bound** is measured: the largest distance from the stored edge to the exact intersection curve it
+  stands for (0.030 to 0.042 mm on the owner's pipes, against stored edge tolerances of 0.03 to 0.04 mm and a
+  document tolerance of 0.001 mm). The line drawn is the stored edge; the line classified is the exact curve. The
+  drawing is therefore the exact drawing with its lines displaced by at most the edge bound, and Info says so:
+  `Cut tubes drawn exactly to a stated bound (faces to their plane or cylinder; drawn edges to the surfaces they
+  join): <id> faces 0.0876, edges 0.0423; ...`. The edge bound is measured at 64 parts of each edge, so it is a
+  measurement and not a certificate; the face bound is a certificate.
+- Stored edge and vertex tolerances are used in one place only: to widen the margin at which a point-in-solid
+  answer counts as evidence. A wrong tolerance there can only leave more cells unknown.
+
+Everything fails closed: a face that is neither, a bound over the limit, contradicting strong evidence, a failed
+check, more than 30 surfaces, each refuses the body with a reason in Info, and the body stays on native HLD.
+
+### The owner's model
+
+Millimetres, tolerance 0.001, about 65 m from the origin. Lengths in mm. "Before" is this build with the class off
+(native HLD), which is also what stage 1 does on this model.
+
+| View | | Visible | Hidden | Unresolved | Native calls | Wall |
+|---|---|---:|---:|---:|---:|---:|
+| Top | before | 21 370 | 41 019 | 6 497 | 1 | 2.37 s |
+| Top | stage 2 | 27 533 | 41 627 | 12 | 0 | 2.30 s |
+| SW | before | 13 405 | 36 110 | 9 317 | 1 | 2.73 s |
+| SW | stage 2 | 22 654 | 36 368 | 6 | 0 | 0.43 s |
+| Node box | before | 1 398 | 9 127 | 19 322 | 1 | 1.87 s |
+| Node box | stage 2 | 2 813 | 9 232 | 17 802 | 0 | 1.90 s |
+
+The first solve of a scene also recognises the bodies: 6 to 8 s for the four cut pipes, once (results are kept by
+geometry content). Top stays at 2 s because of one long certified stretch per pipe seen nearly along a cutter.
+
+Ray check (independent: Rhino ray casts and point-in-solid, nothing of the engine): Top 1 233 samples checked,
+0 flagged. SW 1 219 checked, 3 flagged, all three drawn Hidden where the check says Visible, at the tips of bore
+outlines where the ray leaves the wall through a cut within a fraction of a millimetre; none drawn Visible that is
+hidden. Node box 900 checked, 0 flagged.
+
+What is still Unresolved in Top and SW (12 and 6 mm) is tie windows at tangent contacts and one thin unknown cell.
+
+### The mixed route
+
+As sketched in section 8: a recognised solid S that an unrecognised body may hide leaves HLD anyway; its lines go
+to the view's HLD call as curves, which hide nothing; the answers are united per stretch (Hidden if any side says
+so; not drawn where HLD reports a duplicate under another native line; Visible only where all sides say Visible;
+no answer is Unresolved). HLD's pieces are placed on the candidate by closest point at both ends and the middle.
+One line outside the class (`ComposedVisibility`, reporting dropped duplicates back).
+
+On the synthetic scenes it does what it should: a column behind a freeform body and a tube inside a torus ring
+(Top, Front, SW, NE) give the native drawing where native decides and nothing Unresolved where native leaves up to
+2.4 m; a pipe butted against a torus elbow in plan agrees with native and with the witness.
+
+On the curved models it does not earn its place:
+
+| Model, view | Mixed | Visible m | Unresolved m | Wall | Flagged / checked |
+|---|---|---:|---:|---:|---:|
+| curved S, SW | off | 1 501.1 | 33.8 | 27.4 s | 25 / 903 |
+| curved S, SW | on (124 solids leave) | 1 377.7 | 156.8 | 22.5 s | 97 / 1 124 |
+| curved S, North | off | 866.5 | 37.9 | 22.2 s | 52 / 994 |
+| curved S, North | on | 810.3 | 109.6 | 18.7 s | 74 / 1 010 |
+| diagrid shell, SW | off | 72.1 | 8.7 | 3.5 s | 38 / 608 |
+| diagrid shell, SW | on (16 leave) | 73.7 | 7.2 | 2.9 s | 66 / 655 |
+
+Flagged samples with the route off are native's own (the drawing is the native one). Almost all flagged samples
+with it on are on lines of the bodies that stay in HLD, not on lines of the exact solids.
+
+- The scene moves from the pure native route to the composed route, where a native Duplicate is kept Unresolved
+  unless a front witness is proved. With hundreds of tubes touching freeform bodies that is most of the extra
+  Unresolved length.
+- Native HLD gives different answers for the lines of the bodies that stay, although only bodies that are not
+  theirs were replaced by curves. On curved S, SW, 65 of 111 checked samples that turned from Hidden to Visible are
+  wrong by the ray check, and for each one looked at the composed solve's own record shows HLD returned that line as
+  Visible, not Duplicate. This is the instability of section 3 again; the class cannot repair it and should not move
+  it around.
+
+So the route is off by default (`NativeSettings.AnalyticMixed`), with its tests. It becomes worth switching on when
+the bodies that stay are few and not in contact with the exact ones, or when the lines of the bodies that stay are
+themselves audited more densely than the present ray budget allows (4 096 ray tests per view, used up on curved S).
+
+### Cost on models without cut tubes
+
+Cut-tube recognition is tried on every body the plain shapes refuse that has a cylindrical face. Results are kept
+by content. No body in the building, glass, tower, space-frame or curved models turns out to be a cut
+tube, and with the mixed route off every one of those drawings has the same hash as the stage 1 candidate's (38
+views compared). First-solve times are level with stage 1 within machine noise (perf L SW 21.3 s against 26.6 s;
+perf M SW 6.8 s against 7.3 s; space-frame SW 3.3 s against 2.9 s; curved M SW 354 s against 398 s, all native).
+
+### Verification
+
+Code at `ddd1109`; mixed route off (the default) unless stated. One owned Rhino process at a time; the machine was
+shared (10 to 30 % busy with other work during timings).
+
+- Forced hook passes. Debug and Release build with 0 warnings.
+- `tools/Test-WalkingSkeleton.ps1`, both runs: Core 453, Grasshopper 74, Rhino 324 passed (1 skipped), 0 failed.
+  The analytic Rhino tests are 26, among them ten cut bodies drawn and checked by the witness, the refusals, and
+  the three mixed-route scenes.
+- Planar scenes: 13 drawings byte-identical to `origin/main` (beta.4).
+- Light gate without `--publication`: 219 of 219 cases completed, passed, 0 wrong Visible, 0 known bugs; its report
+  is identical to the stage 1 run's.
+- Ray check on 41 model views: 0 flagged on every building, glass, tower, space-frame and perf view (S, M, L); the
+  owner's model as above; the curved models carry native's flags as before (their drawings are unchanged).
+
+## 10. Stage 2 after review (2026-11-17)
+
+An independent review of section 9's code found it not ready. This section is what changed, what it cost, and the
+arguments for the three things changed beyond what the review asked. Section 9's owner-model numbers are superseded
+by the table here. Rebased onto `origin/main` at 0.1.0-beta.5 (`bfff071`), where stage 1 already is.
+
+### What the review found and what was done
+
+| | Finding | Done |
+|---|---|---|
+| 1 | Crash: an outline Rhino places off the exact ruling has no solid of its own, and the contact pass indexed with it. Hit by faces that are only near their cylinder, seen from the side. | Such curves are skipped there. Test: every cut body turned on its side and to two other angles. |
+| 2 | Owner SW: three samples drawn Hidden where the check said Visible. | The check was wrong, not the drawing: Rhino's own point-in-solid test finds the pipe's wall in front of each point along the ray (0.15 to 1.9 mm and 0.2 to 0.4 mm of cover at a tolerance of 0.001 mm). A line on a bore is behind the wall beside it right up to the rim. The check now looks for own material along the ray. Test: a hollow pipe with an oblique end, seen into the end. |
+| 3 | A surface's slack was only its faces' bound, but real faces run on to the stored edge. | Slack is now the larger of the faces' bound and (certified distance of the edges on the surface from their surfaces + stored edge and vertex tolerances). The sum, not the maximum asked for: a face ends at its trim, which is within the stored tolerance of the edge, which is within its measured distance of the other surface. |
+| 4 | The stored edge is drawn, the exact intersection is classified, and the two differ. | The difference is carried: every decision must hold for all rays within the gap of the exact one, across the view and along it. A point that does not snap is Unresolved. Edge-to-surface distance is bounded through control points. Change tolerance is eight times (gap + largest slack). |
+| 5 | Recognition is by sampling; the both-sides face check had exemptions. | End faces were in fact never checked (the virtual end plane sat within the margin of them): fixed. An edge that reaches beyond the outer cylinder refuses the body, by a certified bound. Slivers: see (c) below. Info says recognition is evidence. Not done: per-cell volume checks. |
+| 6 | Contact pass quadratic; recognition serial, uncancellable, cache cleared wholesale. | Contact pass looks only at solids whose view bounds the curve meets. Recognition runs in parallel over distinct objects, takes the token, keeps results least-recently-used. A view examines at most 128 possible cut tubes, the first in input order whatever is cached; Info counts the rest. Bounding the edges was the slow part (3 to 6 s a tube) and now stops at a sixty-fourth of the body's own looseness (under 0.5 s). |
+| low | Closed-rim halving needed exact equality; the union of two interval lists dropped a tail. | Both fixed; Core test. |
+
+### What it cost on the owner's model
+
+Lengths in mm, on beta.5. "Native" is this build with the class off.
+
+| View | | Visible | Hidden | Unresolved | Native calls | Wall | Pipes exact |
+|---|---|---:|---:|---:|---:|---:|---:|
+| Top | native | 21 370 | 40 994 | 6 523 | 1 | 2.2 s | |
+| Top | section 9 (beta.4) | 27 533 | 41 627 | 12 | 0 | 2.3 s | 5 of 5 |
+| Top | after review | 27 278 | 41 427 | 273 | 0 | 3.7 s | 5 of 5 |
+| SW | native | 13 405 | 33 481 | 11 945 | 1 | 4.2 s | |
+| SW | section 9 (beta.4) | 22 654 | 36 368 | 6 | 0 | 0.4 s | 5 of 5 |
+| SW | after review | 22 501 | 35 815 | 166 | 0 | 0.7 s | 5 of 5 |
+| Node box | native | 1 398 | 9 126 | 28 039 | 1 | 2.7 s | |
+| Node box | after review | 2 813 | 9 216 | 26 534 | 0 | 2.0 s | 3 of 5 |
+
+First solve of a scene (recognition included): 3.3 to 6.5 s. Ray check: Top 1 516 samples checked, 0 flagged, 178
+not judged; SW 1 223, 0 flagged, 131 not judged; node box 900, 0 flagged. The node box still has two pipes that the
+section route rejects before this class sees them; with the section-side change that lets uncut bodies skip that
+validation (a separate branch), a scratch check of the two together gave 0.8 mm Unresolved and no native call there.
+
+Carrying the real looseness is what raises Unresolved. The node's pipes share surfaces to within microns but each
+is only known to 0.04 to 0.09 mm (stored edge tolerances of 0.03 to 0.04 mm on a 0.001 mm document). A ray that
+passes that close to another surface of the node is no longer decided. Section 9's 12 mm and 6 mm were the exact
+drawing of the fitted surfaces; these are what can be said of the bodies as stored.
+
+### (a) An Unresolved piece under a Visible piece of the same source is not drawn
+
+Rule. A piece U of this class that is Unresolved is dropped over a stretch when a Visible piece V **of the same
+source** covers it there and is no further from the viewer.
+
+The test, exactly. Both are curves made by this class. U is cut at the parameters nearest to the ends of every
+candidate V. On each stretch between cuts, at its points at 1/4, 1/2 and 3/4: the projected point of U must have a
+point of projected V within tol/2 + gap(U) + gap(V), where gap is how far each drawn curve may be from the exact
+one it stands for (0 for the closed-form shapes, the edge gap or outline bound for a cut tube); and V's world point
+there must be no further from the viewer than U's by more than tol + gap(U) + gap(V). All three points must pass
+against the same V. This is the test that already drops a Hidden piece under another piece (section 7), with the
+gaps added to the radius and the depth condition added. It is a test at three points per stretch, not a proof for
+the stretch between them; the cut at V's ends is what keeps a stretch from running past where V stops.
+
+Why the ink is unchanged. On that stretch U is in truth Visible or Hidden. If Visible, it is a visible line at V's
+locus, within the bound to which either is drawn: one visible line. If Hidden, it is a hidden line under a visible
+one, which this class already does not draw. Later steps cannot separate them: the planar clip can only turn V
+Hidden by a face in front of V, and that face is then in front of U as well (U is no nearer), so U would be Hidden
+too and the locus shows V's hidden line. Same source, so no source's output loses a line another source keeps.
+What changes is the label: the planar loci let uncertainty take precedence at a shared locus, and this does not. The
+case is the far edge of a cope seen square-on: every ray from it passes through the near edge itself, which no
+bound on the body can decide.
+
+### (b) Surfaces of two bodies that agree within their slacks as contact: removed
+
+It was tried and is not in the code. It cannot be argued. Calling a line "on" another body's surface replaces a
+distance by a rule about the ray's direction; that is right when the two surfaces are the same surface, and wrong
+by up to (sum of the slacks)/sin(angle) of cover along the ray when they are only that close. In that band it can
+draw as Visible a line the other body covers thinly, or as Hidden one it does not cover, with no Unresolved in
+between. Measured, it also changed nothing on the owner's model (273 and 166 mm with and without). Contact is as in
+section 9: the same surface to a tolerance, or every sampled point of the exact curve within the graze width.
+
+### (c) Sliver faces are checked against the body's orientation, not let through
+
+The point-in-solid comparison needs points two margins clear of every other surface on both sides of a face (a
+margin is four times the body's looseness: 0.13 to 0.14 mm on the owner's pipes). The cut face where two equal pipes
+pinch out against each other has none: on two owner pipes, faces of 227 and 110 mm2 with no such point among 600.
+They are no longer let through unchecked. For each such face, at up to 65 interior points, one step (the face's own
+slack plus four tolerances) behind and in front along its normal, the description is asked what it allows when every
+surface is only known to its slack (`AnalyticCsg.May`): it must allow material behind and void in front. If it says
+void behind or solid in front for certain, the body is refused. The reference here is not a point-in-solid answer but
+the Brep's own orientation: a valid closed solid has material immediately behind every face and none immediately in
+front.
+
+What this bounds. The real boundary lies within the slacks of the listed surfaces (every face is bounded against
+one), so a cell shrunk by those slacks has no boundary inside it and each connected piece of it is all material or
+all void. A wrong label therefore needs a cell with two pieces of different kind, one of them never sampled. The
+check above catches that for the piece beside a sliver unless the difference lies within the slack of the surface
+the sliver hugs, and there the visibility test already treats both sides as possible, which is Unresolved. It
+remains a check at sample points, like the one it stands in for.
+
+On the owner's model all four cut pipes pass it: two faces (227 mm2 in all) on one pipe, two (110 mm2) on another
+and one of 0.19 mm2 on a third are compared this way. Info gives the count and area for each body.
+
+### Known limits
+
+- Cells are labelled from samples; a cell with two pieces of different kind, the smaller never sampled and beside no
+  face that is checked at a point near it, would be mislabelled. The derived planes exist to prevent such cells; there
+  is no per-cell volume check. The whole-body volume check is 1 %.
+- The gap between a stored edge and its exact curve is measured at 65 points, not bounded.
+- Coincidence tests ((a), and the Hidden-under rule) are at three points per stretch.
+- The witness in the tests is Rhino's point-in-solid test marched along the ray at 4 mm steps: it does not see cover
+  thinner than that.
+- Seen along a cutter's axis (a cope looked at down the hole), the far rims are drawn Hidden under the near rim's
+  Visible line instead of being dropped as coincident. The ink is the same; why the coincidence rule does not take
+  them is not found. The witness counts a Hidden piece with a Visible piece of the same place nearer the viewer as a
+  tie, not as an error.
+
+### Timings
+
+Wall time of the second solve, and of the first (recognition included), in seconds; main is beta.5.
+
+| Model, view | main | after review |
+|---|---:|---:|
+| perf L, SW | 21.9 (21.3) | 21.8 (22.7) |
+| perf L, North | 10.5 (11.9) | 11.6 (11.7) |
+| perf M, SW | 6.3 (6.6) | 6.3 (6.7) |
+| space-frame, SW | 1.7 (2.7) | 1.8 (2.6) |
+| round tower, SW | 0.5 (0.8) | 0.5 (0.7) |
+| curved S, SW | 24.7 (25.3) | 25.7 (26.1) |
+
+One cut tube costs 0.3 to 2.2 s to recognise once (the cells take most of it); four of the owner's in parallel
+about 3 s. The 2 983-leaf campus model is being timed separately.
+
+### Verification on beta.5
+
+Code at `e4e9cf0`. One owned Rhino process at a time; machine shared.
+
+- Forced hook passes. Debug and Release build with 0 warnings.
+- `tools/Test-WalkingSkeleton.ps1`, both runs: Core 490, Grasshopper 74, Rhino 381 passed (1 skipped), 0 failed. The
+  analytic Rhino tests are 30: the cut bodies in plan and turned three ways with five witness points a piece, the
+  bodies that must be refused or drawn right (branch stub, lug, severed pipe, notch, hole through one wall, inside
+  out), and the mixed-route scenes. Core has tests for slack, for the lateral and depth radius, and for the union of
+  interval lists.
+- Planar scenes: 13 drawings byte-identical to main.
+- Ray check on 41 model views: 0 flagged on every building, glass, tower, space-frame and perf view and on the
+  owner's model; the curved models carry native's flags as before.
+- Same drawing as main where nothing of stage 2 applies: 10 of 11 views compared have main's hash. The eleventh,
+  space-frame SW, differed once: see below.
+- Light gate: not yet run at this commit.
+
+The independent check was changed in this round and is weaker near loose bodies, on purpose. It now looks for an
+exact solid's own material along the ray (what it missed in finding 2); it judges nothing where that material is
+thinner than the body's stated bound, nothing from point-in-solid answers within four bounds of the line, and
+nothing within sixteen bounds of a change point along the line. On the owner's views that leaves 10 to 12 % of the
+samples not judged.
+
+### One drawing hash that differed once
+
+In the batch, space-frame SW had a different hash from main's, with Visible and Hidden lengths equal to the last
+digit. Run again with both drawings written out line by line, they were identical; six more runs of this build all
+gave main's hash. Not reproduced and not explained. What the code read found:
+
+- In this class there is no iteration over a hash container, no result taken in the order parallel work finishes
+  (every parallel loop writes to its own index), no time budget and no unseeded random number. Ties between
+  coincident pieces are broken by the order of the candidates, which is the canonical order of the sources.
+- The harness's hash is not of the curves themselves: it goes through Rhino's polyline approximation of each curve.
+  The harness now also prints a hash of the curves' own definitions (degree, knots, control points), and
+  `M2D_DUMP=<prefix>` writes both sets of hashed lines to files, so that a run that differs can be compared.
 
 ## Reproduce
 

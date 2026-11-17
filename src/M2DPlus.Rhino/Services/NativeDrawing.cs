@@ -16,6 +16,13 @@ public sealed record NativeSettings(bool MultipleThreads = false, bool NativeOnl
     internal bool ReverseNativeForAudit { get; init; }
     /// <summary>Exact analytic solids (sphere, cylinder, tube, extruded arc) leave native HLD. Off only for comparisons.</summary>
     internal bool Analytic { get; init; } = true;
+    /// <summary>The mixed route of the exact analytic class: a recognised solid that an unrecognised body may hide
+    /// leaves HLD all the same, and its lines are given to HLD as curves. Off by default: on the curved test models
+    /// it moves which lines native HLD gets wrong (hillclimb/curved-engine/FINDINGS.md, section 9).</summary>
+    internal bool AnalyticMixed { get; init; }
+    /// <summary>How many possible cut tubes (closed bodies of planes and cylinders that are none of the plain shapes)
+    /// are examined per view. Each costs about a second the first time it is seen; the rest stay on native HLD.</summary>
+    internal int CutTubeBudget { get; init; } = 128;
     internal Action<IReadOnlyList<VisibilityInput>>? ObserveNativeInputs { get; init; }
     internal Action<NativeHldOptions>? ObserveHldOptions { get; init; }
     /// <summary>Harness only: the sources that left native HLD as exact analytic solids. They are occluders that
@@ -281,7 +288,7 @@ public static class NativeDrawing
             result._diagnostics.Add($"Admission: {scene.Cost.GeometryBytes} geometry bytes; {scene.Cost.BrepFaces} faces; {scene.Cost.MeshTriangles} triangles; {scene.SourceCount} sources. Native threading follows the per-view engine setting (serial global scheduler).");
             if (sources.Count == 0) return result;
             if (!settings.NativeOnly && (sources.Any(s => !ReferenceEquals(s.Geometry,s.KernelClassifiedGeometry) || s.KernelTolerance != tolerance || s.KernelEligible) ||
-                AnalyticVisibility.Applies(sources.Select(s => s.Geometry), result.Frame.Plane, tolerance, view, settings)))
+                AnalyticVisibility.Applies(sources.Select(s => s.Geometry), result.Frame.Plane, tolerance, view, settings, token)))
             {
                 route = ComposedVisibility.Solve(sources.Select(s => new VisibilityInput(s.Geometry, s)).ToArray(), result, view, settings, token, scene.Bounds);
                 invalid += result.RoutingInvalid; quarantine |= result.RoutingQuarantine;

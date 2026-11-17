@@ -45,6 +45,35 @@ internal static class AnalyticCheck
         return flat;
     }
 
+    /// <summary>A second hash that does not go through Rhino's polyline approximation of a curve: class, source,
+    /// profile flag and the curve's own definition (degree, knots, control points and weights of its NURBS form).
+    /// When the first hash differs between two runs and this one does not, the drawings are the same curves.</summary>
+    private static string HashExact(ViewDrawing drawing)
+    {
+        var lines = new List<string>(); var invariant = System.Globalization.CultureInfo.InvariantCulture;
+        foreach (var item in drawing.Items)
+        {
+            using var g = item.CopyGeometry(); var text = new StringBuilder($"{item.Class}|{item.SourceIdentity}|{item.Profile}|");
+            if (g is global::Rhino.Geometry.Point q) text.Append(FormattableString.Invariant($"{q.Location.X:R},{q.Location.Y:R},{q.Location.Z:R}"));
+            else if (g is Curve c)
+            {
+                using var n = c.ToNurbsCurve();
+                if (n is null) text.Append("no NURBS form");
+                else
+                {
+                    text.Append(n.Degree).Append('|');
+                    for (int k = 0; k < n.Knots.Count; k++) text.Append(n.Knots[k].ToString("R", invariant)).Append(',');
+                    text.Append('|');
+                    foreach (var point in n.Points) text.Append(FormattableString.Invariant($"{point.Location.X:R},{point.Location.Y:R},{point.Location.Z:R},{point.Weight:R};"));
+                }
+            }
+            lines.Add(text.ToString());
+        }
+        lines.Sort(StringComparer.Ordinal);
+        if (Environment.GetEnvironmentVariable("M2D_DUMP") is { Length: > 0 } dump) File.WriteAllLines(dump + "-exact-" + lines.Count + ".txt", lines);
+        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(string.Join("\n", lines))))[..16];
+    }
+
     private static string Hash(ViewDrawing drawing, Plane plane, double tol)
     {
         var lines = new List<string>();
@@ -55,6 +84,8 @@ internal static class AnalyticCheck
             lines.Add($"{item.Class}|{item.SourceIdentity}|{item.Profile}|{string.Join(",", p.Select(v => v.ToString("R", System.Globalization.CultureInfo.InvariantCulture)))}");
         }
         lines.Sort(StringComparer.Ordinal);
+        // M2D_DUMP=<path prefix> writes the hashed lines to <prefix>-<count>.txt, to compare two runs line by line.
+        if (Environment.GetEnvironmentVariable("M2D_DUMP") is { Length: > 0 } dump) File.WriteAllLines(dump + "-" + lines.Count + ".txt", lines);
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(string.Join("\n", lines))))[..16];
     }
 
@@ -74,9 +105,11 @@ internal static class AnalyticCheck
             {
                 if (leaf.Geometry is not (Brep or Extrusion or Surface)) { Console.WriteLine($"    BODY {leaf.Identity[^12..]} {leaf.Geometry.GetType().Name}"); continue; }
                 var (shape, refusal) = AnalyticVisibility.Examine(leaf.Geometry, tol);
-                Console.WriteLine($"    BODY {leaf.Identity[^12..]} {(shape is null ? "REFUSED: " + refusal : "recognised " + shape)}");
+                Console.WriteLine($"    BODY {leaf.Identity[^12..]} {(shape is null ? "REFUSED: " + refusal : shape is AnalyticVisibility.CutTubeShape ct ? $"recognised cut tube: {ct.Surfaces.Count} surfaces ({ct.Real} faces' surfaces), face bound {ct.FaceBound:G3}, edge bound {ct.EdgeBound:G3}, {ct.Edges.Count} edges; {ct.Note}" : "recognised " + shape)}");
                 if (leaf.Geometry is not Brep brep) continue;
-                Console.WriteLine($"        faces {brep.Faces.Count}, edges {brep.Edges.Count}, solid {brep.IsSolid}, valid {brep.IsValid}, volume {brep.GetVolume():R}");
+                foreach (var sil in Silhouette.Compute(brep, SilhouetteType.Tangent, view.Direction, tol, .001) ?? [])
+                    Console.WriteLine($"        SILHOUETTE type {sil?.SilhouetteType} component {sil?.GeometryComponentIndex.ComponentIndexType} {sil?.GeometryComponentIndex.Index} curve {sil?.Curve?.GetType().Name} length {sil?.Curve?.GetLength():F3}");
+                Console.WriteLine($"        faces {brep.Faces.Count}, edges {brep.Edges.Count}, orientation {brep.SolidOrientation}, solid {brep.IsSolid}, valid {brep.IsValid}, volume {brep.GetVolume():R}");
                 foreach (var face in brep.Faces)
                 {
                     string kind = face.TryGetPlane(out var pl, tol) ? $"plane n=({pl.Normal.X:F8}, {pl.Normal.Y:F8}, {pl.Normal.Z:F8}) at {pl.Origin}"
@@ -86,7 +119,89 @@ internal static class AnalyticCheck
                     Console.WriteLine($"        face {face.FaceIndex}: {kind}; loops {face.Loops.Count}; edges {face.AdjacentEdges().Length}; area {AreaMassProperties.Compute(face)?.Area:F3}");
                 }
             }
-        var off = new NativeSettings { Analytic = false }; var on = new NativeSettings();
+        if (variants.Contains("fit"))
+        {   // Stage 2 probe: every face against every exact cylinder and plane found anywhere in the scene.
+            var cylinders = new List<(Line Axis, double R, string From)>(); var planes = new List<(Plane P, string From)>();
+            foreach (var leaf in prepared)
+                if (leaf.Geometry is Brep b)
+                    foreach (var face in b.Faces)
+                    {
+                        if (face.TryGetPlane(out var pl, tol)) { if (!planes.Any(k => Math.Abs(k.P.DistanceTo(pl.Origin)) < tol && k.P.Normal.IsParallelTo(pl.Normal, 1e-9) != 0)) planes.Add((pl, $"{leaf.Identity[^12..]}/{face.FaceIndex}")); }
+                        else if (face.TryGetCylinder(out var cy, tol))
+                        {
+                            var u = cy.Axis; u.Unitize(); var axis = new Line(cy.Center, cy.Center + u);
+                            if (!cylinders.Any(k => Math.Abs(k.R - cy.Radius) < tol && k.Axis.Direction.IsParallelTo(u, 1e-9) != 0 && k.Axis.DistanceTo(cy.Center, false) < tol)) cylinders.Add((axis, cy.Radius, $"{leaf.Identity[^12..]}/{face.FaceIndex}"));
+                        }
+                    }
+            // Each tube's other radius on the same axis too (a bore that is only a NURBS face).
+            foreach (var c in cylinders.ToArray())
+                foreach (double r in cylinders.Select(k => k.R).Distinct().ToArray())
+                    if (!cylinders.Any(k => Math.Abs(k.R - r) < tol && k.Axis.Direction.IsParallelTo(c.Axis.Direction, 1e-9) != 0 && k.Axis.DistanceTo(c.Axis.From, false) < tol)) cylinders.Add((c.Axis, r, c.From + "*"));
+            Console.WriteLine($"    FIT pool: {cylinders.Count} cylinders, {planes.Count} planes");
+            foreach (var leaf in prepared)
+            {
+                if (leaf.Geometry is not Brep brep) continue;
+                Console.WriteLine($"    FIT BODY {leaf.Identity[^12..]} faces {brep.Faces.Count} max edge tolerance {brep.Edges.Max(e => e.Tolerance):R} max vertex tolerance {brep.Vertices.Max(v => v.Tolerance):R}");
+                var match = new string[brep.Faces.Count];
+                foreach (var face in brep.Faces)
+                {
+                    var points = new List<Point3d>(); var du = face.Domain(0); var dv = face.Domain(1);
+                    for (int i = 0; i <= 40; i++)
+                        for (int j = 0; j <= 40; j++)
+                        {
+                            double u = du.ParameterAt(i / 40.0), v = dv.ParameterAt(j / 40.0);
+                            if (face.IsPointOnFace(u, v) != PointFaceRelation.Exterior) points.Add(face.PointAt(u, v));
+                        }
+                    foreach (var loop in face.Loops) foreach (var trim in loop.Trims) if (trim.Edge is { } trimEdge) for (int k = 0; k <= 16; k++) points.Add(trimEdge.PointAt(trimEdge.Domain.ParameterAt(k / 16.0)));
+                    var best = cylinders.Select(c => (Name: $"cylinder r={c.R:F4} of {c.From}", Dev: points.Max(q => Math.Abs(c.Axis.DistanceTo(q, false) - c.R))))
+                        .Concat(planes.Select(p => (Name: $"plane of {p.From}", Dev: points.Max(q => Math.Abs(p.P.DistanceTo(q))))))
+                        .OrderBy(x => x.Dev).First();
+                    var nurbs = face.UnderlyingSurface() as NurbsSurface;
+                    bool isExact = face.TryGetPlane(out _, tol) || face.TryGetCylinder(out _, tol);
+                    match[face.FaceIndex] = best.Name;
+                    if (!isExact && best.Dev > 1e-2 && nurbs is not null)
+                    {   // Rulings of a degree-1 direction, in the frame of the body's own tube: where do the two ends of
+                        // each ruling sit (radius, height, angle), and which pool surfaces do the two boundary curves lie on?
+                        var own = cylinders.Where(k => k.From.StartsWith(leaf.Identity[^12..], StringComparison.Ordinal) && !k.From.EndsWith('*')).OrderByDescending(k => k.R).First();
+                        var u = own.Axis.Direction; u.Unitize(); var frame = new Plane(own.Axis.From, u);
+                        int ruled = nurbs.Degree(0) == 1 ? 0 : nurbs.Degree(1) == 1 ? 1 : -1; if (ruled < 0) { Console.WriteLine("            not ruled"); continue; }
+                        var dr = nurbs.Domain(ruled); var dc = nurbs.Domain(1 - ruled); double worstH = 0, worstA = 0, worstStraight = 0; var ends = new[] { new List<Point3d>(), new List<Point3d>() };
+                        for (int k = 0; k <= 64; k++)
+                        {
+                            double c = dc.ParameterAt(k / 64.0);
+                            Point3d At(double r) => ruled == 0 ? nurbs.PointAt(r, c) : nurbs.PointAt(c, r);
+                            var a = At(dr.Min); var b = At(dr.Max); var mid = At(dr.Mid); ends[0].Add(a); ends[1].Add(b);
+                            (double H, double Angle, double Rho) Polar(Point3d q) { var d = q - own.Axis.From; double x = d * frame.XAxis, y = d * frame.YAxis; return (d * u, Math.Atan2(y, x), Math.Sqrt(x * x + y * y)); }
+                            var pa = Polar(a); var pb = Polar(b); double da = Math.Abs(pa.Angle - pb.Angle); if (da > Math.PI) da = 2 * Math.PI - da;
+                            worstH = Math.Max(worstH, Math.Abs(pa.H - pb.H)); worstA = Math.Max(worstA, da * own.R); worstStraight = Math.Max(worstStraight, new Line(a, b).DistanceTo(mid, false));
+                        }
+                        for (int row = 0; row < 2; row++)
+                        {   // Each end of the ruled surface as a curve: circle, ellipse, or neither.
+                            using var iso = nurbs.IsoCurve(1 - ruled, row == 0 ? dr.Min : dr.Max);
+                            string what = iso.TryGetCircle(out var circle, 1e-6) ? $"circle r={circle.Radius:F6} centre {circle.Center} normal ({circle.Normal.X:F7}, {circle.Normal.Y:F7}, {circle.Normal.Z:F7})"
+                                : iso.TryGetEllipse(out var ellipse, 1e-6) ? $"ellipse {ellipse.Radius1:F6} x {ellipse.Radius2:F6} centre {ellipse.Plane.Origin} normal ({ellipse.Plane.Normal.X:F7}, {ellipse.Plane.Normal.Y:F7}, {ellipse.Plane.Normal.Z:F7})"
+                                : iso.TryGetArc(out var arcIso, 1e-6) ? $"arc r={arcIso.Radius:F6} angle {arcIso.Angle:F4} centre {arcIso.Center}" : "neither circle nor ellipse; planar " + iso.IsPlanar(1e-6);
+                            Console.WriteLine($"            end {row}: {what}; closed {iso.IsClosed}");
+                        }
+                        Console.WriteLine($"            ruling direction at start ({(nurbs.PointAt(ruled == 0 ? dr.Max : dc.Min, ruled == 0 ? dc.Min : dr.Max) - nurbs.PointAt(ruled == 0 ? dr.Min : dc.Min, ruled == 0 ? dc.Min : dr.Min))}); own axis ({u.X:F7}, {u.Y:F7}, {u.Z:F7})");
+                        Console.WriteLine($"            rulings in own tube frame: height change across a ruling up to {worstH:E3}, sideways shift up to {worstA:E3}, straightness {worstStraight:E3}");
+                        for (int side = 0; side < 2; side++)
+                        {
+                            var fits = cylinders.Select(c => (Name: $"cylinder r={c.R:F4} of {c.From}", Dev: ends[side].Max(q => Math.Abs(c.Axis.DistanceTo(q, false) - c.R))))
+                                .Concat(planes.Select(p => (Name: $"plane of {p.From}", Dev: ends[side].Max(q => Math.Abs(p.P.DistanceTo(q))))))
+                                .OrderBy(x => x.Dev).Take(3).ToArray();
+                            Console.WriteLine($"            boundary {side}: " + string.Join("; ", fits.Select(f => $"{f.Name} dev {f.Dev:E2}")));
+                        }
+                    }
+                }
+            }
+            return;
+        }
+        bool mixed = variants.Contains("mixed");     // the mixed route, off by default
+        var off = new NativeSettings { Analytic = false }; var on = new NativeSettings { AnalyticMixed = mixed };
+        // `why`: what HLD returned in the composed solve, to show beside a flagged sample.
+        var heard = new List<(string Id, int Edge, bool Duplicate, LineClass Kind, Curve World)>();
+        var listening = !variants.Contains("why") ? on : new NativeSettings { AnalyticMixed = mixed, ObserveCompositionRecord = (id, edge, duplicate, kind, world) => { lock (heard) heard.Add((id, edge, duplicate, kind, world.DuplicateCurve())); } };
         using (var cold = SolveView(scene, prepared, view, off, timeout)) { }
         (ViewDrawing Drawing, double Wall, string Busy) Timed(NativeSettings settings)
         {
@@ -95,7 +210,7 @@ internal static class AnalyticCheck
             return (d, timer.Elapsed.TotalSeconds, busy.Stop());
         }
         var (before, beforeWall, beforeBusy) = Timed(off);
-        using var after1 = SolveView(scene, prepared, view, on, timeout);   // first analytic solve pays recognition once per scene
+        using var after1 = SolveView(scene, prepared, view, listening, timeout);   // first analytic solve pays recognition once per scene
         var (after, afterWall, afterBusy) = Timed(on);
         using var keepBefore = before; using var keepAfter = after;
         var plane = after.Frame.Plane; var e = plane.ZAxis; var toView = Transform.PlaneToPlane(plane, Plane.WorldXY);
@@ -111,9 +226,16 @@ internal static class AnalyticCheck
         Console.WriteLine($"--- {stem} [after, analytic on] wall {afterWall:F3}s (first solve {after1.Seconds:F3}s) native calls {after.NativeCalls} native solve {after.Phases.Seconds.GetValueOrDefault("native solve"):F3}s; {Show(afterLengths)}; error {after.Error}; busy {afterBusy}");
         Console.WriteLine($"    route: {after.Report.Route}");
         Console.WriteLine($"    {Analytic(after)}");
+        foreach (var (label, d) in new[] { ("before", before), ("after", after) })
+        {
+            foreach (var x in d.Diagnostics.Where(x => x.StartsWith("Native ray verifier", StringComparison.Ordinal) || x.StartsWith("Composition coverage", StringComparison.Ordinal)))
+                Console.WriteLine($"    {label}: {x[..Math.Min(x.Length, 330)]}");
+            Console.WriteLine($"    {label}: Unset notes {d.Diagnostics.Count(x => x.Contains("Unset", StringComparison.Ordinal))}; quarantined sources {d.UncertainRoutingSources.Count}; routing invalid {d.RoutingInvalid}; duplicates {d.DuplicateSegments}");
+        }
         Console.WriteLine($"    phases after: {string.Join(", ", after.Phases.Seconds.Where(p => p.Value >= .005).Select(p => $"{p.Key} {p.Value:F2}"))}");
         string hashBefore = Hash(before, plane, tol), hashAfter = Hash(after, plane, tol), hashAfter1 = Hash(after1, plane, tol);
         Console.WriteLine($"    drawing hash before {hashBefore} after {hashAfter} ({(hashBefore == hashAfter ? "identical" : "different")}); repeat of after {(hashAfter == hashAfter1 ? "identical" : "DIFFERENT")}");
+        Console.WriteLine($"    exact hash (curve definitions, no polyline approximation) before {HashExact(before)} after {HashExact(after)}; repeat of after {(HashExact(after) == HashExact(after1) ? "identical" : "DIFFERENT")}");
 
         if (variants.Contains("why"))
             foreach (var item in after.Items.Where(p => p.Class == LineClass.Unresolved).Select(p => { using var g = p.CopyGeometry(); var c = g as Curve; return (p, Length: c?.GetLength() ?? 0, Mid: c?.PointAt(c.Domain.Mid) ?? Point3d.Unset, Linear: c?.IsLinear(tol) ?? false); }).OrderByDescending(x => x.Length).Take(10))
@@ -121,9 +243,61 @@ internal static class AnalyticCheck
                 plane.ClosestParameter(item.Mid, out var ux, out var uy); var depth = item.p.DepthGeometry as Curve; var w = depth?.PointAt(depth.Domain.Mid) ?? Point3d.Unset;
                 var leaf = prepared.First(l => l.Identity == item.p.SourceIdentity);
                 Console.WriteLine($"    UNRESOLVED {item.Length * 1000:F4} mm {(item.Linear ? "line" : "curve")} at ({ux:F3}, {uy:F3}) world {w} source {item.p.SourceIdentity[^12..]} {AnalyticVisibility.Recognise(leaf.Geometry, tol)?.GetType().Name}");
+                // The engine's answer per solid at the exact point behind this piece: the point is put on the two own
+                // surfaces it is nearest to, and every surface of any solid it then lies on (within 1e-7) is taken as known.
+                if (AnalyticVisibility.Recognise(leaf.Geometry, tol) is AnalyticVisibility.CutTubeShape ownTube)
+                {
+                    var two = Enumerable.Range(0, ownTube.Real).OrderBy(i => Math.Abs(CutTubeRecognition.Distance(ownTube.Surfaces[i], w))).Take(2).ToArray();
+                    var exactPoint = CutTubeRecognition.Onto(ownTube.Surfaces[two[0]], ownTube.Surfaces[two[1]], w) ?? w; var ve = AnalyticVisibility.Project(plane, exactPoint);
+                    foreach (var other in prepared)
+                    {
+                        if (AnalyticVisibility.Recognise(other.Geometry, tol) is not { } otherShape) continue;
+                        var solid = AnalyticVisibility.Solid(otherShape, plane); int bits = 0; string lies = "";
+                        if (otherShape is AnalyticVisibility.CutTubeShape ct2)
+                            for (int i = 0; i < ct2.Real; i++) if (Math.Abs(CutTubeRecognition.Distance(ct2.Surfaces[i], exactPoint)) < 1e-7) { bits |= 1 << i; lies += $" {i}"; }
+                        if (otherShape is AnalyticVisibility.CylinderShape pc)
+                        {
+                            var d = exactPoint - pc.Origin; d -= pc.Axis * (d * pc.Axis);
+                            if (Math.Abs(d.Length - pc.Radius) < 1e-7) { bits |= M2DPlus.Core.Visibility.AnalyticSolid.Outer; lies += " outer"; }
+                            if (Math.Abs(d.Length - pc.InnerRadius) < 1e-7) { bits |= M2DPlus.Core.Visibility.AnalyticSolid.Inner; lies += " bore"; }
+                        }
+                        var answer = solid.Occlusion(ve, tol, bits);
+                        if (answer != M2DPlus.Core.Visibility.VisibilityClass.Visible || other.Identity == item.p.SourceIdentity)
+                            Console.WriteLine($"        exact point (moved {exactPoint.DistanceTo(w):E2}): {answer} by {other.Identity[^12..]}{(other.Identity == item.p.SourceIdentity ? " (own)" : "")} on its surfaces [{lies.Trim()}]; with no surface known {solid.Occlusion(ve, tol)}");
+                    }
+                }
+                foreach (var other in prepared)
+                    if (AnalyticVisibility.Recognise(other.Geometry, tol) is AnalyticVisibility.CutTubeShape nearTube)
+                    {
+                        var close = Enumerable.Range(0, nearTube.Surfaces.Count).Where(i => Math.Abs(CutTubeRecognition.Distance(nearTube.Surfaces[i], w)) < .2).ToArray();
+                        if (close.Length != 0) Console.WriteLine($"        within 0.2 of {other.Identity[^12..]}{(other.Identity == item.p.SourceIdentity ? " (own)" : "")}: " + string.Join(", ", close.Select(i => $"{i}:{(nearTube.Surfaces[i].Cylinder ? $"cyl r={nearTube.Surfaces[i].Radius:F2}" : "plane")} {nearTube.Surfaces[i].Role}{(nearTube.Surfaces[i].Virtual ? "*" : "")} at {CutTubeRecognition.Distance(nearTube.Surfaces[i], w):E2}")));
+                    }
+                    else if (AnalyticVisibility.Recognise(other.Geometry, tol) is AnalyticVisibility.CylinderShape plain)
+                    {
+                        var d = w - plain.Origin; d -= plain.Axis * (d * plain.Axis);
+                        if (Math.Abs(d.Length - plain.Radius) < .2 || Math.Abs(d.Length - plain.InnerRadius) < .2) Console.WriteLine($"        within 0.2 of {other.Identity[^12..]} (plain tube): outer at {d.Length - plain.Radius:E2}, bore at {d.Length - plain.InnerRadius:E2}, cap planes at {plain.Cap0.DistanceTo(w):E2} and {plain.Cap1.DistanceTo(w):E2}");
+                    }
                 foreach (var other in prepared)
                     if (AnalyticVisibility.Recognise(other.Geometry, tol) is { } shape && AnalyticVisibility.Solid(shape, plane).Occlusion(AnalyticVisibility.Project(plane, w), tol) is var k && k != M2DPlus.Core.Visibility.VisibilityClass.Visible)
-                        Console.WriteLine($"        {k} by {other.Identity[^12..]}{(other.Identity == item.p.SourceIdentity ? " (own)" : "")} {shape}");
+                    {
+                        Console.WriteLine($"        {k} by {other.Identity[^12..]}{(other.Identity == item.p.SourceIdentity ? " (own)" : "")} {shape.GetType().Name}");
+                        if (shape is AnalyticVisibility.CutTubeShape cutTube)
+                        {   // Along the ray: which cells of the cut tube it passes through, and whether each is known.
+                            var csg = (M2DPlus.Core.Visibility.AnalyticCsg)AnalyticVisibility.Solid(cutTube, plane); var v0 = AnalyticVisibility.Project(plane, w);
+                            var seen = new List<string>(); string last = "";
+                            double reach = cutTube.Bounds.Diagonal.Length;
+                            for (int march = 1; march <= 4000; march++)
+                            {
+                                double h = reach * march / 4000; var x = new M2DPlus.Core.Visibility.Vertex(v0.X, v0.Y, v0.Z + h);
+                                int cell = csg.Cell(x, 0, out _, out bool inTube); bool? state = csg.Contains(x, 0);
+                                string label = !inTube ? "outside tube" : $"cell {Convert.ToString(cell, 2)} {(state == true ? "solid" : state == false ? "void" : "UNKNOWN")}";
+                                if (label != last) { seen.Add($"{h:F3}: {label}"); last = label; }
+                            }
+                            Console.WriteLine("            along the ray: " + string.Join(" | ", seen.Take(14)));
+                            int near = Enumerable.Range(0, cutTube.Surfaces.Count).OrderBy(i => Math.Abs(CutTubeRecognition.Distance(cutTube.Surfaces[i], w))).First();
+                            Console.WriteLine("            surfaces within 1 of the point: " + string.Join(", ", Enumerable.Range(0, cutTube.Surfaces.Count).Where(i => Math.Abs(CutTubeRecognition.Distance(cutTube.Surfaces[i], w)) < 1).Select(i => $"{i}:{(cutTube.Surfaces[i].Cylinder ? $"cyl r={cutTube.Surfaces[i].Radius:F2}" : "plane")} {cutTube.Surfaces[i].Role}{(cutTube.Surfaces[i].Virtual ? "*" : "")} slack {cutTube.Surfaces[i].Slack:G3} at {CutTubeRecognition.Distance(cutTube.Surfaces[i], w):E2}")));
+                        }
+                    }
             }
         // ---- Classed loci, both ways.
         static int Class(LineClass c) => c == LineClass.Hidden ? 1 : c == LineClass.Unresolved ? 2 : c is LineClass.Visible or LineClass.Profile or LineClass.Beyond ? 0 : 3;
@@ -248,7 +422,48 @@ internal static class AnalyticCheck
             // Its own body: the ray itself; if that is blocked or grazing, step sideways both ways (a line on an outline
             // grazes its own surface). Visible when either side is clear, hidden when both are blocked; two steps agree.
             var centre = Blocked(p, tol, 20 * tol, only: own);
+            // An exact solid's own material in front of the point, however thin sideways: a line on a bore (its outline,
+            // an end cut's inner rim) has the wall just beside the ray, a few tolerances thick where the ray is about to
+            // leave through an end cut, and a ray cast misses it. Rhino's point-in-solid test along the ray does not:
+            // two consecutive steps strictly inside the body are cover beyond a tolerance, which is Hidden by the depth rule.
+            // The body is only known to its stated bound (a cut tube's surfaces, with their stored tolerances), so the
+            // material must be inside by more than that to count; material thinner than the bound is not judged
+            // either way, as a ray that skims a surface a few degrees off it is in or out by less than the bound.
+            bool thin = false;
+            if (exactOwn && bodies.FirstOrDefault(b => b.Id == own) is { Brep: { IsSolid: true } material } mine)
+            {
+                // (For a plain shape the bound is what Rhino itself stores on the body's edges.)
+                double bound = tol + Math.Max(material.Edges.Max(edge => edge.Tolerance), AnalyticVisibility.Recognise(mine.Geometry, tol) is AnalyticVisibility.CutTubeShape loose ? loose.SurfaceBound : 0);
+                // (Rhino's test with a large tolerance is not "inside by that much": with one it reports points inside
+                // that it reports outside with a small one. So: strictly inside at the point and at the four points
+                // one bound to each side of the ray.)
+                bool last = false; var across = Vector3d.CrossProduct(e, normal);
+                for (double h = 2 * tol; h < mine.Box.Diagonal.Length; h *= 1.15)
+                {
+                    var q = p + e * h; bool inside = material.IsPointInside(q, tol / 10, true);
+                    // Within four bounds of the line itself, which is on an edge stored that loosely, Rhino's answer is
+                    // not evidence either way (recognition keeps the same distance from loose edges): seen, not judged.
+                    if (h < 4 * bound) { thin |= inside; last = false; continue; }
+                    bool deep = inside && material.IsPointInside(q + normal * bound, tol / 10, true) && material.IsPointInside(q - normal * bound, tol / 10, true) &&
+                        material.IsPointInside(q + across * bound, tol / 10, true) && material.IsPointInside(q - across * bound, tol / 10, true);
+                    if (deep && last) return 1;
+                    last = deep; thin |= inside && !deep;
+                }
+            }
+            // Material in front that is thinner than the body's bound: the real body may or may not cover the point.
+            if (thin) return -1;
             if (centre == false) return 0;
+            // The ray grazes its own body. An outline of a hole (a bore) has the hole on one side, so "one side clear"
+            // says nothing there: first ask Rhino whether the ray itself runs through the body's material. A point
+            // strictly inside by a tenth of a tolerance has more than the depth rule's cover around it.
+            if (centre is null && bodies.FirstOrDefault(b => b.Id == own) is { Brep: { IsSolid: true } solid } body)
+            {
+                // No material found in front, but there is some on the same line behind the point: the line touches a
+                // hole from inside the material, and whatever is in front is thinner sideways than this test resolves
+                // (the ray leaves through an end cut within a fraction of a millimetre). Not judged.
+                for (double h = 2 * tol; h < body.Box.Diagonal.Length; h *= 1.5)
+                    if (solid.IsPointInside(p - e * h, tol / 10, true)) return -1;
+            }
             int? verdict = null;
             foreach (double delta in exactOwn ? new[] { .2 * tol, .4 * tol } : new[] { 4 * tol, 8 * tol })
             {
@@ -259,6 +474,29 @@ internal static class AnalyticCheck
             }
             return verdict ?? -1;
         }
+        // A cut tube's lines are its stored edges, which can be off the faces they join by the edge tolerance (0.03 mm on
+        // the owner's pipes at a model tolerance of 0.001 mm). Where a rim meets its outline that offset decides whether
+        // the ray grazes inside or outside the body, so the sample is judged at the faces' own intersection: the nearest
+        // edge between two faces is found and the point is projected onto the two faces' surfaces in turn (Rhino's
+        // closest point, nothing of the engine's). A point not near such an edge is left where it is.
+        int moved = 0;
+        Point3d OnFaces(Point3d world, string source)
+        {
+            var body = bodies.FirstOrDefault(b => b.Id == source); if (body is null || body.Brep is null || AnalyticVisibility.Recognise(body.Geometry, tol) is not AnalyticVisibility.CutTubeShape shape) return world;
+            double reach = 4 * shape.EdgeBound + 4 * tol, best = reach; BrepEdge? nearest = null;
+            foreach (var edge in body.Brep.Edges)
+            {
+                var faces = edge.AdjacentFaces(); if (faces.Length != 2 || shape.FaceSurface[faces[0]] == shape.FaceSurface[faces[1]]) continue;
+                if (edge.ClosestPoint(world, out double t, best) && edge.PointAt(t).DistanceTo(world) < best) { best = edge.PointAt(t).DistanceTo(world); nearest = edge; }
+            }
+            if (nearest is null) return world;
+            var pair = nearest.AdjacentFaces().Select(i => body.Brep.Faces[i]).ToArray(); var p = world;
+            for (int round = 0; round < 40; round++)
+                foreach (var face in pair) if (face.ClosestPoint(p, out double u, out double v)) p = face.PointAt(u, v);
+            if (p.DistanceTo(world) > reach) return world;
+            moved++; return p;
+        }
+        Console.WriteLine($"    after Unresolved by source kind: exact {after.Items.Where(p => p.Class == LineClass.Unresolved && exact.Contains(p.SourceIdentity)).Sum(p => { using var c = p.CopyGeometry(); return c is Curve k ? k.GetLength() : 0; }):F1}, other {after.Items.Where(p => p.Class == LineClass.Unresolved && !exact.Contains(p.SourceIdentity)).Sum(p => { using var c = p.CopyGeometry(); return c is Curve k ? k.GetLength() : 0; }):F1}");
         var random = new Random(20261116); var groups = new SortedDictionary<string, List<(DrawingPiece Piece, double T, int Class)>>(StringComparer.Ordinal);
         foreach (var (cls, flat, piece) in afterPieces)
         {
@@ -276,6 +514,8 @@ internal static class AnalyticCheck
                 list.Add((piece, t, cls));
             }
         }
+        // `only:<text>` lists up to 40 flagged samples of the groups whose name contains the text.
+        string? only = variants.FirstOrDefault(v => v.StartsWith("only:", StringComparison.Ordinal))?[5..];
         var adjudication = new SortedDictionary<string, int[]>(StringComparer.Ordinal); var flagged = new List<string>(); int flaggedTotal = 0;
         foreach (var (key, list) in groups)
         {
@@ -285,19 +525,34 @@ internal static class AnalyticCheck
                 using var g = piece.CopyGeometry(); var c = (Curve)g; var depth = (Curve)piece.DepthGeometry!;
                 var tangent = c.TangentAt(t); var normal = Vector3d.CrossProduct(e, tangent); if (!normal.Unitize()) { counts[2]++; continue; }
                 // The same parameter on the world-depth curve; the verdict must also hold 2 mm either way along the line.
-                double span = c.Domain.Length, dt = Math.Min(.002 / Math.Max(c.GetLength(), 1e-9), .25) * span; int agreed = -2;
+                // For a cut tube, sixteen of its stated bounds either way: its change points are placed no better.
+                double along = bodies.FirstOrDefault(b => b.Id == piece.SourceIdentity) is { } known && AnalyticVisibility.Recognise(known.Geometry, tol) is AnalyticVisibility.CutTubeShape tube
+                    ? Math.Max(.002, 16 * (tol + Math.Max(tube.SurfaceBound, tube.EdgeBound))) : .002;
+                double span = c.Domain.Length, dt = Math.Min(along / Math.Max(c.GetLength(), 1e-9), .25) * span; int agreed = -2;
                 foreach (double s in new[] { t, Math.Max(c.Domain.Min, t - dt), Math.Min(c.Domain.Max, t + dt) })
                 {
-                    var world = depth.PointAt(depth.Domain.ParameterAt(c.Domain.NormalizedParameterAt(s)));
+                    var world = OnFaces(depth.PointAt(depth.Domain.ParameterAt(c.Domain.NormalizedParameterAt(s))), piece.SourceIdentity);
                     int v = Verdict(world, normal, piece.SourceIdentity, exact.Contains(piece.SourceIdentity));
                     if (agreed == -2) agreed = v; else if (agreed != v) agreed = -1;
+                }
+                // A cut tube's lines are drawn to its stated bound, and the body is known no better than that: the
+                // verdict must not be turned by another body when the ray is moved two bounds to either side of the line.
+                // (Its own body is on one side of most of its lines; that is the own-material test's business.)
+                if (agreed >= 0 && bodies.FirstOrDefault(b => b.Id == piece.SourceIdentity) is { } loose && AnalyticVisibility.Recognise(loose.Geometry, tol) is AnalyticVisibility.CutTubeShape stated)
+                {
+                    double bound = tol + Math.Max(stated.SurfaceBound, stated.EdgeBound); var at = OnFaces(depth.PointAt(depth.Domain.ParameterAt(c.Domain.NormalizedParameterAt(t))), piece.SourceIdentity);
+                    foreach (double side in new[] { -2.0, 2.0 })
+                    {
+                        var beside = Blocked(at + normal * (side * bound), tol, 20 * tol, except: piece.SourceIdentity);
+                        if (beside is null || beside.Value && agreed == 0) { agreed = -1; break; }
+                    }
                 }
                 if (agreed < 0) counts[2]++;
                 else if (agreed == cls) counts[0]++;
                 else
                 {
                     counts[1]++; flaggedTotal++; var q = c.PointAt(t); plane.ClosestParameter(q, out var x, out var y);
-                    if (flagged.Count < 12)
+                    if (flagged.Count < (only is null ? 12 : 40) && (only is null || key.Contains(only, StringComparison.Ordinal)))
                     {
                         var where = depth.PointAt(depth.Domain.ParameterAt(c.Domain.NormalizedParameterAt(t))); var note = new StringBuilder();
                         if (variants.Contains("why"))
@@ -305,6 +560,35 @@ internal static class AnalyticCheck
                                 foreach (var body in bodies)
                                     if (Blocked(where + offset, tol, 20 * tol, only: body.Id) != false)
                                         note.Append($" | {label}: {(Blocked(where + offset, tol, 20 * tol, only: body.Id) is null ? "unsure" : "blocked")} by {body.Id[^12..]}{(body.Id == piece.SourceIdentity ? " (own)" : "")} {(body.Exact ? AnalyticVisibility.Recognise(body.Geometry, tol)!.GetType().Name : body.Geometry.GetType().Name)} box z {body.Box.Min.Z:F3}..{body.Box.Max.Z:F3}");
+                        if (variants.Contains("why") && bodies.FirstOrDefault(b => b.Id == piece.SourceIdentity) is { } mine && AnalyticVisibility.Recognise(mine.Geometry, tol) is AnalyticVisibility.CutTubeShape cutShape)
+                        {   // What the engine's own solid says at this point, for each pair of its surfaces the point is near.
+                            var solid = (M2DPlus.Core.Visibility.AnalyticCsg)AnalyticVisibility.Solid(cutShape, plane); var at = OnFaces(where, piece.SourceIdentity); var v = AnalyticVisibility.Project(plane, at);
+                            var close = Enumerable.Range(0, cutShape.Surfaces.Count).Where(i => Math.Abs(CutTubeRecognition.Distance(cutShape.Surfaces[i], at)) < 1e-6).ToArray();
+                            note.Append($" | engine: on surfaces [{string.Join(",", close.Select(i => $"{i}:{(cutShape.Surfaces[i].Cylinder ? $"cyl r={cutShape.Surfaces[i].Radius:F2}" : "plane")} {cutShape.Surfaces[i].Role}{(cutShape.Surfaces[i].Virtual ? "*" : "")}"))}]; moved {at.DistanceTo(where):E2}; no own bits {solid.Occlusion(v, tol)}; all near as own {solid.Occlusion(v, tol, close.Aggregate(0, (m, i) => m | 1 << i))}; tangent {solid.Occlusion(v, tol, close.Aggregate(0, (m, i) => m | 1 << i), true)}");
+                            if (mine.Brep is not null) note.Append("; Rhino point-in-solid above the point at " + string.Join(", ", new[] { 10.0, 100, 1000, 3000 }.Select(k => $"{k * tol:G3}: {mine.Brep.IsPointInside(at + e * (k * tol), tol / 10, true)}")));
+                            foreach (int i in close) note.Append($"; n{i}·e {(cutShape.Surfaces[i].Cylinder ? "(cyl)" : (cutShape.Surfaces[i].Direction * e).ToString("F4"))}");
+                        }
+                        if (variants.Contains("why"))
+                        {   // Which exact solids the engine says hide this point (no own-surface rule), and Rhino's point-in-solid along the ray for each.
+                            var at = OnFaces(where, piece.SourceIdentity); var v = AnalyticVisibility.Project(plane, at);
+                            foreach (var body in bodies.Where(b => b.Exact))
+                            {
+                                var k = AnalyticVisibility.Solid(AnalyticVisibility.Recognise(body.Geometry, tol)!, plane).Occlusion(v, tol);
+                                var inside = new List<double>();
+                                if (body.Brep is { IsSolid: true } solidBrep) for (double h = 2 * tol; h < 4 * body.Box.Diagonal.Length; h *= 1.15) if (solidBrep.IsPointInside(at + e * h, tol / 10, true)) inside.Add(h);
+                                if (body.Id == piece.SourceIdentity && body.Brep is { IsSolid: true } ownBrep)
+                                {
+                                    double bound = tol + Math.Max(ownBrep.Edges.Max(edge => edge.Tolerance), AnalyticVisibility.Recognise(body.Geometry, tol) is AnalyticVisibility.CutTubeShape ls ? ls.SurfaceBound : 0);
+                                    var thick = new List<double>(); for (double h = 2 * tol; h < body.Box.Diagonal.Length; h *= 1.15) if (ownBrep.IsPointInside(at + e * h, bound, true)) thick.Add(h);
+                                    note.Append($" | own bound {bound:G3}: inside by more than it at {thick.Count} steps{(thick.Count == 0 ? "" : $" from {thick[0]:G4} to {thick[^1]:G4}")}; others block the ray: {Blocked(at, tol, 20 * tol, except: body.Id)?.ToString() ?? "unsure"}; own blocks: {Blocked(at, tol, 20 * tol, only: body.Id)?.ToString() ?? "unsure"}");
+                                }
+                                if (k != M2DPlus.Core.Visibility.VisibilityClass.Visible || inside.Count != 0)
+                                    note.Append($" | replay {body.Id[^12..]}{(body.Id == piece.SourceIdentity ? " (own)" : "")}: engine {k}; Rhino inside along the ray at {inside.Count} steps{(inside.Count == 0 ? "" : $" from {inside[0]:G4} to {inside[^1]:G4}")}");
+                            }
+                        }
+                        if (variants.Contains("why"))
+                            foreach (var h in heard)
+                                if (h.World.ClosestPoint(where, out double ht, 20 * tol)) note.Append($" | HLD: {h.Id[^12..]}{(h.Id == piece.SourceIdentity ? " (own)" : "")} edge {h.Edge} {(h.Duplicate ? "Duplicate " : "")}{h.Kind} length {h.World.GetLength():F3} at {h.World.PointAt(ht).DistanceTo(where):E1}");
                         flagged.Add($"{key}: source {piece.SourceIdentity[^12..]} drawn {(cls == 0 ? "Visible" : "Hidden")} at ({x:F4}, {y:F4}) world {where}, check says {(agreed == 0 ? "Visible" : "Hidden")}{note}");
                     }
                 }
@@ -312,6 +596,7 @@ internal static class AnalyticCheck
             adjudication[key] = new[] { list.Count, chosen.Length, counts[0], counts[1], counts[2] };
             Console.WriteLine($"    ray check [{key}]: {list.Count} samples, checked {chosen.Length}: right {counts[0]}, flagged {counts[1]}, not judged {counts[2]}");
         }
+        Console.WriteLine($"    ray check: {moved} ray starts were moved from a stored edge onto its two faces' intersection");
         foreach (var line in flagged) Console.WriteLine("    FLAGGED " + line);
         Console.WriteLine($"    rays {rays}; bodies {bodies.Count}; recognised sources {exact.Count}");
         foreach (var b in owned) b.Dispose();
