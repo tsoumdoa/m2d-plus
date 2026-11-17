@@ -1,5 +1,3 @@
-using M2DPlus.Core;
-
 namespace M2DPlus.Grasshopper.UI.Model;
 
 /// <summary>Job state as the canvas needs it (UX §5.2). The component reports it; the UI never reads job internals.</summary>
@@ -41,18 +39,4 @@ public static class RuntimeModel
         FooterButton.Run => "Run the drawing now.",
         _ => ""
     };
-
-    /// <summary>Whole-job fraction for the progress line: preparation 0–40 %, drawing 40–100 % (UX §5.2).</summary>
-    public static double? Fraction(JobProgress progress)
-    {
-        var part = progress.Total > 0 ? Math.Clamp((double)progress.Done / progress.Total, 0, 1) : 0;
-        return progress.Phase switch
-        {
-            JobPhase.Reading or JobPhase.Queued => null,
-            JobPhase.Preparing => .4 * part,
-            JobPhase.Drawing => .4 + .6 * part,
-            JobPhase.Complete => 1,
-            _ => null
-        };
-    }
 }

@@ -11,21 +11,6 @@ public sealed class BakeTests
     private static readonly Guid Component = Guid.Parse("77777777-7777-7777-7777-777777777777");
     private static readonly Plane3 South = new(Vector3.Zero, Vector3.UnitX, Vector3.UnitZ);
 
-    [Theory]
-    [InlineData(LineClass.Visible, "Visible")]
-    [InlineData(LineClass.Profile, "Visible")]
-    [InlineData(LineClass.Hidden, "Hidden")]
-    [InlineData(LineClass.Beyond, "Beyond")]
-    [InlineData(LineClass.FarClip, "Far clip")]
-    [InlineData(LineClass.Cut, "Cut")]
-    [InlineData(LineClass.Hatch, "Hatch")]
-    [InlineData(LineClass.Unresolved, "Unresolved")]
-    public void LayerTreeIsCategoryThenMirroredSourcePath(LineClass lineClass, string category)
-    {
-        Assert.Equal($"M2D+::Section A::{category}::Arch::Walls", BakeNames.LayerPath("Section A", lineClass, "Arch::Walls"));
-        Assert.Equal($"M2D+::Section A::{category}", BakeNames.LayerPath("Section A", lineClass));
-    }
-
     // Owner decision 2026-11-16 (UX §8.1): four layouts; the line type is the leaf except in the classic layout.
     [Theory]
     [InlineData(BakeLayout.ViewLayer, "M2D+::Section A::Arch::Walls::Visible", "M2D+::Section A::Grasshopper (no layer)::Visible", 4)]
@@ -56,6 +41,8 @@ public sealed class BakeTests
     [InlineData(LineClass.Ignored, "Ignored")]
     public void TheLineTypeIsAlwaysTheLeafAndDeepSourcePathsNest(LineClass lineClass, string type)
     {
+        Assert.Equal($"M2D+::Section A::{type}::Arch::Walls", BakeNames.LayerPath("Section A", lineClass, "Arch::Walls"));
+        Assert.Equal($"M2D+::Section A::{type}", BakeNames.LayerPath("Section A", lineClass));
         const string source = "Site::Building A::Level 2::Walls";
         Assert.Equal($"M2D+::Plan +3.00::Site::Building A::Level 2::Walls::{type}", BakeNames.Layer(BakeLayout.ViewLayer, "Plan +3.00", lineClass, source).FullPath);
         Assert.Equal($"M2D+::Site::Building A::Level 2::Walls::Plan +3.00::{type}", BakeNames.Layer(BakeLayout.LayerView, "Plan +3.00", lineClass, source).FullPath);

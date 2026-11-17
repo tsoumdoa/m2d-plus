@@ -191,17 +191,6 @@ public sealed class MenuTests
         Assert.Equal(Enum.Parse<FooterButton>(expected), RuntimeModel.Button(new(Enum.Parse<DrawingPhase>(phase))));
 
     [Fact]
-    public void ProgressFractionSplitsPreparationAndDrawing()
-    {
-        Assert.Null(RuntimeModel.Fraction(new(JobPhase.Reading, 0, 0)));
-        Assert.Null(RuntimeModel.Fraction(new(JobPhase.Queued, 0, 3)));
-        Assert.Equal(.2, RuntimeModel.Fraction(new(JobPhase.Preparing, 1, 2))!.Value, 6);
-        Assert.Equal(.4, RuntimeModel.Fraction(new(JobPhase.Drawing, 0, 3))!.Value, 6);
-        Assert.Equal(.8, RuntimeModel.Fraction(new(JobPhase.Drawing, 2, 3))!.Value, 6);
-        Assert.Equal(1, RuntimeModel.Fraction(new(JobPhase.Drawing, 9, 3))!.Value, 6);
-    }
-
-    [Fact]
     public void ViewMenuChoosesTextValuesAndGreysWhenWired()
     {
         var menu = ViewMenu.Build(["Level 1", "Roof"], [], ["level 1"], wired: false);

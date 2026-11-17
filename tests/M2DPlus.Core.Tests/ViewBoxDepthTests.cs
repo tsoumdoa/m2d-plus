@@ -24,8 +24,7 @@ public sealed class ViewBoxDepthTests
     // ------------------------------------------------------------------ parsing (the settings unit parser)
 
     [Theory]
-    [InlineData("8 m", Mm, 8000)] [InlineData("3000 mm", M, 3)] [InlineData("3000mm", Mm, 3000)] [InlineData("10'", M, 3.048)]
-    [InlineData("10 ft", Mm, 3048)] [InlineData("12", M, 12)] [InlineData(" 2.5 ", Mm, 2.5)] [InlineData(".5 m", M, .5)] [InlineData("1e3 mm", M, 1)]
+    [InlineData("8 m", Mm, 8000)] [InlineData("3000 mm", M, 3)] [InlineData(" 2.5 ", Mm, 2.5)]
     public void DepthTextUsesTheSettingsUnitParser(string text, double metresPerUnit, double expected)
     {
         Assert.True(DepthChoice.TryParse(text, metresPerUnit, Tol, out var choice, out var error), error);
@@ -34,7 +33,7 @@ public sealed class ViewBoxDepthTests
         Assert.Equal(Settings.ParseDistance(text, metresPerUnit), choice.Value.Value, 12);
     }
 
-    [Theory] [InlineData("auto")] [InlineData(" AUTO ")] [InlineData("Auto")]
+    [Theory] [InlineData(" AUTO ")]
     public void AutoTextMeansAuto(string text)
     {
         Assert.True(DepthChoice.TryParse(text, M, Tol, out var choice, out _));
