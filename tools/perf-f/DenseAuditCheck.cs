@@ -36,7 +36,7 @@ internal static class DenseAuditCheck
         double tol = scene.Tolerance; var invariant = CultureInfo.InvariantCulture;
         var options = new DenseAuditOptions();
         if (Environment.GetEnvironmentVariable("PERFF_DA_BAND") is { Length: > 0 } band) options = options with { BandTolerances = double.Parse(band, invariant) };
-        if (Environment.GetEnvironmentVariable("PERFF_DA_TRIANGLES") is { Length: > 0 } triangles) options = options with { MaxTriangles = long.Parse(triangles, invariant) };
+        if (Environment.GetEnvironmentVariable("PERFF_DA_TRIANGLES") is { Length: > 0 } triangles) options = options with { StripTriangles = long.Parse(triangles, invariant) };
         int samples = 600; foreach (var v in variants) if (v.StartsWith("samples:", StringComparison.Ordinal)) samples = int.Parse(v[8..], invariant);
         var off = new NativeSettings { DenseAudit = false }; var spans = new List<Curve>();
         var on = new NativeSettings { DenseAudit = true, DenseAuditOptions = options };

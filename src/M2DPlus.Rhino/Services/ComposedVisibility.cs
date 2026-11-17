@@ -200,6 +200,7 @@ internal static class ComposedVisibility
                     var audit = new DenseNativeAudit(curved, output, settings.DenseAuditOptions, token);
                     if (audit.Active)
                     {
+                        audit.Prepare(records.Where(r => r.Class == LineClass.Visible && !r.Duplicate).Select(r => r.World).ToArray(), token);
                         var audited = new List<NativeRecord>();
                         foreach (var record in records)
                         {

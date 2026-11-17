@@ -32,6 +32,9 @@ internal sealed class CertifiedMesh
     /// <summary>Per face: its control-net certificate in the body's own coordinates, or null.</summary>
     internal SurfaceCertificate?[] Certificates { get; private init; } = [];
     internal int Uncertified { get; private init; }
+    /// <summary>The vertices' box, and the largest band.</summary>
+    internal BoundingBox Box { get; private init; }
+    internal double Widest { get; private init; }
     internal double Band { get; private init; }
     internal int Count => Bands.Length;
 
@@ -176,7 +179,7 @@ internal sealed class CertifiedMesh
                 return new()
                 {
                     Vertices = vertices.ToArray(), Triangles = triangles.ToArray(), Bands = bands.ToArray(), Faces = faces.ToArray(), Parameters = boxes.ToArray(),
-                    Certificates = certificates, Uncertified = uncertified, Band = band
+                    Certificates = certificates, Uncertified = uncertified, Band = band, Box = new BoundingBox(vertices), Widest = bands.Count == 0 ? 0 : bands.Max()
                 };
             }
             finally { foreach (var mesh in meshes) mesh.Dispose(); }

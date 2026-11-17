@@ -6,7 +6,11 @@ using Rhino.Geometry;
 namespace M2DPlus.Rhino.Services;
 
 /// <summary>Deterministic limits of the dense audit. Internal: there is no user setting.</summary>
-internal sealed record DenseAuditOptions(double BandTolerances = 10, double FloorTolerances = 5, long MaxTriangles = 8_000_000, int Coarsenings = 3);
+/// <param name="BandTolerances">The band asked of the certified meshes, in model tolerances.</param>
+/// <param name="FloorTolerances">The least band used, in model tolerances.</param>
+/// <param name="StripTriangles">Triangles aimed at per strip of the drawing; one strip is indexed at a time.</param>
+/// <param name="MaxStripTriangles">A strip that needs more than this is not audited.</param>
+internal sealed record DenseAuditOptions(double BandTolerances = 10, double FloorTolerances = 5, long StripTriangles = 4_000_000, long MaxStripTriangles = 24_000_000);
 
 /// <summary>
 /// Dense audit of native Visible lines (mesh tier, step C). Every curved body native HLD saw becomes a certified
@@ -16,72 +20,64 @@ internal sealed record DenseAuditOptions(double BandTolerances = 10, double Floo
 /// so a proof here is evidence against native's confidence, not yet a certificate for ours.
 ///
 /// Unlike the sampled ray audit it looks at every chord of every Visible curve, and it sees cover that is thicker
-/// than a tolerance, however thin. It says nothing where a curve is within a band of a surface or of an open
-/// boundary, and nothing about native Hidden lines.
+/// than a tolerance, however thin. The body a curve lies on is a body like any other, so a line hidden by its own
+/// body is found too. It says nothing where a curve is within a band of a surface or of an open boundary, and
+/// nothing about native Hidden lines.
 ///
-/// The band starts at <see cref="DenseAuditOptions.BandTolerances"/> model tolerances and doubles, up to
-/// <see cref="DenseAuditOptions.Coarsenings"/> times, while the view's triangles exceed
-/// <see cref="DenseAuditOptions.MaxTriangles"/>; past that the view is not audited and Info says so. That depends on
-/// the scene alone, never on time or memory at hand.
+/// Memory is bounded by working through the drawing in vertical strips. A strip holds every body whose extent
+/// reaches it, whole (the proof needs whole bodies), and the chords whose middle lies in it; strips are cut so that
+/// each holds about <see cref="DenseAuditOptions.StripTriangles"/> triangles. A strip that would need more than
+/// <see cref="DenseAuditOptions.MaxStripTriangles"/> is left unaudited and Info says how much of the drawing that
+/// is. Both depend on the scene alone, never on time or memory at hand.
 /// </summary>
 internal sealed class DenseNativeAudit
 {
-    private readonly BandedMeshIndex? _index;
-    private readonly Plane _plane; private readonly double _tol, _band, _chord;
-    private readonly int _sheets, _uncertified; private readonly long _triangles;
-    private readonly string? _skipped;
-    private readonly Stopwatch _clock = new(); private double _setup;
-    // Working storage is as large as the index: kept between curves, one per thread that has been used.
-    private readonly System.Collections.Concurrent.ConcurrentBag<BandedMeshIndex.Scratch> _scratch = new();
-    private int _curves, _spans, _uncut; private double _moved, _looked;
+    private sealed record Body(CertifiedMesh? Mesh, Transform Placement, double Scale, Mesh? Plain, double X0, double X1, long Triangles);
+    private readonly record struct Chord(int Curve, double A, double B, Vertex Pa, Vertex Pb);
 
-    internal bool Active => _index is not null;
+    private readonly List<Body> _bodies = [];
+    private readonly Plane _plane; private readonly double _tol, _band, _floor, _chord;
+    private readonly DenseAuditOptions _options;
+    private readonly Dictionary<Curve, List<(double A, double B)>> _proven = new(ReferenceEqualityComparer.Instance);
+    private readonly Stopwatch _clock = new(); private double _setup;
+    private readonly long _triangles; private readonly int _uncertified;
+    private int _curves, _spans, _uncut, _strips, _skippedStrips; private double _moved, _looked, _skippedLength; private long _largest;
+
+    internal bool Active => _bodies.Count > 0;
 
     internal DenseNativeAudit(IReadOnlyList<VisibilityInput> inputs, ViewDrawing output, DenseAuditOptions options, CancellationToken token)
     {
-        _plane = output.Frame.Plane; _tol = output.Tolerance; _chord = Math.Max(64 * _tol, output.Frame.BoundingBox.Diagonal.Length / 256);
+        _plane = output.Frame.Plane; _tol = output.Tolerance; _options = options; _band = options.BandTolerances * _tol; _floor = options.FloorTolerances * _tol;
+        _chord = Math.Max(64 * _tol, output.Frame.BoundingBox.Diagonal.Length / 256);
         _clock.Start();
         try
         {
-            var ordered = VisibilityInputOrder.Canonical(inputs, i => i);
-            double band = options.BandTolerances * _tol; List<(CertifiedMesh Mesh, Transform Placement, double Scale)>? meshes = null; var plain = new List<Mesh>();
-            foreach (var input in ordered) if (input.Geometry is Mesh mesh) plain.Add(mesh);
-            long plainTriangles = plain.Sum(m => (long)m.Faces.Count + m.Faces.QuadCount);
-            for (int attempt = 0; ; attempt++, band *= 2)
+            foreach (var input in VisibilityInputOrder.Canonical(inputs, i => i))
             {
-                var placed = new List<(CertifiedMesh, Transform, double)>(); long count = plainTriangles;
-                foreach (var input in ordered)
-                {
-                    token.ThrowIfCancellationRequested();
-                    if (CertifiedMesh.For(input.Geometry, input.Source, _tol, band, token) is not { } found) continue;
-                    placed.Add(found); count += found.Mesh.Count;
-                }
-                if (count <= options.MaxTriangles) { meshes = placed; _triangles = count; break; }
-                if (attempt >= options.Coarsenings) { _skipped = FormattableString.Invariant($"{count} triangles at a band of {band:R} exceed the limit of {options.MaxTriangles}"); return; }
-            }
-            _band = band; double floor = options.FloorTolerances * _tol;
-            var sheets = new List<BandedSheet>(meshes.Count + plain.Count);
-            foreach (var (mesh, placement, scale) in meshes) { sheets.Add(mesh.Place(placement, scale, _plane, sheets.Count, floor)); _uncertified += mesh.Uncertified; }
-            foreach (var mesh in plain)
-            {   // A mesh is its own surface: its triangles are exact. Quads are split as Rhino splits them.
                 token.ThrowIfCancellationRequested();
-                var vertices = new Vertex[mesh.Vertices.Count];
-                for (int i = 0; i < vertices.Length; i++) { var d = mesh.Vertices.Point3dAt(i) - _plane.Origin; vertices[i] = new(d * _plane.XAxis, d * _plane.YAxis, d * _plane.ZAxis); }
-                var triangles = new List<int>(mesh.Faces.Count * 3);
-                foreach (var face in mesh.Faces)
-                {
-                    triangles.Add(face.A); triangles.Add(face.B); triangles.Add(face.C);
-                    if (face.IsQuad) { triangles.Add(face.A); triangles.Add(face.C); triangles.Add(face.D); }
+                if (input.Geometry is Mesh plain)
+                {   // A mesh is its own surface: its triangles are exact. A non-planar quad is not its two triangles: no say.
+                    if (plain.Faces.Count == 0 || plain.Faces.QuadCount > 0 && !PlanarQuads(plain)) continue;
+                    var (x0, x1) = Extent(plain.GetBoundingBox(false), Transform.Identity);
+                    _bodies.Add(new(null, Transform.Identity, 1, plain, x0, x1, plain.Faces.Count + plain.Faces.QuadCount));
                 }
-                // A non-planar quad is not its two triangles: such a mesh gets no say.
-                if (mesh.Faces.QuadCount > 0 && !PlanarQuads(mesh)) continue;
-                var bands = new double[triangles.Count / 3]; Array.Fill(bands, floor);
-                sheets.Add(new() { Id = sheets.Count, Vertices = vertices, Triangles = triangles.ToArray(), Bands = bands });
+                else if (CertifiedMesh.For(input.Geometry, input.Source, _tol, _band, token) is { } found && found.Mesh.Count > 0)
+                {
+                    var (x0, x1) = Extent(found.Mesh.Box, found.Placement);
+                    _bodies.Add(new(found.Mesh, found.Placement, found.Scale, null, x0, x1, found.Mesh.Count)); _uncertified += found.Mesh.Uncertified;
+                }
             }
-            _sheets = sheets.Count;
-            if (sheets.Count > 0) _index = new(sheets, token);
+            _triangles = _bodies.Sum(b => b.Triangles);
         }
         finally { _clock.Stop(); _setup = _clock.Elapsed.TotalSeconds; }
+    }
+
+    /// <summary>The drawing X range of a box under a placement.</summary>
+    private (double, double) Extent(BoundingBox box, Transform placement)
+    {
+        double x0 = double.MaxValue, x1 = double.MinValue;
+        foreach (var corner in box.GetCorners()) { var p = corner; p.Transform(placement); double x = (p - _plane.Origin) * _plane.XAxis; x0 = Math.Min(x0, x); x1 = Math.Max(x1, x); }
+        return (x0, x1);
     }
 
     private bool PlanarQuads(Mesh mesh)
@@ -98,62 +94,115 @@ internal sealed class DenseNativeAudit
 
     private Vertex Project(Point3d p) { var d = p - _plane.Origin; return new(d * _plane.XAxis, d * _plane.YAxis, d * _plane.ZAxis); }
 
-    /// <summary>
-    /// Parameter intervals of a native world curve that the meshes prove Hidden, in order and merged. The curve is
-    /// cut into pieces whose points stay within half a tolerance of the straight piece at the same fraction; the
-    /// candidate's error given to the index is that plus one tolerance for the curve itself.
-    /// </summary>
-    internal List<(double A, double B)> ProvenHidden(Curve world, CancellationToken token)
+    private BandedSheet Sheet(Body body, int id)
     {
-        var result = new List<(double, double)>(); if (_index is null) return result;
+        if (body.Mesh is not null) return body.Mesh.Place(body.Placement, body.Scale, _plane, id, _floor);
+        var mesh = body.Plain!; var vertices = new Vertex[mesh.Vertices.Count];
+        for (int i = 0; i < vertices.Length; i++) vertices[i] = Project(mesh.Vertices.Point3dAt(i));
+        var triangles = new List<int>(mesh.Faces.Count * 3);
+        foreach (var face in mesh.Faces)
+        {
+            triangles.Add(face.A); triangles.Add(face.B); triangles.Add(face.C);
+            if (face.IsQuad) { triangles.Add(face.A); triangles.Add(face.C); triangles.Add(face.D); }
+        }
+        var bands = new double[triangles.Count / 3]; Array.Fill(bands, _floor);
+        return new() { Id = id, Vertices = vertices, Triangles = triangles.ToArray(), Bands = bands };
+    }
+
+    /// <summary>
+    /// Works out, for all the curves at once, which stretches the meshes prove Hidden. Each curve is cut into pieces
+    /// whose points stay within half a tolerance of the straight piece at the same fraction; the candidate's error
+    /// given to the index is that plus one tolerance for the curve itself.
+    /// </summary>
+    internal void Prepare(IReadOnlyList<Curve> curves, CancellationToken token)
+    {
+        if (!Active) return;
         _clock.Start();
         try
         {
-            var chords = new List<(double A, double B, Vertex Pa, Vertex Pb)>();
-            for (int span = 0; span < world.SpanCount; span++)
+            var chords = new List<Chord>(); var fresh = new List<Curve>();
+            foreach (var world in curves)
             {
-                token.ThrowIfCancellationRequested();
-                var domain = world.SpanDomain(span); var stack = new Stack<(double A, double B, int Depth)>(); stack.Push((domain.Min, domain.Max, 0));
-                while (stack.Count > 0)
+                if (_proven.ContainsKey(world)) continue;
+                int index = fresh.Count; fresh.Add(world); _proven[world] = []; _curves++; _looked += world.GetLength();
+                for (int span = 0; span < world.SpanCount; span++)
                 {
-                    var (a, b, depth) = stack.Pop(); if (!(b > a)) continue;
-                    Point3d pa = world.PointAt(a), pb = world.PointAt(b); bool fine = pa.DistanceTo(pb) <= _chord || depth >= 40;
-                    if (fine && depth < 40)
-                        foreach (double k in new[] { .5, .25, .75 })
-                            if (world.PointAt(a + (b - a) * k).DistanceTo(pa + (pb - pa) * k) > _tol / 2) { fine = false; break; }
-                    if (fine) chords.Add((a, b, Project(pa), Project(pb)));
-                    else { stack.Push(((a + b) / 2, b, depth + 1)); stack.Push((a, (a + b) / 2, depth + 1)); }
+                    token.ThrowIfCancellationRequested();
+                    var domain = world.SpanDomain(span); var stack = new Stack<(double A, double B, int Depth)>(); stack.Push((domain.Min, domain.Max, 0));
+                    while (stack.Count > 0)
+                    {
+                        var (a, b, depth) = stack.Pop(); if (!(b > a)) continue;
+                        Point3d pa = world.PointAt(a), pb = world.PointAt(b); bool fine = pa.DistanceTo(pb) <= _chord || depth >= 40;
+                        if (fine && depth < 40)
+                            foreach (double k in new[] { .5, .25, .75 })
+                                if (world.PointAt(a + (b - a) * k).DistanceTo(pa + (pb - pa) * k) > _tol / 2) { fine = false; break; }
+                        if (fine) chords.Add(new(index, a, b, Project(pa), Project(pb)));
+                        else { stack.Push(((a + b) / 2, b, depth + 1)); stack.Push((a, (a + b) / 2, depth + 1)); }
+                    }
                 }
             }
-            var pieces = new List<BandedMeshIndex.Piece>[chords.Count];
+            if (chords.Count == 0) return;
             double error = 1.5 * _tol, least = Math.Max(_band / 2, 2 * _tol);
-            Parallel.For(0, chords.Count, new ParallelOptions { MaxDegreeOfParallelism = Math.Min(Environment.ProcessorCount, 8), CancellationToken = token },
-                () => _scratch.TryTake(out var held) ? held : new BandedMeshIndex.Scratch(_index), (i, _, scratch) =>
+            // Strips by the chords' middles, cut where the triangles of the bodies whose centre has been passed add up.
+            static double Middle(in Chord c) => (c.Pa.X + c.Pb.X) / 2;
+            var order = Enumerable.Range(0, chords.Count).OrderBy(i => Middle(chords[i])).ThenBy(i => i).ToArray();
+            var cuts = new List<double>(); long running = 0;
+            foreach (var body in _bodies.OrderBy(b => b.X0 + b.X1)) { running += body.Triangles; if (running >= _options.StripTriangles) { cuts.Add((body.X0 + body.X1) / 2); running = 0; } }
+            cuts.Add(double.PositiveInfinity);
+            // A chord's triangles are within half its length, its error and a band of its middle. Bands are not bounded
+            // from above, so every body's extent is widened by its own largest band when it is matched to a strip.
+            double reach = _chord / 2 + error;
+            var pieces = new List<BandedMeshIndex.Piece>?[chords.Count]; int at = 0;
+            foreach (double to in cuts)
+            {
+                token.ThrowIfCancellationRequested();
+                int first = at; while (at < order.Length && Middle(chords[order[at]]) <= to) at++;
+                if (at == first) continue;
+                double lo = Middle(chords[order[first]]) - reach, hi = Middle(chords[order[at - 1]]) + reach;
+                var members = _bodies.Where(b => b.X1 + Widest(b) >= lo && b.X0 - Widest(b) <= hi).ToArray(); long count = members.Sum(b => b.Triangles);
+                _strips++; _largest = Math.Max(_largest, count);
+                if (count > _options.MaxStripTriangles)
                 {
-                    var list = new List<BandedMeshIndex.Piece>(2); _index.Classify(chords[i].Pa, chords[i].Pb, _tol, error, least, scratch, list); pieces[i] = list; return scratch;
-                }, _scratch.Add);
+                    _skippedStrips++;
+                    for (int k = first; k < at; k++) { var c = chords[order[k]]; _skippedLength += fresh[c.Curve].GetLength(new Interval(c.A, c.B)); }
+                    continue;
+                }
+                if (members.Length == 0) continue;
+                var index = new BandedMeshIndex(members.Select((b, id) => Sheet(b, id)).ToArray(), token); var slice = order.AsMemory(first, at - first);
+                Parallel.For(0, slice.Length, new ParallelOptions { MaxDegreeOfParallelism = Math.Min(Environment.ProcessorCount, 8), CancellationToken = token },
+                    () => new BandedMeshIndex.Scratch(index), (k, _, scratch) =>
+                    {
+                        int i = slice.Span[k]; var list = new List<BandedMeshIndex.Piece>(2);
+                        index.Classify(chords[i].Pa, chords[i].Pb, _tol, error, least, scratch, list); pieces[i] = list; return scratch;
+                    }, _ => { });
+            }
             for (int i = 0; i < chords.Count; i++)
-                foreach (var piece in pieces[i])
+            {
+                if (pieces[i] is not { } list) continue;
+                var result = _proven[fresh[chords[i].Curve]];
+                foreach (var piece in list)
                 {
                     if (piece.Class != VisibilityClass.Hidden) continue;
                     double a = chords[i].A + (chords[i].B - chords[i].A) * piece.T0, b = chords[i].A + (chords[i].B - chords[i].A) * piece.T1;
-                    if (result.Count > 0 && a <= result[^1].Item2) result[^1] = (result[^1].Item1, b); else result.Add((a, b));
+                    if (result.Count > 0 && a <= result[^1].B) result[^1] = (result[^1].A, b); else result.Add((a, b));
                 }
+            }
             // A stretch too short to draw as a piece of its own is not worth a cut.
-            result.RemoveAll(r => world.GetLength(new Interval(r.Item1, r.Item2)) < 8 * _tol);
-            _curves++; _looked += world.GetLength();
-            return result;
+            foreach (var world in fresh) _proven[world].RemoveAll(r => world.GetLength(new Interval(r.A, r.B)) < 8 * _tol);
         }
         finally { _clock.Stop(); }
     }
+
+    private double Widest(Body body) => body.Mesh is null ? _floor : Math.Max(_floor, body.Mesh.Widest * body.Scale);
 
     /// <summary>The whole domain as alternating spans: proven stretches Unresolved, the rest as native had it.</summary>
     internal List<(double A, double B, LineClass Class)> Spans(Curve world, LineClass native, CancellationToken token)
     {
         var spans = new List<(double, double, LineClass)>(); var domain = world.Domain;
-        if (native != LineClass.Visible) { spans.Add((domain.Min, domain.Max, native)); return spans; }
+        if (native != LineClass.Visible || !Active) { spans.Add((domain.Min, domain.Max, native)); return spans; }
+        if (!_proven.ContainsKey(world)) Prepare([world], token);
         double at = domain.Min;
-        foreach (var (a, b) in ProvenHidden(world, token))
+        foreach (var (a, b) in _proven[world])
         {
             double a0 = Math.Max(a, at), b0 = Math.Min(b, domain.Max); if (!(b0 > a0)) continue;
             if (a0 > at) spans.Add((at, a0, native));
@@ -169,9 +218,9 @@ internal sealed class DenseNativeAudit
     internal void Report(ViewDrawing output)
     {
         output.Phases.Add("dense native audit", _clock.Elapsed.TotalSeconds); output.Phases.Add("dense native audit meshes", _setup);
-        output._diagnostics.Add(_skipped is not null
-            ? $"Dense native audit not run: {_skipped}. Native Visible lines keep the sampled audit only."
-            : FormattableString.Invariant($"Dense native audit: native Visible proved Hidden by certified meshes and moved to Unresolved: spans={_spans}; world length={_moved:R}; Visible curves looked at={_curves} (length={_looked:R}); bodies={_sheets}; triangles={_triangles}; band={_band:R}; triangles with a measured band={_uncertified}; curves left whole because a stretch could not be cut out={_uncut}. It moves lines to Unresolved only and proves nothing about Hidden lines."));
+        output._diagnostics.Add(!Active
+            ? "Dense native audit: no curved body to audit against."
+            : FormattableString.Invariant($"Dense native audit: native Visible proved Hidden by certified meshes and moved to Unresolved: spans={_spans}; world length={_moved:R}; Visible curves looked at={_curves} (length={_looked:R}); bodies={_bodies.Count}; triangles={_triangles}; band={_band:R}; triangles with a measured band={_uncertified}; strips={_strips} (largest {_largest} triangles); strips over the limit and not audited={_skippedStrips} (length={_skippedLength:R}); curves left whole because a stretch could not be cut out={_uncut}. It moves lines to Unresolved only and proves nothing about Hidden lines."));
     }
 
     /// <summary>The native fallback route: audits the drawing's native Visible pieces in place.</summary>
@@ -180,26 +229,33 @@ internal sealed class DenseNativeAudit
         if (!settings.DenseAudit || settings.NativeOnly) return;
         var audit = new DenseNativeAudit(inputs, output, settings.DenseAuditOptions, token);
         if (audit.Active)
-            foreach (var piece in output.Pieces.ToArray())
+        {
+            var candidates = output.Pieces.Where(p => !p.KernelOwned && p.DepthGeometry is Curve && p.Class == LineClass.Visible).ToArray();
+            audit.Prepare(candidates.Select(p => (Curve)p.DepthGeometry!).ToArray(), token);
+            foreach (var piece in candidates)
             {
                 token.ThrowIfCancellationRequested();
-                if (piece.KernelOwned || piece.DepthGeometry is not Curve world || piece.Class != LineClass.Visible) continue;
-                var spans = audit.Spans(world, piece.Class, token);
+                var world = (Curve)piece.DepthGeometry!; var spans = audit.Spans(world, piece.Class, token);
                 if (spans.Count == 1 && spans[0].Class == piece.Class) continue;
                 using var geometry = piece.CopyGeometry();
                 if (geometry is not Curve projected) continue;
-                var source = inputs.First(i => i.Source.Identity == piece.SourceIdentity).Source; var parts = new List<DrawingPiece>();
+                var source = inputs.First(i => i.Source.Identity == piece.SourceIdentity).Source; List<(DrawingPiece Piece, Curve Deep)>? parts = [];
                 foreach (var (a, b, kind) in spans)
                 {
                     var flat = projected.Trim(a, b); var deep = world.Trim(a, b);
-                    if (flat is null || deep is null) { flat?.Dispose(); deep?.Dispose(); foreach (var p in parts) p.Dispose(); parts = null; audit._uncut++; break; }
-                    parts.Add(new(flat, source, kind, deep) { Profile = piece.Profile, FarCandidate = piece.FarCandidate });
-                    if (kind == LineClass.Unresolved) { audit.Moved(deep); settings.ObserveDenseAuditSpan?.Invoke(deep); }
+                    // A span that cannot be cut out leaves the whole piece as it was: the audit only ever adds doubt.
+                    if (flat is null || deep is null) { flat?.Dispose(); deep?.Dispose(); foreach (var p in parts) p.Piece.Dispose(); parts = null; audit._uncut++; break; }
+                    parts.Add((new(flat, source, kind, deep) { Profile = piece.Profile, FarCandidate = piece.FarCandidate }, deep));
                 }
-                // A span that cannot be cut out leaves the whole piece as it was: the audit only ever adds doubt.
                 if (parts is null) continue;
-                output.Pieces.AddRange(parts); output.Pieces.Remove(piece); piece.Dispose();
+                foreach (var (part, deep) in parts)
+                {
+                    output.Pieces.Add(part);
+                    if (part.Class == LineClass.Unresolved) { audit.Moved(deep); settings.ObserveDenseAuditSpan?.Invoke(deep); }
+                }
+                output.Pieces.Remove(piece); piece.Dispose();
             }
+        }
         audit.Report(output);
     }
 }
