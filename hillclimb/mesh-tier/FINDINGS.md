@@ -238,15 +238,15 @@ repeat), so their figure includes the one-off mesh build.
 | curved S SW | 28.4 | 3.2 | 2 s | 50.4 | 3.4 % | 737 / 0 |
 | curved S North | 23.2 | 3.0 | 3 s | 33.0 | 3.8 % | 621 / 0 |
 | curved M SW | 354 | 47 (once) | in it | 292.7 | 4.6 % | 610 / 0 |
-| diagrid SW | 4.0 | 0.6 | 7.5 s | 4.3 | 6.0 % | 126 / 0 |
-| curved-steel SW | 1.7 | 1.2 | 13 s | 0.3 | 0.3 % | 6 / 0 |
+| diagrid SW | 4.0 | 0.6 | 7.5 s | 4.4 | 6.0 % | 126 / 0 |
+| curved-steel SW | 1.7 | 1.2 | 13 s | 0.4 | 0.3 % | 6 / 0 |
 | curved-steel Top | 1.9 | 1.1 | 13 s | 1.4 | 1.5 % | 42 / 0 |
 | curved-facade SW | 1.9 | 0.6 | 6 s | 2.5 | 1.8 % | 78 / 0 |
 | campus Top | 200 | 30 (once, 18.5 of it meshes) | in it | 1.0 | 0.02 % | 18 / 0 |
 
 - **Nothing it moved was wrong.** 2,238 points on moved stretches were ray-checked against the original bodies;
   every one has more than four tolerances of cover.
-- **It finds 3 to 6 % of native's Visible length on four of the five curved-model views** (less on curved-steel and
+- **It finds 3 to 6 % of native's Visible length on four of the seven curved-model views** (less on curved-steel and
   the facade) that the sampled audit left Visible, and almost nothing on campus, where the round columns are
   already in the analytic class.
 - **Self-occlusion** (the twisted RHS of curved-steel, Top, from Sol's evidence): 384 of the 435 witness points lie
