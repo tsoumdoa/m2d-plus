@@ -6,47 +6,19 @@ using Rhino.Geometry;
 
 namespace M2DPlus.Rhino.Services;
 
-public sealed record NativeSettings(bool MultipleThreads = false, bool NativeOnly = false)
+public sealed record NativeSettings
 {
-    public NativeVerificationOptions Verification { get; init; } = new();
-    // Correctness harnesses run in isolated, memory-capped processes. Product work
-    // always retains the process-global scheduler and its admission budget.
     internal NativeScheduler Scheduler { get; init; } = NativeScheduler.Global;
     internal bool IsWorker { get; init; }
-    internal bool ReverseNativeForAudit { get; init; }
-    /// <summary>Harness switch for byte-for-byte drawing comparisons; production always enables it.</summary>
     internal bool CullSources { get; init; } = true;
-    /// <summary>Exact analytic solids (sphere, cylinder, tube, extruded arc) leave native HLD. Off only for comparisons.</summary>
-    internal bool Analytic { get; init; } = true;
-    /// <summary>The mixed route of the exact analytic class: a recognised solid that an unrecognised body may hide
-    /// leaves HLD all the same, and its lines are given to HLD as curves. Off by default: on the curved test models
-    /// it moves which lines native HLD gets wrong (hillclimb/curved-engine/FINDINGS.md, section 9).</summary>
-    internal bool AnalyticMixed { get; init; }
-    /// <summary>How many possible cut tubes (closed bodies of planes and cylinders that are none of the plain shapes)
-    /// are examined per view. Each costs about a second the first time it is seen; the rest stay on native HLD.</summary>
-    internal int CutTubeBudget { get; init; } = 128;
-    /// <summary>Dense audit of native Visible lines against certified meshes of the curved bodies (mesh tier, step C):
-    /// what they prove Hidden goes to Unresolved. Off by default; M2D_DENSE_AUDIT=1 turns it on for a process, for
-    /// trials, and the solve message carries it to that process's workers. See hillclimb/mesh-tier/FINDINGS.md.</summary>
-    internal bool DenseAudit { get; init; } = System.Environment.GetEnvironmentVariable("M2D_DENSE_AUDIT") == "1";
-    /// <summary>Harness only: every world stretch the dense audit moved to Unresolved.</summary>
-    internal Action<Curve>? ObserveDenseAuditSpan { get; init; }
-    internal DenseAuditOptions DenseAuditOptions { get; init; } = new();
     internal Action<IReadOnlyList<VisibilityInput>>? ObserveNativeInputs { get; init; }
     internal Action<NativeHldOptions>? ObserveHldOptions { get; init; }
-    /// <summary>Harness only: the sources that left native HLD as exact analytic solids. They are occluders that
-    /// <see cref="ObserveNativeInputs"/> no longer reports.</summary>
-    internal Action<IReadOnlyList<VisibilityInput>>? ObserveExactSolids { get; init; }
-    internal Action<IReadOnlyCollection<string>>? ObserveKernelSources { get; init; }
-    internal Action<PlanarExtraction, Plane>? ObservePlanarScene { get; init; }
-    internal Action<string,int,bool,LineClass,Curve>? ObserveCompositionRecord { get; init; }
 }
 public sealed class DrawingPiece : IDisposable
 {
     private readonly GeometryBase _geometry;
     internal GeometryBase? DepthGeometry { get; }
     internal bool FarCandidate { get; init; }
-    internal bool KernelOwned { get; init; }
     internal SourceSection Source { get; }
     public bool Profile { get; internal set; }
     public double Intensity { get; internal set; } = 1;
@@ -112,31 +84,30 @@ public sealed class ViewDrawing : IDisposable
     public string IgnoredSummary => MinVisible <= 0 ? "Ignored: off (min visible = off)." :
         FormattableString.Invariant($"Ignored (min visible {MinVisible:G6}): {IgnoredObjects} objects, {IgnoredPieces} pieces. Their lines are in the Ignored output; nothing is deleted.");
     public PhaseTimings Phases { get; } = new();
-    // Retain the stored/wire member name so exact result archives remain byte-identical.
+    // Number of distinct sources registered with HLD.
     public int FastNativeSources { get; internal set; }
-    public string EngineSummary => Settings?.Engine == EngineMode.Native
-        ? "native: Rhino HiddenLineDrawing, not certified; lines may differ between runs."
-        : "Engine: exact";
+    public string EngineSummary => NativeCalls == 0 ? Settings?.CutOnly == true
+        ? "Engine: sections only; HLD not run" : "Engine: HLD not run"
+        : "Engine: Rhino HLD; multithreaded; visibility not certified";
+    private string JointsDisclosure => Settings is { } settings && settings["joints"].AssignedBy != SettingSource.Default
+        ? "Joints suppression removed; joints is ignored; Rhino HLD controls contact edges.\n" : "";
     public string Info => $"{Name}: {(Error ?? "finished")} · {Seconds:F3} s\n" +
-        EngineSummary + "\n" +
-        (Settings?.CutOnly == true ? Settings.Engine == EngineMode.Native ? "Cut only: HLD output filtered to near-section lines\n" : "Cut only: projection beyond the cut skipped\n" : "") +
-        $"{Report.Route}; deterministic={!MultipleThreads}; tolerance={Tolerance:R}; validation: {Report.ValidationDomain}\n" +
+        EngineSummary + "\n" + JointsDisclosure + (NativeCalls > 0 ? "Fresh HLD solves may change duplicate ownership/source attribution and Ignored results.\n" : "") +
+        (Settings?.CutOnly == true ? "Cut only: projection beyond the cut skipped\n" : "") +
+        $"{Report.Route}; HLD threading={(NativeCalls == 0 ? "not run" : MultipleThreads ? "multithreaded" : "single-threaded")}; tolerance={Tolerance:R}; validation: {Report.ValidationDomain}\n" +
         $"Visible={Pieces.Count(p => p.Class == LineClass.Visible)}, hidden={Pieces.Count(p => p.Class == LineClass.Hidden)}, unresolved={Report.UncertainCount}, hidden points={HiddenPoints}; " +
         $"invalid extraction={Report.InvalidExtractionCount}; duplicate={DuplicateSegments}; projecting={ProjectingSegments}; empty slots={EmptyNativeSlots}; zero length={ZeroLengthNativeSegments}; quarantined={Report.Quarantined}\n" +
         $"Tolerance counts: adapter tolerance drops={ToleranceDroppedPieces}; source edges at or below 2 x tolerance={SubToleranceSourceEdges}; close source-bound gaps={SubToleranceBoundsGaps}; uncertain section components={UncertainSectionComponents}. Native internal drops=unknown; risk counts are not measured native loss counts.\n" +
         $"Unsupported: {string.Join(", ", Report.UnsupportedByType.Select(p => $"{p.Key}={p.Value}"))}\n" +
         string.Join("; ", Report.Normalisation.Concat(Diagnostics)) +
-        $"\nRouting: kernel candidates={KernelEdges}; native candidates={NativeEdges}; native calls={NativeCalls}.\nPhases: {string.Join(", ", Phases.Seconds.Select(p => $"{p.Key}={p.Value:F4}s"))}\nCut regions={Regions.Count}, Hatch={Regions.Count(r => r.Region.Hatch is not null)}, Beyond={Pieces.Count(p => p.Class == LineClass.Beyond)}, Far clip={Pieces.Count(p => p.Class == LineClass.FarClip)}; weights={Weights.BandName}.\n{IgnoredSummary}";
-    public int KernelEdges { get; internal set; }
+        $"\nHLD: native candidates={NativeEdges}; native calls={NativeCalls}.\nPhases: {string.Join(", ", Phases.Seconds.Select(p => $"{p.Key}={p.Value:F4}s"))}\nCut regions={Regions.Count}, Hatch={Regions.Count(r => r.Region.Hatch is not null)}, Beyond={Pieces.Count(p => p.Class == LineClass.Beyond)}, Far clip={Pieces.Count(p => p.Class == LineClass.FarClip)}; weights={Weights.BandName}.\n{IgnoredSummary}";
     public int NativeEdges { get; internal set; }
     public int NativeCalls { get; internal set; }
     public int CurvedCandidateEdges { get; internal set; }
-    public int PlanarNativeEdges { get; internal set; }
     public int NativeFragments { get; internal set; }
     internal int RoutingInvalid;
     internal bool RoutingQuarantine;
-    internal HashSet<string> UncertainRoutingSources { get; } = new(StringComparer.Ordinal);
-    internal bool MultipleThreads;
+    internal bool MultipleThreads = true;
     internal double Tolerance;
     public void Dispose() { foreach (var item in Pieces) item.Dispose(); Pieces.Clear(); foreach (var region in Regions) region.Region.Dispose(); Regions.Clear(); }
 }
@@ -156,14 +127,14 @@ public static class NativeDrawing
     internal static IProgress<double>? NativeProgress { get; set; }
 
     /// <summary>The view being drawn on this flow reports its user-facing step here (UX §5.2 status). Parallel managed
-    /// work (the planar kernel) inherits it; there is no process-global view state.</summary>
+    /// work inherits it; there is no process-global view state.</summary>
     private static readonly AsyncLocal<StepStatus?> Steps = new();
     /// <summary>An engine phase started (PhaseTimings): report its step once when it changes.</summary>
     internal static void ReportPhase(string phase)
     {
         if (Steps.Value is { } steps && ViewSteps.Of(phase) is { } step) steps.Report(step, null);
     }
-    /// <summary>Inner-phase progress of the current view (planar kernel, ray verification): <paramref name="done"/> of
+    /// <summary>Inner-phase progress of the current view (native HLD): <paramref name="done"/> of
     /// <paramref name="total"/> within <paramref name="step"/>. Safe from any thread; only whole-percent changes go out.</summary>
     internal static void ReportStep(string step, long done, long total)
     {
@@ -171,21 +142,20 @@ public static class NativeDrawing
     }
     private sealed class StepProgress(StepStatus steps) : IProgress<double>
     {
-        public void Report(double value) { NativeProgress?.Report(value); if (double.IsFinite(value)) steps.Report(ViewSteps.HiddenLines, value); }
+        public void Report(double value) { NativeProgress?.Report(value); if (double.IsFinite(value)) steps.Report(ViewSteps.Native, value); }
     }
     /// <summary>Rhino's own HLD progress: the test hook, and the hidden-lines fraction of the current view.</summary>
     internal static IProgress<double>? HldProgress => Steps.Value is { } steps ? new StepProgress(steps) : NativeProgress;
 
     /// <summary>One view's step and that step's percentage. Reports go out only when the step or its whole percent
-    /// changes, so per-edge kernel callbacks from many threads never flood the UI or a worker pipe.</summary>
-    private sealed class StepStatus(Action<string, double?> sink, bool native)
+    /// changes, so native callbacks from many threads never flood the UI or a worker pipe.</summary>
+    private sealed class StepStatus(Action<string, double?> sink)
     {
         private readonly object _gate = new();
         private volatile string? _step;
         private volatile int _percent = -1;
         internal void Report(string step, double? fraction)
         {
-            if (native && step == ViewSteps.HiddenLines) step = ViewSteps.Native;
             var percent = fraction is double f ? (int)Math.Floor(Math.Clamp(f, 0, 1) * 100) : -1;
             if (ReferenceEquals(step, _step) && (fraction is null || percent == _percent)) return;
             lock (_gate)
@@ -237,7 +207,7 @@ public static class NativeDrawing
                         ct.ThrowIfCancellationRequested();
                         var name = views[index].Name; var at = index;
                         progress?.Report(new(JobPhase.Drawing, index, views.Count) { View = name });
-                        Steps.Value = progress is null ? null : new StepStatus((step, fraction) => progress.Report(new(JobPhase.Drawing, at, views.Count) { View = name, Step = step, StepFraction = fraction }), views[index].Settings?.Engine == EngineMode.Native);
+                        Steps.Value = progress is null ? null : new StepStatus((step, fraction) => progress.Report(new(JobPhase.Drawing, at, views.Count) { View = name, Step = step, StepFraction = fraction }));
                         ViewDrawing drawing;
                         try { drawing = SolveView(scene, prepared, views[index], settings, ct); }
                         finally { Steps.Value = null; }
@@ -293,169 +263,47 @@ public static class NativeDrawing
     private static ViewDrawing SolveFilteredView(PreparedScene scene, IReadOnlyList<PreparedLeaf> sources,
         IReadOnlyList<PreparedLeaf> original, ViewRequest view, NativeSettings settings, CancellationToken token, double tolerance)
     {
-        if (view.Settings?.Engine == EngineMode.Native) return NativeModeDrawing.Solve(scene, sources, view, settings, token);
         if (view.Cut is not null && view.Error is null) return SectionDrawing.Solve(scene, sources, view, settings, token,
             DrawingFrames.Resolve(view, original, scene.Bounds, tolerance));
-        var result = new ViewDrawing { Name = view.Name, Settings = view.Settings, MultipleThreads = settings.MultipleThreads, Tolerance = tolerance };
+        var result = new ViewDrawing { Name = view.Name, Settings = view.Settings, MultipleThreads = true, Tolerance = tolerance };
         var timer = Stopwatch.StartNew();
         using var glass = new GlassGeometry(sources, view);
-        sources = glass.Sources;
-        var invalid = 0;
-        var quarantine = scene.HasPotentialOccluderUnsupported;
-        var uncertainSources = new HashSet<string>(StringComparer.Ordinal);
-        var localSources = new HashSet<string>(StringComparer.Ordinal);
-        var uncertainRegions = new List<BoundingBox>();
-        string route = "Native HLD (in process)";
+        var quarantine = false;
         try
         {
             if (view.Error is not null) { result.Error = view.Error; return result; }
             result.Frame = view.Resolve(scene.Bounds, tolerance);
             if (view.Settings?.CutOnly == true)
-            {
-                ReportPhase("sections");
-                route = "sections";
-                result._diagnostics.Add(ViewNotices.CutOnlyEmpty);
-                return result;
-            }
-            result._diagnostics.Add($"Admission: {scene.Cost.GeometryBytes} geometry bytes; {scene.Cost.BrepFaces} faces; {scene.Cost.MeshTriangles} triangles; {scene.SourceCount} sources. Native threading follows the per-view engine setting (serial global scheduler).");
-            if (sources.Count == 0) return result;
-            if (!settings.NativeOnly && (sources.Any(s => !ReferenceEquals(s.Geometry,s.KernelClassifiedGeometry) || s.KernelTolerance != tolerance || s.KernelEligible) ||
-                AnalyticVisibility.Applies(sources.Select(s => s.Geometry), result.Frame.Plane, tolerance, view, settings, token)))
-            {
-                route = ComposedVisibility.Solve(sources.Select(s => new VisibilityInput(s.Geometry, s)).ToArray(), result, view, settings, token, scene.Bounds);
-                invalid += result.RoutingInvalid; quarantine |= result.RoutingQuarantine;
-                uncertainSources.UnionWith(result.UncertainRoutingSources);
+            { ReportPhase("sections"); result._diagnostics.Add(ViewNotices.CutOnlyEmpty); return result; }
+            result._diagnostics.Add($"Admission: {scene.Cost.GeometryBytes} geometry bytes; {scene.Cost.BrepFaces} faces; {scene.Cost.MeshTriangles} triangles; {scene.SourceCount} sources.");
+            HldProjection.Solve(glass.Sources.Select(s => new VisibilityInput(s.Geometry, s)).ToArray(), result, view, settings, scene.Bounds, token);
+            quarantine |= result.RoutingQuarantine;
+            if (view.Named is { Crop: true })
                 foreach (var piece in result.Pieces.ToArray())
                 {
-                    if (view.Named is not { Crop: true }) continue;
                     using var geometry = piece.CopyGeometry();
                     result.Pieces.Remove(piece);
                     try
                     {
                         var source = sources.First(s => s.Identity == piece.SourceIdentity);
                         if (geometry is Curve curve)
-                            foreach (var cropped in Crop(curve, result.Frame, tolerance))
-                                result.Pieces.Add(new(cropped, source, piece.Class, (piece.DepthGeometry as Curve)?.Trim(cropped.Domain)) { Profile = piece.Profile, KernelOwned = piece.KernelOwned });
+                            foreach (var part in Crop(curve, result.Frame, tolerance))
+                                result.Pieces.Add(new(part, source, piece.Class, (piece.DepthGeometry as Curve)?.Trim(part.Domain)) { Profile = piece.Profile });
                         else if (geometry is Point point && Inside(point.Location, result.Frame, tolerance))
-                            result.Pieces.Add(new(geometry.Duplicate(), source, piece.Class, piece.DepthGeometry?.Duplicate()));
+                            result.Pieces.Add(new(point.Duplicate(), source, piece.Class, piece.DepthGeometry?.Duplicate()));
                     }
                     finally { piece.Dispose(); }
                 }
-            }
-            else
-            {
-            using var phase = result.Phases.Start("native setup");
-            using var viewport = new ViewportInfo();
-            var frame = result.Frame;
-            NativeViewport.Configure(viewport,frame,view.Direction,scene.Bounds,tolerance);
-            var nativeOptions = NativeHldOptions.For(view, settings);
-            var parameters = new HiddenLineDrawingParameters { AbsoluteTolerance = tolerance, Flatten = false,
-                IncludeHiddenCurves = nativeOptions.IncludeHiddenCurves, IncludeTangentEdges = view.Settings?.Tangents ?? false, IncludeTangentSeams = view.Settings?.Seams ?? false };
-            parameters.SetViewport(viewport);
-            foreach (var source in VisibilityInputOrder.Native(sources, s => new VisibilityInput(s.Geometry,s), settings))
-            {
-                token.ThrowIfCancellationRequested();
-                if (!parameters.AddGeometry(source.Geometry, source)) { invalid++; quarantine = true; result._diagnostics.Add($"Native rejected {source.Identity}"); }
-            }
-            CountHld(); result.NativeCalls++;
-            phase.Next("native solve");
-            nativeOptions.Begin(result, sources.Select(s => new VisibilityInput(s.Geometry,s)), settings);
-            using var drawing = HiddenLineDrawing.Compute(parameters, nativeOptions.MultipleThreads, HldProgress, token);
-            phase.Next("output construction");
-            token.ThrowIfCancellationRequested();
-            if (drawing is null) throw new InvalidOperationException("Native HLD returned null without cancellation.");
-            if (!drawing.WorldToHiddenLine.TryGetInverse(out var inverse)) throw new InvalidOperationException("Invalid native frame.");
-            var toPlane = Transform.PlanarProjection(frame.Plane) * inverse;
-            var nativeParents = new HashSet<int>(); int nativeFragments = 0;
-            foreach (var segment in drawing.Segments)
-            {
-                token.ThrowIfCancellationRequested();
-                var visibility = segment.SegmentVisibility;
-                // Unset may be a non-dereferenceable proxy. Check it before ParentCurve or CurveGeometry.
-                if (visibility == HiddenLineDrawingSegment.Visibility.Unset)
-                {
-                    var evidence = NativeUncertainty.Inspect(segment, tag => tag as PreparedLeaf, toPlane);
-                    if (evidence.Kind == UnsetKind.EmptySlot) result.EmptyNativeSlots++;
-                    else if (evidence.Kind == UnsetKind.ZeroLength) result.ZeroLengthNativeSegments++;
-                    else
-                    {
-                        invalid++;
-                        if (!settings.NativeOnly && NativeUncertainty.RetainLocal(segment, evidence, inverse, result, uncertainRegions,
-                            (id, world) => settings.ObserveCompositionRecord?.Invoke(id, -1, false, LineClass.Unresolved, world)))
-                            localSources.Add(evidence.Source!.Identity);
-                        else if (evidence.Source is { } affected) uncertainSources.Add(affected.Identity);
-                        else if (evidence.Bounds is { } bounds) uncertainRegions.Add(bounds);
-                        else quarantine = true;
-                        result._diagnostics.Add($"Unset segment {segment.Index}: {evidence.Kind}; source={evidence.Source?.Identity}; bounds={evidence.Bounds}; {evidence.Detail}");
-                    }
-                    continue;
-                }
-                var parent = segment.ParentCurve;
-                if (parent?.SourceObject?.Tag is not PreparedLeaf source)
-                { invalid++; quarantine = true; result._diagnostics.Add($"Parentless/source-less segment {segment.Index}"); continue; }
-                if (visibility != HiddenLineDrawingSegment.Visibility.Projecting) nativeParents.Add(parent.Index);
-                if (visibility == HiddenLineDrawingSegment.Visibility.Duplicate) { result.DuplicateSegments++; continue; }
-                if (visibility == HiddenLineDrawingSegment.Visibility.Projecting) { result.ProjectingSegments++; continue; }
-                var proxy = segment.CurveGeometry;
-                if (proxy is null) { invalid++; uncertainSources.Add(source.Identity); result._diagnostics.Add($"Null geometry {segment.Index}: {source.Identity}"); continue; }
-                nativeFragments++;
-                var owned = proxy.DuplicateCurve();
-                try
-                {
-                    owned.EnsurePrivateCopy();
-                    using var depthCurve = proxy.DuplicateCurve(); depthCurve.Transform(inverse);
-                    if (!owned.Transform(toPlane) || !owned.IsValid) throw new InvalidOperationException("Native curve extraction failed.");
-                    var classification = visibility switch
-                    {
-                        HiddenLineDrawingSegment.Visibility.Visible => LineClass.Visible,
-                        HiddenLineDrawingSegment.Visibility.Hidden => LineClass.Hidden, _ => LineClass.Unresolved
-                    };
-                    if (view.Named is { Crop: true })
-                    {
-                        foreach (var clipped in Crop(owned, frame, tolerance)) result.Pieces.Add(new(clipped, source, classification, depthCurve.Trim(clipped.Domain)) { Profile = segment.IsSceneSilhouette });
-                        owned.Dispose();
-                    }
-                    else result.Pieces.Add(new(owned, source, classification, depthCurve.DuplicateCurve()) { Profile = segment.IsSceneSilhouette });
-                }
-                catch { owned.Dispose(); throw; }
-            }
-            result.NativeEdges = result.CurvedCandidateEdges = nativeParents.Count; result.NativeFragments = nativeFragments;
-            foreach (var point in drawing.Points)
-            {
-                token.ThrowIfCancellationRequested();
-                if (point.PointVisibility == HiddenLineDrawingPoint.Visibility.Unset || point.SourceObject?.Tag is not PreparedLeaf source || !point.Location.IsValid)
-                { invalid++; quarantine = true; result._diagnostics.Add("Invalid native point extraction"); continue; }
-                if (point.PointVisibility == HiddenLineDrawingPoint.Visibility.Hidden) { result.HiddenPoints++; continue; }
-                if (point.PointVisibility != HiddenLineDrawingPoint.Visibility.Visible)
-                { invalid++; quarantine = true; result._diagnostics.Add("Uncertain native point"); continue; }
-                var world = point.Location; world.Transform(inverse);
-                var location = point.Location; location.Transform(toPlane);
-                if (view.Named is { Crop: true } && !Inside(location, frame, tolerance)) continue;
-                result.Pieces.Add(new(new Point(location), source, LineClass.Visible, new Point(world)));
-            }
-            phase.Next("native ray verification");
-            var audited = sources.Select(s => new VisibilityInput(s.Geometry,s)).ToArray();
-            NativeVisibilityVerifier.Apply(audited, result, settings, token);
-            DenseNativeAudit.Apply(audited, result, settings, token);
-            }
+            HldProjection.ApplyFailure(result, quarantine, [], tolerance, token);
         }
         catch (OperationCanceledException) { result.Dispose(); throw; }
-        catch (Exception ex) { result.Dispose(); result.Error = ex.Message; quarantine = true; }
+        catch (Exception ex) { result.Dispose(); result.Error = ex.Message; }
         finally
         {
-            using var completionPhase = result.Phases.Start("uncertainty and ordering");
-            if (quarantine || uncertainSources.Count != 0 || uncertainRegions.Count != 0)
-            {
-                try { NativeUncertainty.ApplyFootprints(result, sources, quarantine, uncertainSources, uncertainRegions, tolerance, token, !settings.NativeOnly, localSources); }
-                catch { result.Dispose(); throw; }
-            }
-            if (result.EmptyNativeSlots + result.ZeroLengthNativeSegments != 0) result._diagnostics.Add($"Benign native records dropped: {result.EmptyNativeSlots} empty slots (index -1, no parent); {result.ZeroLengthNativeSegments} exactly zero-length point curves. No nonzero Unset was promoted.");
-            if(view.Settings?.Hidden==false)
-                foreach(var piece in result.Pieces.Where(p=>p.Class==LineClass.Hidden).ToArray())
-                { result.Pieces.Remove(piece);piece.Dispose(); }
+            result._diagnostics.Add($"Compute: {HldProjection.Policy}; fingerprint={WorkerCodec.Fingerprint()}; processors={System.Environment.ProcessorCount}.");
             result.Pieces.Sort(ComparePieces);
-            result.Report = new(route, result.Pieces.Count(p => p.Class == LineClass.Unresolved), invalid,
-                scene.Unsupported, scene.Conversions, quarantine) { ValidationDomain = settings.NativeOnly ? "native parallel baseline; analytic properties" : "exact planar kernel; mixed composition gate pending; general freeform visibility unknown; sections not evaluated (M2)" };
+            result.Report = new("Rhino HLD", result.Items.Count(p => p.Class == LineClass.Unresolved), result.RoutingInvalid,
+                scene.Unsupported, scene.Conversions, quarantine) { ValidationDomain = "Rhino HLD; visibility not certified" };
             result.Seconds = timer.Elapsed.TotalSeconds;
         }
         return result;

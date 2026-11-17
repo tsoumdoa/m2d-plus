@@ -155,15 +155,15 @@ public sealed class MinVisibleTests
     }
 
     [Fact]
-    public void MinVisibleAndHiddenNeverKeyTheVisibilitySolve()
+    public void MinVisibleIsPresentationAndHiddenKeysTheVisibilitySolve()
     {
         Assert.DoesNotContain("min_visible", Settings.VisibilityKeys);
-        Assert.DoesNotContain("hidden", Settings.VisibilityKeys);
+        Assert.Contains("hidden", Settings.VisibilityKeys);
         Assert.All(Settings.VisibilityKeys, k => Assert.Contains(k, Settings.Keys));
         var view = new ViewSettingsContext("v", "V", ViewSourceKind.Plane, false, 10, .001);
         var off = Settings.Resolve([view], [["hidden = off", "min visible = 2 mm"]], DocumentUnits.Metres).Views[0];
-        var solve = off.ForVisibilitySolve();
-        Assert.True(solve.Hidden); Assert.False(off.Hidden);
+        var solve = off;
+        Assert.False(solve.Hidden); Assert.False(off.Hidden);
         Assert.Equal(off.MinVisible, solve.MinVisible);
         Assert.All(Settings.VisibilityKeys, k => Assert.Equal(off[k].Value, solve[k].Value));
     }

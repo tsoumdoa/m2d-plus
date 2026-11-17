@@ -43,7 +43,7 @@ public sealed class WorkerCodecStateTests(RhinoHost host)
                 property.SetValue(typeAndValue.Item2,value);
             }
         }
-        source.RoutingInvalid=37;source.RoutingQuarantine=true;source.UncertainRoutingSources.Add("uncertain/source");
+        source.RoutingInvalid=37;source.RoutingQuarantine=true;
         source.Pieces.Add(piece);source._diagnostics.Add("wire diagnostic");source.Phases.Add("wire phase",.1875);
         source.Regions.Add(new(new("region",[],null,["source/id"],SectionStyleSnapshot.Default(),SectionStatus.Contact,7,"test"),[3,5]){SourceItem=19});
         using var restored=WorkerCodec.RestoreDrawing(WorkerCodec.CaptureDrawing(source));

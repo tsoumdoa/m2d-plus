@@ -1,6 +1,5 @@
 using System.Collections.Concurrent;
 using M2DPlus.Core;
-using M2DPlus.Core.Visibility;
 using M2DPlus.Rhino.Services;
 using Rhino;
 using Rhino.Geometry;
@@ -16,51 +15,36 @@ public sealed class UnitScaleRhinoTests(RhinoHost host, ITestOutputHelper output
     [RhinoFact]
     public void ElevationTopologyAndClassesAreInvariantInMillimetresAtSurveyCoordinates() => host.Run(() =>
     {
-        (string Source,LineClass Class,Point3d A,Point3d B)[][]? expected=null;
-        foreach(var (scale,offset) in new[]{(1d,0d),(1000d,0d),(1000d,1000000d),(1000d,10000000d)})
+        var expected=new List<ViewDrawing>();
+        try
         {
-            using var doc=RhinoDoc.CreateHeadless(null);doc.ModelUnitSystem=scale==1?UnitSystem.Meters:UnitSystem.Millimeters;
-            doc.ModelAbsoluteTolerance=.00001*scale;
-            Point3d V(double x,double y,double z)=>new(x*scale+offset,y*scale+offset,z*scale+offset);
-            using var box=Brep.CreateFromBox(new BoundingBox(V(0,0,0),V(2,2,3)));
-            using var panel=Brep.CreateFromBox(new BoundingBox(V(1,3,1),V(3,4,2)));
-            using var line=new LineCurve(V(-1,1,1),V(4,1,1));
-            CaptureInput[] inputs=[new(box,[],"box"),new(panel,[],"panel"),new(line,[],"line")];
-            using var cache=new SceneCache();using var scene=BaselineTests.Capture(doc,cache,inputs);
-            var views=new[]{"Back","Front","Right","Left"}.Select(v=>ViewRequest.Parse(v)).ToArray();
-            using var batch=NativeDrawing.SolveBorrowedAsync(scene.Value,new(scene.Value.Revision,"views","settings",1),views,new(),default,null).GetAwaiter().GetResult();
-            var actual=batch.Views.Select((view,v)=>
+            foreach(var (scale,offset) in new[]{(1d,0d),(1000d,0d),(1000d,1000000d),(1000d,10000000d)})
             {
-                Assert.Null(view.Error);Assert.Equal(0,view.NativeCalls);
-                var pieces=view.Items.Select(piece=>{
-                    using var geometry=piece.CopyGeometry();var curve=Assert.IsAssignableFrom<Curve>(geometry);
-                    Point3d Normalize(Point3d p)=>new((p.X-offset)/scale,(p.Y-offset)/scale,(p.Z-offset)/scale);
-                    return(piece.SourceIdentity,piece.Class,Normalize(curve.PointAtStart),Normalize(curve.PointAtEnd));
-                }).ToArray();
-                // Compare the drawing topology after joining collinear same-class,
-                // same-source intervals. Filtered endpoint rounding may leave an
-                // extra partition boundary without changing any drawing locus.
-                var plane=new Plane(Point3d.Origin,-views[v].Direction);
-                return pieces.GroupBy(p=>(p.SourceIdentity,p.Class)).SelectMany(group=>
+                using var doc=RhinoDoc.CreateHeadless(null);doc.ModelAbsoluteTolerance=.00001*scale;
+                Point3d V(double x,double y,double z)=>new(x*scale+offset,y*scale+offset,z*scale+offset);
+                using var box=Brep.CreateFromBox(new BoundingBox(V(0,0,0),V(2,2,3)));
+                using var panel=Brep.CreateFromBox(new BoundingBox(V(1,3,1),V(3,4,2)));
+                using var line=new LineCurve(V(-1,1,1),V(4,1,1));
+                using var cache=new SceneCache();using var scene=BaselineTests.Capture(doc,cache,[new(box,[],"box"),new(panel,[],"panel"),new(line,[],"line")]);
+                var views=new[]{"Back","Front","Right","Left"}.Select(v=>ViewRequest.Parse(v)).ToArray();
+                using var batch=NativeDrawing.SolveBorrowedAsync(scene.Value,new("s","v","f",1),views,new(),default,null).GetAwaiter().GetResult();
+                for(int v=0;v<views.Length;v++)
                 {
-                    var loci=group.Select(p=>{plane.ClosestParameter(p.Item3,out var ax,out var ay);plane.ClosestParameter(p.Item4,out var bx,out var by);
-                        return new Locus(ax,ay,bx,by,VisibilityClass.Visible,p.SourceIdentity);}).ToArray();
-                    return VisibilityLoci.Union(loci,.00001).Select(l=>(group.Key.SourceIdentity,group.Key.Class,plane.PointAt(l.X0,l.Y0),plane.PointAt(l.X1,l.Y1)));
-                }).ToArray();
-            }).ToArray();
-            if(expected is null){expected=actual;continue;}
-            for(int v=0;v<actual.Length;v++)
-            {
-                var extra=actual[v].Where(p=>!expected[v].Any(piece=>Same(p,piece))).ToArray();
-                Assert.True(expected[v].Length==actual[v].Length,$"scale={scale} offset={offset} view={views[v].Name}; expected={expected[v].Length} actual={actual[v].Length}; extra={string.Join(";",extra)}");
-                // Geometry sorting strings need not sort the same way after scaling.
-                foreach(var piece in expected[v]) Assert.Contains(actual[v],p=>Same(p,piece));
+                    var original=batch.Views[v];Assert.Null(original.Error);Assert.Equal(1,original.NativeCalls);
+                    using var normalized=new ViewDrawing{Tolerance=.00001,MultipleThreads=true};
+                    var transform=Transform.Scale(Point3d.Origin,1/scale)*Transform.Translation(-offset,-offset,-offset);
+                    foreach(var piece in original.Items)
+                    {
+                        var geometry=piece.CopyGeometry();Assert.True(geometry.Transform(transform));
+                        normalized.Pieces.Add(new(geometry,new(piece.SourceIdentity,piece.SourcePath,geometry),piece.Class));
+                    }
+                    if(expected.Count<views.Length)expected.Add(WorkerCodec.RestoreDrawing(WorkerCodec.CaptureDrawing(normalized)));
+                    else HldFixtureComparison.Equal(expected[v],normalized);
+                }
             }
         }
+        finally{foreach(var drawing in expected)drawing.Dispose();}
     });
-
-    private static bool Same((string Source,LineClass Class,Point3d A,Point3d B) a,(string Source,LineClass Class,Point3d A,Point3d B) b) =>
-        a.Source==b.Source&&a.Class==b.Class&&(a.A.DistanceTo(b.A)<1e-7&&a.B.DistanceTo(b.B)<1e-7||a.A.DistanceTo(b.B)<1e-7&&a.B.DistanceTo(b.A)<1e-7);
 
     [RhinoFact]
     public void NativeCameraDistancesScaleWithTheSceneAndTolerance() => host.Run(() =>
@@ -92,15 +76,15 @@ public sealed class UnitScaleRhinoTests(RhinoHost host, ITestOutputHelper output
         var localProgress=new Sink();
         using var local=NativeDrawing.SolveBorrowedAsync(scene.Value,identity,views,new(),default,localProgress).GetAwaiter().GetResult();
         // Inner phases feed the one status model: the view's step with that step's own percentage.
-        Assert.Contains(localProgress.Values,p=>p.Phase==JobPhase.Drawing && p.View==views[0].Name && p.Step==ViewSteps.HiddenLines && p.StepFraction is not null);
+        Assert.Contains(localProgress.Values,p=>p.Phase==JobPhase.Drawing && p.View==views[0].Name && p.Step==ViewSteps.Native && p.StepFraction is not null);
         var workerProgress=new Sink();
         var directory=Path.GetFullPath(Path.Combine(AppContext.BaseDirectory,"../../../../../src/M2DPlus.Worker/bin/Debug/net"+System.Environment.Version.Major+".0-windows"));
         using var pool=new DrawingWorkerPool(new(){Count=1,Directory=directory});
         using var worker=pool.SolveAsync(scene.Value,identity,views,new(),default,workerProgress).GetAwaiter().GetResult();
         Assert.Null(worker.Views[0].Error);
         // The child's steps cross the pipe and come back with the view they belong to.
-        Assert.Contains(workerProgress.Values,p=>p.Phase==JobPhase.Drawing && p.Workers==1 && p.View==views[0].Name && p.Step==ViewSteps.HiddenLines && p.StepFraction is not null);
-        Assert.Equal(WorkerCodec.CaptureDrawing(local.Views[0],true),WorkerCodec.CaptureDrawing(worker.Views[0],true));
+        Assert.Contains(workerProgress.Values,p=>p.Phase==JobPhase.Drawing && p.Workers==1 && p.View==views[0].Name && p.Step==ViewSteps.Native && p.StepFraction is not null);
+        HldFixtureComparison.Equal(local.Views[0],worker.Views[0]);
     });
     private sealed class Sink:IProgress<JobProgress>
     {
@@ -120,7 +104,7 @@ public sealed class UnitScaleRhinoTests(RhinoHost host, ITestOutputHelper output
         try
         {
             Assert.ThrowsAny<OperationCanceledException>(()=>NativeDrawing.SolveBorrowedAsync(scene.Value,
-                new(scene.Value.Revision,"view","settings",1),[ViewRequest.Parse("Front")],new(NativeOnly:true),cancel.Token,null).GetAwaiter().GetResult());
+                new(scene.Value.Revision,"view","settings",1),[ViewRequest.Parse("Front")],new(),cancel.Token,null).GetAwaiter().GetResult());
             Assert.True(sink.CancelledAt!=0,"Native progress callback was not entered");
             var latency=System.Diagnostics.Stopwatch.GetElapsedTime(sink.CancelledAt);
             output.WriteLine($"Single-view native cancellation returned in {latency.TotalMilliseconds:F1} ms after the callback cancelled.");

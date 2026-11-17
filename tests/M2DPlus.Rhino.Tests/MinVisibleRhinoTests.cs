@@ -9,7 +9,7 @@ using Xunit.Abstractions;
 namespace M2DPlus.Rhino.Tests;
 
 /// <summary>min visible end to end in a licensed Rhino: a wall with a 3 mm gap shows a sliver of a column behind it.
-/// The column is ignored at 5 mm and kept at 0 or 2 mm; changing only the threshold (or hidden) never solves again.</summary>
+/// The column is ignored at 5 mm and kept at 0 or 2 mm; changing only the threshold never solves again; hidden invalidates projection.</summary>
 [Collection("Rhino")]
 [Trait("Category", "RhinoIntegration")]
 public sealed class MinVisibleRhinoTests(RhinoHost host, ITestOutputHelper output)
@@ -79,12 +79,13 @@ public sealed class MinVisibleRhinoTests(RhinoHost host, ITestOutputHelper outpu
         Assert.Equal(sliver, Length(twoMm.Views[0], LineClass.Visible, column), 6);
         using var hiddenOff = Draw("min visible = 0.005 m", "hidden = off"); // the rule still sees hidden pieces
         Assert.Equal(0, Length(hiddenOff.Views[0], LineClass.Hidden));
-        Assert.Equal(sliver, Length(hiddenOff.Views[0], LineClass.Ignored, column), 6);
+        Assert.Equal(0, hiddenOff.Views[0].IgnoredPieces);
+        Assert.Contains(ViewNotices.For(hiddenOff.Views[0]), n => n.Text.Contains("min visible ignored", StringComparison.Ordinal));
         using var hiddenOffKept = Draw("hidden = off");
-        Assert.Equal(sliver, Length(hiddenOffKept.Views[0], LineClass.Visible, column), 6);
+        Assert.InRange(Math.Abs(6 - Length(hiddenOffKept.Views[0], LineClass.Visible, column)), 0, doc.ModelAbsoluteTolerance);
         Assert.Equal(off.Report.UncertainCount, hiddenOffKept.Views[0].Report.UncertainCount);
         // M3 gate, extended: threshold and hidden edits are presentation only.
-        Assert.Equal(solves, NativeDrawing.VisibilitySolves); Assert.Equal(hld, NativeDrawing.HldCalls);
+        Assert.Equal(solves+1, NativeDrawing.VisibilitySolves); Assert.Equal(hld+1, NativeDrawing.HldCalls);
 
         // Bake: ignored lines go to their own Ignored layer, beside the existing scheme; nothing is deleted.
         var bake = DrawingBake.Bake(doc, Guid.NewGuid(), [new BakeDrawing(ignored, "Gap")]);

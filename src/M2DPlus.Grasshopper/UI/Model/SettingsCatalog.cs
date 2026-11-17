@@ -20,7 +20,6 @@ public static class SettingsCatalog
 
     public static ImmutableArray<FieldSpec> Fields { get; } =
     [
-        new("engine", "Engine", Lines, FieldKind.Choice, [O("exact", "Exact"), O("native", "Native (Rhino Make2D)")], "engine = exact | native. Exact is the default. Native uses Rhino HiddenLineDrawing for every source; lines are not certified and may differ between runs. Saved engine = fast is an alias of native."),
         new("depth", "Depth", ViewRange, FieldKind.Distance, [O("auto", "Auto")], "depth = auto | <distance>: the far plane, measured from the view plane. Auto: box height, clipping-plane depth, else the scene extent."),
         new("beyond", "Beyond", ViewRange, FieldKind.Distance, [O("auto", "Auto"), O("off", "Off"), O("1 m", "1 m"), O("3 m", "3 m"), O("10 m", "10 m")], "beyond = auto | off | <distance>: visible lines farther than this go to Beyond. Auto: 3 m in cut views, off otherwise."),
         new("farclip", "Far clip", ViewRange, FieldKind.Choice, [O("none", "No clip"), O("line", "Clip with line"), O("noline", "Clip without line")], "farclip = none | line | noline"),
@@ -33,7 +32,6 @@ public static class SettingsCatalog
         new("hidden", "Hidden lines", Lines, FieldKind.Toggle, OnOff, "hidden = on | off"),
         new("tangents", "Tangent edges", Lines, FieldKind.Toggle, OnOff, "tangents = on | off"),
         new("seams", "Seams", Lines, FieldKind.Toggle, OnOff, "seams = on | off"),
-        new("joints", "Joints", Lines, FieldKind.Toggle, OnOff, "joints = on | off"),
         new("min_visible", "Min visible", Lines, FieldKind.Distance, [O("off", "Off"), O("1 mm", "1 mm"), O("2 mm", "2 mm"), O("5 mm", "5 mm"), O("10 mm", "10 mm")], "min visible = off | <length>: objects seen only through small gaps. A partly hidden object whose longest continuous visible piece (2D, in the drawing) is shorter than this moves to the Ignored output. Fully visible objects are never ignored."),
         new("glass", "Glass", Lines, FieldKind.Choice, [O("opaque", "Opaque"), O("clear", "Clear")], "glass = opaque | clear"),
         new("weights", "Weights", Lines, FieldKind.Choice, [O("auto", "From scale"), O("layers", "From source layers")], "weights = auto | layers"),
@@ -61,7 +59,7 @@ public static class SettingsCatalog
             case FieldKind.Toggle:
                 return lower is "on" or "true" or "yes" or "1" ? "on" : lower is "off" or "false" or "no" or "0" ? "off" : lower;
             // tree = branch (the old "Per source branch" menu item, saved before 2026-11-15) now means auto.
-            case FieldKind.Choice: return key == "tree" && lower == "branch" ? "auto" : key == "engine" && lower == "fast" ? "native" : lower;
+            case FieldKind.Choice: return key == "tree" && lower == "branch" ? "auto" : lower;
             case FieldKind.Scale: return ScaleDenominator(value) is double n ? "1:" + Number(n) : lower;
             case FieldKind.Percent: return Percent(value) is double p ? Number(p) + " %" : lower;
             case FieldKind.Distance: return lower is "auto" or "off" ? lower : value;

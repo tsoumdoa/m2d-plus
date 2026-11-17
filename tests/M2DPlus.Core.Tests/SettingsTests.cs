@@ -64,9 +64,9 @@ public sealed class SettingsTests
             cutonly = on
             bake = layer-view
             """, View(source: ViewSourceKind.NamedView));
-        Assert.Empty(result.Diagnostics);
+        Assert.DoesNotContain(result.Diagnostics, d => d.Severity != DiagnosticSeverity.Remark);
         var s = Assert.Single(result.Views);
-        Assert.Equal(25, s.Values.Count); Assert.False(s.Joints); Assert.True(s.CutOnly); Assert.Equal(.002, s.MinVisible, 12); Assert.Equal(EngineMode.Native, s.Engine); Assert.Equal(BakeLayout.LayerView, s.Bake);
+        Assert.Equal(25, s.Values.Count); Assert.False(s.Get<bool>("joints")); Assert.True(s.CutOnly); Assert.Equal(.002, s.MinVisible, 12); Assert.Equal(EngineMode.Native, s.Get<EngineMode>("engine")); Assert.Equal(BakeLayout.LayerView, s.Bake);
         Assert.Equal(8, s.Depth); Assert.Equal(3, s.Beyond); Assert.Equal(FarClipMode.Line, s.FarClip);
         Assert.True(s.Fade); Assert.Equal(25, s.FadeStart); Assert.Equal(90, s.FadeEnd); Assert.Equal(10, s.FadeLimit);
         Assert.False(s.Crop); Assert.False(s.Hidden); Assert.True(s.Tangents); Assert.True(s.Seams);
@@ -136,7 +136,7 @@ public sealed class SettingsTests
     {
         var result = Settings.Resolve([View(), View("B", "b")],
             [new[] { "depth = 8", "[B]\nscale = 50" }, new[] { "hidden = off", "[#0]", "beyond = off", "[*]\nseams = on" }], DocumentUnits.Metres);
-        Assert.Empty(result.Diagnostics);
+        Assert.DoesNotContain(result.Diagnostics, d => d.Severity != DiagnosticSeverity.Remark);
         Assert.Equal(8, result.Views[0].Depth); Assert.Equal(20, result.Views[1].Depth);
         Assert.Equal(50, result.Views[1].Scale); Assert.False(result.Views[1].Hidden);
         Assert.True(result.Views[0].Hidden); Assert.Null(result.Views[0].Beyond);
@@ -238,7 +238,7 @@ public sealed class SettingsTests
         var editor = new EditorSettings(Row(("hidden", "off")), new[] { KeyValuePair.Create("a", Row(("name", "A #1"), ("scale", "50"))) });
         var text = Settings.CopyEditorAsText(editor, contexts);
         var result = Settings.Resolve(contexts, [new[] { text }], DocumentUnits.Metres);
-        Assert.Empty(result.Diagnostics); Assert.Equal("A #1", result.Views[0].Name);
+        Assert.DoesNotContain(result.Diagnostics, d => d.Severity != DiagnosticSeverity.Remark); Assert.Equal("A #1", result.Views[0].Name);
         Assert.Equal(50, result.Views[0].Scale); Assert.Equal(100, result.Views[1].Scale);
         Assert.All(result.Views, s => Assert.False(s.Hidden));
     }
@@ -247,7 +247,7 @@ public sealed class SettingsTests
     public void HeadersAllowCommentsContainingBracketsAndWhitespaceAndCrLineEndings()
     {
         var result = Resolve("[Section A] # comment with ]\rhidden=off\r[#0]\rseams=on");
-        Assert.Empty(result.Diagnostics); Assert.False(result.Views[0].Hidden); Assert.True(result.Views[0].Seams);
+        Assert.DoesNotContain(result.Diagnostics, d => d.Severity != DiagnosticSeverity.Remark); Assert.False(result.Views[0].Hidden); Assert.True(result.Views[0].Seams);
     }
 
     [Fact]
@@ -274,7 +274,7 @@ public sealed class SettingsTests
         var contexts = new[] { View(source: ViewSourceKind.Plane) with { SourceDepth = 8 },
             View("CP", "cp", source: ViewSourceKind.ClippingPlane) with { SourceDepth = 8 } };
         var result = Settings.Resolve(contexts, [], DocumentUnits.Metres);
-        Assert.Empty(result.Diagnostics);
+        Assert.DoesNotContain(result.Diagnostics, d => d.Severity != DiagnosticSeverity.Remark);
         Assert.Equal(20, result.Views[0].Depth); Assert.Equal(8, result.Views[1].Depth);
     }
 

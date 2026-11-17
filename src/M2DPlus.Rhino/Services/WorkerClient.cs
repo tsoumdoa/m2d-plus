@@ -63,7 +63,7 @@ internal sealed class WorkerClient : IDisposable
         if(options.TestFault is {} fault)start.Environment["M2DPLUS_WORKER_TEST_FAULT"]=fault;
         else start.Environment.Remove("M2DPLUS_WORKER_TEST_FAULT");
         start.Environment["DOTNET_ROLL_FORWARD"]="LatestPatch";
-        // Bound managed kernel parallelism across the whole reservation instead
+        // Bound advertised processor count across the whole reservation instead
         // of advertising all host cores independently to every worker.
         start.Environment["DOTNET_PROCESSOR_COUNT"]=options.ProcessorLimit.ToString(System.Globalization.CultureInfo.InvariantCulture);
         start.Environment.Remove("M2DPLUS_WORKER_DIRECTORY");

@@ -163,8 +163,6 @@ def report(models,out):
              'disagreementViewsByClass':{key:sum(any(r.get('audit',{}).get('locus',{}).get(d,{}).get(key,0)>0
                  for d in ('expectedToActual','actualToExpected')) for r in rows)
                  for key in ('missingInkSamples','uncertaintyClassSamples','confidentVisibleHiddenSwapSamples')},
-             'exactPlanar':dict(Counter('pass' if r['m2d']['planar']['oraclePassed'] else 'fail' for r in rows
-                 if r.get('m2d',{}).get('planar',{}).get('status')=='completed')),
              'metamorphic':dict(Counter(r['engine']+'/'+r['kind']+'/'+r['status'] for r in metamorphic)),
              'completedLocusDisagreements':sum(bool(r.get('locusMissingSamples',0)+r.get('locusExtraSamples',0)) for r in rows)}
     phases={'m2d':'M2D+ route C','prepare':'raw native HLD preparation','compute':'raw native HLD',

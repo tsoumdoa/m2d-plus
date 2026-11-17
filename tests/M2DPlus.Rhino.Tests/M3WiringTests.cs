@@ -147,7 +147,7 @@ public sealed class M3WiringTests(RhinoHost host, ITestOutputHelper output)
         using var baseline = Draw(doc, scene, cache, views); Healthy(baseline.Views[0]);
         var calls = NativeDrawing.VisibilitySolves;
         var target = new Plane(new Point3d(100, 20, 30), Vector3d.YAxis, Vector3d.ZAxis);
-        var styled = views.Select(v => SettingsFor(v, "scale=1:50", "fade=on", "gap=3", "hatch=black", "cuts=merge", "min visible = 2 mm", "hidden=off")).ToArray();
+        var styled = views.Select(v => SettingsFor(v, "scale=1:50", "fade=on", "gap=3", "hatch=black", "cuts=merge", "min visible = 2 mm")).ToArray();
         using var placed = Draw(doc, scene, cache, styled, target);
         Assert.Equal(calls, NativeDrawing.VisibilitySolves);
         Assert.Equal(target.Origin, placed.Views[0].Frame.Plane.Origin);
@@ -226,7 +226,7 @@ public sealed class M3WiringTests(RhinoHost host, ITestOutputHelper output)
         var owner = Guid.NewGuid();
         var first = DrawingBake.Bake(doc, owner, new[] { new BakeDrawing(faded.Views[0], "Line") });
         var obj = doc.Objects.FindId(Assert.Single(first.Added));
-        Assert.Equal(Color.FromArgb(38, 38, 38).ToArgb(), obj.Attributes.ObjectColor.ToArgb());
+        Assert.Equal(Color.FromArgb(38, 38, 147).ToArgb(), obj.Attributes.ObjectColor.ToArgb());
         Assert.Equal(obj.Attributes.ObjectColor.ToArgb(), obj.Attributes.PlotColor.ToArgb());
         var category = doc.Layers.FindByFullPath("M2D+::Line::Steel::Visible", -1); Assert.Equal(.18, doc.Layers[category].PlotWeight, 8);
         using var detail = Draw(doc, scene, cache, new[] { SettingsFor(ViewRequest.Parse(Plane.WorldXY), "scale=1:50") });

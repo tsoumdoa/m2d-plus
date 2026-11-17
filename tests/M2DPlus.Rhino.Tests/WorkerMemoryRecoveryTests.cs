@@ -52,7 +52,7 @@ public sealed class WorkerMemoryRecoveryTests(RhinoHost host)
             originalPid = Assert.Single(pool.ProcessIds);
             using var second = pool.SolveAsync(scene.Value, identity, [view], new(), default).GetAwaiter().GetResult();
             Assert.Equal(3, reads); Assert.NotEqual(originalPid, Assert.Single(pool.ProcessIds));
-            Assert.Equal(WorkerCodec.CaptureDrawing(first.Views[0], true), WorkerCodec.CaptureDrawing(second.Views[0], true));
+            HldFixtureComparison.Equal(first.Views[0],second.Views[0]);
         }
     });
 }

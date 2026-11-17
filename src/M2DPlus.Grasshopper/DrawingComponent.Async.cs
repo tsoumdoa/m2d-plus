@@ -166,7 +166,7 @@ public sealed partial class DrawingComponent
                     {
                         var parts = line.Split('=', 2);
                         if (parts.Length == 2 && parts[0].Trim().Equals("multiplethreads", StringComparison.OrdinalIgnoreCase))
-                            _settings = new(parts[1].Trim().ToLowerInvariant() is "on" or "true" or "yes" or "1");
+                            _settings = new();
                         else lines.Add(line);
                     }
                 branches.Add(lines);
@@ -195,8 +195,8 @@ public sealed partial class DrawingComponent
         Ui.Context = () => _context;
         Previews(BoundingBox.Empty);
         // The progress weights of the next run come from this one when the inputs, views and settings are the same.
-        _historyKey = _captureKey + "|" + string.Join("|", _views.Select(v => v.Revision)) + "|" + string.Join("\n", branches.SelectMany(b => b)) +
-            "|" + string.Join(",", depth.Select(d => d?.Value)) + "|" + Ui.State + "|" + string.Join(",", _targets);
+        _historyKey = _captureKey + "|" + string.Join("|", _views.Select(v => v.Revision)) + "|" + string.Join("\n", branches.Select(Settings.RunText)) +
+            "|" + string.Join(",", depth.Select(d => d?.Value)) + "|" + Settings.RunText(Ui.State.Menu) + "|" + string.Join(",", _targets);
         const char Unit = '\u001f';
         _runKey = string.Join(Unit, [_captureKey ?? "", string.Join(Unit, _views.Select(v => v.Revision)),
             string.Join(Unit, branches.Select(Settings.RunText)), string.Join(Unit, depth.Select(d => d?.Value)), Settings.RunText(Ui.State.Menu),

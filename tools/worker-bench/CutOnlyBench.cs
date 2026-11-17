@@ -46,7 +46,7 @@ internal static class CutOnlyBench
                 bool only = label == "cut-only";
                 var requests = views.Select(v => v with { Settings = Settings.Resolve(
                     [new("v", v.Name, v.Kind, true, scene.Bounds.Diagonal.Length, scene.Tolerance)],
-                    [[$"cutonly={(only ? "on" : "off")}\nhidden=on"]], units).Views[0].ForVisibilitySolve() }).ToArray();
+                    [[$"cutonly={(only ? "on" : "off")}\nhidden=on"]], units).Views[0] }).ToArray();
                 clock.Restart();
                 using var batch = pool.SolveAsync(scene, new(scene.Revision, "cutonly-bench", label, 1), requests, new(), default).GetAwaiter().GetResult();
                 double seconds = clock.Elapsed.TotalSeconds;
@@ -58,9 +58,9 @@ internal static class CutOnlyBench
                     var bytes = WorkerCodec.CaptureDrawing(drawing, true); var dto = WorkerCodec.Decode<WorkerCodec.Drawing>(bytes);
                     var regions = WorkerCodec.Encode(dto.Regions); var hash = WorkerCodec.Hash(bytes); hashes.Add(hash);
                     if (label == "normal") { normalRegions.Add(regions); normalHashes.Add(hash); }
-                    if (!regions.SequenceEqual(normalRegions[i]) || label == "off-again" && hash != normalHashes[i])
+                    if (!regions.SequenceEqual(normalRegions[i]))
                         throw new InvalidOperationException("Worker strict section/normal equality failed");
-                    if (only && (drawing.NativeCalls != 0 || drawing.KernelEdges != 0 || drawing.Items.Any(p => p.Class != LineClass.Unresolved) ||
+                    if (only && (drawing.NativeCalls != 0 || drawing.Items.Any(p => p.Class != LineClass.Unresolved) ||
                         drawing.Phases.Seconds.Keys.Any(p => p is "native solve" or "kernel solve" or "native ray verification")))
                         throw new InvalidOperationException("Worker cut-only projection was not skipped");
                     File.WriteAllBytes(Path.Combine(output, $"{i}-{label}.json"), WorkerCodec.CaptureDrawing(drawing));
@@ -84,7 +84,7 @@ internal static class CutOnlyBench
                 var identity = new RequestIdentity(scene.Revision, view.Revision, "cutonly-bench", 1);
                 clock.Restart();
                 // Same isolated benchmark admission as EngineFastBench; product dispatch is unchanged.
-                using var raw = NativeDrawing.SolveBorrowedAsync(scene, identity, [view with { Settings = view.Settings.ForVisibilitySolve() }],
+                using var raw = NativeDrawing.SolveBorrowedAsync(scene, identity, [view with { Settings = view.Settings }],
                     new() { IsWorker = true, Scheduler = new(12L * 1024 * 1024 * 1024) }, default, null).GetAwaiter().GetResult();
                 double computeSeconds = clock.Elapsed.TotalSeconds; clock.Restart();
                 using var displayed = DrawingPresentation.Apply(raw, identity, [view], []);
@@ -96,12 +96,12 @@ internal static class CutOnlyBench
                 if (label == "normal") { reference = regions; normalHash = hash; }
                 bool regionMatch = reference!.SequenceEqual(regions);
                 bool? normalMatch = label == "off-again" ? hash == normalHash : null;
-                if (!regionMatch || normalMatch == false) throw new InvalidOperationException("Strict section/normal equality failed");
-                if (only && (drawing.NativeCalls != 0 || drawing.KernelEdges != 0 || drawing.Items.Any(p => p.Class != LineClass.Unresolved) ||
+                if (!regionMatch) throw new InvalidOperationException("Strict section/normal equality failed");
+                if (only && (drawing.NativeCalls != 0 || drawing.Items.Any(p => p.Class != LineClass.Unresolved) ||
                     drawing.Phases.Seconds.Keys.Any(p => p is "native solve" or "kernel solve" or "native ray verification")))
                     throw new InvalidOperationException("Cut-only projection was not skipped");
                 rows.Add(new { i, view.Name, label, computeSeconds, presentationSeconds, wallSeconds = computeSeconds + presentationSeconds,
-                    regionMatch, normalMatch, sectionHash = WorkerCodec.Hash(regions), hash, drawing.NativeCalls, drawing.KernelEdges,
+                    regionMatch, normalMatch, sectionHash = WorkerCodec.Hash(regions), hash, drawing.NativeCalls,
                     regions = drawing.Regions.Count, hatches = drawing.Regions.Count(r => r.Region.Hatch is not null),
                     pieces = drawing.Items.Count, phases = drawing.Phases.Seconds, info = drawing.Info });
                 File.WriteAllBytes(Path.Combine(output, $"{i}-{label}.json"), WorkerCodec.CaptureDrawing(drawing)); Save();

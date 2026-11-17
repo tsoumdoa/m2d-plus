@@ -129,7 +129,7 @@ internal static class ScaleBench
             foreach (bool native in productionOnly ? new[] {false} : new[] { false, true })
             {
                 clock.Restart();
-                using var batch = NativeDrawing.SolveBorrowedAsync(scene,identity,[views[i]],new() { NativeOnly = native, IsWorker = true, Scheduler = new(12L*1024*1024*1024) },default,new ProgressSink()).GetAwaiter().GetResult();
+                using var batch = NativeDrawing.SolveBorrowedAsync(scene,identity,[views[i]],new() { IsWorker = true, Scheduler = new(12L*1024*1024*1024) },default,new ProgressSink()).GetAwaiter().GetResult();
                 double seconds = clock.Elapsed.TotalSeconds; var drawing = batch.Views[0];
                 if (drawing.Error is not null) throw new InvalidOperationException(drawing.Error);
                 rows.Add(new { i, drawing.Name, native, seconds, pieces=drawing.Items.Count, regions=drawing.Regions.Count, phases=drawing.Phases.Seconds, info=drawing.Info });

@@ -79,7 +79,7 @@ public sealed class ExclusionTests(RhinoHost host, ITestOutputHelper output)
         foreach (var mode in new[] { "document", "select-all", "layer *", "layer Default + $M2D Views" })
             foreach (var which in new[] { 0, 1, 2 })
             {
-                string Run(bool others)
+                ViewDrawing Run(bool others)
                 {
                     using var doc = RhinoDoc.CreateHeadless(null);
                     var boxes = Model(doc); var ids = new[] { boxes.A, boxes.B, boxes.C };
@@ -90,17 +90,17 @@ public sealed class ExclusionTests(RhinoHost host, ITestOutputHelper output)
                         Assert.Equal(others ? 3 : 1, dropped.Count(d => d.Why == SceneCapture.Exclusion.ViewBox));
                     else Assert.Empty(dropped);
                     Assert.True(view.Items.Count + view.Regions.Count > 0, $"{mode} view {which} others={others}: empty. {view.Info}");
-                    return Hash(view);
+                    return view;
                 }
-                var with = Run(true); var without = Run(false);
-                output.WriteLine($"{mode} view {which}: {with[..12]} / {without[..12]}");
-                Assert.Equal(without, with);
+                using var with = Run(true); using var without = Run(false);
+                output.WriteLine($"{mode} view {which}: {with.Items.Count} / {without.Items.Count} fragments");
+                HldFixtureComparison.Equal(without,with);
             }
     });
 
     [RhinoFact] public void AViewBoxInsideABlockIsNeverDrawn() => host.Run(() =>
     {
-        string Run(bool withViewBox)
+        ViewDrawing Run(bool withViewBox)
         {
             using var doc = RhinoDoc.CreateHeadless(null);
             var (a, b, _) = Model(doc);
@@ -110,9 +110,9 @@ public sealed class ExclusionTests(RhinoHost host, ITestOutputHelper output)
             Assert.True(doc.Objects.Delete(b, true));
             var definition = doc.InstanceDefinitions.Add("with view box", "", Point3d.Origin, geometry, attributes);
             doc.Objects.AddInstanceObject(definition, Transform.Identity);
-            return Hash(Draw(doc, a, null, out _));
+            return Draw(doc, a, null, out _);
         }
-        Assert.Equal(Run(false), Run(true));
+        using var without=Run(false);using var with=Run(true);HldFixtureComparison.Equal(without,with);
     });
 
     [RhinoFact] public void ExplicitlyReferencedViewBoxesAndBakesAreReportedInInfo() => host.Run(() =>
@@ -140,12 +140,13 @@ public sealed class ExclusionTests(RhinoHost host, ITestOutputHelper output)
     {
         using var doc = RhinoDoc.CreateHeadless(null);
         var (a, _, _) = Model(doc);
-        var first = Draw(doc, a, null, out _); var reference = Hash(first);
+        using var first = Draw(doc, a, null, out _);
+        void Compare(ViewDrawing actual) { using(actual) HldFixtureComparison.Equal(first,actual); }
         var owner = Guid.NewGuid();
         var bake = DrawingBake.Bake(doc, owner, [new BakeDrawing(first, "Plan A")]);
         Assert.True(bake.Added.Count > 4, string.Join("\n", bake.Messages));
         // 1. Rerun in document mode: the bake is not drawn and hides nothing.
-        Assert.Equal(reference, Hash(Draw(doc, a, null, out _)));
+        Compare(Draw(doc, a, null, out _));
         // 2. Move some baked curves to a normal layer: their bake markers still exclude them.
         var plain = doc.Layers.Add("Plain", Color.Black);
         foreach (var id in bake.Added.Where(id => doc.Objects.FindId(id).Geometry is Curve).Take(5))
@@ -153,13 +154,13 @@ public sealed class ExclusionTests(RhinoHost host, ITestOutputHelper output)
             var attributes = doc.Objects.FindId(id).Attributes.Duplicate(); attributes.LayerIndex = plain;
             Assert.True(doc.Objects.ModifyAttributes(id, attributes, true));
         }
-        Assert.Equal(reference, Hash(Draw(doc, a, null, out _)));
+        Compare(Draw(doc, a, null, out _));
         // 3. A layer-name "*" (and "M2D+*", and the bake root's parent) ignores both bakes and view boxes.
-        Assert.Equal(reference, Hash(Draw(doc, a, Layers("*"), out var star)));
+        Compare(Draw(doc, a, Layers("*"), out var star));
         Assert.Empty(star);
-        Assert.Equal(reference, Hash(Draw(doc, a, Layers("Default", "Plain", "M2D+*", "M2D+", ViewBoxes.LayerName), out _)));
+        Compare(Draw(doc, a, Layers("Default", "Plain", "M2D+*", "M2D+", ViewBoxes.LayerName), out _));
         // Select-all references them explicitly: they are left out and reported.
-        Assert.Equal(reference, Hash(Draw(doc, a, All(doc), out var dropped)));
+        Compare(Draw(doc, a, All(doc), out var dropped));
         Assert.Contains(dropped, d => d.Why == SceneCapture.Exclusion.Baked);
         Assert.Equal(bake.Added.Count, dropped.Count(d => d.Why == SceneCapture.Exclusion.Baked));
     });

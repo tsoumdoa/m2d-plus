@@ -59,8 +59,9 @@ public sealed class DrawingWorkerPool : IDisposable
                 try{resident+=slot.Client?.ResidentBytes??0;retained|=slot.Client is not null;}finally{slot.Gate.Release();}
             }
             memory=memory with{AvailableBytes=Math.Min(memory.PhysicalBytes,checked(memory.AvailableBytes+resident))};
-            long extra=settings.DenseAudit?DenseNativeAudit.WorkerAllowanceBytes:0;
-            var plan=WorkerMemoryPolicy.Size(cost,views.Count,_options.Count,memory,_options.MemoryBytes,extra);
+            long extra=0;
+            var admittedWorkers=Math.Min(_options.Count,WorkerMemoryPolicy.ThreadedHldLimit(Environment.ProcessorCount));
+            var plan=WorkerMemoryPolicy.Size(cost,views.Count,admittedWorkers,memory,_options.MemoryBytes,extra);
             if(plan.Count==0 && retained)
             {
                 // Working-set credit cannot restore paged-out private commit. Reap only our idle clients,
@@ -68,7 +69,7 @@ public sealed class DrawingWorkerPool : IDisposable
                 await CloseAll().ConfigureAwait(false);
                 token.ThrowIfCancellationRequested();
                 memory=_options.ReadMemory();
-                plan=WorkerMemoryPolicy.Size(cost,views.Count,_options.Count,memory,_options.MemoryBytes,extra);
+                plan=WorkerMemoryPolicy.Size(cost,views.Count,admittedWorkers,memory,_options.MemoryBytes,extra);
             }
             LastSizing=plan;
             if(plan.Count==0)throw new WorkerUnavailableException(plan.Refusal!);
@@ -82,7 +83,7 @@ public sealed class DrawingWorkerPool : IDisposable
                 finally{slot.Gate.Release();}
             }
             if(_historyScene!=identity.SceneRevision){_viewSeconds.Clear();_historyScene=identity.SceneRevision;}
-            var keys=views.Select(v=>WorkerCodec.Hash(WorkerCodec.Encode(WorkerCodec.Request.FromSettings(default,0,v,settings)))).ToArray();
+            var keys=views.Select(v=>WorkerCodec.TimingKey(v,settings,fingerprint)).ToArray();
             var order=Enumerable.Range(0,views.Count).OrderByDescending(i=>_viewSeconds.GetValueOrDefault(keys[i])).ThenBy(i=>i).ToArray();
             var pending=new System.Collections.Concurrent.ConcurrentQueue<int>(order);var seconds=new double[views.Count];
             progress?.Report(new(JobPhase.Drawing,0,views.Count){Workers=plan.Count,Step="starting workers"});

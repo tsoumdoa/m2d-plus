@@ -142,7 +142,7 @@ public sealed class WalkingSkeletonTests(RhinoHost host)
         var definition = AddBlocks(document); using var watch = new DocumentWatch(document);
         var lease = Capture(document, watch, cache); var revision = lease.Value.Revision;
         using var barrier = new NativeBarrier(); NativeDrawing.NativeProgress = barrier;
-        var task = NativeDrawing.SolveAsync(lease, Request(lease.Value), new[] { ViewRequest.Parse("Top"), ViewRequest.Parse("Front") }, new(NativeOnly: true), default);
+        var task = NativeDrawing.SolveAsync(lease, Request(lease.Value), new[] { ViewRequest.Parse("Top"), ViewRequest.Parse("Front") }, new(), default);
         try
         {
             Assert.True(barrier.Entered.Wait(TimeSpan.FromSeconds(15)), "Native progress callback was not entered");
@@ -200,7 +200,7 @@ public sealed class WalkingSkeletonTests(RhinoHost host)
         // before the scene is accepted, so the change is rejected by then at the latest.
         Assert.ThrowsAny<OperationCanceledException>(() => { while (!capture.Step(TimeSpan.FromMilliseconds(12))) { } capture.Accept().Dispose(); });
     });
-    [RhinoFact] public void UnknownTypeQuarantinesBothUncutAndSectionViews() => host.Run(() =>
+    [RhinoFact] public void UnknownTypeWarnsWithoutQuarantiningNativeProjection() => host.Run(() =>
     {
         using var document = RhinoDoc.CreateHeadless(null); using var cache = new SceneCache();
         using var watch = new DocumentWatch(document);
@@ -210,11 +210,12 @@ public sealed class WalkingSkeletonTests(RhinoHost host)
         var input = new[] { new CaptureInput(brep, new[] { 0 }, "box"), new CaptureInput(light, new[] { 1 }, "light") };
         var lease = Capture(document, watch, cache, input);
         using var batch = NativeDrawing.SolveAsync(lease, Request(lease.Value), new[] { ViewRequest.Parse("Top"), ViewRequest.Parse(Plane.WorldXY) }, new(), default).GetAwaiter().GetResult();
-        Assert.Null(batch.Views[0].Error); Assert.True(batch.Views[0].Report.Quarantined);
-        Assert.All(batch.Views[0].Items, item => Assert.Equal(LineClass.Unresolved, item.Class));
+        Assert.Null(batch.Views[0].Error); Assert.False(batch.Views[0].Report.Quarantined);
+        Assert.Contains(batch.Views[0].Items,item=>item.Class==LineClass.Visible);
         Assert.Equal(1, batch.Views[0].Report.UnsupportedByType["Light"]);
-        Assert.Null(batch.Views[1].Error); Assert.True(batch.Views[1].Report.Quarantined);
-        Assert.Empty(batch.Views[1].Regions); Assert.All(batch.Views[1].Items, item => Assert.Equal(LineClass.Unresolved, item.Class));
+        Assert.Null(batch.Views[1].Error); Assert.False(batch.Views[1].Report.Quarantined);
+        Assert.DoesNotContain(batch.Views[1].Items,item=>item.Class==LineClass.Unresolved);
+        Assert.Contains(ViewNotices.For(batch.Views[0]),n=>n.Level==NoticeLevel.Warning && n.Text.Contains("Light",StringComparison.Ordinal));
     });
     [RhinoFact] public void AnnotationsAreReportedButDoNotQuarantine() => host.Run(() =>
     {

@@ -3,7 +3,6 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using M2DPlus.Core;
 using M2DPlus.Core.Sections;
-using M2DPlus.Core.Visibility;
 using M2DPlus.Rhino.Sections;
 using M2DPlus.Rhino.Services;
 using Rhino;
@@ -116,30 +115,6 @@ public sealed class SmallFeatureTests(RhinoHost host, ITestOutputHelper output)
                     }
                     var good = expectedRegions == 0 ? !certified : certified && Math.Abs(certificateArea-expectedArea) <= areaError;
                     Add("certificate",1,good ? 1 : 0,good,certified && expectedRegions == 0,false,timer.Elapsed.TotalSeconds,certified ? 0 : 1,0,[reason]);
-                }
-
-                // Curves are explicitly outside the planar domain, even if IsLinear(tol) approximates them.
-                if (profiles.All(p => p.GetProperty("kind").GetString() == "polygon"))
-                {
-                    timer.Restart();
-                    var extraction = new PlanarExtraction();
-                    Assert.True(extraction.Add(obj.Geometry,Transform.Identity,Plane.WorldXY,tol*factor,name));
-                    Assert.True(extraction.Add(probe,Transform.Identity,Plane.WorldXY,tol*factor,name+"/probe"));
-                    var exact = EdgeFaceKernel.Solve(extraction.Faces,extraction.Edges,new(tol*factor));
-                    var loci = VisibilityLoci.Create(extraction.Edges,exact,tol*factor);
-                    var lines = loci.Select(l => (Class: PlanarExtraction.OutputClass(l.Class), Curve: (GeometryBase)new LineCurve(
-                        new Point3d(l.X0,l.Y0,0),new Point3d(l.X1,l.Y1,0)))).ToArray();
-                    try
-                    {
-                        foreach (var (_,g) in lines) g.Transform(local);
-                        var outline = lines.Where((_,i) => loci[i].Source == name && lines[i].Class == LineClass.Visible).Select(l => (Curve)l.Curve).ToArray();
-                        var good = features.Count(f => Covered(f,outline,tol));
-                        var probeGood = ProbeCorrect(lines.Where((_,i) => loci[i].Source == name+"/probe").ToArray(),bands,tol);
-                        var junk = outline.Any(c => Enumerable.Range(0,9).Any(i => !OnFeatures(c.PointAtNormalizedLength(i/8d),features,tol)));
-                        Add("exact",features.Length+1,good+(probeGood ? 1 : 0),features.Where(f => f.Length>=2*tol).All(f => Covered(f,outline,tol))&&probeGood&&!junk,false,junk,timer.Elapsed.TotalSeconds,
-                            exact.Intervals.Count(i => i.Class == VisibilityClass.Unresolved),0,exact.Diagnostics.ToArray());
-                    }
-                    finally { foreach (var (_,g) in lines) g.Dispose(); }
                 }
 
                 void Add(string engine,int expected,int correct,bool gate,bool wrong,bool junk,double seconds,int unresolved,int invalid,string[] notes) => rows.Add(new(

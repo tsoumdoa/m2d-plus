@@ -18,7 +18,7 @@ public sealed class CutOnlySettingsTests
         Assert.Contains("cutonly", Settings.VisibilityKeys);
         Assert.NotEqual(off.VisibilityKey(), on.VisibilityKey());
         Assert.Equal(off.VisibilityKey(), Resolve("cutonly=off").VisibilityKey());
-        Assert.True(on.ForVisibilitySolve().CutOnly);
+        Assert.True(on.CutOnly);
     }
 
     [Fact] public void InputBeatsViewObjectBeatsMenuAndInvalidInputKeepsInheritedValue()

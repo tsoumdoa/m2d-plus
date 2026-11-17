@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using M2DPlus.Core.Sections;
-using M2DPlus.Core.Visibility;
 using M2DPlus.Rhino.Services;
 using M2DPlus.Rhino.Sections;
 using Rhino.Geometry;
@@ -155,11 +154,7 @@ public sealed class OffsetSectionTests(RhinoHost host, ITestOutputHelper output)
             // The inverse transform can collapse an arithmetic needle to an exact point
             // (the origin control has a 1.5e-19 mm wall fragment). Use the same 1e-7 mm
             // geometry comparison resolution for degeneracy and endpoint equality.
-            var actual = pieces.Where(p => p.Item3.DistanceTo(p.Item4) > 1e-7).GroupBy(p => (p.SourceIdentity, p.Class)).SelectMany(group =>
-                VisibilityLoci.Union(group.Select(p => new Locus(p.Item3.X, p.Item3.Y, p.Item4.X, p.Item4.Y,
-                    VisibilityClass.Visible, p.SourceIdentity)).ToArray(), Tol).Select(l =>
-                    (SourceIdentity: group.Key.SourceIdentity, Class: group.Key.Class,
-                        new Point3d(l.X0, l.Y0, 1500), new Point3d(l.X1, l.Y1, 1500)))).ToArray();
+            var actual = pieces.Where(p => p.Item3.DistanceTo(p.Item4) > 1e-7).ToArray();
             if (expected is null) { expected = actual; continue; }
             Assert.True(expected.Length == actual.Length, $"offset={offset:R}; expected={string.Join(";", expected)}; actual={string.Join(";", actual)}; info={drawing.Info}");
             foreach (var piece in expected)

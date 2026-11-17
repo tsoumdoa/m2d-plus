@@ -7,6 +7,8 @@ namespace M2DPlus.Rhino.Services;
 public static class ViewNotices
 {
     private const string LayerNotFound = "Layer not found '";
+    internal const string ZeroDepth = "Zero depth: section-only view; projection skipped";
+    internal const string ThinDepth = "Positive depth is within tolerance: no certified projection volume; sections only";
     internal const string CutOnlyEmpty = "Cut only: this view cuts nothing";
 
     public static ViewOutcome Outcome(ViewDrawing view)
@@ -30,7 +32,14 @@ public static class ViewNotices
         var notices = NoticePolicy.For(Outcome(view)).ToList();
         if (view.Error is null)
         {
-            if (view.Settings?.Engine == EngineMode.Native) notices.Add(new(NoticeLevel.Remark, view.Name + ": " + view.EngineSummary));
+            notices.Add(new(NoticeLevel.Remark, view.Name + ": " + view.EngineSummary));
+            if (view.Diagnostics.Any(d => d.StartsWith("min visible ignored", StringComparison.Ordinal)))
+                notices.Add(new(NoticeLevel.Remark, view.Name + ": min visible ignored with hidden = off; all objects retained."));
+            foreach (var diagnostic in view.Diagnostics.Where(d => d.StartsWith(HldProjection.SkippedSource, StringComparison.Ordinal) ||
+                d.StartsWith(HldProjection.FailedClip, StringComparison.Ordinal)).Distinct(StringComparer.Ordinal))
+                notices.Add(new(NoticeLevel.Warning, view.Name + ": " + diagnostic));
+            foreach (var notice in new[] { ZeroDepth, ThinDepth })
+                if (view.Diagnostics.Contains(notice)) notices.Add(new(NoticeLevel.Remark, view.Name + ": " + notice));
             if (view.Diagnostics.Contains(CutOnlyEmpty)) notices.Add(new(NoticeLevel.Remark, view.Name + ": " + CutOnlyEmpty));
         }
         return notices;

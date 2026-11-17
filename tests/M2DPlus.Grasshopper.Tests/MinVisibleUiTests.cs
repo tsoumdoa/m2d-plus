@@ -66,9 +66,8 @@ public sealed class MinVisibleUiTests
         for (var i = 0; i < before.Views.Length; i++)
         {
             Assert.NotEqual(before.Views[i][key].Value, after.Views[i][key].Value);
-            var solveBefore = before.Views[i].ForVisibilitySolve(); var solveAfter = after.Views[i].ForVisibilitySolve();
-            Assert.All(Settings.VisibilityKeys, k => Assert.Equal(solveBefore[k].Value, solveAfter[k].Value));
-            Assert.Equal(solveBefore.Hidden, solveAfter.Hidden);
+            var solveBefore = before.Views[i]; var solveAfter = after.Views[i];
+            Assert.Equal(key != "hidden", solveBefore.VisibilityKey() == solveAfter.VisibilityKey());
         }
     }
 }

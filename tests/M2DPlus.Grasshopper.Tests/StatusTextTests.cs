@@ -16,16 +16,16 @@ public sealed class StatusTextTests
         Assert.Equal("Waiting for another drawing (1 ahead)", StatusText.Of(new(JobPhase.Queued, 0, 8) { Ahead = 1 }).Core);
         Assert.Equal("Waiting for another drawing", StatusText.Of(new(JobPhase.Queued, 0, 8)).Core);
         Assert.Equal("Preparing geometry 3,100 / 6,000", StatusText.Of(new(JobPhase.Preparing, 3100, 6000)).Core);
-        var drawing = StatusText.Of(new(JobPhase.Drawing, 2, 8) { View = "Section A", Step = ViewSteps.HiddenLines, StepFraction = .456 }, 41);
-        Assert.Equal(("Drawing 3 / 8", "Section A", "hidden lines 45 %", "~40 s left"), (drawing.Core, drawing.View, drawing.Detail, drawing.Eta));
-        Assert.Equal("Drawing 3 / 8 · Section A · hidden lines 45 % · ~40 s left", drawing.Full);
+        var drawing = StatusText.Of(new(JobPhase.Drawing, 2, 8) { View = "Section A", Step = ViewSteps.Native, StepFraction = .456 }, 41);
+        Assert.Equal(("Drawing 3 / 8", "Section A", "native 45 %", "~40 s left"), (drawing.Core, drawing.View, drawing.Detail, drawing.Eta));
+        Assert.Equal("Drawing 3 / 8 · Section A · native 45 % · ~40 s left", drawing.Full);
         var workers = StatusText.Of(new(JobPhase.Drawing, 5, 8) { Workers = 3, Step = "sending scene" });
         Assert.Equal(("Drawing 5 / 8 · 3 workers", "sending scene"), (workers.Core, workers.Detail));
         // A worker's inner step comes with its view, like in process.
-        var child = StatusText.Of(new(JobPhase.Drawing, 5, 8) { Workers = 3, View = "Section A", Step = ViewSteps.ExactLines, StepFraction = .37 });
-        Assert.Equal(("Drawing 5 / 8 · 3 workers", "Section A", "exact lines 37 %"), (child.Core, child.View, child.Detail));
-        var checking = StatusText.Of(new(JobPhase.Drawing, 0, 1) { View = "Plan", Step = ViewSteps.Checking, StepFraction = .999 });
-        Assert.Equal("checking 99 %", checking.Detail);
+        var child = StatusText.Of(new(JobPhase.Drawing, 5, 8) { Workers = 3, View = "Section A", Step = ViewSteps.Sections, StepFraction = .37 });
+        Assert.Equal(("Drawing 5 / 8 · 3 workers", "Section A", "sections 37 %"), (child.Core, child.View, child.Detail));
+        var checking = StatusText.Of(new(JobPhase.Drawing, 0, 1) { View = "Plan", Step = ViewSteps.Output, StepFraction = .999 });
+        Assert.Equal("output 99 %", checking.Detail);
         Assert.Equal("Building output", StatusText.Of(new(JobPhase.Output, 0, 0)).Core);
         Assert.Equal("Drawing 8 / 8", StatusText.Of(new(JobPhase.Drawing, 8, 8)).Core);
         Assert.Null(StatusText.Of(new(JobPhase.Drawing, 2, 8)).Eta);
@@ -62,9 +62,9 @@ public sealed class StatusTextTests
     [Fact]
     public void RowTwoShortensTheStepAfterTheView()
     {
-        var line = StatusText.Of(new(JobPhase.Drawing, 2, 8) { View = "Section A", Step = ViewSteps.HiddenLines, StepFraction = .45 }, 41);
-        Assert.Equal("hidden lines 45 %", line.Row2(Measure, 200));
-        Assert.Equal("hidden li…", line.Row2(Measure, Measure("hidden li…")));
+        var line = StatusText.Of(new(JobPhase.Drawing, 2, 8) { View = "Section A", Step = ViewSteps.Native, StepFraction = .45 }, 41);
+        Assert.Equal("native 45 %", line.Row2(Measure, 200));
+        Assert.Equal("native 45…", line.Row2(Measure, Measure("native 45…")));
         Assert.Null(line.Row2(Measure, 12));
         Assert.Null(StatusText.Of(new(JobPhase.Reading, 1, 2)).Row2(Measure, 200));
     }

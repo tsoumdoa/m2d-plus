@@ -9,6 +9,8 @@ public sealed class WorkerMemoryPolicyTests
     [Theory]
     [InlineData(1,1)] [InlineData(2,1)] [InlineData(8,6)] [InlineData(16,14)] [InlineData(32,30)]
     public void CpuCeilingLeavesTwoLogicalCores(int cores,int expected) => Assert.Equal(expected,WorkerMemoryPolicy.CpuLimit(cores));
+    [Theory] [InlineData(1,1)] [InlineData(8,1)] [InlineData(15,1)] [InlineData(16,2)] [InlineData(32,2)] [InlineData(128,2)]
+    public void ThreadedHldAdmissionLimitsFullNativePools(int cores,int expected) => Assert.Equal(expected,WorkerMemoryPolicy.ThreadedHldLimit(cores));
     [Fact] public void Installed32GiBClassUsesLargerBudgetDespiteReservedHardwareRam()
     {
         Assert.Equal(31*G/100*75,WorkerMemoryPolicy.Budget(new(31*G,31*G)));

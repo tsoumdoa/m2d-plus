@@ -76,7 +76,7 @@ public static class DrawingWorkerServer
     /// <summary>
     /// The solve's inner progress for the host's status (UX §5.2): only preparing and the view's step with its fraction
     /// (the host owns view counts and completion). A new step goes out at once, a fraction at most every 100 ms, never
-    /// after the reply, and never blocking a native or kernel thread behind another write.
+    /// after the reply, and never blocking a native thread behind another write.
     /// </summary>
     private sealed class ProgressRelay(object writeGate, Action<byte[]> write) : IProgress<JobProgress>
     {
