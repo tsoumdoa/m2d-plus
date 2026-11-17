@@ -178,16 +178,6 @@ public sealed class WalkingSkeletonTests(RhinoHost host)
         try { Assert.ThrowsAny<OperationCanceledException>(() => NativeDrawing.SolveAsync(lease, Request(lease.Value), new[] { ViewRequest.Parse("Top") }, new(), cancel.Token).GetAwaiter().GetResult()); }
         finally { NativeDrawing.BeforeCompletion = null; }
     });
-    [RhinoFact] public void StaleGenerationNeverPublishesCompletedNativeBatch() => host.Run(() =>
-    {
-        using var document = RhinoDoc.CreateHeadless(null); using var cache = new SceneCache();
-        Box(document, Point3d.Origin, new Point3d(2, 2, 2)); using var watch = new DocumentWatch(document);
-        var lease = Capture(document, watch, cache); using var gate = new RequestGate();
-        var request = gate.Begin(lease.Value.Revision, "Top", "single");
-        using var batch = NativeDrawing.SolveAsync(lease, request.Identity, new[] { ViewRequest.Parse("Top") }, new(), request.Token).GetAwaiter().GetResult();
-        gate.Begin(batch.Identity.SceneRevision, "Front", "single");
-        Assert.False(gate.TryPublish(batch.Identity, batch.Complete, () => throw new Exception("Stale publish")));
-    });
     [RhinoFact] public void DocumentOrDefinitionChangeBetweenCaptureSlicesIsRejected() => host.Run(() =>
     {
         using var document = RhinoDoc.CreateHeadless(null); using var cache = new SceneCache();

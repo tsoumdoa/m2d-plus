@@ -148,7 +148,8 @@ public sealed class GeometryMatrixTests(RhinoHost host, ITestOutputHelper output
         return sum * h / 3;
     }
 
-    [RhinoFact] public void ExpectedFailureRawClippingUnsetProxiesAreCountedWithoutDereferencing() => host.Run(() =>
+    [RhinoResearchFact, Trait("Category", "Research")]
+    public void ExpectedFailureRawClippingUnsetProxiesAreCountedWithoutDereferencing() => host.Run(() =>
     {
         // Research F extraction property. This is deliberately a RAW diagnostic experiment;
         // M1b never enables native clipping or exposes section views.

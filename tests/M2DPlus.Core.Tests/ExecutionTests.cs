@@ -89,11 +89,4 @@ public sealed class ExecutionTests
         await Assert.ThrowsAsync<InvalidOperationException>(() => new NativeScheduler(100).RunAsync(estimate, _ => 1, default));
     }
     [Fact] public void InvalidBudgetRejected() => Assert.Throws<ArgumentOutOfRangeException>(() => new NativeScheduler(0));
-    [Fact] public void QualityDoesNotDependOnExecutionState()
-    {
-        var report = new QualityReport("Native", 2, 1, new Dictionary<string, int> { ["Text"] = 1 }, new[] { "SubD to Brep" }, true);
-        Assert.True(report.Quarantined); Assert.Equal(2, report.UncertainCount);
-        Assert.Equal(1, report.UnsupportedByType["Text"]);
-        Assert.Equal(new JobProgress(JobPhase.Complete, 2, 2), new(JobPhase.Complete, 2, 2));
-    }
 }

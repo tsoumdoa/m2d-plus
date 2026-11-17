@@ -20,8 +20,21 @@ public sealed class SettingsTests
     [InlineData("+1.2e3 MM", DocumentUnits.Metres, 1.2)]
     [InlineData("-3 m", DocumentUnits.Metres, -3)]
     [InlineData("0", DocumentUnits.Kilometres, 0)]
-    public void UnitEnumConvertsDistances(string text, DocumentUnits units, double expected) =>
+    [InlineData("300 cm", DocumentUnits.Metres, 3)]
+    [InlineData("8 m", DocumentUnits.Millimetres, 8000)]
+    [InlineData("2 km", DocumentUnits.Metres, 2000)]
+    [InlineData("5mm", DocumentUnits.Centimetres, 0.5)]
+    [InlineData("10'", DocumentUnits.Metres, 3.048)]
+    [InlineData("12\"", DocumentUnits.Metres, 0.3048)]
+    [InlineData("12 in", DocumentUnits.Metres, 0.3048)]
+    [InlineData("1 FT", DocumentUnits.Metres, 0.3048)]
+    [InlineData("12.5", DocumentUnits.Millimetres, 12.5)]
+    [InlineData("1e2 mm", DocumentUnits.Metres, 0.1)]
+    public void DistancesConvertToDocumentUnits(string text, DocumentUnits units, double expected)
+    {
         Assert.Equal(expected, Settings.ParseDistance(text, units), 10);
+        Assert.Equal(expected, Settings.ParseDistance(text, Settings.MetresPerUnit(units)), 10);
+    }
 
     [Theory]
     [InlineData("2..3 m")]
@@ -31,8 +44,20 @@ public sealed class SettingsTests
     [InlineData("1e308 km")]
     [InlineData("")]
     [InlineData("1 m junk")]
+    [InlineData("NaN")]
+    [InlineData("Infinity m")]
+    [InlineData("1e999 m")]
+    [InlineData("3 yards")]
+    [InlineData("3,5 m")]
     public void MalformedAndOverflowingDistancesAreRejected(string text) =>
         Assert.Throws<FormatException>(() => Settings.ParseDistance(text, DocumentUnits.Metres));
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    [InlineData(double.NaN)]
+    public void InvalidDocumentUnitIsRejected(double metresPerUnit) =>
+        Assert.Throws<ArgumentOutOfRangeException>(() => Settings.ParseDistance("3 m", metresPerUnit));
 
     [Fact]
     public void AllKeysParseWithTypedValues()

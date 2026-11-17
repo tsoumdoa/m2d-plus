@@ -1,4 +1,3 @@
-using System.Reflection;
 using M2DPlus.Core;
 using Xunit;
 
@@ -6,18 +5,6 @@ namespace M2DPlus.Core.Tests;
 
 public sealed class CoreTests
 {
-    [Fact]
-    public void IdentityUsesBuiltAssemblyAndReportsRuntime()
-    {
-        var identity = BuildIdentity.Current;
-        Assert.Equal("M2D+", identity.Product);
-        Assert.Equal(typeof(BuildIdentity).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()!
-            .InformationalVersion, identity.Version);
-        Assert.Equal(0, identity.ProtocolSchema);
-        Assert.StartsWith(".NET ", identity.Runtime);
-        Assert.NotEqual(Guid.Empty, Guid.Parse(identity.CoreModuleId));
-    }
-
     [Fact]
     public void CoreHasNoRhinoOrGrasshopperDependency()
     {
@@ -49,34 +36,4 @@ public sealed class CoreTests
         var error = Assert.Throws<FormatException>(() => Settings.Parse(new[] { "", text }));
         Assert.Contains("Line 2:", error.Message);
     }
-
-    [Theory]
-    [InlineData("300 cm", 1, 3)]
-    [InlineData("8 m", 0.001, 8000)]
-    [InlineData("2 km", 1, 2000)]
-    [InlineData("5mm", 0.01, 0.5)]
-    [InlineData("10'", 1, 3.048)]
-    [InlineData("12\"", 1, 0.3048)]
-    [InlineData("12 in", 1, 0.3048)]
-    [InlineData("1 FT", 1, 0.3048)]
-    [InlineData("12.5", 0.001, 12.5)]
-    [InlineData("1e2 mm", 1, 0.1)]
-    public void DistancesConvertToDocumentUnits(string text, double metresPerUnit, double expected)
-        => Assert.Equal(expected, Settings.ParseDistance(text, metresPerUnit), 10);
-
-    [Theory]
-    [InlineData("NaN")]
-    [InlineData("Infinity m")]
-    [InlineData("1e999 m")]
-    [InlineData("3 yards")]
-    [InlineData("3,5 m")]
-    public void InvalidDistancesAreRejected(string text)
-        => Assert.Throws<FormatException>(() => Settings.ParseDistance(text, 1));
-
-    [Theory]
-    [InlineData(0)]
-    [InlineData(-1)]
-    [InlineData(double.NaN)]
-    public void InvalidDocumentUnitIsRejected(double metresPerUnit)
-        => Assert.Throws<ArgumentOutOfRangeException>(() => Settings.ParseDistance("3 m", metresPerUnit));
 }

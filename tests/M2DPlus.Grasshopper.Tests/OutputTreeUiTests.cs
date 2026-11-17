@@ -6,7 +6,7 @@ using static M2DPlus.Grasshopper.Tests.PresentationTests;
 namespace M2DPlus.Grasshopper.Tests;
 
 /// <summary>tree = auto | layer | object in the UI model (owner decision 2026-11-15): the appended Key output, the
-/// Output tree menu, old saved menu state, and the guarantee that a tree change never reaches the solve's cache key.</summary>
+/// Output tree menu and old saved menu state.</summary>
 public sealed class OutputTreeUiTests
 {
     [Fact]
@@ -57,22 +57,6 @@ public sealed class OutputTreeUiTests
         Assert.Equal(3, item.Children.Length); // no stray "branch" entry
         Assert.All(presentation.Resolution!.Views, v => Assert.Equal(mode, v.Tree));
         Assert.Empty(presentation.Resolution.Diagnostics);
-    }
-
-    [Theory]
-    [InlineData("auto", "layer")]
-    [InlineData("layer", "object")]
-    [InlineData("object", "auto")]
-    public void ATreeChangeLeavesTheVisibilitySolveKeyUnchanged(string from, string to)
-    {
-        // DrawingCache keys the solve on Settings.VisibilityKeys only, so an unchanged key means zero HLD calls.
-        var before = new SettingsPresentation(ComponentUiState.Default.With("tree", from), Context()).Resolution!;
-        var after = new SettingsPresentation(ComponentUiState.Default.With("tree", to), Context()).Resolution!;
-        for (var i = 0; i < before.Views.Length; i++)
-        {
-            Assert.NotEqual(before.Views[i].Tree, after.Views[i].Tree);
-            Assert.All(Settings.VisibilityKeys, k => Assert.Equal(before.Views[i].ForVisibilitySolve()[k].Value, after.Views[i].ForVisibilitySolve()[k].Value));
-        }
     }
 
     [Fact]

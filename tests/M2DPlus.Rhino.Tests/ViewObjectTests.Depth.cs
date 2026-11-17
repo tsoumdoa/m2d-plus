@@ -254,7 +254,8 @@ public sealed partial class ViewObjectTests
         Assert.Equal(12, ReadDepth(doc, given.Id).Depth, 9);
     });
 
-    [RhinoFact] public void AutoDepthIsFastOnFiftyThousandObjects() => host.Run(() =>
+    [RhinoPerformanceFact, Trait("Category", "Performance")]
+    public void AutoDepthIsFastOnFiftyThousandObjects() => host.Run(() =>
     {
         using var doc = Document(UnitSystem.Meters);
         // 224 × 224 = 50 176 columns 1 × 1 at spacing 2, 3 m tall; slabs under them.

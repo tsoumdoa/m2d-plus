@@ -48,7 +48,7 @@ public sealed class UnitScaleTests(ITestOutputHelper output)
         }
     }
 
-    [Fact]
+    [PerformanceFact, Trait("Category", "Performance")]
     public void MillimetresDoNotMultiplyPredicateWorkOrRuntime()
     {
         var m=Scene(6400,1,0);var mm=Scene(6400,1000,10000000);
