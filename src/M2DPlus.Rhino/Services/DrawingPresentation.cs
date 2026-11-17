@@ -38,7 +38,7 @@ public sealed class DrawingCache : IDisposable
             try
             {
                 // Exact reuses hidden-on visibility. Native hidden generation follows the view setting.
-                var key = scene.Value.VisibilityRevision + "/" + settings + "/" + string.Join("|", views.Select(v => (v with { Cut = v.Cut is { } cut ? cut with { SectionerStyle = null } : null }).Revision + "/" +
+                var key = scene.Value.VisibilityRevision + "/" + settings + "/cull=" + settings.CullSources + "/" + string.Join("|", views.Select(v => (v with { Cut = v.Cut is { } cut ? cut with { SectionerStyle = null } : null }).Revision + "/" +
                     v.Settings?.VisibilityKey()));
                 LeaseEntry<DrawingBatch>.Lease? lease;
                 long generation;

@@ -120,11 +120,12 @@ public sealed class JobProgressModel
 public static class ViewSteps
 {
     public const string ExactLines = "exact lines", HiddenLines = "hidden lines", Native = "native", Sections = "sections", Checking = "checking", Output = "output",
-        ExactCurved = "exact curved";
+        ExactCurved = "exact curved", Culling = "culling";
 
     /// <summary>The user-facing step of an engine phase (PhaseTimings names), or null for bookkeeping phases.</summary>
     public static string? Of(string phase) => phase switch
     {
+        "source culling" => Culling,
         "planar extraction" or "kernel solve" or "interval union" or "curve-plane events" or "composition setup" => ExactLines,
         "native setup" or "native solve" or "native extraction and duplicates" => HiddenLines,
         "sections" or "section output construction" or "section restyle and output" => Sections,

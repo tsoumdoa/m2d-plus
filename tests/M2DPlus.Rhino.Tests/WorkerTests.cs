@@ -72,6 +72,25 @@ public sealed class WorkerTests(RhinoHost host)
         var failure=Assert.Throws<WorkerUnavailableException>(()=>WorkerClient.StartAsync(Options() with{MemoryBytes=2*WorkerMemoryPolicy.GiB},fingerprint,default).GetAwaiter().GetResult());
         Assert.Contains("fingerprint mismatch",failure.Message);
     });
+    [RhinoFact] public void CullingSwitchAndCropFrameAreKeysForPersistentWorkers()=>host.Run(()=>
+    {
+        using var doc=RhinoDoc.CreateHeadless(null);Populate(doc);using var cache=new SceneCache();using var lease=Capture(doc,cache);
+        using var pool=new DrawingWorkerPool(Options());
+        var a=ViewRequest.Parse(new Rectangle3d(new Plane(new Point3d(0,0,5),Vector3d.ZAxis),new Interval(-1,3),new Interval(-1,3)));
+        var b=ViewRequest.Parse(new Rectangle3d(new Plane(new Point3d(8,0,5),Vector3d.ZAxis),new Interval(-1,3),new Interval(-1,3)));
+        var views=new[]{a,b};
+        using var baseline=NativeDrawing.SolveBorrowedAsync(lease.Value,Identity(lease.Value),views,new(){CullSources=false},default,null).GetAwaiter().GetResult();
+        foreach(var enabled in new[]{true,false,true})
+        {
+            using var drawn=pool.SolveAsync(lease.Value,Identity(lease.Value),views,new(){CullSources=enabled},default).GetAwaiter().GetResult();
+            for(int i=0;i<views.Length;i++)
+            {
+                Assert.Equal(ExclusionTests.Hash(baseline.Views[i]),ExclusionTests.Hash(drawn.Views[i]));
+                Assert.Equal(enabled,drawn.Views[i].Diagnostics.Any(d=>d.StartsWith("culled ",StringComparison.Ordinal)));
+            }
+        }
+        Assert.NotEqual(ExclusionTests.Hash(baseline.Views[0]),ExclusionTests.Hash(baseline.Views[1]));
+    });
     [RhinoFact] public void WarmBatchSchedulesSlowestViewFirstWithoutReshippingScene()=>host.Run(()=>
     {
         using var doc=RhinoDoc.CreateHeadless(null);Populate(doc);using var cache=new SceneCache();using var lease=Capture(doc,cache);

@@ -23,6 +23,28 @@ dumps that differ.
 
 Special variants (this tree only, not the baseline build):
 
+- `cull-off`, `cull-on` — toggle the production per-view source filter. Their reported hashes use
+  `.drawing.json`: exact Rhino archives of every piece/depth curve and region/hatch, with source
+  paths, style and provenance, plus Frame/Error/quarantine. Info, timings and work counters are
+  excluded because they intentionally differ. No coordinate rounding or segmentation normalization.
+  Prefix with `native+` to exercise native mode.
+
+```powershell
+python -B tools/perf-f/cull-audit.py --resolver $r --out "$env:USERPROFILE/.t3/m2d-plus-models/evidence/source-cull/correctness"
+python -B tools/perf-f/cull-audit.py --resolver $r --timings --out "$env:USERPROFILE/.t3/m2d-plus-models/evidence/source-cull/timings"
+```
+
+The controller runs one headless process at a time, batching a model's correctness views with
+the harness's `view1;view2;...` syntax. Correctness covers the thirteen planar
+controls, curved S blocks/exploded SW, space-frame SW, owner pipes Top/SW/nodebox, and four
+`region_*` fixtures with both an unbounded section and a cropped depth box. Timing records one
+`cull-off-warmup` row followed by ABBA (off/on/on/off); exclude the warmup from timing summaries.
+It holds `SerialRhino(wait_seconds=None)` throughout both timing views.
+The default timing model is `buildings/perf-M-blocks.3dm`; `--timing-model` overrides it.
+`tenthbox` is centred on the model, with one tenth of its Top bounding rectangle's area and
+depth encompassing the whole scene; `Top` has no crop. Timings are direct solves after shared
+capture/preparation, bypassing admission and the tolerance census. All archives stay outside git.
+
 - `audit-verdicts` — for every body, compares the definition-local validation verdict with
   validating that instance's own world-space copy. `PERFF_AUDIT_THREADS=1` gives the serial
   reference.
