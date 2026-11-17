@@ -40,7 +40,14 @@ internal static class DenseAuditCheck
         int samples = 600; foreach (var v in variants) if (v.StartsWith("samples:", StringComparison.Ordinal)) samples = int.Parse(v[8..], invariant);
         var off = new NativeSettings { DenseAudit = false }; var spans = new List<Curve>();
         var on = new NativeSettings { DenseAudit = true, DenseAuditOptions = options };
-        (ViewDrawing Drawing, double Wall) Timed(NativeSettings settings) { var timer = Stopwatch.StartNew(); var d = Solve(scene, prepared, view, settings, timeout); return (d, timer.Elapsed.TotalSeconds); }
+        var peaks = new List<long>();
+        (ViewDrawing Drawing, double Wall) Timed(NativeSettings settings)
+        {   // also the peak of this process's private bytes while the solve runs, sampled every 50 ms
+            long peak = 0; using var stop = new CancellationTokenSource(); using var self = Process.GetCurrentProcess();
+            var sampler = new Thread(() => { while (!stop.IsCancellationRequested) { self.Refresh(); peak = Math.Max(peak, self.PrivateMemorySize64); Thread.Sleep(50); } }) { IsBackground = true };
+            GC.Collect(); sampler.Start(); var timer = Stopwatch.StartNew(); var d = Solve(scene, prepared, view, settings, timeout); double wall = timer.Elapsed.TotalSeconds;
+            stop.Cancel(); sampler.Join(); peaks.Add(peak); return (d, wall);
+        }
 
         // quick: no cold solve and no repeats (for views where one native solve takes minutes).
         bool quick = variants.Contains("quick");
@@ -59,6 +66,7 @@ internal static class DenseAuditCheck
             Console.WriteLine($"=== {stem} dense audit: off {plainWall:F2}s / {againWall:F2}s, on first {firstWall:F2}s (meshes built {builds}), on again {secondWall:F2}s; added {secondWall - Math.Min(plainWall, againWall):F2}s; route {second.Report.Route}; native calls {second.NativeCalls}; error {second.Error}");
             Console.WriteLine($"    off: Visible {before[0]:F1} Hidden {before[1]:F1} Unresolved {before[2]:F1} | on: Visible {after[0]:F1} Hidden {after[1]:F1} Unresolved {after[2]:F1}; moved world length {moved:F2} in {spans.Count} spans; phase {second.Phases.Seconds.GetValueOrDefault("dense native audit"):F2}s (meshes and index {second.Phases.Seconds.GetValueOrDefault("dense native audit meshes"):F2}s; first run {first.Phases.Seconds.GetValueOrDefault("dense native audit"):F2}s, {first.Phases.Seconds.GetValueOrDefault("dense native audit meshes"):F2}s); native solve {second.Phases.Seconds.GetValueOrDefault("native solve"):F2}s");
             Console.WriteLine($"    {info}");
+            Console.WriteLine($"    in-process private bytes peak per solve, MiB (off, on first{(quick ? "" : ", on again, off again")}): {string.Join(", ", peaks.Select(p => (p / 1048576.0).ToString("F0")))}");
             Console.WriteLine($"    mesh build s: meshing {CertifiedMesh.BuildSeconds[0]:F2}, certificates {CertifiedMesh.BuildSeconds[1]:F2}, vertex parameters {CertifiedMesh.BuildSeconds[2]:F2}, triangle bounds {CertifiedMesh.BuildSeconds[3]:F2}, measuring triangles with no bound {CertifiedMesh.BuildSeconds[4]:F2}; vertices pulled back by closest point {CertifiedMesh.PulledBack}");
 
             // ---- Direct ray check of the moved stretches: is something really more than a tolerance in front?
@@ -111,7 +119,7 @@ internal static class DenseAuditCheck
             File.WriteAllText(Path.Combine(output, stem + "-da.json"), JsonSerializer.Serialize(new
             {
                 view = view.Name, tolerance = tol, plainWall, againWall, firstWall, secondWall, added = secondWall - Math.Min(plainWall, againWall), builds,
-                route = second.Report.Route, nativeCalls = second.NativeCalls, before, after, moved, spans = spans.Count, info,
+                peaksBytes = peaks, route = second.Report.Route, nativeCalls = second.NativeCalls, before, after, moved, spans = spans.Count, info,
                 phase = second.Phases.Seconds.GetValueOrDefault("dense native audit"), meshPhase = second.Phases.Seconds.GetValueOrDefault("dense native audit meshes"), firstPhase = first.Phases.Seconds.GetValueOrDefault("dense native audit"), firstMeshPhase = first.Phases.Seconds.GetValueOrDefault("dense native audit meshes"), quick, nativeSolve = second.Phases.Seconds.GetValueOrDefault("native solve"),
                 check = new { points = checkedPoints, hidden, thin, clear, failed, clearNotes }, witnesses, covered, options
             }, new JsonSerializerOptions { WriteIndented = true }));

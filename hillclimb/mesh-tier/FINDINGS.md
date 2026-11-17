@@ -6,7 +6,7 @@ pushed, installed or published.
 
 ## 1. Verdict
 
-**Update, same day:** steps A to C are built; their numbers are in [section 9](#9-steps-a-to-c-built-2026-11-17-on-main-at-43c6e95).
+**Update, same day:** steps A to C are built; their numbers are in [section 9](#9-steps-a-to-c-built-2026-11-17-on-main-at-43c6e95). After review, the first-solve cost and the worker route are in [section 10](#10-after-review-the-two-blockers-for-default-on-2026-11-1718).
 
 **Build with caveats. Do not drop native from exact mode on this evidence.**
 
@@ -261,6 +261,8 @@ repeat), so their figure includes the one-off mesh build.
 
 ### Should C be on by default? Not yet.
 
+(Superseded in part by section 10: the first solve is cheaper, workers and .NET 10 were run, and strips became tiles.)
+
 It is sound in everything measured and it catches real errors, so it should become the default. Three things stand
 between it and that, none of them research:
 
@@ -273,6 +275,113 @@ between it and that, none of them research:
    134 m to 185 m), which the gate's expectations may count against a view.
 
 Until then: on for the owner's own trials with `M2D_DENSE_AUDIT=1`, off in the product.
+
+## 10. After review: the two blockers for default-on (2026-11-17/18)
+
+Branch `t3/mesh-tier-default-on-blockers`, on top of the review's merge-off fixes (`6e7b40d`). Fast models only, by
+the owner's direction; campus and curved M were not re-measured (their figures below are from earlier runs and say
+so). One worker, mutex held, n = 1.
+
+### What changed
+
+| | Change | Why |
+|---|---|---|
+| Parameters | Vertex parameters come from Rhino's unpacked texture coordinates (the surface's own parameters over its whole domain), each checked by evaluating the surface there. Closest point is the fallback for a vertex that does not fit and for faces meshed in their NURBS form's parameters (revolved surfaces). | The pull-back was most of the first solve. A worker can now rebuild meshes cheaply, so nothing new is sent to workers and the codec is untouched. Shipping meshes was the other option: more protocol, more memory in transit, and it would not have helped the host's first solve. |
+| Scene cache | Meshes live in `SceneCache` under the definition's own key (stable identity and content fingerprint) plus tolerance and band, with a byte budget of their own (1 GiB) and leases; `Clear` retires them. The audit holds leases while it runs. Only vertices, triangles and bands are kept. A failure to mesh is not remembered. | Review findings 1 and 5. Repeat solves, other views and other scenes with the same definitions reuse them. |
+| Tiles | The drawing is audited in tiles of about 1.5 M triangles (4 M at most), cut along either axis, replacing strips of 4 to 24 M. The limits depend on the scene alone. | Review finding 2. A tile costs about a gigabyte at most, in a capped worker as in the host, and both draw the same. |
+| Workers | The solve message carries `DenseAudit` and its limits. The cap gets a 1 GiB allowance when the audit is on. | Review finding 3; and curved S peaked at 1.95 GiB under a 2 GiB cap without the allowance. |
+| Rounding | Derivative enclosures are padded from the size of their operands. | Review finding 6. |
+| Info | Names what is measured rather than proved, and counts bodies that failed to mesh. | Review finding 4. |
+
+Not done from the review: certifying the measured steps (finding 4 beyond wording), and the two low items (Graph and
+Fold have no production caller; two threads may build one definition's mesh at once, the first is kept).
+
+### First and repeat solve, in process (.NET 8)
+
+"Audit s" is the audit's own phase. Before = section 9.
+
+| Model, view | View s, off | Audit s, first solve (before) | Audit s, repeat (before) | Moved m | Ray check: covered / not |
+|---|---:|---:|---:|---:|---|
+| curved S SW | 24.9 | 5.5 (5.3) | 4.0 (3.2) | 50.2 | 738 / 0 |
+| diagrid SW | 3.6 | 3.6 (8.1) | 0.2 (0.6) | 4.4 | 126 / 0 |
+| curved-steel SW | 1.7 | 5.3 (13.7) | 0.8 (1.2) | 0.4 | 6 / 0 |
+| curved-facade SW | 1.9 | 2.1 (6.6) | 0.2 (0.6) | 2.5 | 78 / 0 |
+| pipe node Top | 3.6 | 0 | 0 | 0 | — |
+
+- The first solve costs 2 to 5 s where it cost 6 to 14 s. What is left on curved-steel (4.0 s for 1.1 M triangles):
+  certificates 1.7 s, Rhino's mesher 1.2 s, bounds and parameters 0.8 s.
+- Curved S got slower on repeat (4.0 s against 3.2 s): ten tiles are indexed where two strips were. That is the
+  price of the memory bound.
+- The pipe node makes no native call, so the audit has nothing to do and costs nothing.
+- Known from before, not re-measured: campus Top, first solve, +38 s on 172 s (14.9 s of it meshes; 2.9 M of its
+  vertices are on revolved faces and still go through closest point), peak 5.7 GiB to 7.3 GiB in process, 51 tiles,
+  none over the limit.
+
+### Through a worker, both runtimes
+
+Every worker drawing with the audit on was byte-identical to the in-process one (10 of 10). Peak is the worker's
+private bytes while the solve ran; the cap is 2 GiB without the audit and 3 GiB with it on all of these.
+
+| Model, view | Runtime | Off: wall s, peak GiB | On, first: wall s, audit s, peak GiB | On, repeat: wall s, audit s, peak GiB |
+|---|---|---|---|---|
+| curved S SW | .NET 8 | 29.5, 0.73 | 32.9, 5.1, 1.36 | 33.5, 4.0, 1.76 |
+| curved S SW | .NET 10 | 31.3, 0.74 | 36.5, 4.6, 1.32 | 33.3, 3.3, 1.84 |
+| diagrid SW | .NET 8 | 4.5, 0.57 | 8.5, 3.7, 0.57 | 3.7, 0.2, 0.77 |
+| diagrid SW | .NET 10 | 6.1, 0.57 | 10.6, 4.1, 0.57 | 5.1, 0.3, 0.84 |
+| curved-steel SW | .NET 8 | 3.3, 0.55 | 12.9, 5.9, 0.83 | 2.7, 0.8, 1.07 |
+| curved-steel SW | .NET 10 | 3.8, 0.55 | 9.3, 5.2, 0.79 | 2.7, 0.7, 1.16 |
+| curved-facade SW | .NET 8 | 6.7, 0.56 | 9.0, 2.3, 0.56 | 2.3, 0.3, 0.73 |
+| curved-facade SW | .NET 10 | 7.0, 0.56 | 8.8, 2.0, 0.56 | 2.6, 0.4, 0.78 |
+| pipe node Top | .NET 8 | 8.0, 0.33 | 9.0, 0, 0.33 | 3.9, 0, 0.32 |
+| pipe node Top | .NET 10 | 12.5, 0.32 | 12.6, 0, 0.32 | 3.8, 0, 0.32 |
+
+- **The audit adds 0.2 to 1.1 GiB to a worker's peak** (most on curved S, the only one here with several tiles), under
+  a cap raised by 1 GiB. The highest peak was 1.84 GiB of 3 GiB.
+- The peak is higher on the repeat solve than on the first. The managed heap is not collected between solves; it is
+  garbage, not retention, but it is why the allowance is a whole gigabyte.
+- A worker builds its own meshes on its first solve (it has its own cache), then keeps them: the first-solve audit
+  cost in a worker is the same 2 to 6 s, and it is paid once per worker, not once per process.
+- .NET 10 behaves as .NET 8 does.
+
+### Found on the way: the worker cap on main is too small for curved M SW
+
+This is not the audit's; it fails with the audit off, on both runtimes.
+
+- **Where.** `WorkerMemoryPolicy.Required` (`src/M2DPlus.Core/WorkerMemoryPolicy.cs`): the cap is
+  max(2 GiB, 3 × `SceneCost.Estimate(1)` + 1 GiB), rounded up to a GiB. `DrawingWorkerPool` asks
+  `WorkerMemoryPolicy.Size` for it once per batch; after a cap is hit, `RetryCap` allows one retry at twice the cap.
+- **What it uses.** `SceneCost` (`src/M2DPlus.Core/Admission.cs`) is summed over leaves in `PreparedScene`: geometry
+  bytes (Rhino's `MemoryEstimate` of each leaf's definition), Brep faces, mesh triangles and source count.
+  `Estimate(1)` is 4.125 × bytes + 2,560 × faces + 120 × triangles + 4,608 × sources + 64 KiB. It is linear in the
+  input. For curved M (5,000 small Breps) that gives the 2 GiB floor.
+- **What HLD needed.** The worker's peak on curved M SW with the audit off was **4.48 GiB** (.NET 8) and
+  **4.55 GiB** (.NET 10), measured with the cap raised to 14 GB. At the policy's cap the view fails at 2 GiB, the
+  one retry fails at 4 GiB, and the view is reported as over its cap. Native HLD's memory on this view goes with
+  what it produces (43,000 m of Hidden and Visible linework, 68 M triangles of render mesh behind it), which the
+  input sizes do not predict.
+- **Also seen.** With the cap raised by hand, a second solve was refused because the first, still-resident worker
+  had lowered the machine's free memory below cap plus reply reservation; and campus Top (cap 13 GiB) cannot get a
+  worker at all on this machine while other work leaves under about 21 GiB free.
+
+A fix belongs with the workers, not here: a curved-source term in the estimate, or retries that climb to the budget
+instead of stopping at one doubling.
+
+### Recommendation on default-on
+
+Closer, and still not yet.
+
+- **Blocker 1, the first solve: mostly gone.** 2 to 5 s once per process on the small models, against a view of 2 to
+  4 s. That is still visible on a small drawing. The rest is certificates and Rhino's mesher.
+- **Blocker 2, workers and .NET 10: gone on what was run.** Byte-identical, both runtimes, memory bounded and inside
+  the cap. Curved M and campus through a worker with the audit on were not measured, because main cannot run them
+  through a worker without it either.
+- **Blocker 3, the gate: open.** Terra is running the suite and the light gate with the audit off and on.
+- **New: it is unreviewed.** The parameter source, the tiles, the cache move and the worker message are all after the
+  review of `580f5ee`.
+
+I would turn it on by default when the gate is clean with it on and the second review is in; and I would first fix
+the worker cap, because on the models where the audit finds most (curved M: 293 m) the worker route does not work
+today with or without it.
 
 ## Reproduce
 
@@ -294,4 +403,10 @@ The product's audit, off and on, with a ray check of what moved (`quick`: one so
 ```sh
 python -B tools/perf-f/mt_run.py <label> curved/curved-perf-S-blocks.3dm da:SW
 python -B tools/perf-f/mt_run.py <label> large/frame2d-large-campus.3dm da:Top quick
+```
+
+The same through one worker, with peak memory and a byte comparison against in-process (`DOTNET_ROLL_FORWARD=LatestMajor` for .NET 10; build `src/M2DPlus.Worker -c Release` first):
+
+```sh
+python -B tools/perf-f/mt_run.py <label> curved/curved-perf-S-blocks.3dm dp:SW check
 ```
