@@ -56,7 +56,7 @@ public static class DrawingWorkerServer
                             try
                             {
                                 using var result=NativeDrawing.SolveBorrowedAsync(scene,solve.Identity,[solve.View],
-                                    new NativeSettings(false,solve.NativeOnly){Scheduler=scheduler,IsWorker=true,DenseAudit=solve.DenseAudit,DenseAuditOptions=solve.DenseAuditOptions??new(),CullSources=solve.CullSources},default,progress).GetAwaiter().GetResult();
+                                    solve.ToSettings(scheduler),default,progress).GetAwaiter().GetResult();
                                 payload=WorkerCodec.Encode(new WorkerCodec.Reply(solve.Identity,solve.ViewIndex,WorkerCodec.CaptureDrawing(result.Views[0])));
                             }
                             finally{progress.End();}
