@@ -1,27 +1,42 @@
-# Persistent drawing workers (schema 3)
+# Persistent drawing workers (schema 4)
 
 Implemented 2026-11-15. This replaces the M0 worker identity-only executable. It does not change the owner's Rhino runtime, install anything, or publish a package.
 
 ## Boundary and ownership
 
-`DrawingCache` routes a visibility cache miss through `DrawingExecution`; presentation and target placement still run on the receiving side. `NativeDrawing` remains the explicit in-process entry point for correctness harnesses. Workers invoke that same adapter, including SectionDrawing and ComposedVisibility. Default exact mode disables native multipleThreads; opt-in native mode enables it at native calls and follows the view's hidden-generation setting. Each process still has one serial, budgeted native scheduler.
+`DrawingCache` routes misses through `DrawingExecution`. Workers invoke the same
+threaded HLD adapter, physical Route C sections, requested hidden flag, ordered source
+registrations and owned geometry/settings as the host. One budgeted HLD call per
+process; bounded worker admission limits CPU contention and respects memory caps. Rhino native
+thread counts remain outside managed processor control.
 
-Every public `NativeSettings` compute option travels with each solve: `MultipleThreads`, `NativeOnly` and all three `Verification` limits (`MaxRayTests`, `MaxSamples`, `ViewSpacingFraction`). Exact-mode native calls honor the explicit threading override; `engine=native` retains its own always-threaded, no-verification policy. Omitted request fields retain serial threading and default verification, including an explicitly null verification object. Dense-audit options and source culling remain host-controlled. The same request factory supplies timing-history keys, so option changes cannot reuse timing estimates for a different compute policy. These are additive schema-3 JSON fields; the exact engine-assembly fingerprint continues to reject mixed host/worker implementations before scene transport.
+Schema 4 removes NativeOnly, serial/threading overrides, verification and dense-audit
+options and kernel-only result state. Culling travels with each request. Runtime
+version/architecture, exact Rhino build/revision, RhinoCommon and Core/Rhino hashes
+must match before scene transfer. Processor count is recorded, not an equality promise.
 
-The host encodes only an already-owned PreparedScene. Definition geometry is serialized once per content key using Rhino's own JSON/binary archive (Rhino 8, user data included); source identities, paths, styles, transparency, scoped-clipping IDs and exact transform chains accompany it. The receiver reconstructs leases and runs the ordinary preparation code, preserving section canonicalization and mirrored-instance semantics. No RhinoDoc, live object, viewport, GH wrapper or document table crosses this boundary. Scenes are sent once per participating process and retained by scene revision; warm solves avoid even re-encoding an unchanged scene. One scene is retained per process.
+Only owned scene archives, exact transform chains, source attributes/paths, style and
+scope snapshots cross the boundary. Definition geometry is sent once per key and
+retained per scene. No live Rhino/GH/UI objects cross it. Region/geometry leases and
+whole-current generation publication, stale-reply rejection, crash/cancel isolation,
+Job Object caps and no heavy in-process fallback remain unchanged.
 
-Results contain independent Rhino geometry archives, depth geometry, every source/path/class/profile value, section loops and edge provenance, aligned hatches and resolved styles, quality and extraction counters. Order is preserved. Settings values use an explicit type whitelist and sorted keys, with their effective/authored values and provenance preserved. The stable result comparison includes all serialized geometry, settings and quality; it excludes wall/phase timings and diagnostic prose, which necessarily differ between processes. No rounding, locus canonicalization or tolerance-based repair is used for this byte comparison.
+Equality means same inputs/settings/fingerprints and policy. Fresh threaded HLD
+realizations may differ in fragments, ordering, duplicate ownership and Ignored.
+Single-result transport stays lossless: geometry/depth, classes/paths, loops/provenance,
+hatches/styles, settings/authorship, quality/counters/diagnostics. The codec field census
+is mandatory. Tests compare independent classed loci at fixture-declared document
+tolerance, topology/hole counts and analytic areas, not independent solve hashes.
+Timing keys use visibility settings and fingerprints; engine/joints edits affect remarks
+only. Schema/policy/assembly/Rhino changes invalidate durable and timing records.
 
-Owner decision 2026-11-16: `engine` crosses the settings whitelist and `FastNativeSources` crosses the drawing
-codec/presentation boundary. The strict repeat/worker equality gate is **exact mode only**; its tests explicitly
-request `engine=exact`. Threaded fast native output may differ between solves or worker counts, so its tests verify
-policy, progress, disclosure and lossless transport of a single result without promising repeat byte identity.
-The default remains exact. A planar-only exact/fast comparison normalizes the authored engine setting only and
-compares every output geometry/class/quality/routing field byte-for-byte; native calls must remain zero.
+The previous exact engine is archived at `archive/exact-engine`, `0cfc171` (beta.8).
+Dated benchmarks below retain their original fingerprints and equality claims as
+historical evidence; they do not certify the current HLD-only policy.
 
 ## Protocol and containment
 
-A random, current-user-only duplex named pipe uses a little-endian 32-bit length prefix, an exact-read loop and a 1 GiB compressed frame bound. Schema 3 gzip envelopes contain a one-byte operation-name length (1–16 lowercase ASCII letters), the name, a little-endian 32-bit raw payload length, and those payload bytes. Declared expanded lengths are checked against 8 GiB and .NET's array limit before allocation; short payloads and trailing expanded data are rejected. Host replies additionally use the smaller admission-derived expanded bound below. The host streams gzip directly from a length-bounded pipe frame, without allocating the compressed frame. This removes the previous giant outer base64 JSON token: the real 50,000-object scene exceeded System.Text.Json's streaming buffer growth range despite staying under its worker cap. Scene/drawing JSON, the inner Reply.Drawing base64 and all stable output bytes are unchanged. The handshake remains an uncompressed identity frame, limited to 16 KiB on host receive. Before any scene bytes, both peers compare schema, exact CLR version and major, process architecture, exact Rhino build and source revision, RhinoCommon SHA-256 and the combined Core/Rhino engine assembly SHA-256. A net8 apphost cannot roll forward to net10. A mismatched or absent executable is unavailable.
+A random, current-user-only duplex named pipe uses a little-endian 32-bit length prefix, an exact-read loop and a 1 GiB compressed frame bound. Schema 4 gzip envelopes contain a one-byte operation-name length (1–16 lowercase ASCII letters), the name, a little-endian 32-bit raw payload length, and those payload bytes. Declared expanded lengths are checked against 8 GiB and .NET's array limit before allocation; short payloads and trailing expanded data are rejected. Host replies additionally use the smaller admission-derived expanded bound below. The host streams gzip directly from a length-bounded pipe frame, without allocating the compressed frame. This removes the previous giant outer base64 JSON token: the real 50,000-object scene exceeded System.Text.Json's streaming buffer growth range despite staying under its worker cap. Scene/drawing JSON, the inner Reply.Drawing base64 and all stable output bytes are unchanged. The handshake remains an uncompressed identity frame, limited to 16 KiB on host receive. Before any scene bytes, both peers compare schema, exact CLR version and major, process architecture, exact Rhino build and source revision, RhinoCommon SHA-256 and the combined Core/Rhino engine assembly SHA-256. A net8 apphost cannot roll forward to net10. A mismatched or absent executable is unavailable.
 
 The child waits for its private stdin containment acknowledgement before resolving or initializing Rhino. Its parent first assigns it to an unnamed Windows Job Object with kill-on-close and a hard aggregate job commit cap (including descendants). Cancel and request deadlines terminate only this owned job. The parent confirms process death before releasing its slot. A request deadline is a per-view timeout failure; caller cancellation remains whole-batch cancellation. A worker claims a view only after its startup handshake succeeds. A failed startup retires that slot for the batch without taking work from ready siblings. Once every view finishes, unused startup attempts are cancelled and their owned processes are reaped; they cannot hold a completed batch until the startup deadline. A queued view fails only when no slot remains able to take it, with an explicit Info explanation. If none can start, the existing unavailable/fallback policy applies. A crashed worker fails only its current view with a quarantined Info error; remaining views can start a fresh process after confirmed death. Memory failure uses the single isolated retry described below; other completed views survive.
 
@@ -29,11 +44,11 @@ Every solve request and reply carries the complete RequestIdentity (scene/view/s
 
 ## Pool and admission
 
-There is one shared pool across components, with one batch reservation at a time. The CPU ceiling is `max(1, logical cores - 2)`. Expert count overrides cannot exceed it. Actual concurrency is the minimum of that ceiling, the view count and `floor((memory budget - host reply reservation) / per-view cap)`. One whole view runs per process; default exact solves use serial native HLD, without tiling. Explicit threading overrides and native engine mode follow the same policy as in-process solves.
+There is one shared pool across components, with one batch reservation at a time. The CPU ceiling is `max(1, logical cores - 2)`. Expert count overrides cannot exceed it. Threaded HLD adds a conservative admission ceiling: **one worker below 16 host logical cores, at most two on 16+ cores**, regardless of larger expert count overrides. Actual concurrency is the minimum of both CPU ceilings, the configured count, the view count and `floor((memory budget - host reply reservation) / per-view cap)`. One whole view runs per process with threaded HLD, without tiling. Host and worker use the same required threading/requested-hidden policy.
 
 A shared work queue lets each free worker take another view. For another batch on the same scene, previously measured longest views start first; unmeasured views retain input order. Results remain in input order. History retains only the current batch and clears on scene-revision changes. Scene transport was already retained per process; changing only views still avoids scene encoding and transfer.
 
-Each process advertises `max(1, floor((host logical cores - 2) / admitted workers))` processors through `DOTNET_PROCESSOR_COUNT`. Children also run at BelowNormal process priority. This bounds managed kernel parallelism across the reservation; it is not OS affinity or a native hard CPU cap. A changed processor allowance retires idle workers, as does a changed cap. An isolated memory retry gets the full managed allowance. Busy workers never expire; idle workers now expire after ten minutes.
+Each process advertises `max(1, floor((host logical cores - 2) / admitted workers))` processors through `DOTNET_PROCESSOR_COUNT`. Children also run at BelowNormal process priority. This advertises a managed processor allowance only: DOTNET_PROCESSOR_COUNT does not limit Rhino's native HLD pool. Each solve can use all host cores. The one/two-worker admission ceiling limits concurrent full pools; on large hosts two pools can still oversubscribe CPU. It is not OS affinity or a native thread cap. The host's separate in-process HLD slot and other Rhino applications are outside this worker-admission limit. The same conservative worker ceiling also applies to all-cut-only batches, avoiding per-job scheduling exceptions. A changed processor allowance retires idle workers, as does a changed cap. An isolated memory retry gets the full managed allowance. Busy workers never expire; idle workers now expire after ten minutes.
 
 Windows supplies physical RAM and the lesser of available physical RAM and available commit. Below the 32 GiB machine class the aggregate budget remains `min(60% physical, 80% available)`. At 32 GiB class and above (at least 30 GiB reported usable physical RAM, allowing hardware reservations) it is `min(75% physical, 85% available)`. Thus 32/64/128 GiB hosts leave at least 8/16/32 GiB outside worker caps **and the host transport reservation** for Rhino, retained results and the OS, with a further current-availability constraint. Owned idle resident memory is reclaimable for admission; other applications' memory is never counted as reclaimable. If working-set credit still gives a refusal, reap the pool's idle workers before taking a fresh RAM/commit snapshot and sizing again: paged-out private commit is not covered by working-set credit.
 
@@ -58,7 +73,7 @@ Fake-machine unit-tested policy outputs at **75% of physical RAM available** and
 
 | Limit | Current policy and reason |
 |---|---|
-| Four-worker ceilings in sizing, options and pool | Removed; CPU ceiling, view count and sum of memory caps choose the count |
+| Active worker count | Threaded HLD admits 1 below 16 host cores, at most 2 on larger hosts; config/view/memory limits may reduce this |
 | Host scheduler: 512 MiB estimate | Retained as interactive dispatch threshold, never a worker refusal |
 | 600,000 Brep faces times views; 4,000,000 triangles times views | Retained only for in-process dispatch. Division avoids product overflow. Workers use their separate estimate and Job Object cap |
 | 50,000 sources | New explicit heavy dispatch, even for an otherwise cheap single view; no worker source-count rejection |
@@ -75,15 +90,14 @@ Fake-machine unit-tested policy outputs at **75% of physical RAM available** and
 | Manual-bootstrap scheduler fallback | Server has a 4 GiB fallback only when its private budget variable is absent. Production always passes the resolved cap; this is not an additional production limit |
 | Preparation-cache retention | Existing host 128 MiB LRU retained; oversize/live scene leases stay usable, and this is not worker admission or the worker scene lifetime |
 | Confirm owned process death | 10 s retained; never replace a slot whose process death is unconfirmed |
-| Native scheduling | One serial native slot per process; one shared host batch reservation; native multithreading off in exact, on at native calls in opt-in fast |
-| Kernel managed threads | Existing maximum 8 per view retained to bound per-view temporary work, further limited by each worker's processor allowance. Aggregate concurrency grows through workers; this round measures face preparation rather than assuming more edge threads help |
+| Native scheduling | One budgeted native call per process; one shared host batch reservation; HLD always multithreaded |
 | Memory retry | Exactly once, alone, after original workers exit; larger cap only within fresh budget |
 
 Environment configuration is read when the shared pool is created:
 
 | Variable | Default | Bounds / meaning |
 |---|---|---|
-| M2DPLUS_WORKERS | CPU ceiling | 1 to `max(1, cores - 2)`; still constrained by views and memory |
+| M2DPLUS_WORKERS | CPU ceiling | Parser: 1 to `max(1, cores - 2)`; active count further capped at 1/2 by threaded-HLD admission, views and memory |
 | M2DPLUS_WORKER_MEMORY_MIB | automatic | 512 to 2147483647 MiB parser range; aggregate budget is the effective maximum; recovery may grow it |
 | M2DPLUS_WORKER_IDLE_SECONDS | 600 | 1 to 86400 seconds |
 | M2DPLUS_WORKER_STARTUP_SECONDS | 120 | 15 to 3600 seconds |
@@ -115,7 +129,7 @@ The trial Yak contains the usual GHA/Core/Rhino payload plus `workers/net8` and 
 
 ## Verification and remaining limits
 
-Licensed tests cover persistent one/two-worker equality (including mixed planar/curved geometry, points, mirrored blocks, resolved settings, physical sections and hatches), runtime mismatch before scene transfer, crash isolation and next-generation restart, hard cancellation of a deliberately non-cooperative solve, document close and publication rejection, stale replies, OS allocation refusal at the memory cap, idle expiry, set/heavy admission and unavailable-worker refusal. The full existing suite is also run under .NET 8 and .NET 10.
+Historical verification before the HLD-only cutover covered persistent one/two-worker equality (including mixed planar/curved geometry, points, mirrored blocks, resolved settings, physical sections and hatches), runtime mismatch before scene transfer, crash isolation and next-generation restart, hard cancellation of a deliberately non-cooperative solve, document close and publication rejection, stale replies, OS allocation refusal at the memory cap, idle expiry, set/heavy admission and unavailable-worker refusal. The full existing suite is also run under .NET 8 and .NET 10.
 
 Risks: the cost estimator is conservative and not an allocator prediction; a pathological single view can hit the hard cap or frame bound and fail. Higher-concurrency commercial/Cloud Zoo/offline licence recovery and installed-Yak interactive responsiveness remain manual deployment gates. A cancelled batch is rejected; a crashed view is failed without discarding other views; one indivisible slow view can still leave slots idle near batch completion despite dynamic scheduling. Cold measurements refer to fresh processes, not purged OS caches. Durable disk caching, tiling and new visibility algorithms are outside this change.
 
@@ -154,7 +168,7 @@ Reproduction: tools/worker-bench/Run.ps1; use a new output folder. Evidence in a
 
 Rebased onto origin/main at 6a3b0f0 (#22 curved section fixes, #23 Ignored/min visible). DrawingCache still canonicalizes hidden-on visibility before dispatch; hidden off and min visible remain presentation-only. The transport preserves DrawingPiece.SolvedClass separately from Class, plus MinVisible, IgnoredObjects, IgnoredPieces and all stored routing state. No output indices or stable identities change.
 
-WorkerCodecStateTests enumerates every instance backing field (including get-only state) of ViewDrawing and DrawingPiece, requires an explicit wire mapping or checked reconstruction, seeds non-default scalar state, and compares it after a real round trip. It also checks geometry archives, phases, regions, diagnostics and source state. A future stored field fails coverage; adding a DTO entry but forgetting assignment fails value comparison. Licensed cases compare raw and presented worker/local bytes with hidden off, min visible = 5 mm through a real 3 mm wall gap, and a physical section with hatches. A quarantined solved-hidden piece explicitly checks SolvedClass preservation.
+WorkerCodecStateTests enumerates every instance backing field (including get-only state) of ViewDrawing and DrawingPiece, requires an explicit wire mapping or checked reconstruction, seeds non-default scalar state, and compares it after a real round trip. It also checks geometry archives, phases, regions, diagnostics and source state. A future stored field fails coverage; adding a DTO entry but forgetting assignment fails value comparison. Current licensed cases compare raw/presented fixture loci, topology and policy with hidden off and physical sections; hidden-off min-visible retains all objects. The earlier worker/local byte checks are archived measurements. A quarantined solved-hidden piece explicitly checks SolvedClass preservation.
 
 Retry tests inject an OS-denied allocation in one view, verify one larger-cap retry alone after original worker death, and preserve a different view's authored error. A separate no-headroom case verifies the actionable per-view failure and no retry loop. The earlier crash/cancel/stale/runtime/idle/admission cases remain in the suite.
 
@@ -184,8 +198,20 @@ See [PERF G findings](../../hillclimb/perf-g/FINDINGS.md) for current-source pro
 
 Host replies now stream compressed bytes from the pipe and share one receive/restore gate. Admission and isolated recovery both subtract the host reply reservation before selecting worker caps; expanded reply declarations are checked against that reservation before allocation. Fake 16/32/64/128 GiB machines cover counts, aggregate accounting and retry headroom. Protocol tests exercise short reads, consecutive frames, oversized expansion declarations, truncation, trailing data and cancellation, including a 1 GiB declared frame with no payload and no compressed-frame allocation.
 
-A failed startup requeues its claimed view and disables that slot for the current batch. The licensed startup-timeout regression now requires every first-batch view to match the local result, including the late requeue after healthy siblings initially finish. The all-unavailable path reports why queued views cannot run. Additional licensed assertions check serialized reply consumption and byte-identical mixed planar/curved output with one versus multiple advertised managed processors.
+A failed startup requeues its claimed view and disables that slot for the current batch.
+Current licensed startup/retry gates check input/policy/fingerprint parity, successful
+fixture geometry/topology within declared tolerances, serialized reply consumption and
+stale isolation. Processor-count controls do not gate independent solve bytes. Only
+transport/restoration of one result stays byte-exact. The dated local-hash measurements
+above belong to the archived exact engine, not the current acceptance contract.
 
 Debug and Release builds passed with zero warnings/errors. `tools/Test-WalkingSkeleton.ps1` passed **344 Core, 62 UI-model and 238 licensed Rhino tests on each runtime**, .NET 8.0.34 and .NET 10.0.15, Rhino 8.36.26296.17001. The forced local hook passed after the licensed hosts exited.
 
 Fresh M eight-view in-process references and two production-pool passes per runtime produced **32/32 matching stable view hashes**; subsequent native reconstruction produced **16/16 matching hashes**. Each pass admitted four 3 GiB workers plus a 4 GiB host reply reservation. Evidence, source diff, runtime/engine fingerprints, model hash, test logs and a SHA-256 manifest are retained outside Git in `~/.t3/m2d-plus-models/evidence/worker-review-20261116-bc06c73a-verified`. These are correctness checks, not new performance claims. No commit, push, installation or publication was performed; the owner's Rhino processes were untouched.
+
+
+The current failure boundary is local: rejected sources, failed segments and uncertain
+points are skipped/diagnosed, and detached Unset curves alone are Unresolved. Failed
+participating section clips affect only overlapping footprints. A null HLD drawing or
+missing frame quarantines projection; section-admission diagnostics alone do not.
+Fingerprints are cached in one process-wide Lazy and retained in schema-4 messages.

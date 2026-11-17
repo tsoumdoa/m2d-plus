@@ -1,7 +1,7 @@
 # M2D+ agent notes
 
 MIT open-source Make2D-style drawings for Rhino 8 on Windows. **Beta:**
-one M2D+ Drawing component with exact/native drawing engines, sections, Target
+one M2D+ Drawing component with Rhino HiddenLineDrawing visibility, sections, Target
 placement, preview, Bake and headless drawing workers.
 Read [PLAN.md](docs/PLAN.md), [REQUIREMENTS.md](docs/REQUIREMENTS.md) and
 [UX](docs/design/ux.md) before changing contracts.
@@ -19,8 +19,9 @@ Warnings are errors. No cloud CI. Enable the local hook per clone with
 `git config core.hooksPath .githooks`; don't bypass it. It builds the solution and
 runs **Core and GH UI-model tests** (no Rhino licence) for code changes. Manually verify using
 `M2DPLUS_HOOK_FORCE=1 sh .githooks/pre-commit` (Git's sh on Windows).
-Licensed, serial integration tests require explicit `M2D_RHINO_TESTS=1` and an
-existing compatible Rhino.Inside resolver. See [test instructions](tests/M2DPlus.Rhino.Tests/README.md).
+Licensed integration tests require explicit `M2D_RHINO_TESTS=1` and an
+existing compatible Rhino.Inside resolver. Use up to three owned headless processes for correctness; never curved-M or campus.
+See [test instructions](tests/M2DPlus.Rhino.Tests/README.md).
 Never attach to, terminate or alter another person's Rhino processes.
 
 Generated test models (building, curved and view suites, campus) and archived run evidence live
@@ -76,7 +77,8 @@ names are intentional and package inventory/restore-GUID validation still passes
 Drawing sets (two or more views) and jobs too large for in-process run in a pool of
 persistent headless workers, one whole view per worker ([design](docs/design/drawing-workers.md)):
 named pipes, Job Object memory caps sized from machine RAM, hard cancel, crash and
-stale-reply isolation, results byte-identical to in-process. The codec must carry
+stale-reply isolation, same inputs/settings/fingerprints as in-process; threaded HLD realizations may differ.
+Transport of one result remains lossless (schema 4). The codec must carry
 every `ViewDrawing`/`DrawingPiece` field; `WorkerCodecStateTests` enforces it. See
 [S1a](docs/research/s1a-worker.md): Rhino 8.36 defaults to **.NET 10** here. Workers
 must match actual host runtime/architecture and exact Rhino build/revision,
@@ -89,8 +91,15 @@ the UI thread resolves live docs/objects/definitions/styles; compute gets owned
 geometry and plain values. Cache entries own data, jobs/previews hold leases until
 native work ends, and GH outputs are independent copies. Publish only a complete,
 current generation across all views. Keep quality/uncertainty separate from job
-state; quarantine potentially occluding unsupported sources. One global budgeted
+state. Keep Unset/extraction failures local; failed participating clips demote only
+overlapping footprints. Quarantine projection only when HLD returns no drawing/frame. One global budgeted
 HLD scheduler; UI cancellation immediately rejects stale work but does not imply
 native release. Hard kill/memory limits exist only on the worker route. Cut region
 branches hold all loops with aligned hatch/null; crop edges have separate provenance.
 Layered cache keys use content fingerprints plus stable identity, never CRC alone.
+
+Visibility is always threaded Rhino HLD, using physical Route C sections. No custom
+visibility classifiers or joint suppression. Legacy engine/joints values load with
+deduplicated grey remarks and do not key compute/run/timing identity. Hidden is
+a projection key; hidden-off disables min-visible. Exact engine archive:
+`archive/exact-engine` at `0cfc171` (beta.8). See [native engine](docs/design/native-engine.md).

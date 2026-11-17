@@ -72,8 +72,7 @@ public sealed class GeometryMatrixTests(RhinoHost host, ITestOutputHelper output
         }
         else if (gate.StartsWith("U:"))
         {
-            Assert.NotEmpty(view.Items); Assert.Contains("general freeform visibility unknown", view.Report.ValidationDomain);
-            Assert.Contains("sections not evaluated (M2)", view.Report.ValidationDomain);
+            Assert.NotEmpty(view.Items); Assert.Contains("visibility not certified", view.Report.ValidationDomain);
         }
         else if (gate == "P:point")
         { var item = Assert.Single(view.Items); using var g = item.CopyGeometry(); Assert.IsType<Point>(g); Assert.Equal(LineClass.Visible, item.Class); }

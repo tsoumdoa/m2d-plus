@@ -15,8 +15,8 @@ public sealed class ProgressModelTests
         {
             if (workers) { yield return new(JobPhase.Drawing, v, views) { Workers = 3 }; continue; }
             yield return new(JobPhase.Drawing, v, views) { View = $"V{v}" };
-            yield return new(JobPhase.Drawing, v, views) { View = $"V{v}", Step = ViewSteps.ExactLines };
-            foreach (var f in new[] { 0, .3, .7, 1 }) yield return new(JobPhase.Drawing, v, views) { View = $"V{v}", Step = ViewSteps.HiddenLines, StepFraction = f };
+            yield return new(JobPhase.Drawing, v, views) { View = $"V{v}", Step = ViewSteps.Sections };
+            foreach (var f in new[] { 0, .3, .7, 1 }) yield return new(JobPhase.Drawing, v, views) { View = $"V{v}", Step = ViewSteps.Native, StepFraction = f };
             yield return new(JobPhase.Drawing, v, views) { View = $"V{v}", Step = ViewSteps.Sections };
             yield return new(JobPhase.Drawing, v, views) { View = $"V{v}", Step = ViewSteps.Output };
         }
@@ -85,7 +85,7 @@ public sealed class ProgressModelTests
         Assert.True(workers.Indeterminate);
         Assert.Equal(.25 + .70 * 5 / 8, workers.SpanEnd, 6);
         // In process, hidden lines report their own fraction: determinate.
-        var hidden = model.Update(new(JobPhase.Drawing, 3, 8) { Step = ViewSteps.HiddenLines, StepFraction = .5 }, 3);
+        var hidden = model.Update(new(JobPhase.Drawing, 3, 8) { Step = ViewSteps.Native, StepFraction = .5 }, 3);
         Assert.False(hidden.Indeterminate);
         Assert.True(model.Update(new(JobPhase.Output, 0, 0), 4).Indeterminate);
     }
@@ -95,17 +95,17 @@ public sealed class ProgressModelTests
     {
         // Exact lines (the planar kernel) and checking (ray verification) report their own fraction, like hidden lines.
         var model = new JobProgressModel(null, loading: false);
-        var exact = model.Update(new(JobPhase.Drawing, 0, 1) { Step = ViewSteps.ExactLines, StepFraction = .5 }, 1);
+        var exact = model.Update(new(JobPhase.Drawing, 0, 1) { Step = ViewSteps.Sections, StepFraction = .5 }, 1);
         Assert.False(exact.Indeterminate);
-        var checking = model.Update(new(JobPhase.Drawing, 0, 1) { Step = ViewSteps.Checking, StepFraction = .5 }, 2);
+        var checking = model.Update(new(JobPhase.Drawing, 0, 1) { Step = ViewSteps.Output, StepFraction = .5 }, 2);
         Assert.True(checking.Fraction > exact.Fraction);
         // One worker forwards its one view's steps: determinate too. Parallel workers keep whole views.
         var single = new JobProgressModel(null, loading: false);
-        var one = single.Update(new(JobPhase.Drawing, 0, 1) { Workers = 1, Step = ViewSteps.HiddenLines, StepFraction = .5 }, 1);
+        var one = single.Update(new(JobPhase.Drawing, 0, 1) { Workers = 1, Step = ViewSteps.Native, StepFraction = .5 }, 1);
         Assert.False(one.Indeterminate);
         Assert.True(one.Fraction > single.Update(new(JobPhase.Preparing, 1, 1), 1).Fraction - 1e-9);
         var parallel = new JobProgressModel(null, loading: false);
-        var many = parallel.Update(new(JobPhase.Drawing, 0, 4) { Workers = 3, Step = ViewSteps.HiddenLines, StepFraction = .5 }, 1);
+        var many = parallel.Update(new(JobPhase.Drawing, 0, 4) { Workers = 3, Step = ViewSteps.Native, StepFraction = .5 }, 1);
         Assert.True(many.Indeterminate);
         Assert.True(one.Fraction > many.Fraction);
     }
@@ -140,11 +140,11 @@ public sealed class ProgressModelTests
     [Fact]
     public void EnginePhasesMapToUserSteps()
     {
-        Assert.Equal(ViewSteps.HiddenLines, ViewSteps.Of("native solve"));
-        Assert.Equal(ViewSteps.ExactLines, ViewSteps.Of("kernel solve"));
+        Assert.Equal(ViewSteps.Native, ViewSteps.Of("native solve"));
+        Assert.Null(ViewSteps.Of("kernel solve"));
         Assert.Equal(ViewSteps.Sections, ViewSteps.Of("sections"));
-        Assert.Equal(ViewSteps.Checking, ViewSteps.Of("native ray verification"));
-        Assert.Equal(ViewSteps.ExactCurved, ViewSteps.Of("exact curved"));
+        Assert.Null(ViewSteps.Of("native ray verification"));
+        Assert.Null(ViewSteps.Of("exact curved"));
         Assert.Equal(ViewSteps.Output, ViewSteps.Of("output construction"));
         Assert.Null(ViewSteps.Of("normalisation"));
     }

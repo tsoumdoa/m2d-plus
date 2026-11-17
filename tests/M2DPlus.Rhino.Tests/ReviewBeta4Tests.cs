@@ -29,7 +29,7 @@ public sealed class ReviewBeta4Tests(RhinoHost host)
         using var output = new ViewDrawing { Frame = crop, Tolerance = 1e-4 };
         var before = WorkerCodec.Archive(geometry);
         // Deliberately leave the plane origin far from the geometry in XY.
-        SectionDrawing.AddRefusedMarker(output, source, geometry, new(new Plane(new Point3d(0,0,offset),Vector3d.ZAxis),1e-4,.001,crop), default);
+        SectionPreparation.AddRefusedMarker(output, source, geometry, new(new Plane(new Point3d(0,0,offset),Vector3d.ZAxis),1e-4,.001,crop), default);
         Assert.NotEmpty(output.Items); Assert.Empty(output.Regions);
         foreach (var item in output.Items)
         {
@@ -42,7 +42,7 @@ public sealed class ReviewBeta4Tests(RhinoHost host)
         Assert.Equal(before, WorkerCodec.Archive(geometry));
         using var canceled = new CancellationTokenSource(); canceled.Cancel();
         using var empty = new ViewDrawing { Frame = crop, Tolerance = 1e-4 };
-        Assert.Throws<OperationCanceledException>(() => SectionDrawing.AddRefusedMarker(empty,source,geometry,new(crop.Plane,1e-4,.001,crop),canceled.Token));
+        Assert.Throws<OperationCanceledException>(() => SectionPreparation.AddRefusedMarker(empty,source,geometry,new(crop.Plane,1e-4,.001,crop),canceled.Token));
         Assert.Empty(empty.Items);
     });
 
@@ -91,9 +91,11 @@ public sealed class ReviewBeta4Tests(RhinoHost host)
     });
 
     [RhinoTheory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void CompoundSourceMarksOnlyTheUnpublishedComponent(bool cutOnly) => host.Run(() =>
+    [InlineData(false, 10)]
+    [InlineData(true, 10)]
+    [InlineData(false, 0)]
+    [InlineData(false, .00005)]
+    public void CompoundSourceMarksOnlyTheUnpublishedComponent(bool cutOnly, double depth) => host.Run(() =>
     {
         using var doc = global::Rhino.RhinoDoc.CreateHeadless(null); doc.ModelAbsoluteTolerance=1e-4;
         using var box = Brep.CreateFromBox(new BoundingBox(new Point3d(-2,-2,-1),new Point3d(2,2,1)));
@@ -103,39 +105,15 @@ public sealed class ReviewBeta4Tests(RhinoHost host)
         using var lease = BaselineTests.Capture(doc,cache,[new(compound,[0],"compound")]);
         var request = ViewRequest.Parse(Plane.WorldXY);
         var resolved = Settings.Resolve([new("compound",request.Name,request.Kind,true,lease.Value.Bounds.Diagonal.Length,1e-4)],
-            [[cutOnly ? "cutonly=on" : "cutonly=off", "hidden=on"]],DocumentUnits.Metres);
+            [[cutOnly ? "cutonly=on" : "cutonly=off", "hidden=on", "farclip=line", "depth="+depth.ToString("R",System.Globalization.CultureInfo.InvariantCulture)]],DocumentUnits.Metres);
         request = request with { Settings = resolved.Views[0] };
         using var batch = BaselineTests.Solve(lease,request);
         var view = Assert.Single(batch.Views); Assert.Null(view.Error);
-        if (cutOnly) { Assert.Equal(0,view.NativeCalls);Assert.Equal(0,view.KernelEdges); }
+        if (cutOnly || depth <= 1e-4) { Assert.Equal(0,view.NativeCalls);}
         var region = Assert.Single(view.Regions).Region; Assert.Equal(16,region.Area,8);Assert.NotNull(region.Hatch);
         var markers = view.Items.Where(p=>p.Class==LineClass.Unresolved).ToArray(); Assert.NotEmpty(markers);
         foreach (var marker in markers)
         { using var g=marker.CopyGeometry(); Assert.True(g.GetBoundingBox(true).Min.X>9,view.Info); }
     });
 
-    [RhinoTheory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public void RecoveryAuditBudgetsRefuseHiddenAndCannotLoseTheUnresolvedInk(bool sampleBudget) => host.Run(() =>
-    {
-        using var line = new LineCurve(new Point3d(-.1,0,0),new Point3d(.1,0,0));
-        using var sphere = new Sphere(new Point3d(0,0,1),.5).ToBrep();
-        var source = new PreparedLeaf("line",[0],line); var body = new PreparedLeaf("sphere",[1],sphere);
-        using var view = new ViewDrawing {Frame=new(Plane.WorldXY,10,10),Tolerance=1e-6};
-        view.Pieces.Add(new(line.DuplicateCurve(),source,LineClass.Hidden,line.DuplicateCurve()));
-        NativeUncertainty.ApplyFootprints(view,[source,body],false,[],[],1e-6,default,localSources:new HashSet<string>{"line"},
-            verificationInputs:[new(line,source),new(sphere,body)],recoveryAudit:new(sampleBudget?100:0,sampleBudget?0:100));
-        Assert.All(view.Items,p=>{Assert.Equal(LineClass.Unresolved,p.Class);Assert.Equal(LineClass.Unresolved,p.SolvedClass);});
-        Assert.NotEmpty(view.Items);
-        Assert.Contains(view.Diagnostics,d=>d.Contains("native casts=0",StringComparison.Ordinal));
-        Assert.Contains(view.Diagnostics,d=>d.Contains("remain Unresolved",StringComparison.Ordinal));
-        using var visible = new ViewDrawing {Frame=new(Plane.WorldXY,10,10),Tolerance=1e-6};
-        using var farSphere = new Sphere(new Point3d(10,0,1),.5).ToBrep();
-        var farBody = new PreparedLeaf("far sphere",[2],farSphere);
-        visible.Pieces.Add(new(line.DuplicateCurve(),source,LineClass.Visible,line.DuplicateCurve()));
-        NativeUncertainty.ApplyFootprints(visible,[source,farBody],false,[],[],1e-6,default,localSources:new HashSet<string>{"line"},maximumBoundTests:0);
-        Assert.Equal(LineClass.Unresolved,Assert.Single(visible.Items).Class);
-        Assert.Contains(visible.Diagnostics,d=>d.Contains("tests=0/0; budget refusals=1",StringComparison.Ordinal));
-    });
 }

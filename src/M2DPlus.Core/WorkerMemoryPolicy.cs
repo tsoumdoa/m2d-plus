@@ -19,6 +19,8 @@ public static class WorkerMemoryPolicy
     public static long ReplyExpandedLimit(long reservation) => Math.Max(0,
         Math.Min(Array.MaxLength, (reservation - ReplyStreamAllowance) / 2));
     public static int CpuLimit(int logicalCores) => Math.Max(1, logicalCores - 2);
+    /// <summary>Each HLD solve can use all host cores: one worker on smaller hosts, at most two on 16+ cores.</summary>
+    public static int ThreadedHldLimit(int logicalCores) => logicalCores >= 16 ? 2 : 1;
     public static long Budget(MachineMemory memory)
     {
         if (memory.PhysicalBytes <= 0 || memory.AvailableBytes <= 0) return 0;

@@ -67,13 +67,13 @@ public sealed class ViewSourceCullTests(RhinoHost host)
         DrawingBatch Solve(bool enabled) => NativeDrawing.SolveBorrowedAsync(scene.Value, new(scene.Value.Revision, view.Revision, "test", 1),
             [view], new() { CullSources = enabled }, default, progress).GetAwaiter().GetResult();
         using var off = Solve(false); using var on = Solve(true);
-        Assert.Equal(ExclusionTests.Hash(off.Views[0]), ExclusionTests.Hash(on.Views[0]));
+        HldFixtureComparison.Equal(off.Views[0],on.Views[0]);
         Assert.Contains("culled 2 sources outside the view", on.Views[0].Info);
         Assert.Contains(ViewSteps.Culling, steps);
         Assert.True(on.Views[0].Phases.Seconds.ContainsKey("source culling"));
         using var restored = WorkerCodec.RestoreDrawing(WorkerCodec.CaptureDrawing(on.Views[0]));
         Assert.Equal(on.Views[0].Info, restored.Info);
-        Assert.False(WorkerCodec.Decode<WorkerCodec.Request>(WorkerCodec.Encode(new WorkerCodec.Request(default, 0, view, false, CullSources: false))).CullSources);
+        Assert.False(WorkerCodec.Decode<WorkerCodec.Request>(WorkerCodec.Encode(new WorkerCodec.Request(default, 0, view, CullSources: false))).CullSources);
     });
 
     private sealed class InlineProgress(Action<JobProgress> report) : IProgress<JobProgress>

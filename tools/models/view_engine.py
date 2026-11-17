@@ -48,8 +48,6 @@ def run(model, sidecar, view, multiple_threads, emit_phase):
         area=sum(r['area'] for r in regions); loops=sum(r['loops'] for r in regions)
         section={'status':'pass' if abs(area-expectation['area'])<=expectation['areaTolerance'] and loops==expectation['loops'] else 'fail',
                  'area':area,'loops':loops,'expected':expectation,'regions':regions}
-    if engine['planar']['status']=='completed':
-        engine['planar']['nativeAgreement']=json.loads(ViewCaseRunner.Compare(str(target)+'.native-loci.json',str(target)+'.planar-loci.json',sidecar['tolerance']*4,.05))
     return {'engine':'view_engine','status':engine['status'],'native':raw,'m2d':engine,
             'agreement':{k:v for k,v in agreement.items() if k not in ('expectedToActual','actualToExpected')},
             'locusMissingSamples':agreement['expectedToActual']['Missed'],'locusExtraSamples':agreement['actualToExpected']['Missed'],

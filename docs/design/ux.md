@@ -413,8 +413,7 @@ frame rectangle and that reaches behind the frame plane (what is in front of the
 | `m2d.beyond` | `auto` · `off` · distance | `default` |
 | `m2d.fade` | `on` · `off` | `default` |
 | `m2d.fade.start` / `m2d.fade.end` / `m2d.fade.limit` | 0–100 % | `default` |
-| `m2d.hidden` · `m2d.tangents` · `m2d.seams` · `m2d.joints` | `on` · `off` | `default` |
-| `m2d.engine` | `exact` · `native` | `default` (inherits; built-in is `exact`) |
+| `m2d.hidden` · `m2d.tangents` · `m2d.seams` | `on` · `off` | `default` |
 | `m2d.glass` | `opaque` · `clear` | `default` |
 | `m2d.scale` | `1:n` (line weights only) | `default` |
 | `m2d.weights` | `auto` · `layers` | `default` |
@@ -737,34 +736,23 @@ style; the API suggests they don't).
 ### 3.8 Edges
 
 - **Tangent edges:** off by default. **Seams:** off by default. Both are menu toggles, as in Make2D.
-- **Joints:** on by default. `joints = off` removes certified flush planar joints (coplanar,
-  matching outward faces continuing across the edge). Seated edges, such as a wall on a slab,
-  remain and are occluded normally. Shared edges draw once with stable source ownership.
-  Approximate contacts stay Unresolved; native/freeform contacts retain their disclosed native
-  behaviour. Settings, `m2d.joints` user text and the menu use normal precedence. Joints keys
-  visibility whenever projection runs (native currently keeps the key too), so changing it
-  re-solves from the kept scene. Cut-only views omit joints from the effective visibility key.
-- **Hidden lines:** on by default. Turning it off empties the Hidden output. With `engine = exact` it is a
-  presentation choice: the solve keeps hidden lines (also needed by `min visible`), so toggling it reuses visibility.
-  With `engine = native`, native HLD computes hidden curves only when requested; changing hidden re-solves visibility.
-- **Engine:** `engine = exact | native`, default **exact**, from Settings, view-object `m2d.engine`, or
-  *Engine ▸ Exact · Native (Rhino Make2D)*. Saved `fast` remains accepted as an alias of `native`,
-  with a component remark: `engine = fast is now engine = native`.
-  **Exact** retains M2D+'s planar/analytic engines (including cut tubes), Route C sections, verifier and
-  Unresolved disclosure, using native HLD where our engines cannot solve yet.
-  **Native** submits every source, including planar and analytic bodies, to RhinoCommon HiddenLineDrawing.
-  Threading is on; hidden curves are computed only with `hidden = on`. No own visibility engine or verifier
-  runs, and Unresolved is empty. Expect Make2D-like speed and errors; lines are not certified and may differ
-  between runs. Info and a component remark say `native: Rhino HiddenLineDrawing, not certified`.
-  Tangents/seams and near/far depth clipping use HLD flags/planes, including per-object clipping participation.
-  Rhino 8.36 can still clip excluded curves despite those lists; Info discloses this native limitation, with no own correction.
-  Crop and `farclip` line suppression are output filters. `cutonly` keeps only HLD near-section lines after solving.
-  `joints` and `glass = clear` have no HLD equivalent and are ignored with Info notes (native contact/opaque behaviour).
-  `min visible` remains a presentation filter with `hidden = on`; with hidden off it is ignored with an Info note,
-  since uncomputed hidden evidence cannot identify partly hidden objects honestly.
-  Native sections use HLD clipping-plane SectionCut curves: **cut lines only**, one source branch with a null
-  Hatch slot; no certified closed material regions. `cuts` merge and `hatch` are ignored with an Info note.
-  Inputs, styling, line weights, layers, layout/Target, bake, output indices, caching and workers remain M2D+'s wrapper.
+- **Visibility:** Rhino HLD only, always multithreaded. Native visibility/contacts are not certified;
+  fresh solves may change duplicate ownership/source attribution and Ignored results. The custom
+  exact engine is archived at `archive/exact-engine`, `0cfc171` (beta.8).
+- **Legacy settings:** Engine and Joints are absent from menus/new view-box defaults/copied settings.
+  Saved `engine=exact|native|fast` and `joints=on|off` load and preserve authored values but are ignored.
+  Deduplicated grey remarks: `engine is always Rhino HLD now` and
+  `joints is ignored; Rhino HLD controls contact edges`. Defaults produce no remark.
+  They never change run/visibility/worker timing identities or call HLD.
+- **Hidden lines:** on by default; the requested flag reaches HLD. Toggling it invalidates projection.
+  Hidden-off disables min-visible: retain all objects and give a grey remark.
+- **Sections:** physical Route C trims/caps participating sources before HLD, including points and curves;
+  excluded sources remain whole. Independent certified regions preserve holes, crop provenance,
+  merge and hatch. No HLD clipping planes. Cut-only and zero-depth far clips make zero HLD calls.
+  Positive sub-tolerance depth remains explicitly uncertain. Failed clips demote only overlapping projected footprints,
+  preserving independent certified regions. Rejected sources and failed extraction records are
+  skipped with diagnostics; Unset curves remain local. Whole-view quarantine requires an HLD solve failure.
+  Valid Unset points are suppressed with per-source diagnostics without quarantining the view.
 - **Glass:** opaque by default (as in Make2D); `glass = clear` makes objects with a transparent material or on a layer
   named `*Glass*`/`*Glazing*` non-occluding.
 
@@ -801,7 +789,7 @@ on an `Ignored` category layer (`m2d.class = ignored`, §8). **Preview:** like H
 **off by default**, because these lines are left out of the drawing; when on, they draw very faint (25 % ink).
 
 **Cost.** A presentation filter over the per-source classification, like beyond, fade and placement. Changing only the
-threshold never re-runs visibility and makes no HLD call. Native requires hidden-on evidence (§3.8). Hidden is also presentation in exact mode; native
+threshold never re-runs visibility and makes no HLD call. Hidden requires a new HLD solve (§3.8); hidden-off disables this filter. HLD
 hidden generation follows the setting and therefore re-solves. The min-visible filter does not speed up visibility; culling before
 the solve is a possible later experiment behind its own correctness gate.
 
@@ -860,8 +848,8 @@ share the Z = 0 line" working.
   the scene it read, keyed by what it read: the document, its tolerance, every Geometry item (an id, a layer name, or the
   content fingerprint of Grasshopper geometry) and the view objects. A Settings, Depth, Target or menu change, or a view
   object's `m2d.*` text or geometry, re-solves from it: **no capture, no normalisation, no preparation**. Presentation-only
-  settings (min visible, scale, weights, fade, hatch, tree, placement, plus hidden in exact mode) make no HLD call;
-  visibility settings (depth, far clip, crop, tangents, seams, joints, glass, tolerance, engine, plus hidden in native mode)
+  settings (min visible, scale, weights, fade, hatch, tree, placement) make no HLD call;
+  visibility settings (depth, far clip, crop, hidden, tangents, seams, glass, tolerance)
   re-solve from the prepared scene. Only a change to the
   Geometry input or to what the scene read (§5.1a) reads the objects again, and then only the changed objects are
   fingerprinted and normalised (unchanged ones are found by their Rhino serial number).
@@ -882,7 +870,7 @@ Owner request, 2026-11-15: the drawing re-ran whenever object visibility changed
 document change is now classified against **what the current drawing read** (the scope: drawn objects and block parts,
 their layers, block definitions, the view objects and layer-name items) by one policy (`RerunPolicy`, Core). A re-run re-reads
 the scene on the UI thread; visibility is solved again only when its content changed, so colour, name, section-style,
-`tree` changes reuse the cached solve and make no HLD call. Hidden does so in exact mode; in native mode its hidden
+`tree` changes reuse the cached solve and make no HLD call. Hidden invalidates projection; its hidden
 generation flag changes and visibility is recomputed.
 
 | Change in Rhino | Geometry given (GH geometry, referenced objects, ids, layer names) | Document mode (Geometry empty) |
@@ -915,13 +903,14 @@ layer names, Grasshopper geometry) is drawn whatever its visibility.
   the same facets under the same policy (at most every 200 ms while reading the scene, and before publishing).
 - Tested by `RerunTests` (solves and HLD calls counted per change, both modes) and `RerunPolicyTests` (the table).
 
-**What a re-run costs** (`RerunTests.SettingsChangesReuseTheCapturedScene`, both modes; spheres force native HLD):
+**What a re-run costs** (`RerunTests.SettingsChangesReuseTheCapturedScene`, document and referenced geometry modes):
 
 | Change | Objects read again (captures) | Normalised | Prepared | HLD calls |
 |---|---|---|---|---|
 | Settings `hidden = off`, `min visible`, menu `scale`, Target, Depth on a view box | 0 | 0 | 0 | 0 |
 | Settings `tangents = on`, menu `seams` (visibility keys) | 0 | 0 | 0 | re-solve |
-| Settings/menu/view-object `engine`, or `hidden` while native | 0 | 0 | 0 | re-solve; native sends all sources to HLD, including planar/analytic ones |
+| Settings/menu/view-object `hidden` | 0 | 0 | 0 | re-solve with requested HLD hidden flag |
+| Legacy `engine` / `joints` edits | 0 | 0 | 0 | remarks only; reuse drawing |
 | View object `m2d.*` text (e.g. `m2d.fade`) | 0 | 0 | 0 | 0 |
 | Settings/menu/view-object `bake` only (`BakeLayoutTests`) | 0 | 0 | 0 | 0, and no presentation: the same drawing is republished |
 | View box moved (its view changes) | 0 | 0 | 0 | re-solve |
@@ -938,8 +927,8 @@ While a job runs the footer (§1) shows two rows saying **what is being processe
 | Loading objects (host capture) | `Loading objects 2,400 / 6,000` | · estimate | determinate (objects read / known); skipped when the scene is reused |
 | Waiting | `Waiting for another drawing (1 ahead)` | | shimmer: only shown when the global scheduler is busy |
 | Preparing geometry | `Preparing geometry 3,100 / 6,000` | · `~20 s left` | determinate |
-| Drawing, in process | `Drawing 3 / 8 · Section A` | `hidden lines 45 %` · `~40 s left` (steps: exact lines, hidden lines or **native** during native work, sections, checking, output; native, exact and checking steps carry a percentage) | determinate within a view; the planar kernel, Rhino's own hidden-line progress and ray checking move it |
-| Drawing, on workers | `Drawing 5 / 8 · 3 workers · Section A` | `starting workers`, `sending scene`, then a worker's own step, e.g. `exact lines 37 %` · estimate | per finished view, with a shimmer over the views in flight; one view's step is shown at a time (it keeps the row until it finishes or goes quiet); with one worker, determinate within the view as in process |
+| Drawing, in process | `Drawing 3 / 8 · Section A` | `native 45 %` · `~40 s left` (steps: sections, native, output) | determinate within native HLD progress |
+| Drawing, on workers | `Drawing 5 / 8 · 3 workers · Section A` | `starting workers`, `sending scene`, then a worker's own step, e.g. `native 37 %` · estimate | per finished view, with a shimmer over the views in flight; one view's step is shown at a time (it keeps the row until it finishes or goes quiet); with one worker, determinate within the view as in process |
 | Building output | `Building output` | | shimmer over the last share |
 
 - **The bar only moves forward.** Each stage has a share: the time it took in the previous run of the same inputs, views and
@@ -963,7 +952,7 @@ While a job runs the footer (§1) shows two rows saying **what is being processe
 | Running | the stage status above | stage progress | empty | stale, grey | — |
 | Done | `Section A · 2.1 s` or `6 drawings · 41 s` | hidden | **complete** | full style | — |
 | Done, unresolved | `6 drawings · 41 s` | hidden | complete | unresolved in orange | **Remark** per view: "Section A: 12 unresolved pieces in the Unresolved output (orange in the preview, own layer when baked). Check them before issuing." |
-| Done, native engine | (as Done) | hidden | complete | full style, Unresolved empty | **Remark**: `native: Rhino HiddenLineDrawing, not certified`; never a warning solely for choosing native |
+| Done, Rhino HLD | (as Done) | hidden | complete | full style; detected uncertainty Unresolved | **Remark**: `Engine: Rhino HLD; multithreaded; visibility not certified` |
 | Not drawn, harmless | (as Done) | | complete | | **Remark**: "Section A: 4 objects not drawn (3 TextDot, 1 PointCloud). They hide nothing. See Info." |
 | Not drawn, could hide | (as Done) | | complete | | **Warning**: "Section A: 2 objects not drawn (2 …). They could hide other objects. See Info." |
 | Quarantined view | (as Done) | | complete; every line Unresolved | orange | **Warning**: "Section A: visibility could not be trusted for the whole view, so its lines are Unresolved (orange). Check Info for the cause." |
@@ -992,19 +981,17 @@ Unknown keys and bad values are warnings that suggest the closest match ("Unknow
 
 ### 5.4 Info (one per view)
 
-With `cutonly = on` in exact mode, Info says `Cut only: projection beyond the cut skipped`. While drawing, the footer step
-is `sections`; no exact-lines, hidden-lines or checking step runs. Native instead solves HLD and filters to near-section
-lines, with Info `Cut only: HLD output filtered to near-section lines`. The separate output stage remains as usual.
-
-Info states `Engine: exact`, or in native mode:
-
-```text
-native: Rhino HiddenLineDrawing, not certified; lines may differ between runs.
-```
-
-Native threading, actual HLD flags and counts are recorded, alongside ignored-setting and cut-lines-only notes
-(§3.8). No native verifier runs and no Unresolved class is produced. Native may differ between runs/workers;
-only exact mode has a strict repeat/worker byte-equality gate. Worker transport remains lossless in either mode.
+With `cutonly = on`, Info says `Cut only: projection beyond the cut skipped`; the footer
+step is `sections` and HLD is never called. Zero depth with far clipping also skips projection.
+When HLD runs, Info says `Engine: Rhino HLD; multithreaded; visibility not certified`;
+zero-call views say HLD did not run (cut-only: sections only). Explicit legacy joints
+settings alone get the joints disclosure. Info records actual flags,
+route, calls, extraction/regions/hatches/refusals, tolerance risks and fingerprints.
+Joints suppression is gone; fresh solves may change duplicate ownership/source attribution
+and Ignored. Hidden-off disables min-visible with a grey remark. Detected unsafe extraction
+and section failures remain Unresolved; it cannot enumerate every Rhino visibility error.
+Workers preserve inputs/settings/fingerprints and lossless transport of one result, without
+promising repeat byte equality across threaded solves.
 
 ```
 Section A — View box (front face origin 12.0, 6.0, 0.0), cuts 214 objects
@@ -1094,11 +1081,9 @@ fade.limit = 25 %
 | `fade.limit` | 0–100 | `30 %` | % intensity | Depth Cueing *Fade Limit* | view object |
 | `crop` | `auto` · `off` | `auto` | — | Crop View | text only (boxes always crop) |
 | **Lines** | | | | | |
-| `engine` | `exact` · `native` | **`exact`** | — | — | view object (`m2d.engine`), menu |
 | `hidden` | `on` · `off` | `on` | — | Show Hidden Lines | view object, menu |
 | `tangents` | `on` · `off` | `off` | — | — (Make2D option) | view object, menu |
 | `seams` | `on` · `off` | `off` | — | — (Make2D option) | view object, menu |
-| `joints` | `on` · `off` | **`on`** | — | — | view object (`m2d.joints`), menu; visibility key |
 | `glass` | `opaque` · `clear` | `opaque` | — | — | view object |
 | `min visible` (`min_visible`) | `off` · length | `off` | 2D length in the drawing | — | view object (`m2d.min_visible`), menu |
 | `scale` | `1:n` · `n` | `1:100` | — (picks the nearest preset band, §3.6) | View Scale (line weights only; the drawing stays 1:1) | view object, menu |
@@ -1137,10 +1122,8 @@ Run now
 Cancel                            (only while running)
 ────────────────
 Hidden lines                 ✓        hidden   = on | off
-Engine ▸ Exact ✓ · Native (Rhino Make2D)                            engine = exact | native
 Tangent edges                         tangents = off | on
 Seams                                 seams    = off | on
-Joints                                joints   = on | off
 Min visible ▸ Off ✓ · 1 mm · 2 mm · 5 mm · 10 mm      min_visible = off | <length>   (§3.9)
 Beyond ▸     Auto ✓ · Off · 1 m · 3 m · 10 m          beyond  = auto | off | <distance>
 Far clip ▸   No clip · Clip with line · Clip without line ✓   farclip = none | line | noline
@@ -1485,12 +1468,10 @@ new in revision 3** and follow from the two decisions.
 10. **Anchor frames** per source type (§4) and a rigid 1:1 plane-to-plane placement (no scaling). Placement is a
     transform applied after drawing, so changing Target re-places cached drawings without re-solving.
 11. **Cheap frame inference** from bounding boxes before any meshing. A **relevance test** between changed objects and view volumes.
-12. **Reports:** unsupported objects by type, unresolved counts per object, styles used per rule, timings, cache hits. Deterministic
-    output order, so trees don't shuffle between runs.
+12. **Reports:** unsupported objects by type, unresolved counts per object, styles used per rule, timings, cache hits. Sorted output within each cached realization; native fragments/ownership may differ across fresh solves.
 13. **Unit-aware defaults:** the document tolerance and angle tolerance, and metre defaults (3 m beyond) converted to document units.
 14. **Settings-independent caching:** depth cueing, line weights (`scale`, `weights`), fill colours and the `hatch` override are
-    styling only and must not invalidate the drawing cache. Neither does `min visible` (§3.9). Exact also treats
-    `hidden` as presentation. Visibility keys are `depth`, `farclip`, `crop`, `tangents`, `seams`, `joints`, `glass`, `tolerance`, `cutonly`
-    and `engine` (`Settings.VisibilityKeys`); `EffectiveSettings.VisibilityKey()` additionally includes hidden in
-    native mode. `beyond` and `cuts` are applied over the cached solve too. Engine changes always invalidate
-    visibility even if the resulting planar-only drawing is geometrically identical.
+    styling only and must not invalidate the drawing cache. Neither does `min visible` (§3.9).
+    Visibility keys: `depth`, `farclip`, `crop`, `hidden`, `tangents`, `seams`, `glass`, `tolerance`,
+    `cutonly`, scene/view/scope and policy/fingerprints. Cut-only omits hidden, tangents and seams; glass remains keyed for excluded foreground region admission.
+    Legacy engine/joints never key compute/run/timing; beyond/cuts/Target remain presentation.

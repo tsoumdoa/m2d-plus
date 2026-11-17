@@ -5,10 +5,7 @@
     <AssemblyName>M2DPlus.PerfF</AssemblyName>
     <RootNamespace>M2DPlus.PerfF</RootNamespace>
     <UseWindowsForms>true</UseWindowsForms>
-    <!-- /p:PerfFBaseline=true builds the same harness against a tree without the section-reuse internals (e.g. main). -->
-    <DefineConstants Condition="'$(PerfFBaseline)' == 'true'">$(DefineConstants);PERFF_BASELINE</DefineConstants>
   </PropertyGroup>
-  <ItemGroup Condition="'$(PerfFBaseline)' == 'true'"><Compile Remove="Verdicts.cs;AnalyticCheck.cs;CurvedEngine.cs;CurvedCensus.cs;RoundCoverBench.cs;MeshTier.cs;DenseAuditCheck.cs" /></ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/M2DPlus.Rhino/M2DPlus.Rhino.csproj" />
     <PackageReference Include="RhinoCommon" Version="$(RhinoApiVersion)" ExcludeAssets="runtime" />

@@ -63,6 +63,7 @@ public static partial class Settings
                         continue;
                     }
                     var key = NormalizeKey(line[..equals]);
+                    if (IsLegacyKey(key) && line[(equals + 1)..].Trim().Equals("default", StringComparison.OrdinalIgnoreCase)) continue;
                     if (TryValue(key, line[(equals + 1)..].Trim(), units, diagnostics, null, branch, lineIndex + 1, out var value))
                         foreach (var index in addressed) candidates[index][key].Add(new(value!, SettingSource.Input));
                 }
@@ -127,6 +128,7 @@ public static partial class Settings
             foreach (var (raw, text) in row.Values)
             {
                 var key = NormalizeKey(raw);
+                if (IsLegacyKey(key) && text.Trim().Equals("default", StringComparison.OrdinalIgnoreCase)) continue;
                 if (TryValue(key, text, units, diagnostics, index, null, null, out var value))
                     candidates[index][key].Add(new(value!, source));
             }
@@ -145,8 +147,10 @@ public static partial class Settings
         try
         {
             value = ParseValue(key, text, units);
-            if (key == "engine" && text.Trim().Equals("fast", StringComparison.OrdinalIgnoreCase))
-                diagnostics.Add(new(DiagnosticSeverity.Remark, "engine = fast is now engine = native", view, branch, line, key));
+            if (IsLegacyKey(key) && !text.Trim().Equals("default", StringComparison.OrdinalIgnoreCase) &&
+                !diagnostics.Any(d => d.Key == key && d.Severity == DiagnosticSeverity.Remark))
+                diagnostics.Add(new(DiagnosticSeverity.Remark, key == "engine" ? "engine is always Rhino HLD now" :
+                    "joints is ignored; Rhino HLD controls contact edges", Key: key));
             return true;
         }
         catch (Exception e) when (e is FormatException or JsonException)
@@ -194,7 +198,7 @@ public static partial class Settings
         for (var i = 0; i < views.Count; i++)
         {
             text.AppendLine($"[#{i}]");
-            foreach (var key in Keys) text.AppendLine($"{key} = {views[i][key].Text}");
+            foreach (var key in ActiveKeys) text.AppendLine($"{key} = {views[i][key].Text}");
         }
         return text.ToString();
     }
@@ -215,7 +219,7 @@ public static partial class Settings
         return text.ToString();
         void Append(SettingsRow row)
         {
-            foreach (var key in Keys.Where(row.Values.ContainsKey))
+            foreach (var key in ActiveKeys.Where(row.Values.ContainsKey))
             {
                 var value = row.Values[key];
                 if (key == "name" && !value.StartsWith('"')) value = JsonSerializer.Serialize(value);

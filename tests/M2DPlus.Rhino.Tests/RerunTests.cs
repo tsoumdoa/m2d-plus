@@ -161,7 +161,7 @@ public sealed class RerunTests(RhinoHost host, ITestOutputHelper output)
         // Real changes to the referenced input and to the view object do re-run.
         Expect(rig, "colour of the drawn object", () => Attributes(doc, rig.Drawn, a => { a.ColorSource = ObjectColorSource.ColorFromObject; a.ObjectColor = Color.Blue; }), rerun: true, solved: false);
         Expect(rig, "rename the drawn object (Key labels)", () => Attributes(doc, rig.Drawn, a => a.Name = "Column A"), rerun: true, solved: false);
-        Expect(rig, "view box setting m2d.hidden", () => Attributes(doc, rig.ViewBox, a => a.SetUserString("m2d.hidden", "off")), rerun: true, solved: false);
+        Expect(rig, "view box setting m2d.hidden", () => Attributes(doc, rig.ViewBox, a => a.SetUserString("m2d.hidden", "off")), rerun: true, solved: true);
         Expect(rig, "move the drawn object", () => doc.Objects.Transform(rig.Drawn, Transform.Translation(0, 1, 0), true), rerun: true, solved: true);
     });
 
@@ -285,7 +285,7 @@ public sealed class RerunTests(RhinoHost host, ITestOutputHelper output)
                 if (text is not null) persistent.Append(new GH_String(text));
                 param.ExpireSolution(true);
             }
-            Rerun("Settings: hidden = off (presentation)", () => Text(3, "hidden = off"), capture: false, solved: false);
+            Rerun("Settings: hidden = off (visibility)", () => Text(3, "hidden = off"), capture: false, solved: true);
             Rerun("Settings: tangents = on (visibility)", () => Text(3, "tangents = on"), capture: false, solved: true);
             Rerun("Settings: min visible = 0.1 (presentation)", () => Text(3, "tangents = on\nmin visible = 0.1"), capture: false, solved: false);
             Rerun("Depth: 8 (a view box keeps its own)", () => Text(4, "8"), capture: false, solved: false);

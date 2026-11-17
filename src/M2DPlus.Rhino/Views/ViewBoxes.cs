@@ -44,7 +44,7 @@ public static class ViewBoxes
     /// geometry; tree, gap and tolerance are rarely per-view, so they are not written (but m2d.tree, m2d.gap and
     /// m2d.tolerance are read). <c>m2d.bake</c> (the bake layer layout, UX §8.1) is bake-time only.</summary>
     public static ImmutableArray<string> Keys { get; } = ["name", "farclip", "cutonly", "beyond", "fade", "fade.start", "fade.end", "fade.limit",
-        "hidden", "engine", "tangents", "seams", "joints", "glass", "scale", "weights", "hatch", "cuts", "min_visible", "bake"];
+        "hidden", "tangents", "seams", "glass", "scale", "weights", "hatch", "cuts", "min_visible", "bake"];
 
     public static bool IsViewBox(RhinoObject? obj) => obj?.Attributes.GetUserString(Marker) is not null;
 

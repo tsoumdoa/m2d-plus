@@ -18,7 +18,7 @@ public sealed class MenuTests
         var labels = Menu(ComponentUiState.Default, DrawingPhase.Running).Where(n => !n.IsSeparator).Select(n => n.Label).ToArray();
         Assert.Equal(["Convert to view boxes", "Flip view direction", "Create view from current viewport", "Select view objects",
             "Bake drawing", "Bake one", "Bake layers", "Run automatically", "Run now", "Cancel",
-            "Hidden lines", "Engine", "Tangent edges", "Seams", "Joints", "Min visible", "Beyond", "Far clip", "Cut only", "Depth cueing", "Cuts", "Hatch", "Scale", "Line weights",
+            "Hidden lines", "Tangent edges", "Seams", "Min visible", "Beyond", "Far clip", "Cut only", "Depth cueing", "Cuts", "Hatch", "Scale", "Line weights",
             "Reset menu defaults", "Preview", "Output tree", "Copy info", "Copy settings as text", "Clear drawing cache"], labels);
         Assert.DoesNotContain(Menu(ComponentUiState.Default, DrawingPhase.Done), n => n.Label == "Cancel");
         var all = Flatten(Menu(ComponentUiState.Default)).ToArray();
@@ -29,19 +29,12 @@ public sealed class MenuTests
     private static IEnumerable<MenuNode> Flatten(IEnumerable<MenuNode> nodes) =>
         nodes.SelectMany(n => n.IsSubmenu ? Flatten(n.Children).Prepend(n) : [n]);
 
-    [Fact] public void EngineChoiceDefaultsToExactAndSettingsInputLocksIt()
+    [Fact] public void LegacyRowsRoundTripWithoutMenuItems()
     {
-        var engine=Item(Menu(ComponentUiState.Default),"Engine");
-        Assert.Equal(["Exact","Native (Rhino Make2D)"],engine.Children.Select(n=>n.Label));
-        Assert.True(engine.Children[0].Checked);Assert.False(engine.Children[1].Checked);
-        var fast=Item(Menu(ComponentUiState.Default.With("engine","fast")),"Engine");
-        Assert.True(fast.Children[1].Checked);
-        Assert.Contains("not certified",engine.Tooltip);Assert.Contains("differ between runs",engine.Tooltip);
-        Assert.True(Item(Menu(ComponentUiState.Default.With("engine","native")),"Engine").Children[1].Checked);
-        Assert.Equal(MenuCommands.SetValue("engine","native"),fast.Children[1].Command);
-        var locked=Item(Menu(ComponentUiState.Default,DrawingPhase.Done,["engine=fast"]),"Engine");
-        Assert.False(locked.Enabled);Assert.Contains("set by input",locked.Label);
-        Assert.True(locked.Children[1].Checked);Assert.All(locked.Children,n=>Assert.False(n.Enabled));
+        var state=ComponentUiState.Default.With("engine","fast").With("joints","off");
+        var restored=UiStateSerializer.Read(UiStateSerializer.Write(state),out var problem);Assert.Null(problem);
+        Assert.Equal("fast",restored.Menu.Values["engine"]);Assert.Equal("off",restored.Menu.Values["joints"]);
+        Assert.DoesNotContain(Menu(restored),n=>n.Label.StartsWith("Engine",StringComparison.Ordinal)||n.Label.StartsWith("Joints",StringComparison.Ordinal));
     }
 
     [Fact]
@@ -107,8 +100,6 @@ public sealed class MenuTests
         Assert.Equal(MenuCommands.SetValue("hidden", "off"), hidden.Command);
         Assert.Equal("hidden = on", hidden.Hint);
         Assert.False(Item(menu, "Seams").Checked);
-        Assert.True(Item(menu, "Joints").Checked);
-        Assert.Equal(MenuCommands.SetValue("joints", "off"), Item(menu, "Joints").Command);
         Assert.Equal(["Auto"], Item(menu, "Beyond").Children.Where(c => c.Checked).Select(c => c.Label));
         Assert.Equal(["Clip without line"], Item(menu, "Far clip").Children.Where(c => c.Checked).Select(c => c.Label));
         Assert.Equal(["1:100"], Item(menu, "Scale").Children.Where(c => c.Checked).Select(c => c.Label));

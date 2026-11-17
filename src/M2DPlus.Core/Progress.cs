@@ -54,11 +54,11 @@ public sealed class JobProgressModel
     /// <summary>Within a view: where each step usually starts, so a view's own progress moves forward too.</summary>
     private static double StepStart(string? step) => step switch
     {
-        ViewSteps.ExactLines => .05, ViewSteps.HiddenLines or ViewSteps.Native => .2, ViewSteps.Sections => .75, ViewSteps.Checking or ViewSteps.ExactCurved => .85, ViewSteps.Output => .92, _ => 0,
+        ViewSteps.Sections => .05, ViewSteps.Native => .2, ViewSteps.Output => .92, _ => 0,
     };
     private static double StepEnd(string? step) => step switch
     {
-        ViewSteps.ExactLines => .2, ViewSteps.HiddenLines or ViewSteps.Native => .75, ViewSteps.Sections => .85, ViewSteps.Checking or ViewSteps.ExactCurved => .92, ViewSteps.Output => 1, _ => .05,
+        ViewSteps.Sections => .2, ViewSteps.Native => .92, ViewSteps.Output => 1, _ => .05,
     };
 
     /// <summary>Folds one report in; <paramref name="elapsedSeconds"/> is the job's running time.</summary>
@@ -119,18 +119,14 @@ public sealed class JobProgressModel
 /// <summary>The steps of drawing one view, as the status shows them, and how the engine's phase names map to them.</summary>
 public static class ViewSteps
 {
-    public const string ExactLines = "exact lines", HiddenLines = "hidden lines", Native = "native", Sections = "sections", Checking = "checking", Output = "output",
-        ExactCurved = "exact curved", Culling = "culling";
+    public const string Native = "native", Sections = "sections", Output = "output", Culling = "culling";
 
     /// <summary>The user-facing step of an engine phase (PhaseTimings names), or null for bookkeeping phases.</summary>
     public static string? Of(string phase) => phase switch
     {
         "source culling" => Culling,
-        "planar extraction" or "kernel solve" or "interval union" or "curve-plane events" or "composition setup" => ExactLines,
-        "native setup" or "native solve" or "native extraction and duplicates" => HiddenLines,
+        "native setup" or "native solve" or "native extraction and duplicates" => Native,
         "sections" or "section output construction" or "section restyle and output" => Sections,
-        "native ray verification" => Checking,
-        "exact curved" => ExactCurved,
         "output construction" or "Beyond/fade splitting" or "min visible" => Output,
         _ => null,
     };

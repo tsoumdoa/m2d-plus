@@ -6,7 +6,7 @@ The Frame2D MVP (`C:/Users/tomosandego/.t3/scratch/2026-11-13-i-noticed-that-mak
 
 ## Principles
 
-Owner decision (2026-11-16, beta.4): `cutonly = on | off` (also `cut only`, default `off`) in Settings, `m2d.cutonly` view-object user text and the **Cut only** menu toggle. On keeps the section correctness pipeline, Cut/Hatch, Frame/Info and cut-related Unresolved (including refused-cut markers), and skips all projection beyond the cut: no HLD, planar visibility or verifier, and empty Visible/Hidden/Beyond/Far clip. Uncut views give Frame/Info only with a remark. It is a visibility cache key; Info says `Cut only: projection beyond the cut skipped` and the drawing footer step is `sections`. Workers use the same behavior and existing codec.
+Owner decision (2026-11-16, beta.4): `cutonly = on | off` (also `cut only`, default `off`) in Settings, `m2d.cutonly` view-object user text and the **Cut only** menu toggle. On keeps the section correctness pipeline, Cut/Hatch, Frame/Info and cut-related Unresolved (including refused-cut markers), and skips all projection beyond the cut: no HLD, and empty Visible/Hidden/Beyond/Far clip. Uncut views give Frame/Info only with a remark. It is a visibility cache key; Info says `Cut only: projection beyond the cut skipped` and the drawing footer step is `sections`. Workers use the same behavior and existing codec.
 
 1. **Simplicity first.** One main component. Few inputs, smart defaults, and rare options kept out of the way (right-click menu or an optional settings input). An architect should get a correct plan, section or elevation by wiring geometry and a view.
 2. **Never wrong without saying so.** Unresolved or uncertain output is flagged, never shown as visible. Unsupported geometry is reported, never dropped silently.
@@ -18,7 +18,7 @@ Owner decision (2026-11-16, beta.4): `cutonly = on | off` (also `cut only`, defa
 |---|---|
 | Platform | Rhino 8, Windows only. Product name M2D+ (repo `m2d-plus`). |
 | Projection | Parallel views in v1: plan, elevation, section, axonometric. Perspective comes later. |
-| Engine | Pragmatic hybrid: Rhino's `HiddenLineDrawing` where it is correct and fast, our own code where it fails or is slow. Uncertain results are flagged. |
+| Engine | Rhino HiddenLineDrawing only, multithreaded; native visibility is not certified. Physical Route C sections, independent Cut/Hatch certification. |
 | View input | All three: Rhino named views/viewports, Rhino 8 clipping planes (with their section styles), and Grasshopper planes/section planes. |
 | Placement | Optional target plane: the 2D result is placed on a user-given plane in 3D. No MVP-style docking/anchor system. |
 | Output | Grasshopper outputs plus a one-click bake to tidy Rhino layers (Visible / Hidden / Cut / Hatch / Beyond, per source layer). |
@@ -28,7 +28,7 @@ Owner decision (2026-11-16, beta.4): `cutonly = on | off` (also `cut only`, defa
 
 Brep (planar, curved, trimmed, polysurface, open), Extrusion, SubD, Mesh (closed, open, quad, non-manifold), Line, Polyline, Curve, Circle/Arc, Pipe, hollow sections (RHS, CHS, I-beams: solids with inner voids), Point, and Block instances (nested, mirrored). Text and annotations are nice to have.
 
-- 3D curves are projected and hidden behind solids like any edge. Points project to points and are dropped when hidden.
+- 3D curves are projected and hidden behind solids like any edge. Points project to points and are dropped when hidden. Native Unset points are suppressed with per-source diagnostics; this failure does not quarantine the view.
 - A geometry-type reliability matrix with fixtures is part of the test suite.
 
 ## Drawing features
@@ -91,22 +91,20 @@ See [UX revision 4](design/ux.md) §2.2 and §6.
    user text > menu defaults > built-in default / auto. Double-click selects the view objects in Rhino.
    The preview draws each view's frame, look arrow and depth volume (cobalt `#1F6FD1` when selected).
 
-## Decisions after the hill climbs (2026-11-15)
+## Visibility decision (2026-11-17)
 
-- **Engine pivot (conditional on the A2 native locus validation passing):** our own exact visibility kernel becomes the core engine. It handles planes now and analytic cylinders next. Rhino's native HiddenLineDrawing is kept only for true freeform. The worker, disk cache and tiling work in M4/M5 shrink accordingly; tiling is dropped (S3: no equivalence).
-- **Live view boxes:** build them on Fable's "scrub stack": one solve per view direction, after which every cut depth is a lookup. First prove the section-fill (cap parity) rule against route C.
-- **Hidden lines are off by default** (superseded by beta.2's hidden-on default). In the default exact engine this is a presentation choice only: native HLD loses visible geometry when hidden curves are disabled, so exact solves with hidden lines and discards them. The native engine below follows the requested hidden setting in native HLD.
-- **Test data:** no owner project models. Use the campus model and the generated suites, and treat the census results as optimistic.
-
-## Engine composition decisions (2026-11-15)
-
-- **Contact edges (owner, 2026-11-16; replaces the planar tie rule between source objects only):** an edge incident on another object's planar face is **seated** when its adjacent faces meet that face at an angle (including opposite-facing bearing faces). Seated edges draw Visible unless another surface occludes them. A **flush joint** has an adjacent coplanar face with matching certified outward orientation and material continuing on the opposite side of the edge. Only closed, outward-oriented solids/meshes supply outward normals; open surfaces, open meshes and unnormalised solids never prove Flush from winding normals. `joints = on | off`, default **on**, draws these normally or removes them like seams. Coincident edges draw once with a stable contributing source owner. Contact is decided by filtered/exact incidence, coplanarity and oriented interior-side predicates over polygon event intervals, including holes; no sampling or silent nudges.
-- **Camera invariance:** contact certificates use owned world coordinates before rounded projection. Exact world incidence cannot become an approximate contact just because the view changes; its supporting face cannot hide it through projection roundoff. The usual union still includes all other occluding faces.
-- **Approximate contacts:** a straight support whose two endpoints lie within the contact tolerance band, but whose incidence/continuity cannot be certified, is Unresolved (or Hidden where independent occlusion is proved), never confidently Visible or silently dropped with joints off. An Approximate contact in the same cell as an exact Flush contact prevents suppression of that uncertain cell. Rounded source-geometry transformations can therefore increase uncertainty. The conservative normal-residual band uses tolerance times the normal's L1 norm; it can include Euclidean gaps up to √3 tolerances. A transverse plane crossing has no positive-length contact interval and retains ordinary occlusion, including its depth-tolerance transition. Same-source/self-face tolerance ties remain, including contacts within one mesh building or multi-lump Brep; they are not certified by the inter-object rule, and Info discloses this.
-- **Hidden coverage and contact cost:** complete Hidden coverage ends budgeted occlusion clipping for either joints setting. With joints off, only contact predicates remain, behind a conservative world-space plane-distance prefilter; they do not consume `MaxFacesPerEdge`. World contact polygons are prepared lazily inside that band. An inconclusive suppression check retains independently proved Hidden coverage rather than making it Unresolved.
-- **Native/curved contacts:** keep deterministic serial native tie behaviour in exact mode and reconcile native shared edges when coverage is proved. General freeform contact and joint suppression are not certified; Info discloses this. Analytic engines may opt into a contact certificate separately; planar rules do not claim analytic support by proximity. Native mode retains Rhino contact behaviour and its documented nondeterminism.
-- **Joints setting:** a visibility/cache key in Settings, view-object Attribute User Text `m2d.joints`, and the right-click menu next to Tangents and Seams, with normal precedence. Changing it re-solves when projection runs, in exact mode. With `cutonly=on` it is omitted from the effective visibility key. No new drawing-result/worker fields are required; the existing single-source provenance keeps the stable owner.
-- **Correctness gate:** where the native reference is itself Unresolved/Unset, M2D+'s independent exact check is the judge. The gate stays strict everywhere else (0 unexplained, 0 bugs).
+Rhino HLD is the only visibility engine, including points, contacts and duplicate ownership.
+The earlier exact/composed roadmap is superseded; its archive is `archive/exact-engine`
+at `0cfc171` (beta.8). No custom visibility classifier, ray verifier or dense audit remains.
+Route C physically trims/caps participating geometry before HLD, preserves holes and
+scope, substitutes clear glass feature curves, and builds regions/crop/merge/hatches
+independently. Excluded geometry stays whole and occludes. Cut-only and zero-depth
+far-clipped views make zero HLD calls; positive sub-tolerance depth remains uncertain.
+Failed participating clips demote only overlapping projected footprints and warn by body.
+Rejected sources, failed segments and Unset points are skipped/diagnosed without spreading;
+detachable Unset curves alone are Unresolved. Whole-view quarantine is reserved for an HLD
+solve with no drawing/frame. Cut diagnostics do not affect successfully clipped bodies. Native valid
+Unset points are suppressed with per-source diagnostics without view quarantine.
 
 ## Ignoring objects seen only through small gaps (owner, 2026-11-15)
 
@@ -114,7 +112,7 @@ See [UX revision 4](design/ux.md) §2.2 and §6.
 - **Rule:** an object is *ignored* when it is partly hidden in the view and its longest continuous visible piece is shorter than the threshold, measured in 2D. Objects that are fully visible are never ignored, however small (the setting targets modelling gaps, not small details). Points, annotations and section cuts/hatches are never ignored.
 - **Output:** all visible lines of an ignored object move to a new, separate **Ignored** output (appended as output 10; the nine existing indices stay fixed), plus an `Ignored` bake layer. Nothing is deleted, and Info reports the count.
 - **Cost:** a presentation filter over the per-source classification. Changing the threshold never re-runs visibility. It does not speed up the solve; culling before the solve is a possible later experiment, behind its own correctness gate.
-- **Timing:** implement after the kernel-routing branch lands, since both touch the presentation code.
+- **Timing:** presentation filtering reuses the cached HLD realization; hidden-off disables it with a grey remark.
 
 ## Output trees (owner, 2026-11-15)
 
@@ -184,20 +182,23 @@ From the owner's first real use of v0.1.0-beta.1 on a ~6,000-object model.
   step, workers, output), with a progress bar that only moves forward, a shimmer for stages without sub-progress and a
   rough estimate when there is enough history. See §5.2.
 
-## Exact and native engines (owner decision, 2026-11-17; replaces opt-in fast)
+## Rhino HLD settings and workers (owner decision, 2026-11-17)
 
-- `engine = exact | native`, default exact. Settings, view-object `m2d.engine`, and *Engine ▸ Exact · Native (Rhino Make2D)* use normal precedence.
-- Saved `fast` is an accepted native alias with a component remark: `engine = fast is now engine = native`.
-- Exact retains its engines, sections, verifier and Unresolved. Native submits all sources to threaded Rhino HLD,
-  including planar/analytic ones, computing hidden curves only when requested. No own visibility engines or verifier;
-  Unresolved is empty. Info: `native: Rhino HiddenLineDrawing, not certified`; lines may differ between runs.
-- Native sections are HLD clipping-plane cut lines only, with aligned null Hatch slots. No material regions/hatches;
-  merge/hatch settings are ignored with Info. Crop, cut-only and far-clip line selection are output filters.
-- Clipping participation is passed to HLD; Rhino 8.36 can still clip excluded curves. Info discloses this native limitation.
-- Native ignores joints and clear glass with Info. Min-visible post-filters hidden-on results; hidden-off ignores it
-  with Info because the required hidden evidence was not computed. Styling/placement/bake/output contracts remain.
-- Engine always keys visibility; hidden additionally keys native. Exact retains strict geometry/worker equality gates.
-  Both modes retain lossless worker transport. See UX §3.8 for the complete setting behaviour.
+- Engine and Joints are removed from menus and new view-box/copied settings defaults.
+  Explicit saved `engine=exact|native|fast` and `joints=on|off` still load and are preserved,
+  but are ignored with deduplicated grey remarks. `default` and built-in defaults are quiet.
+  Legacy edits change remarks only: no HLD calls, run/cache/timing-key changes.
+- Hidden defaults on. HLD receives the requested flag; hidden edits invalidate projection.
+  With hidden off, min-visible is disabled: retain all objects and give a grey remark.
+  Tangents/seams default off. Glass clear remains non-occluding after physical clipping.
+- Info says `Engine: Rhino HLD; multithreaded; visibility not certified`, with actual flags,
+  route, call/extraction/region/hatch/refusal counts and fingerprints. Joints suppression
+  is gone; fresh solves may change duplicate ownership/source attribution and Ignored.
+- Workers use identical inputs/settings/fingerprints and adapter policy. Threaded solves
+  need not have identical bytes. Schema 4 rejects old peers; one result's transport is
+  lossless. Geometric fixture gates use declared tolerances, topology, areas and coverage.
+- GUIDs, five inputs and eleven output indices/trees remain fixed. Sections, Target,
+  preview, Bake, cache leases and complete-current publication remain required.
 
 ## View box depth pop-up and Auto depth by view type (owner decision, 2026-11-16, beta.4)
 

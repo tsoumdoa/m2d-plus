@@ -59,3 +59,14 @@ scope, flipped native parity, host style definitions/Parent chains, three-source
 empty-slot extraction and bounded genuine Unset regressions. See
 [M2 wiring notes](../../docs/design/m2-wiring.md) for the measured Unset classes,
 extracted fixture provenance, conservative supported domain and render commands.
+
+HLD-only acceptance (schema 4): exclude the 305-object and 5k-box smokes and the full
+small-feature scoring sweep for short iteration runs. The small fixtures, section
+regions/wiring, HLD section workers, glass/depth/scope, lifecycle, codec and GH/Bake
+suites run on .NET 8 and .NET 10. Up to three owned headless Rhino processes may
+coexist; never run curved-M or campus. No timing mutex is needed for correctness.
+
+Fresh HLD solves are compared by ordered inputs/policy/fingerprints and declared
+fixture geometry properties. Lossless single-result codec round trips remain exact.
+Do not assert independent solve byte equality. Preserve discrepancy manifests rather
+than widening fixture tolerances. `archive/exact-engine` at `0cfc171` is the old engine.

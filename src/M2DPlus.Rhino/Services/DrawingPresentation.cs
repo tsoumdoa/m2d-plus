@@ -37,26 +37,22 @@ public sealed class DrawingCache : IDisposable
             await _solve.WaitAsync(token).ConfigureAwait(false);
             try
             {
-                // Exact reuses hidden-on visibility. Native hidden generation follows the view setting.
-                // NativeSettings prints its public members only: the dense audit and its limits are internal and change the drawing.
-                var key = scene.Value.VisibilityRevision + "/" + settings + "/audit=" + (settings.DenseAudit ? settings.DenseAuditOptions.ToString() : "off") + "/cull=" + settings.CullSources + "/" + string.Join("|", views.Select(v => (v with { Cut = v.Cut is { } cut ? cut with { SectionerStyle = null } : null }).Revision + "/" +
-                    v.Settings?.VisibilityKey()));
+                var key = WorkerCodec.Fingerprint() + "/" + HldProjection.Policy + "/" + scene.Value.VisibilityRevision + "/cull=" + settings.CullSources + "/" + string.Join("|", views.Select(v => (v with { Cut = v.Cut is { } cut ? cut with { SectionerStyle = null } : null }).Revision + "/" + v.Settings?.VisibilityKey()));
                 LeaseEntry<DrawingBatch>.Lease? lease;
                 long generation;
                 lock (_sync) { generation = _generation; lease = key == _key ? _entry?.Acquire() : null; }
                 if (lease is null)
                 {
                     // The supplied scene lease stays alive throughout native work.
-                    // Exact keeps hidden-on evidence. Native reads
-                    // RequestedHidden, preserved in the entry's authored value.
-                    var solveViews = views.Select(v => v.Settings is { } s ? v with { Settings = s.ForVisibilitySolve() } : v).ToArray();
+                    // Preserve requested HLD flags.
+                    var solveViews = views;
                     var raw = await DrawingExecution.SolveBorrowedAsync(scene.Value, identity, solveViews, settings, token, progress).ConfigureAwait(false);
                     var owner = new LeaseEntry<DrawingBatch>(raw); lease = owner.Acquire();
                     lock (_sync)
                     {
                         // Authored view errors are stable under this key; execution failures must retry.
                         if (generation == _generation && raw.Complete &&
-                            raw.Views.Select((v, i) => v.Error is null || views[i].Error is not null).All(reusable => reusable))
+                            raw.Views.Select((v, i) => !v.Report.Quarantined && (v.Error is null || views[i].Error is not null)).All(reusable => reusable))
                         { _entry?.Dispose(); _entry = owner; _key = key; }
                         else owner.Dispose();
                     }
@@ -106,9 +102,9 @@ public static class DrawingPresentation
                 var target = plan.Views[i]; var transform = Transform.PlaneToPlane(RhinoPlane(target.Transform.Source), RhinoPlane(target.Transform.Target));
                 var result = new ViewDrawing { Name = original.Name, Error = original.Error, Frame = original.Frame,
                     Report = original.Report, Settings = settings, Seconds = original.Seconds, Tolerance = original.Tolerance,
-                    KernelEdges = original.KernelEdges, NativeEdges = original.NativeEdges, NativeCalls = original.NativeCalls,
+                    NativeEdges = original.NativeEdges, NativeCalls = original.NativeCalls,
                     FastNativeSources = original.FastNativeSources,
-                    CurvedCandidateEdges = original.CurvedCandidateEdges, PlanarNativeEdges = original.PlanarNativeEdges, NativeFragments = original.NativeFragments,
+                    CurvedCandidateEdges = original.CurvedCandidateEdges, NativeFragments = original.NativeFragments,
                     MultipleThreads = original.MultipleThreads, HiddenPoints = original.HiddenPoints, DuplicateSegments = original.DuplicateSegments,
                     ProjectingSegments = original.ProjectingSegments, EmptyNativeSlots = original.EmptyNativeSlots, ZeroLengthNativeSegments = original.ZeroLengthNativeSegments,
                     ToleranceDroppedPieces = original.ToleranceDroppedPieces, SubToleranceSourceEdges = original.SubToleranceSourceEdges,
@@ -121,10 +117,10 @@ public static class DrawingPresentation
                 if (settings is not null) result._diagnostics.Add(settings.Describe());
                 var range = settings is null ? null : new ViewRange(settings);
                 var minVisible = settings?.MinVisible ?? 0;
-                if (settings?.Engine == EngineMode.Native && !settings.RequestedHidden && minVisible > 0)
+                if (settings?.Hidden == false && minVisible > 0)
                 {
                     minVisible = 0;
-                    result._diagnostics.Add("native: min visible ignored with hidden = off; HLD did not compute the hidden evidence required to identify partly hidden sources.");
+                    result._diagnostics.Add("min visible ignored with hidden = off; HLD did not compute the hidden evidence required to identify partly hidden sources.");
                 }
                 var plane2d = original.Frame.Plane; var toPlane2d = Transform.PlaneToPlane(plane2d, Plane.WorldXY);
                 var rule = new List<(int Piece, MinVisiblePiece Line)>();
@@ -187,7 +183,7 @@ public static class DrawingPresentation
                             if (minVisible > 0) Note(result.Pieces.Count, part, kind, item.SourceIdentity);
                             if (!part.Transform(transform)) throw new InvalidOperationException("Placement failed.");
                             result.Pieces.Add(new(part, new PreparedLeaf(item.SourceIdentity, item.SourcePath, part) { Section = metadata?.GetValueOrDefault(item.SourceIdentity) ?? item.Source, SourceItem = item.SourceItem }, kind, depths.Duplicate())
-                            { Profile = item.Profile, KernelOwned = item.KernelOwned, Depths = span, Intensity = range?.Intensity(span, kind) ?? 1 });
+                            { Profile = item.Profile, Depths = span, Intensity = range?.Intensity(span, kind) ?? 1 });
                         }
                         catch { part.Dispose(); throw; }
                     }
@@ -210,18 +206,7 @@ public static class DrawingPresentation
                     result.IgnoredObjects = ignored.Count;
                 }
                 phase.Next("section restyle and output");
-                if (settings?.Engine == EngineMode.Native)
-                    foreach (var entry in original.Regions)
-                    {
-                        var source = metadata?.GetValueOrDefault(entry.Region.SourceIds[0]) ?? entry.Source;
-                        var style = source.FromSectioner && views[i].Cut?.SectionerStyle is { HasStyle: true } sectioner ?
-                            sectioner with { ObjectColour = source.Style.ObjectColour, ObjectPrintColour = source.Style.ObjectPrintColour } : source.Style;
-                        var loops = entry.Region.Loops.Select(l => new SectionLoop(Move(l.Curve), false, [])).ToArray();
-                        result.Regions.Add(new(entry.Region with { Loops = loops, Hatch = null, Style = style }, (int[])entry.SourcePath.Clone())
-                        { Source = source, SourceItem = entry.SourceItem });
-                    }
-                // Raw native cut lines do not enter the certified region restyler (or acquire Unresolved on a style refusal).
-                var freshRegions = (settings?.Engine == EngineMode.Native ? Enumerable.Empty<DrawingRegion>() : original.Regions).Select(r =>
+                var freshRegions = original.Regions.Select(r =>
                 {
                     if (metadata is null) return r.Region;
                     var source = metadata.GetValueOrDefault(r.Region.SourceIds[0]) ?? r.Source;

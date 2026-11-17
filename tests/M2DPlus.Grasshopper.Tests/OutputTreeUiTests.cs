@@ -71,7 +71,7 @@ public sealed class OutputTreeUiTests
         for (var i = 0; i < before.Views.Length; i++)
         {
             Assert.NotEqual(before.Views[i].Tree, after.Views[i].Tree);
-            Assert.All(Settings.VisibilityKeys, k => Assert.Equal(before.Views[i].ForVisibilitySolve()[k].Value, after.Views[i].ForVisibilitySolve()[k].Value));
+            Assert.All(Settings.VisibilityKeys, k => Assert.Equal(before.Views[i][k].Value, after.Views[i][k].Value));
         }
     }
 

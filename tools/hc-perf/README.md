@@ -1,3 +1,5 @@
+> Retired tooling. See `archive/exact-engine`, `0cfc171` (beta.8). The text below is historical.
+
 # PERF A: edge / planar face experiment
 
 This is an experimental, opt-in benchmark, not a registered product route. No

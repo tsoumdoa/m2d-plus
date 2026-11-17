@@ -8,6 +8,8 @@ namespace M2DPlus.Core;
 public static partial class Settings
 {
     public const bool DefaultHidden = true;
+    public static bool IsLegacyKey(string key) => key is "engine" or "joints";
+    public static IEnumerable<string> ActiveKeys => Keys.Where(k => !IsLegacyKey(k));
     public static ImmutableArray<string> Keys { get; } = ["depth", "farclip", "beyond", "fade", "fade.start", "fade.end",
         "fade.limit", "crop", "hidden", "tangents", "seams", "joints", "glass", "scale", "weights", "hatch", "cuts", "gap", "name", "tree", "tolerance", "min_visible", "engine", "cutonly", "bake"];
 
@@ -15,27 +17,27 @@ public static partial class Settings
     /// visibility solve and no presentation (<see cref="RunText"/>).</summary>
     public static ImmutableArray<string> BakeTimeKeys { get; } = ["bake"];
 
-    /// <summary>True for a <c>key = value</c> line whose key is bake-time only (comments and headers are not).</summary>
+    /// <summary>True for a <c>key = value</c> line whose key is bake-time or ignored legacy (comments and headers are not).</summary>
     public static bool IsBakeTimeLine(string line)
     {
         var text = line; var hash = text.IndexOf('#');
         if (hash >= 0) text = text[..hash];
         var equals = text.IndexOf('=');
-        return equals > 0 && BakeTimeKeys.Contains(NormalizeKey(text[..equals]));
+        return equals > 0 && (BakeTimeKeys.Contains(NormalizeKey(text[..equals])) || IsLegacyKey(NormalizeKey(text[..equals])));
     }
 
-    /// <summary>Settings text with bake-time lines left out: what a drawing run depends on. Two runs whose run text,
+    /// <summary>Settings text with bake-time and ignored legacy lines left out: what a drawing run depends on. Two runs whose run text,
     /// views, inputs and scene are equal draw the same thing, whatever their <c>bake</c> values.</summary>
-    public static string RunText(IEnumerable<string> lines) => string.Join("\n", lines.Where(l => !IsBakeTimeLine(l)));
+    public static string RunText(IEnumerable<string> lines) => string.Join("\n", lines.SelectMany(l => l.Replace("\r\n", "\n").Split('\n')).Where(l => !IsBakeTimeLine(l)));
 
-    /// <summary>A stored row (menu or view object) without its bake-time keys, as canonical text for run keys.</summary>
+    /// <summary>A stored row (menu or view object) without bake-time and ignored legacy keys, as canonical text for run keys.</summary>
     public static string RunText(SettingsRow row) => string.Join("\n", row.Values
-        .Where(p => !BakeTimeKeys.Contains(NormalizeKey(p.Key))).OrderBy(p => p.Key, StringComparer.Ordinal).Select(p => p.Key + "=" + p.Value));
+        .Where(p => !BakeTimeKeys.Contains(NormalizeKey(p.Key)) && !IsLegacyKey(NormalizeKey(p.Key))).OrderBy(p => p.Key, StringComparer.Ordinal).Select(p => p.Key + "=" + p.Value));
 
     /// <summary>The keys that change what the visibility solve computes, and so key the drawing cache (UX §12.14).
-    /// Hidden is additionally keyed in native mode by <see cref="EffectiveSettings.VisibilityKey"/>.
+    /// Hidden is keyed by <see cref="EffectiveSettings.VisibilityKey"/>.
     /// Min-visible and styling remain presentation over the cached solve.</summary>
-    public static ImmutableArray<string> VisibilityKeys { get; } = ["depth", "farclip", "crop", "tangents", "seams", "joints", "glass", "tolerance", "engine", "cutonly"];
+    public static ImmutableArray<string> VisibilityKeys { get; } = ["depth", "farclip", "crop", "hidden", "tangents", "seams", "glass", "tolerance", "cutonly"];
 
     /// <summary>Canonical key spelling: lower case, runs of spaces as one underscore, so <c>min visible</c>,
     /// <c>Min_Visible</c> and the user-text key <c>m2d.min_visible</c> all name <c>min_visible</c>.</summary>
@@ -59,6 +61,7 @@ public static partial class Settings
     private static object ParseValue(string key, string text, DocumentUnits units)
     {
         var value = text.Trim().ToLowerInvariant();
+        if (IsLegacyKey(key) && value == "default") return key == "engine" ? EngineMode.Exact : true;
         switch (key)
         {
             case "depth": case "beyond": case "gap":

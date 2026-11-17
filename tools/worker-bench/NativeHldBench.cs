@@ -93,30 +93,6 @@ internal static class NativeHldBench
             Console.WriteLine($"Exported {curves.Count} real command curves; translation=({frame.X.Min:R},{frame.Y.Min:R})");
             return;
         }
-        if(variant=="audit")
-        {
-            // NativeOnly selects the routing reference; it does not disable the
-            // audit. Start with zero audit coverage so both measured paths see
-            // fresh native classifications rather than an already-vetoed result.
-            using var raw=NativeDrawing.SolveBorrowedAsync(scene,new(scene.Revision,"audit","baseline",1),[request],
-                new(NativeOnly:true){Verification=new(MaxRayTests:0,MaxSamples:0)},default,null).GetAwaiter().GetResult();
-            if(raw.Views[0].Error is {} error)throw new InvalidOperationException(error);
-            var bytes=WorkerCodec.CaptureDrawing(raw.Views[0]);var rows=new List<object>();string? expected=null;
-            for(int pass=0;pass<6;pass++)
-            foreach(bool exhaustive in pass%2==0?new[]{true,false}:new[]{false,true})
-            {
-                using var drawing=WorkerCodec.RestoreDrawing(bytes);
-                clock.Restart();NativeVisibilityVerifier.Apply(sources.Select(s=>new VisibilityInput(s.Geometry,s)).ToArray(),drawing,
-                    new(){Verification=new(){ExhaustiveOffsets=exhaustive}},default);
-                double seconds=clock.Elapsed.TotalSeconds;
-                var hash=WorkerCodec.Hash(WorkerCodec.CaptureDrawing(drawing,true));expected??=hash;
-                rows.Add(new{pass,exhaustive,seconds,hash,match=hash==expected,diagnostics=drawing.Diagnostics.Where(d=>d.StartsWith("Native ray verifier:",StringComparison.Ordinal)).ToArray()});
-                Console.WriteLine($"Audit exhaustive={exhaustive} pass={pass}: {seconds:F4}s match={hash==expected}");
-                File.WriteAllText(Path.Combine(output,"audit.json"),JsonSerializer.Serialize(new{model,fingerprint=WorkerCodec.Fingerprint(),rows}));
-                if(hash!=expected)throw new InvalidOperationException("Audit early-exit changed stable drawing bytes");
-            }
-            return;
-        }
         if(variant is "command-headless" or "command-owned")
         {
             var view=doc.Views.ActiveView??doc.Views.Add("M2D native comparison",Rhino.Display.DefinedViewportProjection.Back,new System.Drawing.Rectangle(0,0,1000,800),false);
@@ -210,7 +186,7 @@ internal static class NativeHldBench
                     if(experiment=="make2d-like")parametersHld.AddGeometryAndPlanes(item.Geometry,item.Transform,item.Source,false,[]);
                     else if(!parametersHld.AddGeometry(item.Geometry,item.Transform,item.Source,experiment=="occluding-objects"))throw new InvalidOperationException("HLD rejected geometry");
                 double registrationSeconds=clock.Elapsed.TotalSeconds;
-                bool threads=experiment.StartsWith("threads",StringComparison.Ordinal)||experiment=="make2d-like";
+                bool threads=true;
                 clock.Restart();var progress=new HldProgress(clock,Path.Combine(output,experiment+"-progress.json"));
                 using var hld=HiddenLineDrawing.Compute(parametersHld,threads,progress,default);
                 double seconds=clock.Elapsed.TotalSeconds;

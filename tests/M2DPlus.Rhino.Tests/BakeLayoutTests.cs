@@ -482,12 +482,39 @@ public sealed class BakeLayoutTests(RhinoHost host, ITestOutputHelper output)
                 settings.ExpireSolution(true);
             }, "bake = layer-view (set by input)", "M2D+::Walls::Plan::");
 
+            foreach(var command in new[]{"set:engine=exact","set:engine=native","set:engine=fast","set:joints=off"})
+            {
+                var restores=(int)Field("_restoreCount")!;
+                ui.Execute(command,false);
+                Pump(()=>(int)Field("_restoreCount")!>restores && Field("_drawing") is not null);
+                Assert.Same(drawing,Field("_drawing"));Assert.Equal(hld,NativeDrawing.HldCalls);
+                Assert.Contains("engine is always Rhino HLD now",Info());
+            }
+
+            foreach(var text in new[]{"exact","native","fast"})
+            {
+                var restores=(int)Field("_restoreCount")!;
+                var attributes=doc.Objects.FindId(frame).Attributes.Duplicate();
+                attributes.SetUserString("m2d.engine",text);attributes.SetUserString("m2d.joints","off");
+                Assert.True(doc.Objects.ModifyAttributes(frame,attributes,true));
+                ((DocumentWatch)Field("_watch")!).VerifyHostState();
+                Pump(()=>(int)Field("_restoreCount")!>restores && Field("_drawing") is not null);
+                Assert.Same(drawing,Field("_drawing"));Assert.Equal(hld,NativeDrawing.HldCalls);
+                restores=(int)Field("_restoreCount")!;
+                settings.PersistentData.Clear();settings.PersistentData.Append(new GH_String("name=Plan\nbake=layer-view\nengine="+text+"\njoints=on"));
+                settings.ExpireSolution(true);
+                Pump(()=>(int)Field("_restoreCount")!>restores && Field("_drawing") is not null);
+                Assert.Same(drawing,Field("_drawing"));Assert.Equal(hld,NativeDrawing.HldCalls);
+                Assert.Single(component.RuntimeMessages(GH_RuntimeMessageLevel.Remark),m=>m.Contains("engine is always Rhino HLD now",StringComparison.Ordinal));
+                Assert.Single(component.RuntimeMessages(GH_RuntimeMessageLevel.Remark),m=>m.Contains("joints is ignored",StringComparison.Ordinal));
+            }
+
             // A change that is not bake-only still redraws (presentation; exact mode reuses visibility).
             var restored = (int)Field("_restoreCount")!;
             ui.Execute("set:hidden=off", false);
             Pump(() => Field("_drawing") is { } next && !ReferenceEquals(next, drawing));
             Assert.Equal(restored, (int)Field("_restoreCount")!);
-            Assert.Equal(hld, NativeDrawing.HldCalls);
+            Assert.Equal(hld + 1, NativeDrawing.HldCalls);
         }
         finally { component.RemovedFromDocument(gh); SceneCache.Shared.Clear(); }
     });

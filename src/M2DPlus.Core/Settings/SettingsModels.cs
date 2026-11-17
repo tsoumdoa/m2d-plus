@@ -96,12 +96,10 @@ public sealed class EffectiveSettings
     public double FadeLimit => Get<double>("fade.limit");
     public bool Crop => Get<bool>("crop");
     public bool Hidden => Get<bool>("hidden");
-    /// <summary>The effective authored hidden flag, preserved when the solve normalizes Hidden to true.</summary>
+    /// <summary>The authored hidden flag; HLD uses this requested value.</summary>
     public bool RequestedHidden => (bool)Values["hidden"].AuthoredValue;
-    public EngineMode Engine => Get<EngineMode>("engine");
     public bool Tangents => Get<bool>("tangents");
     public bool Seams => Get<bool>("seams");
-    public bool Joints => Get<bool>("joints");
     public GlassMode Glass => Get<GlassMode>("glass");
     public double Scale => Get<double>("scale");
     public WeightMode Weights => Get<WeightMode>("weights");
@@ -115,13 +113,10 @@ public sealed class EffectiveSettings
     public double Tolerance => Get<double>("tolerance");
     /// <summary>The <c>min visible</c> threshold in document units; 0 = off (REQUIREMENTS, "small gaps").</summary>
     public double MinVisible => Get<double>("min_visible");
-    /// <summary>Exact retains hidden evidence for reuse/min-visible. Native HLD reads
-    /// <see cref="RequestedHidden"/> instead; that flag survives normalization and worker transport.</summary>
-    public EffectiveSettings ForVisibilitySolve() => Hidden ? this
-        : new(View, Values.SetItem("hidden", Values["hidden"] with { Value = true }));
-    public string VisibilityKey() => string.Join(";", Settings.VisibilityKeys.Where(k => k != "joints" || !CutOnly).Select(k =>
-        k + "=" + Settings.FormatEffective(k, Values[k].Value))) + (Engine == EngineMode.Native ? ";hidden=" + RequestedHidden : "");
-    public string Describe() => string.Join(Environment.NewLine, Settings.Keys.Select(k =>
+    public string VisibilityKey() => "hld-threaded-v4;" + string.Join(";", Settings.VisibilityKeys
+        .Where(k => !CutOnly || k is not ("hidden" or "tangents" or "seams"))
+        .Select(k => k + "=" + Settings.FormatEffective(k, Values[k].Value)));
+    public string Describe() => string.Join(Environment.NewLine, Settings.ActiveKeys.Select(k =>
         $"{k} = {Settings.FormatEffective(k, Values[k].Value)} ({Values[k].SourceDescription})"));
 }
 

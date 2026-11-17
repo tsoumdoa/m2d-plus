@@ -2,7 +2,6 @@
 using System.Diagnostics;
 using System.Text.Json;
 using M2DPlus.Core;
-using M2DPlus.Core.Visibility;
 using M2DPlus.Rhino.Services;
 using M2DPlus.Rhino.Views;
 using Rhino;
@@ -77,7 +76,7 @@ public static class ViewCaseRunner
         Checkpoint();
         var requestView = boxRequest with { Name = v.GetProperty("name").GetString()! };
         using var batch = NativeDrawing.SolveAsync(lease, new(lease.Value.Revision, "view-cases", "main-route-C", 1),
-            [requestView], new(false), default).GetAwaiter().GetResult();
+            [requestView], new(), default).GetAwaiter().GetResult();
         var drawing = batch.Views.Single();
         lock (phaseLock) phase = "m2d/result-extraction";
         Checkpoint();
@@ -120,35 +119,12 @@ public static class ViewCaseRunner
         var regions = drawing.Regions.Select(r => new { sources = r.Region.SourceIds, area = r.Region.Area,
             loops = r.Region.Loops.Count, holes = r.Region.Loops.Count(l => l.IsHole), status = r.Region.Status.ToString(), r.Region.Uncertainty }).ToArray();
         File.WriteAllText(output + ".svg", Program.Render(drawing, output + ".png"));
-        object planar;
-        using (var model = File3dm.Read(modelPath))
-        {
-            var extraction = new PlanarExtraction();
-            foreach (var leaf in PlanarExtraction.Leaves(model).Where(l => !l.Source.Contains("View box ", StringComparison.Ordinal)))
-                extraction.Add(leaf.Geometry, leaf.Transform, plane, document.ModelAbsoluteTolerance, leaf.Source);
-            // The control views have their front face outside the complete scene. No cut adapter is needed.
-            if (extraction.OtherObjects == 0 && extraction.Faces.SelectMany(f => f.Loops).SelectMany(l => l).All(p => p.Z <= 0 && p.Z >= -depth))
-            {
-                timer.Restart(); var result = EdgeFaceKernel.Solve(extraction.Faces, extraction.Edges, new(document.ModelAbsoluteTolerance, 1));
-                var exact = VisibilityLoci.Create(extraction.Edges, result, document.ModelAbsoluteTolerance);
-                double seconds = timer.Elapsed.TotalSeconds;
-                var oracle = ExactVisibilityOracle.Solve(extraction.Faces, extraction.Edges, document.ModelAbsoluteTolerance);
-                var truth = VisibilityLoci.Create(extraction.Edges, oracle, document.ModelAbsoluteTolerance);
-                var missing = VisibilityLoci.Compare(truth, exact, document.ModelAbsoluteTolerance, .02);
-                var extra = VisibilityLoci.Compare(exact, truth, document.ModelAbsoluteTolerance, .02);
-                File.WriteAllText(output + ".planar-loci.json", JsonSerializer.Serialize(exact.Select(l => new {
-                    @class = l.Class.ToString(), source = l.Source, points = new[] { new[] { l.X0, l.Y0 }, new[] { l.X1, l.Y1 } } })));
-                planar = new { status = "completed", seconds, unresolved = result.Intervals.Count(i => i.Class == VisibilityClass.Unresolved),
-                    oraclePassed = missing.Missed + extra.Missed == 0, result.FaceTests, result.ExactFallbacks };
-            }
-            else planar = new { status = "ineligible whole scene", excluded = extraction.Excluded, reason = extraction.OtherObjects > 0 ? "curved/nonplanar sources" : "requires physical clip extraction" };
-        }
         lock (phaseLock) phase = "complete";
         Checkpoint();
         return JsonSerializer.Serialize(new { status = drawing.Error is not null ? "engine_error" : extractionFailures.Count > 0 ? "output_extraction_failure" : "complete", drawing.Error,
             engine = "main NativeDrawing route C / stability certificate", engineSha256 = Hash(typeof(NativeDrawing).Assembly.Location),
-            coreSha256 = Hash(typeof(EdgeFaceKernel).Assembly.Location), bridgeSha256 = Hash(typeof(ViewCaseRunner).Assembly.Location),
-            seconds = drawing.Seconds, captureSeconds, firstHldObservedSeconds = firstHldObserved, viewSourceChecks = checks, regions, planar, extractionFailures, tessellationFallbacks,
+            coreSha256 = Hash(typeof(Settings).Assembly.Location), bridgeSha256 = Hash(typeof(ViewCaseRunner).Assembly.Location),
+            seconds = drawing.Seconds, captureSeconds, firstHldObservedSeconds = firstHldObserved, viewSourceChecks = checks, regions, extractionFailures, tessellationFallbacks,
             counts = drawing.Items.GroupBy(p => p.Class).ToDictionary(g => g.Key.ToString(), g => g.Count()),
             unresolved = drawing.Items.Count(p => p.Class == LineClass.Unresolved), drawing.Report, drawing.Info,
             drawing.DuplicateSegments, drawing.EmptyNativeSlots, drawing.ProjectingSegments,
@@ -159,25 +135,42 @@ public static class ViewCaseRunner
     // Comparison is class-aware, bidirectional and sampled, with explicitly retained failed loci.
     public static string Compare(string expectedPath, string actualPath, double tolerance, double spacing)
     {
-        static List<Locus> Read(string path)
+        static List<ComparisonLocus> Read(string path)
         {
-            using var doc = JsonDocument.Parse(File.ReadAllText(path)); var result = new List<Locus>();
+            using var doc = JsonDocument.Parse(File.ReadAllText(path)); var result = new List<ComparisonLocus>();
             foreach (var row in doc.RootElement.EnumerateArray())
             {
                 var label = row.GetProperty("class").GetString();
                 if (label is not ("Visible" or "Hidden" or "Unresolved" or "Cut")) continue;
                 var points = row.GetProperty("points").EnumerateArray().Select(Numbers).ToArray();
                 // Cut is compared independently by the caller; drawing ink uses visible precedence.
-                var kind = label == "Cut" ? VisibilityClass.Visible : Enum.Parse<VisibilityClass>(label!);
+                var kind = label == "Cut" ? LineClass.Visible : Enum.Parse<LineClass>(label!);
                 for (int i = 1; i < points.Length; i++) result.Add(new(points[i-1][0], points[i-1][1], points[i][0], points[i][1], kind, row.GetProperty("source").GetString() ?? ""));
             }
             return result;
         }
         var expected = Read(expectedPath); var actual = Read(actualPath);
-        var a = VisibilityLoci.Compare(expected, actual, tolerance, spacing);
-        var b = VisibilityLoci.Compare(actual, expected, tolerance, spacing);
-        return JsonSerializer.Serialize(new { passed = a.Missed + b.Missed == 0, tolerance, spacing,
+        var a = Misses(expected, actual, tolerance, spacing);
+        var b = Misses(actual, expected, tolerance, spacing);
+        return JsonSerializer.Serialize(new { passed = a + b == 0, tolerance, spacing,
             method = "bidirectional sampled classed polyline loci; Cut treated as visible ink; topology checked separately; not a Hausdorff certificate",
-            expectedToActual = a, actualToExpected = b }, Json);
+            expectedToActual = new { Missed = a }, actualToExpected = new { Missed = b } }, Json);
+    }
+    private sealed record ComparisonLocus(double X0,double Y0,double X1,double Y1,LineClass Class,string Source);
+    private static int Misses(IReadOnlyList<ComparisonLocus> from,IReadOnlyList<ComparisonLocus> to,double tolerance,double spacing)
+    {
+        if(tolerance<=0||spacing<=0)throw new ArgumentOutOfRangeException(nameof(tolerance));
+        int missed=0;
+        foreach(var line in from)
+        {
+            var a=new Point3d(line.X0,line.Y0,0);var b=new Point3d(line.X1,line.Y1,0);
+            int steps=Math.Max(1,(int)Math.Ceiling(a.DistanceTo(b)/spacing));
+            for(int i=0;i<=steps;i++)
+            {
+                var point=a+(b-a)*(i/(double)steps);
+                if(!to.Any(l=>l.Class==line.Class&&new Line(new Point3d(l.X0,l.Y0,0),new Point3d(l.X1,l.Y1,0)).ClosestPoint(point,true).DistanceTo(point)<=tolerance))missed++;
+            }
+        }
+        return missed;
     }
 }

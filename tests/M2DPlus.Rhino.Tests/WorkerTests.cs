@@ -39,7 +39,7 @@ public sealed class WorkerTests(RhinoHost host)
             return views.Select((v,i)=>v with{Settings=settings.Views[i]}).ToArray();
         }
     }
-    [RhinoFact] public void PersistentParallelWorkersAreByteIdenticalAndDetachAllResults()=>host.Run(()=>
+    [RhinoFact] public void PersistentWorkersPreserveFixtureLociAndDetachAllResults()=>host.Run(()=>
     {
         using var doc=RhinoDoc.CreateHeadless(null);Populate(doc);using var cache=new SceneCache();using var lease=Capture(doc,cache);
         using var baseline=NativeDrawing.SolveBorrowedAsync(lease.Value,Identity(lease.Value),Views,new(),default,null).GetAwaiter().GetResult();
@@ -62,8 +62,8 @@ public sealed class WorkerTests(RhinoHost host)
         for(var i=0;i<Views.Length;i++)
         {
             Assert.Null(first.Views[i].Error);Assert.Null(second.Views[i].Error);
-            Assert.Equal(WorkerCodec.Hash(WorkerCodec.CaptureDrawing(baseline.Views[i],true)),WorkerCodec.Hash(WorkerCodec.CaptureDrawing(first.Views[i],true)));
-            Assert.Equal(WorkerCodec.CaptureDrawing(first.Views[i],true),WorkerCodec.CaptureDrawing(second.Views[i],true));
+            HldFixtureComparison.Equal(baseline.Views[i],first.Views[i]);
+            HldFixtureComparison.Equal(first.Views[i],second.Views[i]);
         }
     });
     [RhinoFact] public void RuntimeMismatchRefusedBeforeScene()=>host.Run(()=>
@@ -85,7 +85,7 @@ public sealed class WorkerTests(RhinoHost host)
             using var drawn=pool.SolveAsync(lease.Value,Identity(lease.Value),views,new(){CullSources=enabled},default).GetAwaiter().GetResult();
             for(int i=0;i<views.Length;i++)
             {
-                Assert.Equal(ExclusionTests.Hash(baseline.Views[i]),ExclusionTests.Hash(drawn.Views[i]));
+                HldFixtureComparison.Equal(baseline.Views[i],drawn.Views[i]);
                 Assert.Equal(enabled,drawn.Views[i].Diagnostics.Any(d=>d.StartsWith("culled ",StringComparison.Ordinal)));
             }
         }
@@ -104,7 +104,7 @@ public sealed class WorkerTests(RhinoHost host)
         var pids=pool.ProcessIds;order.Clear();pool.SolvingView=null;
         using var second=pool.SolveAsync(lease.Value,Identity(lease.Value,3),Views,new(),default).GetAwaiter().GetResult();
         Assert.Equal(1,order[0]);Assert.Equal(pids,pool.ProcessIds);
-        for(var i=0;i<Views.Length;i++)Assert.Equal(WorkerCodec.CaptureDrawing(first.Views[i],true),WorkerCodec.CaptureDrawing(second.Views[i],true));
+        for(var i=0;i<Views.Length;i++)HldFixtureComparison.Equal(first.Views[i],second.Views[i]);
     });
     [RhinoFact] public void ExpertOptionsAllowMoreThanFourWorkersAndLargerCaps()=>host.Run(()=>
     {
@@ -127,11 +127,11 @@ public sealed class WorkerTests(RhinoHost host)
         using var doc=RhinoDoc.CreateHeadless(null);Populate(doc);using var cache=new SceneCache();using var lease=Capture(doc,cache);
         using var pool=new DrawingWorkerPool(Options(2));var killed=0;
         pool.SolvingView=(pid,_)=>{if(Interlocked.Exchange(ref killed,1)!=0)return;using var p=System.Diagnostics.Process.GetProcessById(pid);p.Kill(true);};
-        using var result=pool.SolveAsync(lease.Value,Identity(lease.Value),Views,new(NativeOnly:true),default).GetAwaiter().GetResult();
+        using var result=pool.SolveAsync(lease.Value,Identity(lease.Value),Views,new(),default).GetAwaiter().GetResult();
         Assert.True(result.Complete);Assert.Contains(result.Views,v=>v.Error is not null);Assert.Contains(result.Views,v=>v.Error is null);
         Assert.All(result.Views.Where(v=>v.Error is not null),v=>{Assert.True(v.Report.Quarantined);Assert.Contains("Worker failed",v.Info);});
         pool.SolvingView=null;
-        using var recovery=pool.SolveAsync(lease.Value,Identity(lease.Value,2),Views,new(NativeOnly:true),default).GetAwaiter().GetResult();
+        using var recovery=pool.SolveAsync(lease.Value,Identity(lease.Value,2),Views,new(),default).GetAwaiter().GetResult();
         Assert.All(recovery.Views,v=>Assert.Null(v.Error));
     });
     [RhinoFact] public void CancellationHardKillsBlockedNativeAndDocumentCloseRejectsPublication()=>host.Run(()=>
@@ -139,7 +139,7 @@ public sealed class WorkerTests(RhinoHost host)
         using var doc=RhinoDoc.CreateHeadless(null);Populate(doc);using var cache=new SceneCache();using var lease=Capture(doc,cache);
         using var pool=new DrawingWorkerPool(Options(fault:"block"));using var gate=new RequestGate();var request=gate.Begin(lease.Value.Revision,"views","settings");
         using var started=new ManualResetEventSlim();var pid=0;pool.SolvingView=(id,_)=>{pid=id;started.Set();};
-        var task=pool.SolveAsync(lease.Value,request.Identity,Views,new(NativeOnly:true),request.Token);
+        var task=pool.SolveAsync(lease.Value,request.Identity,Views,new(),request.Token);
         Assert.True(started.Wait(TimeSpan.FromSeconds(30)),"Worker never entered native solve");
         // Document lifetime is controlled on the host thread, while the contained compute is blocked.
         doc.Dispose();gate.Dispose();
@@ -151,7 +151,7 @@ public sealed class WorkerTests(RhinoHost host)
     {
         using var doc=RhinoDoc.CreateHeadless(null);Populate(doc);using var cache=new SceneCache();using var lease=Capture(doc,cache);
         using var pool=new DrawingWorkerPool(Options(fault:"block") with{SolveTimeout=TimeSpan.FromSeconds(2)});
-        using var batch=pool.SolveAsync(lease.Value,Identity(lease.Value),[Views[0],new("invalid",default,"authored view error")],new(NativeOnly:true),default).GetAwaiter().GetResult();
+        using var batch=pool.SolveAsync(lease.Value,Identity(lease.Value),[Views[0],new("invalid",default,"authored view error")],new(),default).GetAwaiter().GetResult();
         Assert.True(batch.Complete);Assert.Contains("deadline",batch.Views[0].Error);Assert.True(batch.Views[0].Report.Quarantined);
         Assert.Equal("authored view error",batch.Views[1].Error);
     });
@@ -172,8 +172,8 @@ public sealed class WorkerTests(RhinoHost host)
             for(var i=0;i<Views.Length;i++)
             {
                 Assert.Null(next.Views[i].Error);
-                Assert.Equal(WorkerCodec.CaptureDrawing(baseline.Views[i],true),WorkerCodec.CaptureDrawing(first.Views[i],true));
-                Assert.Equal(WorkerCodec.CaptureDrawing(baseline.Views[i],true),WorkerCodec.CaptureDrawing(next.Views[i],true));
+                HldFixtureComparison.Equal(baseline.Views[i],first.Views[i]);
+                HldFixtureComparison.Equal(baseline.Views[i],next.Views[i]);
             }
         }
         finally{File.Delete(marker);}
@@ -185,21 +185,22 @@ public sealed class WorkerTests(RhinoHost host)
         var error=Assert.Throws<WorkerUnavailableException>(()=>pool.SolveAsync(lease.Value,Identity(lease.Value),Views,new(),default).GetAwaiter().GetResult());
         Assert.Contains("No worker can take the queued views",error.Message);Assert.Empty(pool.ProcessIds);
     });
-    [RhinoFact] public void ComposedBytesMatchAcrossSingleAndMultipleManagedProcessors()=>host.Run(()=>
+    [RhinoFact] public void ThreadedPolicyAndFixtureLociSurviveProcessorCounts()=>host.Run(()=>
     {
         using var doc=RhinoDoc.CreateHeadless(null);Populate(doc);using var cache=new SceneCache();using var lease=Capture(doc,cache);
         var scene=WorkerCodec.Capture(lease.Value,default);var fingerprint=WorkerCodec.Fingerprint();
-        byte[]? stable=null;
+        ViewDrawing? stable=null;
         foreach(var processors in new[]{1,WorkerMemoryPolicy.CpuLimit(Environment.ProcessorCount)})
         {
             using var client=WorkerClient.StartAsync(Options() with{MemoryBytes=2*WorkerMemoryPolicy.GiB,ProcessorLimit=processors},fingerprint,default).GetAwaiter().GetResult();
             client.CallAsync("scene",scene,TimeSpan.FromSeconds(30),default).GetAwaiter().GetResult();
             var request=WorkerCodec.Encode(new WorkerCodec.Request(Identity(lease.Value),0,Views[0],false));
             var reply=WorkerCodec.Decode<WorkerCodec.Reply>(client.CallAsync("solve",request,TimeSpan.FromSeconds(30),default).GetAwaiter().GetResult());
-            using var drawing=WorkerCodec.RestoreDrawing(reply.Drawing);Assert.Null(drawing.Error);Assert.True(drawing.KernelEdges>0);Assert.True(drawing.NativeEdges>0);
-            var bytes=WorkerCodec.CaptureDrawing(drawing,true);
-            if(stable is null)stable=bytes;else Assert.Equal(stable,bytes);
+            using var drawing=WorkerCodec.RestoreDrawing(reply.Drawing);Assert.Null(drawing.Error);Assert.True(drawing.NativeEdges>0);
+            Assert.True(drawing.MultipleThreads);
+            if(stable is null)stable=WorkerCodec.RestoreDrawing(reply.Drawing);else HldFixtureComparison.Equal(stable,drawing);
         }
+        stable?.Dispose();
     });
     [RhinoFact] public void StaleReplyIsRejectedAndMemoryCapIsEnforced()=>host.Run(()=>
     {
@@ -212,7 +213,7 @@ public sealed class WorkerTests(RhinoHost host)
         }
         using(var pool=new DrawingWorkerPool(Options(fault:"memory") with{MemoryBytes=1024L*1024*1024}))
         {
-            using var result=pool.SolveAsync(lease.Value,Identity(lease.Value),[Views[0]],new(NativeOnly:true),default).GetAwaiter().GetResult();
+            using var result=pool.SolveAsync(lease.Value,Identity(lease.Value),[Views[0]],new(),default).GetAwaiter().GetResult();
             Assert.NotNull(result.Views[0].Error);Assert.DoesNotContain("Memory cap failed",result.Views[0].Error);
         }
     });
@@ -248,7 +249,7 @@ public sealed class WorkerTests(RhinoHost host)
             }
         };
         // One native view is forced over its cap; a view with an authored error needs no native allocation.
-        using var batch=pool.SolveAsync(lease.Value,Identity(lease.Value),[Views[0],new("invalid",default,"authored view error")],new(NativeOnly:true),default).GetAwaiter().GetResult();
+        using var batch=pool.SolveAsync(lease.Value,Identity(lease.Value),[Views[0],new("invalid",default,"authored view error")],new(),default).GetAwaiter().GetResult();
         Assert.Equal(new[]{0},retries);Assert.Equal(2,initial.Count);
         Assert.Null(batch.Views[0].Error);Assert.Contains(batch.Views[0].Diagnostics,d=>d.Contains("retried once alone"));
         Assert.Equal("authored view error",batch.Views[1].Error);
@@ -258,7 +259,7 @@ public sealed class WorkerTests(RhinoHost host)
         using var doc=RhinoDoc.CreateHeadless(null);Populate(doc);using var cache=new SceneCache();using var lease=Capture(doc,cache);
         using var pool=new DrawingWorkerPool(Options(2,"memory") with{MemoryBytes=WorkerMemoryPolicy.GiB,ReadMemory=()=>new(4*WorkerMemoryPolicy.GiB,2*WorkerMemoryPolicy.GiB)});
         var retryCount=0;pool.AttemptingView=(_,_,retry)=>{if(retry)retryCount++;};
-        using var batch=pool.SolveAsync(lease.Value,Identity(lease.Value),[Views[0],new("invalid",default,"authored view error")],new(NativeOnly:true),default).GetAwaiter().GetResult();
+        using var batch=pool.SolveAsync(lease.Value,Identity(lease.Value),[Views[0],new("invalid",default,"authored view error")],new(),default).GetAwaiter().GetResult();
         Assert.Equal(0,retryCount);Assert.Contains("No larger isolated cap",batch.Views[0].Info);Assert.Contains("Close other applications",batch.Views[0].Info);
         Assert.Equal("authored view error",batch.Views[1].Error);
     });
@@ -276,27 +277,37 @@ public sealed class WorkerTests(RhinoHost host)
         views[1]=views[1] with{Settings=Settings.Resolve([new("hidden-only","Front",ViewSourceKind.Direction,false,10000,.001)],
             [["hidden=off","min visible=0","beyond=off","farclip=none"]],DocumentUnits.Millimetres).Views[0]};
         using var pool=new DrawingWorkerPool(Options(2));
-        var solveViews=views.Select(v=>v with{Settings=v.Settings!.ForVisibilitySolve()}).ToArray();
+        var solveViews=views.Select(v=>v with{Settings=v.Settings!}).ToArray();
         using var local=NativeDrawing.SolveBorrowedAsync(scene.Value,identity,solveViews,new(),default,null).GetAwaiter().GetResult();
         using var worker=pool.SolveAsync(scene.Value,identity,solveViews,new(),default).GetAwaiter().GetResult();
         using var presentedLocal=DrawingPresentation.Apply(local,identity,views,[]);
         using var presentedWorker=DrawingPresentation.Apply(worker,identity,views,[]);
-        Assert.True(presentedWorker.Views[0].IgnoredPieces>0);Assert.True(presentedWorker.Views[0].IgnoredObjects>0);
+        Assert.Equal(0,presentedWorker.Views[0].IgnoredPieces);Assert.Equal(0,presentedWorker.Views[0].IgnoredObjects);
         Assert.Equal(0,presentedWorker.Views[1].IgnoredPieces);
         Assert.NotEmpty(presentedWorker.Views[2].Regions);
         for(var i=0;i<views.Length;i++)
         {
             Assert.Null(worker.Views[i].Error);
-            Assert.Equal(WorkerCodec.CaptureDrawing(local.Views[i],true),WorkerCodec.CaptureDrawing(worker.Views[i],true));
-            Assert.Equal(WorkerCodec.CaptureDrawing(presentedLocal.Views[i],true),WorkerCodec.CaptureDrawing(presentedWorker.Views[i],true));
+            HldFixtureComparison.Equal(local.Views[i],worker.Views[i]);
+            HldFixtureComparison.Equal(presentedLocal.Views[i],presentedWorker.Views[i]);
             Assert.DoesNotContain(presentedWorker.Views[i].Items,p=>p.Class==LineClass.Hidden);
         }
         // Quarantined hidden pieces must retain their solved classification even when Class changed.
-        var hidden=local.Views[0].Pieces.First(p=>p.SolvedClass==LineClass.Hidden);hidden.Class=LineClass.Unresolved;
+        using var line=new LineCurve(Point3d.Origin,new Point3d(1,0,0));
+        local.Views[0].Pieces.Add(new(line.DuplicateCurve(),new("wire-hidden",[0],line),LineClass.Unresolved,line.DuplicateCurve(),LineClass.Hidden));
         using var copied=WorkerCodec.RestoreDrawing(WorkerCodec.CaptureDrawing(local.Views[0]));
         Assert.Equal(LineClass.Hidden,copied.Items.First(p=>p.Class==LineClass.Unresolved).SolvedClass);
     });
 
+    [RhinoFact] public void ThreadedHldAdmissionCapsParallelNativePools() => host.Run(() =>
+    {
+        using var doc=RhinoDoc.CreateHeadless(null);Populate(doc);using var cache=new SceneCache();using var lease=Capture(doc,cache);
+        using var pool=new DrawingWorkerPool(Options(4) with{ReadMemory=()=>new(64*WorkerMemoryPolicy.GiB,48*WorkerMemoryPolicy.GiB)});
+        using var batch=pool.SolveAsync(lease.Value,Identity(lease.Value),Views,new(),default).GetAwaiter().GetResult();
+        Assert.All(batch.Views,v=>Assert.Null(v.Error));
+        Assert.InRange(pool.LastSizing!.Count,1,WorkerMemoryPolicy.ThreadedHldLimit(Environment.ProcessorCount));
+        Assert.InRange(pool.ProcessIds.Length,1,WorkerMemoryPolicy.ThreadedHldLimit(Environment.ProcessorCount));
+    });
 }
 
 

@@ -9,10 +9,10 @@ using Rhino.Geometry;
 
 namespace M2DPlus.Rhino.Services;
 
-/// <summary>Schema 3: raw binary transport envelopes; detached scene/drawing JSON is unchanged.</summary>
+/// <summary>Schema 4: threaded HLD only; no kernel/audit request or result state.</summary>
 internal static class WorkerCodec
 {
-    internal const int Schema = 3;
+    internal const int Schema = 4;
     internal static JsonSerializerOptions Json { get; } = Options();
     private static JsonSerializerOptions Options()
     {
@@ -42,7 +42,9 @@ internal static class WorkerCodec
     internal static T Decode<T>(byte[] bytes) => JsonSerializer.Deserialize<T>(bytes, Json) ?? throw new InvalidDataException("Empty worker message");
     internal static string Archive(GeometryBase geometry) => geometry.ToJSON(new global::Rhino.FileIO.SerializationOptions { RhinoVersion = 8, WriteUserData = true });
     internal static GeometryBase Restore(string archive) => global::Rhino.Runtime.CommonObject.FromJSON(archive) as GeometryBase ?? throw new InvalidDataException("Invalid geometry archive");
-    internal static WorkerFingerprint Fingerprint() => new(Schema, Environment.Version.Major, RuntimeInformation.ProcessArchitecture.ToString(),
+    private static readonly Lazy<WorkerFingerprint> CurrentFingerprint = new(CreateFingerprint, LazyThreadSafetyMode.ExecutionAndPublication);
+    internal static WorkerFingerprint Fingerprint() => CurrentFingerprint.Value;
+    private static WorkerFingerprint CreateFingerprint() => new(Schema, Environment.Version.Major, RuntimeInformation.ProcessArchitecture.ToString(),
         global::Rhino.RhinoApp.Version.ToString(), Hash(File.ReadAllBytes(typeof(global::Rhino.RhinoApp).Assembly.Location)),
         Hash(Encoding.UTF8.GetBytes(Hash(File.ReadAllBytes(typeof(WorkerCodec).Assembly.Location)) + Hash(File.ReadAllBytes(typeof(SceneCost).Assembly.Location)))),
         Environment.Version.ToString(), global::Rhino.RhinoApp.VersionControlRevision);
@@ -74,57 +76,51 @@ internal static class WorkerCodec
         catch { foreach(var l in leaves)l.Geometry.Dispose(); throw; }
         finally { foreach(var owner in owners.Values)owner.Dispose(); }
     }
-    /// <summary>Compute options come from the host. Appended optional fields preserve older/default request behavior;
-    /// the exact engine fingerprint still prevents mixed host/worker implementations.</summary>
-    internal sealed record Request(RequestIdentity Identity, int ViewIndex, ViewRequest View, bool NativeOnly,
-        bool DenseAudit = false, DenseAuditOptions? DenseAuditOptions = null, bool CullSources = true,
-        bool MultipleThreads = false, NativeVerificationOptions? Verification = null)
+    internal sealed record Request(RequestIdentity Identity, int ViewIndex, ViewRequest View, bool CullSources = true)
     {
-        // Use the same representation for solve payloads and timing-history keys.
         internal static Request FromSettings(RequestIdentity identity, int viewIndex, ViewRequest view, NativeSettings settings) =>
-            new(identity, viewIndex, view, settings.NativeOnly, settings.DenseAudit, settings.DenseAuditOptions,
-                settings.CullSources, settings.MultipleThreads, settings.Verification);
-
-        internal NativeSettings ToSettings(NativeScheduler scheduler) => new(MultipleThreads, NativeOnly)
-        {
-            Verification = Verification ?? new(), Scheduler = scheduler, IsWorker = true,
-            DenseAudit = DenseAudit, DenseAuditOptions = DenseAuditOptions ?? new(), CullSources = CullSources
-        };
+            new(identity, viewIndex, view, settings.CullSources);
+        internal NativeSettings ToSettings(NativeScheduler scheduler) => new() { Scheduler = scheduler, IsWorker = true, CullSources = CullSources };
     }
+    internal static string TimingKey(ViewRequest view, NativeSettings settings, WorkerFingerprint fingerprint) =>
+        Hash(Encode(new { fingerprint, Policy = HldProjection.Policy, settings.CullSources,
+            View = view with { Settings = null }, Settings = view.Settings?.VisibilityKey() }));
     internal sealed record Reply(RequestIdentity Identity, int ViewIndex, byte[] Drawing);
     internal sealed record Piece(string Geometry, string? Depth, string SourceIdentity, int[] SourcePath, int SourceItem, SourceSection Source,
-        LineClass Class, LineClass SolvedClass, bool Profile, bool KernelOwned, bool FarCandidate, DepthInterval Depths, double Intensity);
+        LineClass Class, LineClass SolvedClass, bool Profile, bool FarCandidate, DepthInterval Depths, double Intensity);
     internal sealed record Edge(string Geometry, M2DPlus.Core.Sections.EdgeOrigin Origin);
     internal sealed record Loop(string Geometry, bool Hole, Edge[] Edges);
     internal sealed record Region(string Id, Loop[] Loops, string? Hatch, string[] Sources, M2DPlus.Core.Sections.SectionStyleSnapshot Style,
         M2DPlus.Core.Sections.SectionStatus Status, double Area, string? Uncertainty, int[] Path, int SourceItem, SourceSection Source);
     
-    internal sealed record Values(string Name, EffectiveSettings? Settings, string? Error, Rectangle3d Frame, QualityReport Report, int HiddenPoints, int DuplicateSegments, int ProjectingSegments, int EmptyNativeSlots, int ZeroLengthNativeSegments, int ToleranceDroppedPieces, int SubToleranceSourceEdges, int SubToleranceBoundsGaps, int UncertainSectionComponents, double Seconds, double MinVisible, int IgnoredObjects, int IgnoredPieces, int RoutingInvalid, bool RoutingQuarantine, string[] UncertainRoutingSources, int KernelEdges, int NativeEdges, int NativeCalls, int FastNativeSources, int CurvedCandidateEdges, int PlanarNativeEdges, int NativeFragments, bool MultipleThreads, double Tolerance);
-    internal sealed record Drawing(Values Values, string[] Diagnostics, Dictionary<string,double> Phases, Piece[] Pieces, Region[] Regions);
+    internal sealed record Values(string Name, EffectiveSettings? Settings, string? Error, Rectangle3d Frame, QualityReport Report, int HiddenPoints, int DuplicateSegments, int ProjectingSegments, int EmptyNativeSlots, int ZeroLengthNativeSegments, int ToleranceDroppedPieces, int SubToleranceSourceEdges, int SubToleranceBoundsGaps, int UncertainSectionComponents, double Seconds, double MinVisible, int IgnoredObjects, int IgnoredPieces, int RoutingInvalid, bool RoutingQuarantine, int NativeEdges, int NativeCalls, int FastNativeSources, int CurvedCandidateEdges, int NativeFragments, bool MultipleThreads, double Tolerance);
+    internal sealed record Drawing(Values Values, string[] Diagnostics, Dictionary<string,double> Phases, Piece[] Pieces, Region[] Regions, int Schema, WorkerFingerprint Fingerprint);
     internal static byte[] CaptureDrawing(ViewDrawing drawing, bool stable = false)
     {
-        var values = new Values(drawing.Name, drawing.Settings, drawing.Error, drawing.Frame, drawing.Report, drawing.HiddenPoints, drawing.DuplicateSegments, drawing.ProjectingSegments, drawing.EmptyNativeSlots, drawing.ZeroLengthNativeSegments, drawing.ToleranceDroppedPieces, drawing.SubToleranceSourceEdges, drawing.SubToleranceBoundsGaps, drawing.UncertainSectionComponents, stable ? 0 : drawing.Seconds, drawing.MinVisible, drawing.IgnoredObjects, drawing.IgnoredPieces, drawing.RoutingInvalid, drawing.RoutingQuarantine, drawing.UncertainRoutingSources.Order(StringComparer.Ordinal).ToArray(), drawing.KernelEdges, drawing.NativeEdges, drawing.NativeCalls, drawing.FastNativeSources, drawing.CurvedCandidateEdges, drawing.PlanarNativeEdges, drawing.NativeFragments, drawing.MultipleThreads, drawing.Tolerance);
+        var values = new Values(drawing.Name, drawing.Settings, drawing.Error, drawing.Frame, drawing.Report, drawing.HiddenPoints, drawing.DuplicateSegments, drawing.ProjectingSegments, drawing.EmptyNativeSlots, drawing.ZeroLengthNativeSegments, drawing.ToleranceDroppedPieces, drawing.SubToleranceSourceEdges, drawing.SubToleranceBoundsGaps, drawing.UncertainSectionComponents, stable ? 0 : drawing.Seconds, drawing.MinVisible, drawing.IgnoredObjects, drawing.IgnoredPieces, drawing.RoutingInvalid, drawing.RoutingQuarantine, drawing.NativeEdges, drawing.NativeCalls, drawing.FastNativeSources, drawing.CurvedCandidateEdges, drawing.NativeFragments, drawing.MultipleThreads, drawing.Tolerance);
         return Encode(new Drawing(values, stable ? [] : drawing.Diagnostics.ToArray(), stable ? new() : new(drawing.Phases.Seconds),
             drawing.Items.Select(p => { using var g=p.CopyGeometry(); return new Piece(Archive(g),p.DepthGeometry is {} d?Archive(d):null,
-                p.SourceIdentity,p.SourcePath,p.SourceItem,p.Source,p.Class,p.SolvedClass,p.Profile,p.KernelOwned,p.FarCandidate,p.Depths,p.Intensity); }).ToArray(),
+                p.SourceIdentity,p.SourcePath,p.SourceItem,p.Source,p.Class,p.SolvedClass,p.Profile,p.FarCandidate,p.Depths,p.Intensity); }).ToArray(),
             drawing.Regions.Select(r=>new Region(r.Region.Id,r.Region.Loops.Select(l=>new Loop(Archive(l.Curve),l.IsHole,
                 l.Edges.Select(e=>new Edge(Archive(e.Curve),e.Origin)).ToArray())).ToArray(),r.Region.Hatch is {} h?Archive(h):null,
-                r.Region.SourceIds.ToArray(),r.Region.Style,r.Region.Status,r.Region.Area,r.Region.Uncertainty,r.SourcePath,r.SourceItem,r.Source)).ToArray()));
+                r.Region.SourceIds.ToArray(),r.Region.Style,r.Region.Status,r.Region.Area,r.Region.Uncertainty,r.SourcePath,r.SourceItem,r.Source)).ToArray(),Schema,Fingerprint()));
     }
     internal static ViewDrawing RestoreDrawing(byte[] bytes)
     {
-        var dto=Decode<Drawing>(bytes); var v=dto.Values;
-        var drawing=new ViewDrawing { Name=v.Name, Settings=v.Settings, Error=v.Error, Frame=v.Frame, Report=v.Report, HiddenPoints=v.HiddenPoints, DuplicateSegments=v.DuplicateSegments, ProjectingSegments=v.ProjectingSegments, EmptyNativeSlots=v.EmptyNativeSlots, ZeroLengthNativeSegments=v.ZeroLengthNativeSegments, ToleranceDroppedPieces=v.ToleranceDroppedPieces, SubToleranceSourceEdges=v.SubToleranceSourceEdges, SubToleranceBoundsGaps=v.SubToleranceBoundsGaps, UncertainSectionComponents=v.UncertainSectionComponents, Seconds=v.Seconds, MinVisible=v.MinVisible, IgnoredObjects=v.IgnoredObjects, IgnoredPieces=v.IgnoredPieces, RoutingInvalid=v.RoutingInvalid, RoutingQuarantine=v.RoutingQuarantine, KernelEdges=v.KernelEdges, NativeEdges=v.NativeEdges, NativeCalls=v.NativeCalls, FastNativeSources=v.FastNativeSources, CurvedCandidateEdges=v.CurvedCandidateEdges, PlanarNativeEdges=v.PlanarNativeEdges, NativeFragments=v.NativeFragments, MultipleThreads=v.MultipleThreads, Tolerance=v.Tolerance };
+        var dto=Decode<Drawing>(bytes);
+        if(dto.Schema!=Schema || dto.Fingerprint is null || !Fingerprint().Accepts(dto.Fingerprint))
+            throw new InvalidDataException("Drawing cache/transport schema or compute fingerprint mismatch.");
+        var v=dto.Values;
+        var drawing=new ViewDrawing { Name=v.Name, Settings=v.Settings, Error=v.Error, Frame=v.Frame, Report=v.Report, HiddenPoints=v.HiddenPoints, DuplicateSegments=v.DuplicateSegments, ProjectingSegments=v.ProjectingSegments, EmptyNativeSlots=v.EmptyNativeSlots, ZeroLengthNativeSegments=v.ZeroLengthNativeSegments, ToleranceDroppedPieces=v.ToleranceDroppedPieces, SubToleranceSourceEdges=v.SubToleranceSourceEdges, SubToleranceBoundsGaps=v.SubToleranceBoundsGaps, UncertainSectionComponents=v.UncertainSectionComponents, Seconds=v.Seconds, MinVisible=v.MinVisible, IgnoredObjects=v.IgnoredObjects, IgnoredPieces=v.IgnoredPieces, RoutingInvalid=v.RoutingInvalid, RoutingQuarantine=v.RoutingQuarantine, NativeEdges=v.NativeEdges, NativeCalls=v.NativeCalls, FastNativeSources=v.FastNativeSources, CurvedCandidateEdges=v.CurvedCandidateEdges, NativeFragments=v.NativeFragments, MultipleThreads=v.MultipleThreads, Tolerance=v.Tolerance };
         try
         {
-            drawing.UncertainRoutingSources.UnionWith(v.UncertainRoutingSources);
             drawing._diagnostics.AddRange(dto.Diagnostics);foreach(var phase in dto.Phases)drawing.Phases.Add(phase.Key,phase.Value);
             foreach(var p in dto.Pieces)
             {
                 var g=Restore(p.Geometry);GeometryBase? depth=null;
                 try { depth=p.Depth is {} d?Restore(d):null;
                     drawing.Pieces.Add(new(g,new PreparedLeaf(p.SourceIdentity,p.SourcePath,g){Section=p.Source,SourceItem=p.SourceItem},p.Class,depth,p.SolvedClass)
-                        {Profile=p.Profile,KernelOwned=p.KernelOwned,FarCandidate=p.FarCandidate,Depths=p.Depths,Intensity=p.Intensity}); }
+                        {Profile=p.Profile,FarCandidate=p.FarCandidate,Depths=p.Depths,Intensity=p.Intensity}); }
                 catch {g.Dispose();depth?.Dispose();throw;}
             }
             foreach(var r in dto.Regions)

@@ -32,7 +32,6 @@ internal static class VisibilityInputOrder
     internal static T[] Native<T>(IEnumerable<T> values, Func<T,VisibilityInput> input, NativeSettings settings)
     {
         var ordered=Canonical(values,input);
-        if(settings.NativeOnly && settings.ReverseNativeForAudit) Array.Reverse(ordered);
         settings.ObserveNativeInputs?.Invoke(ordered.Select(input).ToArray());
         return ordered;
     }

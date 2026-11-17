@@ -1,3 +1,7 @@
+> Superseded 2026-11-17 by [native-engine.md](native-engine.md). The exact engine
+> and its roadmap are archived at `archive/exact-engine`, main `0cfc171` (beta.8).
+> This document is historical design evidence, not the current implementation contract.
+
 # Visibility engine composition
 
 This contract supersedes PLAN's whole-scene-only S4 restriction. A2 (PR #14)

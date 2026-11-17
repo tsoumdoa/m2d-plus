@@ -34,30 +34,28 @@ public sealed class CutOnlyTests(RhinoHost host)
     private static byte[] Regions(ViewDrawing drawing) => WorkerCodec.Encode(WorkerCodec.Decode<WorkerCodec.Drawing>(WorkerCodec.CaptureDrawing(drawing, true)).Regions);
     private static void OnlySections(ViewDrawing drawing)
     {
-        Assert.Null(drawing.Error); Assert.True(drawing.Frame.IsValid); Assert.Equal(0, drawing.NativeCalls); Assert.Equal(0, drawing.KernelEdges);
-        Assert.All(drawing.Items, p => Assert.Equal(LineClass.Unresolved, p.Class));
+        Assert.Null(drawing.Error); Assert.True(drawing.Frame.IsValid); Assert.Equal(0, drawing.NativeCalls); Assert.All(drawing.Items, p => Assert.Equal(LineClass.Unresolved, p.Class));
         Assert.DoesNotContain(drawing.Phases.Seconds.Keys, p => p is "native solve" or "kernel solve" or "native ray verification");
         Assert.Contains("Cut only: projection beyond the cut skipped", drawing.Info);
     }
 
-    [RhinoTheory] [InlineData(false)] [InlineData(true)]
-    public void CutAndHatchBytesMatchNormalWithoutAnyProjection(bool nativeOnly) => host.Run(() =>
+    [RhinoFact]
+    public void CutAndHatchBytesMatchNormalWithoutAnyProjection() => host.Run(() =>
     {
         using var doc = RhinoDoc.CreateHeadless(null); Populate(doc); using var cache = new SceneCache();
         using var scene = BaselineTests.Capture(doc, cache);
-        using var normal = Solve(scene.Value, View(false), new(NativeOnly: nativeOnly));
+        using var normal = Solve(scene.Value, View(false), new());
         var before = NativeDrawing.HldCalls; var reports = new List<JobProgress>();
-        using var only = Solve(scene.Value, View(true), new(NativeOnly: nativeOnly)
+        using var only = Solve(scene.Value, View(true), new()
         {
-            ObserveNativeInputs = _ => throw new InvalidOperationException("Unexpected native input"),
-            ObservePlanarScene = (_, _) => throw new InvalidOperationException("Unexpected planar solve")
+            ObserveNativeInputs = _ => throw new InvalidOperationException("Unexpected native input")
         }, new Sink(reports));
         var drawing = only.Views[0]; OnlySections(drawing); Assert.Equal(before, NativeDrawing.HldCalls);
         Assert.Empty(drawing.Items);
         Assert.NotEmpty(drawing.Regions); Assert.All(drawing.Regions, r => Assert.NotNull(r.Region.Hatch));
         Assert.Equal(Regions(normal.Views[0]), Regions(drawing));
         Assert.Equal(ViewSteps.Sections, reports.Last(p => p.Step is not null).Step);
-        Assert.DoesNotContain(reports, p => p.Step is ViewSteps.HiddenLines or ViewSteps.ExactLines or ViewSteps.Checking);
+        Assert.DoesNotContain(reports, p => p.Step == ViewSteps.Native);
         using var displayedNormal = DrawingPresentation.Apply(normal, normal.Identity, [View(false, extra: "cuts=merge\nhatch=black")], []);
         using var displayedOnly = DrawingPresentation.Apply(only, only.Identity, [View(true, extra: "cuts=merge\nhatch=black")], []);
         Assert.Equal(Regions(displayedNormal.Views[0]), Regions(displayedOnly.Views[0]));
@@ -82,7 +80,7 @@ public sealed class CutOnlyTests(RhinoHost host)
         Assert.Contains(ViewNotices.For(restored), n => n.Text.Contains(ViewNotices.CutOnlyEmpty, StringComparison.Ordinal));
     });
 
-    [RhinoFact] public void TogglingCachedDrawingBackToOffRestoresTheFreshNormalHash() => host.Run(() =>
+    [RhinoFact] public void TogglingCachedDrawingBackToOffPreservesFixtureLoci() => host.Run(() =>
     {
         using var doc = RhinoDoc.CreateHeadless(null); Populate(doc); using var cache = new SceneCache();
         using var scene = BaselineTests.Capture(doc, cache); using var drawings = new DrawingCache(); using var freshCache = new DrawingCache();
@@ -92,8 +90,8 @@ public sealed class CutOnlyTests(RhinoHost host)
         using var on = Cached(drawings, true); Assert.Equal(solves + 1, NativeDrawing.VisibilitySolves); OnlySections(on.Views[0]);
         using var back = Cached(drawings, false); Assert.Equal(solves + 2, NativeDrawing.VisibilitySolves);
         using var fresh = Cached(freshCache, false);
-        Assert.Equal(WorkerCodec.CaptureDrawing(fresh.Views[0], true), WorkerCodec.CaptureDrawing(back.Views[0], true));
-        Assert.Equal(WorkerCodec.CaptureDrawing(off.Views[0], true), WorkerCodec.CaptureDrawing(back.Views[0], true));
+        HldFixtureComparison.Equal(fresh.Views[0],back.Views[0]);
+        HldFixtureComparison.Equal(off.Views[0],back.Views[0]);
     });
 
     [RhinoFact] public void ViewObjectUserTextAndWorkerRoutePreserveCutOnlyWithoutCodecChanges() => host.Run(() =>
@@ -114,7 +112,7 @@ public sealed class CutOnlyTests(RhinoHost host)
         });
         using var worker = pool.SolveAsync(scene.Value, Identity(scene.Value), [view, View(true, "Top")], new(), default).GetAwaiter().GetResult();
         OnlySections(worker.Views[0]);
-        Assert.Equal(WorkerCodec.CaptureDrawing(local.Views[0], true), WorkerCodec.CaptureDrawing(worker.Views[0], true));
+        HldFixtureComparison.Equal(local.Views[0],worker.Views[0]);
         Assert.Equal(Regions(local.Views[0]), Regions(worker.Views[0]));
         OnlySections(worker.Views[1]); Assert.Empty(worker.Views[1].Items); Assert.Empty(worker.Views[1].Regions);
         Assert.Contains(ViewNotices.For(worker.Views[1]), n => n.Text.Contains(ViewNotices.CutOnlyEmpty, StringComparison.Ordinal));

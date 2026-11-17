@@ -1,9 +1,0 @@
-<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup><TargetFramework>net8.0-windows</TargetFramework><OutputType>Exe</OutputType><UseWindowsForms>true</UseWindowsForms><PlatformTarget>x64</PlatformTarget></PropertyGroup>
-  <ItemGroup><ProjectReference Include="../../src/M2DPlus.Rhino/M2DPlus.Rhino.csproj" /></ItemGroup>
-  <ItemGroup><Compile Remove="reader/**/*.cs" /></ItemGroup>
-  <ItemGroup><ProjectReference Include="../../src/M2DPlus.Grasshopper/M2DPlus.Grasshopper.csproj" ReferenceOutputAssembly="false" /></ItemGroup>
-  <Target Name="CopyPublicationAdapter" AfterTargets="Build">
-    <Copy SourceFiles="../../src/M2DPlus.Grasshopper/bin/$(Configuration)/net8.0-windows/M2DPlus.Grasshopper.gha" DestinationFolder="$(OutDir)" />
-  </Target>
-</Project>
