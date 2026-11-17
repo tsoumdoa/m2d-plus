@@ -28,6 +28,8 @@ public sealed record ViewRequest(string Name, Vector3d Direction, string? Error 
         if (value is ClippingPlaneObject clippingObject) return FromClippingPlane(clippingObject.ClippingPlaneGeometry, clippingObject.Name, document ?? clippingObject.Document, clippingObject)
             with { ObjectId = clippingObject.Id };
         if (value is RhinoObject viewObject) return FromViewObject(viewObject, document ?? viewObject.Document, scene);
+        // ClippingPlaneSurface is a Surface, but its display rectangle is not a view crop.
+        if (value is ClippingPlaneSurface clippingSurface) return FromClippingPlane(clippingSurface, "Clipping plane", document, null);
         if (value is Extrusion or Brep or Surface or Curve && value is GeometryBase frameGeometry)
         {
             var tolerance = document?.ModelAbsoluteTolerance ?? .001;
@@ -39,7 +41,6 @@ public sealed record ViewRequest(string Name, Vector3d Direction, string? Error 
             var faced = Faced(check.Frame!.Value, document, scene, []);
             return FromPlane(faced.Plane, label, faced) with { Kind = ViewSourceKind.Rectangle };
         }
-        if (value is ClippingPlaneSurface clippingSurface) return FromClippingPlane(clippingSurface, "Clipping plane", document, null);
         if (value is Plane plane) return FromPlane(plane, "Plane") with { Kind = ViewSourceKind.Plane };
         if (value is Rectangle3d rectangle) return rectangle.IsValid ? FromPlane(rectangle.Plane, "Rectangle", rectangle) with { Kind = ViewSourceKind.Rectangle } : new("Rectangle", default, "Invalid view rectangle.");
         if (value is Box box)
