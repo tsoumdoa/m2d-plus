@@ -9,6 +9,7 @@ using M2DPlus.Rhino.Views;
 using Rhino;
 using Rhino.DocObjects;
 using Rhino.Geometry;
+using Environment = System.Environment;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -47,6 +48,9 @@ public sealed class RerunTests(RhinoHost host, ITestOutputHelper output)
     /// <param name="layerName">Geometry is this layer-name text instead of a referenced object.</param>
     private static Rig Build(bool documentMode, string? layerName = null)
     {
+        Assert.Equal("1", Environment.GetEnvironmentVariable("M2D_RHINO_TESTS"));
+        if (Environment.GetEnvironmentVariable("M2D_EXPECT_RUNTIME") is { } expected)
+            Assert.Equal(int.Parse(expected), Environment.Version.Major);
         var rhino = RhinoDoc.CreateHeadless(null); RhinoDoc.ActiveDoc = rhino;
         GH_Document.EnableSolutions = true;
         var building = rhino.Layers.Add("Building", Color.Black);
@@ -289,12 +293,39 @@ public sealed class RerunTests(RhinoHost host, ITestOutputHelper output)
             Rerun("Settings: tangents = on (visibility)", () => Text(3, "tangents = on"), capture: false, solved: true);
             Rerun("Settings: min visible = 0.1 (presentation)", () => Text(3, "tangents = on\nmin visible = 0.1"), capture: false, solved: false);
             Rerun("Depth: 8 (a view box keeps its own)", () => Text(4, "8"), capture: false, solved: false);
+            Rerun("Source without Target (remark, in place)", () =>
+            {
+                var source = (Param_Plane)c.Params.Input[5];
+                source.PersistentData.Clear(); source.PersistentData.Append(new GH_Plane(Plane.WorldXY));
+                source.ExpireSolution(true);
+            }, capture: false, solved: false);
+            Assert.Contains(c.RuntimeMessages(GH_RuntimeMessageLevel.Remark), m => m.Contains("without Target", StringComparison.Ordinal));
             Rerun("Target: a plane", () =>
             {
                 var target = (Param_Plane)c.Params.Input[2];
                 target.PersistentData.Clear(); target.PersistentData.Append(new GH_Plane(new Plane(new Point3d(50, 0, 0), Vector3d.ZAxis)));
                 target.ExpireSolution(true);
             }, capture: false, solved: false);
+            Rerun("Source: offset and tilted plane (presentation)", () =>
+            {
+                var source = (Param_Plane)c.Params.Input[5];
+                source.PersistentData.Clear(); source.PersistentData.Append(new GH_Plane(new Plane(new Point3d(3, 4, 5), Vector3d.YAxis, Vector3d.ZAxis)));
+                source.ExpireSolution(true);
+            }, capture: false, solved: false);
+            Assert.Equal(1, c.Params.Output[7].VolatileDataCount);
+            Assert.NotEmpty(c.Params.Output[10].VolatileData.AllData(true));
+            var keys = c.Params.Output[10].VolatileData.AllData(true).Cast<GH_String>().Select(k => k.Value).ToArray();
+            var frameBefore = ((GH_Rectangle)c.Params.Output[7].VolatileData.AllData(true).Single()).Value;
+            Rerun("Source: edit below display precision (presentation)", () =>
+            {
+                var source = (Param_Plane)c.Params.Input[5];
+                source.PersistentData.Clear(); source.PersistentData.Append(new GH_Plane(new Plane(new Point3d(3, 4 + 1e-8, 5), Vector3d.YAxis, Vector3d.ZAxis)));
+                source.ExpireSolution(true);
+            }, capture: false, solved: false);
+            var frameAfter = ((GH_Rectangle)c.Params.Output[7].VolatileData.AllData(true).Single()).Value;
+            Assert.InRange(frameBefore.Center.DistanceTo(frameAfter.Center), .9e-8, 1.1e-8);
+            Assert.Equal(keys, c.Params.Output[10].VolatileData.AllData(true).Cast<GH_String>().Select(k => k.Value));
+            Assert.Contains("Placement: Source", ((GH_String)c.Params.Output[8].VolatileData.AllData(true).Single()).Value);
             Rerun("Menu: scale 1:50", () => ((dynamic)c).Ui.Execute("set:scale=1:50", false), capture: false, solved: false);
             Rerun("Menu: seams on (visibility)", () => ((dynamic)c).Ui.Execute("set:seams=on", false), capture: false, solved: true);
             Rerun("View box: m2d.fade = on", () => Attributes(doc, rig.ViewBox, a => a.SetUserString("m2d.fade", "on")), capture: false, solved: false);

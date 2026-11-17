@@ -19,7 +19,7 @@ M2D+ has, an explicit owner exception to "no settings dialogs" (§2.1, §2.2, §
 Addendum, 2026-11-16 (owner decision for beta.4, REQUIREMENTS "Bake layer layout"): `bake = view-layer | layer-view |
 layer | view-type` arranges the bake layers; the new default puts the line type last (§8.1). Bake time only.
 
-**The idea:** one component and five inputs, of which only **View** must be set. Plug in a view and you
+**The idea:** one component and six inputs, of which only **View** must be set. Plug in a view and you
 get a correct drawing. M2D+ works out everything else from the view source and the document: what
 to cut, the crop, the tolerance, the hatches and the line weights. The Frame2D prototype needed about 30
 inputs to say these things. Here they are inferred or given a sensible default.
@@ -71,10 +71,10 @@ from a slider or a number (§6).
 | Tab / panel | **Params ▸ Util**, beside the owner's Panel+ and HopperFormat (owner decision 2026-11-15). Its own group (`GH_Exposure.quarternary`) after GH's canvas helpers (primary: Panel, Scribble, Panel+, HopperFormat), data-flow tools (secondary) and cluster hooks (tertiary). There is **no M2D+ tab** (no category icon is registered). GH finds saved components by GUID, so moving it never breaks a definition. |
 | Description | "Hidden-line plans, sections, elevations and axonometrics from your model and a view. Runs in the background. Reference a planar surface as View and right-click Convert to view boxes to get an editable view box; click Bake on the component to bake to tidy layers." |
 | Icon | Uses the dark rounded tile that Panel+, HopperFormat and Conduit+ share (tile `#181E1A`, white glyph, 24-unit grid), drawn in code the same way as `ConduitIcons.cs`. **Glyph:** a cube in axonometric with its near corner cut away. The cut face is a solid white poché, the visible edges are white strokes and one hidden edge is a soft (50 % white) dash. It reads as "section + hidden line" at 24 px. **Plug-in logo:** "M+" drawn in the same way as the C+ / P+ marks. |
-| Look (layout B, owner choice 2026-11-16) | Chosen from rendered mockups (A–D). **One grid:** every row is 20 units, every inset is one 4-unit margin. **Outputs** fill the eleven rows. **Inputs** use GH's even spacing snapped to the grid: G, V, T, S and D sit on rows 1, 3, 5, 7 and 9 (beside H, Fc, Ha, F and Ig), so every input label shares a row with an output; labels and graft / flatten state tags are GH's own, laid out by GH. **Centre:** a slim name strip (14 units, the nickname in small bold, inset one margin top and bottom) by default. No icon in the body. An explicit right-click *Display ▸ Name* or *Display ▸ Icon* works the GH way (the full nickname capsule, or the icon) on the same grid; GH's default "application" display shows the strip. **Footer:** a full-width band inside the body, 24 units tall, in the capsule's edge colour (dark, dark brown when orange, dark red when red), clipped to its rounded corners. The status sits left-aligned two margins in; the **Bake / Cancel / Run** button sits flush right, inset one margin on the top, bottom and right (16 units tall), with **one width for all three labels** so it never changes between states. Bake and Run are cobalt; Cancel is an outline in the footer's ink. The **progress bar** (2 units, cobalt) runs along the footer's top edge, full width. **While a job runs the footer has two rows** (beta.1 review, 2026-11-16): it grows downwards by one 20-unit row, so the rows above and every grip and wire stay exactly where they are (only the body's bottom edge moves; chosen over reserving the height permanently, which left an empty band under every idle component). Row 1 (20 units) says **what** is being processed, the stage with its full counts and the view; row 2 is the idle footer's 24-unit band and says **how far**: the step and its percentage on the left, the estimate right-aligned before **Cancel**, which sits where Bake sits when idle (same size, same inset). All status text uses **one font size** (GH's standard), never shrunk. The component is wide enough for the widest row-1 text with its counts (`Waiting for another drawing (99 ahead)`, `Preparing geometry 99,999 / 99,999`): 236 units instead of 177, so counts are never cut; the width never changes between states. Only the view name, then the step, are shortened with an ellipsis, and the tooltip over the footer shows everything (§5.2). Text is measured with GH's zoom-independent metrics, so sizes and padding match at every canvas zoom. The pivot stays the centre of the name box (GH's convention), so saved definitions keep their place. `ComponentLookTests` asserts all of this on the real attributes and renders the done, running, remark, warning and paused states at 100 % and 200 % (`artifacts/ui/after/`). |
+| Look (layout B, owner choice 2026-11-16) | Chosen from rendered mockups (A–D). **One grid:** every row is 20 units, every inset is one 4-unit margin. **Outputs** fill the eleven rows. **Inputs** use GH's even spacing snapped to the grid: G, V, T, S, D and Src sit on rows 0, 2, 4, 6, 8 and 10 (beside V, B, C, ?, i and K), so every input label shares a row with an output; labels and graft / flatten state tags are GH's own, laid out by GH. **Centre:** a slim name strip (14 units, the nickname in small bold, inset one margin top and bottom) by default. No icon in the body. An explicit right-click *Display ▸ Name* or *Display ▸ Icon* works the GH way (the full nickname capsule, or the icon) on the same grid; GH's default "application" display shows the strip. **Footer:** a full-width band inside the body, 24 units tall, in the capsule's edge colour (dark, dark brown when orange, dark red when red), clipped to its rounded corners. The status sits left-aligned two margins in; the **Bake / Cancel / Run** button sits flush right, inset one margin on the top, bottom and right (16 units tall), with **one width for all three labels** so it never changes between states. Bake and Run are cobalt; Cancel is an outline in the footer's ink. The **progress bar** (2 units, cobalt) runs along the footer's top edge, full width. **While a job runs the footer has two rows** (beta.1 review, 2026-11-16): it grows downwards by one 20-unit row, so the rows above and every grip and wire stay exactly where they are (only the body's bottom edge moves; chosen over reserving the height permanently, which left an empty band under every idle component). Row 1 (20 units) says **what** is being processed, the stage with its full counts and the view; row 2 is the idle footer's 24-unit band and says **how far**: the step and its percentage on the left, the estimate right-aligned before **Cancel**, which sits where Bake sits when idle (same size, same inset). All status text uses **one font size** (GH's standard), never shrunk. The component is wide enough for the widest row-1 text with its counts (`Waiting for another drawing (99 ahead)`, `Preparing geometry 99,999 / 99,999`): 236 units instead of 177, so counts are never cut; the width never changes between states. Only the view name, then the step, are shortened with an ellipsis, and the tooltip over the footer shows everything (§5.2). Text is measured with GH's zoom-independent metrics, so sizes and padding match at every canvas zoom. The pivot stays the centre of the name box (GH's convention), so saved definitions keep their place. `ComponentLookTests` asserts all of this on the real attributes and renders the done, running, remark, warning and paused states at 100 % and 200 % (`artifacts/ui/after/`). |
 | Custom attributes | The layout and footer above, plus **double-click selects the referenced view objects in Rhino**, so their `m2d.*` user text is right there in Properties (with no view objects, double-click does nothing special). The button's tooltip names the action. Nothing else is custom. Revision 3's cobalt dot beside **S** is gone: it meant "the editor holds values", and there is no editor. Menu defaults show as check marks in the menu, view-object values in Rhino's Properties, and Info lists every effective value with its origin. |
 
-### 1.1 Inputs (5)
+### 1.1 Inputs (6)
 
 | # | Name | Nick | Access | Type | Optional | Default |
 |---|---|---|---|---|---|---|
@@ -83,6 +83,7 @@ from a slider or a number (§6).
 | 2 | Target | T | list | Plane | yes | **In place** (each drawing lies on its own view plane in 3D) |
 | 3 | Settings | S | **tree** | Text, `key = value` lines | yes | View objects' `m2d.*` values, then the menu defaults (§6) |
 | 4 | Depth | D | list (matched to View) | Text: a number in document units or a distance such as `8 m` | yes | Auto (§3.2). **Appended in revision 4**; inputs are never reordered. |
+| 5 | Source | Src | list (matched to View) | Plane | yes | The view’s own plane; an untrimmed surface uses its centre and U/V. **Appended after Depth**; placement only (§4). |
 
 Description text shown in GH (keep these short, as Conduit+ does):
 
@@ -93,9 +94,11 @@ Description text shown in GH (keep these short, as Conduit+ does):
   or moving an object onto or off them, does (§5.1a). Referenced objects and Grasshopper geometry are likewise drawn
   whatever their visibility. Parts inside a drawn block are still drawn as Rhino shows them.
 - **View**: "What to draw. A referenced planar surface, rectangle or M2D+ view box (right-click Convert to view boxes to make one), a named view, clipping plane name or direction (Top, Front, SW…), a referenced clipping plane, a Plane, a Rectangle (its plane is the view plane and it crops; if it cuts the model you get a section), a Box (cut, crop and depth) or a Vector (look along it). A list gives one drawing per view."
-- **Target**: "Optional plane per view. The view's own plane is moved onto it 1:1 (View[i] → Target[i]). One plane for several views lays them out in a row. Leave empty to show each drawing in place."
+- **Target**: "Optional plane per view. Source (or the view's own plane) is moved onto it 1:1. One plane for several views lays them out in a row. Leave empty to show each drawing in place."
 - **Settings**: "Optional `key = value` lines, for example `hidden = off` or `farclip = line`. They override view-object user text (`m2d.*`) and the right-click menu. One branch applies to all views; one branch per view, or `[View name]` headers, set views separately."
 - **Depth**: "Optional view depth for Plane, Rectangle and clipping-plane views: a number in document units or text such as `8 m`. One value for all views, or one per view. Beats `depth` in Settings. Boxes and view boxes take their depth from their geometry."
+
+- **Source**: "Optional plane to orient from, like Orient’s A: the drawing is moved from Source to Target (required). Leave empty to use the view’s own plane (a surface view uses its centre and U/V)."
 
 #### Why each input exists (and why there are no others)
 
@@ -104,6 +107,8 @@ Description text shown in GH (keep these short, as Conduit+ does):
 3. **Target**: placement is geometric, often computed (a sheet grid, a strip), and it is the one thing the prototype's Layout component did that people actually need. Seven layout inputs collapse to one plane, because the anchor is the view's own plane (§4).
 4. **Settings**: view objects and menu toggles cover hand-set values, but they can't be driven by a slider or computed per view. Settings is text so that one wire carries every key without adding inputs.
 5. **Depth**: the one view-range value people drive parametrically (a slider for "how far back do I draw this section"), and the one a Plane or Rectangle has no geometry for. A view box *is* its depth, so it needs no input; a GH plane can't carry one. Writing `depth = 8 m` into a Settings Panel to drive it from a slider was the clumsy workaround the owner rejected. Depth is a list matched to View, like Target, and it is appended after Settings so saved definitions keep their wires.
+
+6. **Source**: an optional Orient A plane replaces the view’s default placement reference for every view kind. It is appended after Depth, accepts one plane for all views or one per view, and never changes the drawing solve. Without Target, it is ignored with a grey remark.
 
 Not inputs, with where they went: Run, Async, Mode (Native/Custom/Auto), Tolerance, Include hidden, Capture (§2.1, §5);
 Near/Far/Cut, Crop (§2, §3.2); Scale (now the line-weight preset key `scale`, §3.6); Anchor U/V, Offset X/Y, Rotation,
@@ -210,7 +215,8 @@ get a section or a plan. If it doesn't, nothing is cut and you get an elevation.
 | You wire / choose | View plane | Cut? | Crop (extent) | Far limit when `depth = auto` |
 |---|---|---|---|---|
 | **M2D+ view box** (referenced, §2.2) | its **front face** (the frame) | if the front face passes through geometry | **the frame** | **its back face** (the box length; always, §6) |
-| **Planar surface or closed rectangle** (referenced, not converted yet) | the rectangle, faced at the model (§2.2) | as Rectangle | **the rectangle** | scene extent; Info suggests Convert to view boxes |
+| **Untrimmed rectangular planar surface** (one face, referenced or geometry) | centre + U/V/actual face normal; looks against the normal | as Rectangle; removes the normal side | **the rectangle** | scene extent behind the plane |
+| **Trimmed planar surface with rectangular outline or closed rectangle curve** (referenced or geometry) | the rectangle, faced at the model (§2.2) | as Rectangle | **the rectangle** | scene extent; grey remark suggests an untrimmed surface to control direction |
 | **Rectangle** | the rectangle's plane | if it passes through geometry | **the rectangle** | scene extent behind the plane |
 | **Plane** | the plane | if it passes through geometry | none (scene bounds) | scene extent behind the plane |
 | **Box** | its **+Z face** | if that face passes through geometry | the box's XY | **the box's −Z face** (its height) |
@@ -227,6 +233,8 @@ Text is resolved in this order: named view, then named clipping plane, then dire
 A name that isn't found is an error for that view only. The other views continue (§5, *Partial*).
 
 **Perspective named views** are an error for that view only (§11, Q4).
+
+**Surface orientation.** An untrimmed rectangular planar surface uses its centre as origin and the boundary edge closest to ±U (with U’s sign) as X. Its normal is computed from the face’s own U×V derivatives, with `OrientationIsReversed` applied once; Y is normal×X and stays aligned with V. This accepts slightly skewed rectangles within the document angle tolerance and measures their bounds on orthonormal boundary axes. If the surface frame cannot be established, it uses the legacy model-facing frame with the direction remark. If Rhino Flip reverses the face normal relative to U×V, X becomes −U and V stays drawing-up, keeping the frame right-handed. The camera is on the normal side and looks along −normal; a section removes the normal side and draws behind it. Trimmed rectangular surfaces and closed rectangle curves retain model-facing behaviour and show a grey remark: “Use an untrimmed rectangular surface to control the view direction with its normal.” Referenced frame surfaces and curves also retain the “Right-click View > Convert to view boxes…” hint. Existing definitions using untrimmed surfaces may change direction and placement.
 
 **Up direction.** A source with its own axes (Rectangle, Plane, Box, clipping plane, named view) keeps them. A Vector
 or direction keyword uses world Z projected onto the view plane as up. When looking straight down or up, it uses
@@ -334,9 +342,7 @@ A **view box** is the view as a Rhino object. It is an `Extrusion`:
    the same undo record. References stored on V are re-typed to a Brep reference (a GH *Surface* reference can't
    hold a box). A surface that reaches V through a **Surface or Curve parameter wire** is refused with that reason
    instead of being converted, because converting it would break the wire.
-3. **Orientation.** Y (up) is the rectangle edge nearest world Z, or nearest north for a horizontal frame; X makes
-   it right-handed; the origin is the lower-left corner (the placement anchor, §4). A **horizontal** frame looks
-   down (a plan); any other frame looks toward the middle of the scene. **Flip view direction** reverses either.
+3. **Orientation.** The schema is Attribute User Text (`m2d.view = 2`), so it survives Move, Copy and extrusion rebuilds; geometry user strings do not store placement. Version 2 keeps the path-start origin, while existing version 1 boxes retain their lower-left anchor even after Flip or Convert again. An untrimmed rectangular surface keeps the same centre + U/V/normal frame described above, including the −U flip rule, so conversion preserves its view direction and Target placement. The box faces the normal side and extends behind the surface. For trimmed surfaces and rectangle curves, Y is the rectangle edge nearest world Z (nearest north horizontally), X makes it right-handed and the origin is lower-left; horizontal frames look down and other frames face the scene centre. Existing view boxes keep their orientation. **Flip view direction** reverses a view box.
 4. **Depth** comes from the **View box depth** pop-up (below), once for the whole run, before anything changes.
    **Auto** (the default) gives each new box its own Auto depth by view type (below). The depth is written into the
    geometry only (the path length), never as user text, and is edited afterwards by dragging the back face. Existing
@@ -406,7 +412,7 @@ frame rectangle and that reaches behind the frame plane (what is in front of the
 
 | Key | Values | Written by Convert to view boxes |
 |---|---|---|
-| `m2d.view` | `1` (marker and format version) | `1` |
+| `m2d.view` | `2` (marker and format version; `1` is the legacy lower-left anchor) | `2` |
 | `m2d.name` | drawing name (bake layer); `default` = the object's name | `default` |
 | `m2d.farclip` | `none` · `line` · `noline` | `default` |
 | `m2d.cutonly` | `on` · `off` (§3.2) | `default` |
@@ -795,7 +801,7 @@ the solve is a possible later experiment behind its own correctness gate.
 
 ---
 
-## 4. Placement (Target): the view's plane, moved 1:1
+## 4. Placement (Source → Target): planes moved 1:1
 
 **One rule:** each view has an **anchor frame** (an origin, a right axis and an up axis on the view plane). The drawing is
 the view seen in that frame. Placing it is a rigid **plane-to-plane** move of the anchor frame onto the Target plane,
@@ -803,6 +809,7 @@ the view seen in that frame. Placing it is a rigid **plane-to-plane** move of th
 
 | View source | Anchor frame | Frame output (before placing) |
 |---|---|---|
+| **Untrimmed rectangular surface** | centre + U/V/normal (X = −U for a reversed face, V stays up) | the surface rectangle |
 | **Rectangle** | **the rectangle's own plane** (`Rectangle3d.Plane`: its origin and X/Y axes, wherever the origin is) | the rectangle itself |
 | **Plane** | the plane | scene bounds projected on the plane |
 | **Box** | the box's plane, moved along its Z to the +Z (cut) face | the +Z face |
@@ -814,13 +821,15 @@ So for a **Rectangle**: *Frame = the source rectangle, moved and rotated onto th
 (u, v) in the rectangle's plane sits at (u, v) in the Target plane. Draw the rectangle with its origin where you
 want the sheet's reference point (a grid corner, the ground-floor level) and that point lands on the Target origin.
 
+**Source override:** Source behaves exactly like Grasshopper Orient’s A, with Target as B: apply the rigid Source → Target transform as given, including offset and depth, with no projection or flattening. It replaces the default anchor for every view kind. One Source serves all views, or supply one per view; other counts report “Give 1 source, or one per view”. The surface centre lands on Target’s origin by default, with U/V aligned to Target X/Y (−U for a reversed face). Source given without Target leaves the drawing in place and gives a grey remark. Source and Target are applied after solving; neither calls visibility again. Preview, Bake, Frame and Info use the same placement; Key labels and group paths remain associated with their geometry.
+
 - **No Target:** the drawing lies **in place** on its anchor frame in 3D: on the rectangle itself, on the plane, on the
   clipping plane, or (for named views, vectors and directions) on the view plane just in front of the scene. It overlays
   the model exactly where it was cut. Views never overlap one another.
-- **N targets for N views:** View[i] → Target[i]. This is the 1:1 case.
-- **One Target and several views → a row.** View 0's anchor goes on the target origin. Each next view is shifted along the
+- **N targets for N views:** Source[i] (or the default anchor) → Target[i]. This is the 1:1 case.
+- **One Target and several views → a row.** View 0's Source (or default anchor) goes on the target origin. Each next view is shifted along the
   target's X so its frame starts one gap after the previous frame ends (gap = 1/10 of the mean frame width, or `gap = …`).
-  Y is not shifted, so views whose anchors share a height share a level line. Vector and direction views (world-origin
+  Widths and gaps are measured from the transformed frame extents along Target X when Source is supplied; the actual drawing and frame keep their tilt and depth. Y is not shifted, so views whose anchors share a height share a level line. Vector and direction views (world-origin
   anchor) always share world Z = 0 as their level line; for rectangles, put each rectangle's origin on the ground level.
 - **Any other count** is an error with a clear message ("Give 1 target, or one per view").
 - **Scale does not place.** `scale` only picks line weights (§3.6). To put a drawing on a sheet at 1:100, scale it
@@ -846,7 +855,7 @@ share the Z = 0 line" working.
   without further changes, so slider drags don't queue work.
 - **The captured scene is kept (beta.1 feedback: "changing settings should not reload objects").** The component keeps
   the scene it read, keyed by what it read: the document, its tolerance, every Geometry item (an id, a layer name, or the
-  content fingerprint of Grasshopper geometry) and the view objects. A Settings, Depth, Target or menu change, or a view
+  content fingerprint of Grasshopper geometry) and the view objects. A Settings, Depth, Target, Source or menu change, or a view
   object's `m2d.*` text or geometry, re-solves from it: **no capture, no normalisation, no preparation**. Presentation-only
   settings (min visible, scale, weights, fade, hatch, tree, placement) make no HLD call;
   visibility settings (depth, far clip, crop, hidden, tangents, seams, glass, tolerance)
@@ -907,7 +916,7 @@ layer names, Grasshopper geometry) is drawn whatever its visibility.
 
 | Change | Objects read again (captures) | Normalised | Prepared | HLD calls |
 |---|---|---|---|---|
-| Settings `hidden = off`, `min visible`, menu `scale`, Target, Depth on a view box | 0 | 0 | 0 | 0 |
+| Settings `hidden = off`, `min visible`, menu `scale`, Target, Source, Depth on a view box | 0 | 0 | 0 | 0 |
 | Settings `tangents = on`, menu `seams` (visibility keys) | 0 | 0 | 0 | re-solve |
 | Settings/menu/view-object `hidden` | 0 | 0 | 0 | re-solve with requested HLD hidden flag |
 | Legacy `engine` / `joints` edits | 0 | 0 | 0 | remarks only; reuse drawing |
@@ -968,7 +977,7 @@ orange in the preview, on their own bake layer, counted in Info and named in a r
 
 | Level | When |
 |---|---|
-| **Error** (red) | A view failed (no such named view or clipping plane, perspective view, extraction failure); Target count mismatch. |
+| **Error** (red) | A view failed (no such named view or clipping plane, perspective view, extraction failure); Target or Source count mismatch. |
 | **Warning** (orange) | A quarantined view; objects not drawn that **could hide** other geometry; a layer-name item that matches no layer; the effective tolerance **too coarse** for the scale (§3.4); unknown settings keys and bad values (§5.3); Convert to view boxes refusals. |
 | **Remark** (grey) | Unresolved pieces in a normal view; objects not drawn that hide nothing (text, dots, hatches, point clouds); the tolerance detail-risk census (short source edges, close gaps, uncertain section components, which are drawn Unresolved); ignored Depth, bad `m2d.color`, and other notes. |
 
@@ -1327,7 +1336,7 @@ M2D+
   Rhino: draw a vertical planar surface through the building (PlaneSrf / Rectangle + PlanarSrf)
   GH:    right-click V ▸ Pick views in Rhino… ▸ pick it ▸ right-click V ▸ Convert to view boxes
   → View box depth pop-up: OK keeps Auto (a section: to the back of what's inside the frame)
-  → "M2D View 01": a view box looking at the model, arrow + depth volume in preview
+  → "M2D View 01": a view box looking against the surface normal (Rhino Flip changes the surface direction), arrow + depth volume in preview
   Rhino: gumball-drag its back face to 12 m; Properties ▸ Attribute User Text: m2d.farclip = line, m2d.fade = on
   Double-click the component to select it in Rhino again. Flip view direction to look the other way.
 ```
@@ -1415,7 +1424,7 @@ style, a cut is a solid fill in the object's display colour; M2D+ has no hatch s
 Revit's View Scale and only picks line weights; drawings stay 1:1. The Settings input stays as `key = value` text.
 Reopening a file uses a disk cache (§5.1). Q3–Q8 take the recommendations below until the owner says otherwise. The owner
 accepted all Q9–Q15 recommendations on 2026-11-14, which locked the component at 4 inputs and 9 outputs; revision 4
-(owner) appends the fifth input, Depth. **Orchestrator decisions, 2026-11-14 (owner may override):** Q16–Q19 take the recommendations. Q14 is revised: a style's *Viewport* background fill uses the object's display colour, the same as the default fill, and is noted in Info. **Q16–Q19 are
+(owner) appends the fifth input, Depth; the 2026-11-17 owner decision appends sixth input Source (Src). **Orchestrator decisions, 2026-11-14 (owner may override):** Q16–Q19 take the recommendations. Q14 is revised: a style's *Viewport* background fill uses the object's display colour, the same as the default fill, and is noted in Info. **Q16–Q19 are
 new in revision 3** and follow from the two decisions.
 
 | # | Question | Recommendation |
@@ -1466,7 +1475,7 @@ new in revision 3** and follow from the two decisions.
    beyond the far plane is removed before hidden-line work (`farclip = line | noline`), and with `farclip = line` the
    **far-plane section curves** of the trimmed geometry are computed and their visible parts output as Far clip lines.
 10. **Anchor frames** per source type (§4) and a rigid 1:1 plane-to-plane placement (no scaling). Placement is a
-    transform applied after drawing, so changing Target re-places cached drawings without re-solving.
+    transform applied after drawing, so changing Source or Target re-places cached drawings without re-solving.
 11. **Cheap frame inference** from bounding boxes before any meshing. A **relevance test** between changed objects and view volumes.
 12. **Reports:** unsupported objects by type, unresolved counts per object, styles used per rule, timings, cache hits. Sorted output within each cached realization; native fragments/ownership may differ across fresh solves.
 13. **Unit-aware defaults:** the document tolerance and angle tolerance, and metre defaults (3 m beyond) converted to document units.

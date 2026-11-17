@@ -20,16 +20,16 @@ public sealed class DrawingCache : IDisposable
 
     public Task<DrawingBatch> SolveAsync(LeaseEntry<PreparedScene>.Lease scene, RequestIdentity identity,
         IReadOnlyList<ViewRequest> views, NativeSettings settings, IReadOnlyList<Plane> targets,
-        CancellationToken token, IProgress<JobProgress>? progress = null)
+        CancellationToken token, IProgress<JobProgress>? progress = null, IReadOnlyList<Plane>? sources = null)
     {
-        var requests = views.ToArray(); var planes = targets.ToArray();
+        var requests = views.ToArray(); var planes = targets.ToArray(); var sourcePlanes = sources?.ToArray();
         // Cache hits can still rebuild section fills/merge; keep that work off the UI thread too.
-        return Task.Run(() => SolveOwnedAsync(scene, identity, requests, settings, planes, token, progress));
+        return Task.Run(() => SolveOwnedAsync(scene, identity, requests, settings, planes, token, progress, sourcePlanes));
     }
 
     private async Task<DrawingBatch> SolveOwnedAsync(LeaseEntry<PreparedScene>.Lease scene, RequestIdentity identity,
         IReadOnlyList<ViewRequest> views, NativeSettings settings, IReadOnlyList<Plane> targets,
-        CancellationToken token, IProgress<JobProgress>? progress = null)
+        CancellationToken token, IProgress<JobProgress>? progress = null, IReadOnlyList<Plane>? sources = null)
     {
         // Own the incoming scene even if cancellation occurs while waiting for another native solve.
         using (scene)
@@ -61,7 +61,7 @@ public sealed class DrawingCache : IDisposable
                 {
                     token.ThrowIfCancellationRequested();
                     progress?.Report(new(JobPhase.Output, 0, 0));
-                    return DrawingPresentation.ApplySnapshot(lease.Value, identity, views, targets, scene.Value.SourceMetadata);
+                    return DrawingPresentation.ApplySnapshot(lease.Value, identity, views, targets, scene.Value.SourceMetadata, sources);
                 }
             }
             finally { _solve.Release(); }
@@ -76,11 +76,11 @@ public static class DrawingPresentation
     public static Plane RhinoPlane(Plane3 p) => new(new Point3d(p.Origin.X, p.Origin.Y, p.Origin.Z),
         new Vector3d(p.X.X, p.X.Y, p.X.Z), new Vector3d(p.Y.X, p.Y.Y, p.Y.Z));
 
-    public static DrawingBatch Apply(DrawingBatch raw, RequestIdentity identity, IReadOnlyList<ViewRequest> views, IReadOnlyList<Plane> targets)
-        => ApplySnapshot(raw, identity, views, targets, null);
+    public static DrawingBatch Apply(DrawingBatch raw, RequestIdentity identity, IReadOnlyList<ViewRequest> views, IReadOnlyList<Plane> targets, IReadOnlyList<Plane>? sources = null)
+        => ApplySnapshot(raw, identity, views, targets, null, sources);
 
     internal static DrawingBatch ApplySnapshot(DrawingBatch raw, RequestIdentity identity, IReadOnlyList<ViewRequest> views, IReadOnlyList<Plane> targets,
-        IReadOnlyDictionary<string, SourceSection>? metadata)
+        IReadOnlyDictionary<string, SourceSection>? metadata, IReadOnlyList<Plane>? sources = null)
     {
         var placements = raw.Views.Select((v, i) =>
         {
@@ -91,7 +91,7 @@ public static class DrawingPresentation
             plane.ClosestParameter(anchor.Origin, out var dx, out var dy);
             return new PlacementView(Plain(anchor), new Frame2(frame.X.Min - dx, frame.Y.Min - dy, frame.X.Max - dx, frame.Y.Max - dy));
         }).ToArray();
-        var plan = PlacementPlan.Create(placements, targets.Select(Plain).ToArray(), views.Select(v => v.Settings?.Gap ?? DistanceSetting.Auto).ToArray());
+        var plan = PlacementPlan.Create(placements, targets.Select(Plain).ToArray(), views.Select(v => v.Settings?.Gap ?? DistanceSetting.Auto).ToArray(), sources?.Select(Plain).ToArray());
         if (!plan.Success) throw new ArgumentException(plan.Error);
         var results = new List<ViewDrawing>();
         try
@@ -115,6 +115,9 @@ public static class DrawingPresentation
                 results.Add(result); result._diagnostics.AddRange(original.Diagnostics.Where(d => metadata is null || !d.StartsWith("Style ", StringComparison.Ordinal)));
                 var frame = original.Frame; frame.Transform(transform); result.Frame = frame;
                 if (settings is not null) result._diagnostics.Add(settings.Describe());
+                if (plan.Remark is { } remark) result._diagnostics.Add(remark);
+                if (sources is { Count: > 0 } && targets.Count > 0)
+                    result._diagnostics.Add(FormattableString.Invariant($"Placement: Source → Target (1:1); origins ({target.Transform.Source.Origin.X:0.###}, {target.Transform.Source.Origin.Y:0.###}, {target.Transform.Source.Origin.Z:0.###}) → ({target.Transform.Target.Origin.X:0.###}, {target.Transform.Target.Origin.Y:0.###}, {target.Transform.Target.Origin.Z:0.###})."));
                 var range = settings is null ? null : new ViewRange(settings);
                 var minVisible = settings?.MinVisible ?? 0;
                 if (settings?.Hidden == false && minVisible > 0)

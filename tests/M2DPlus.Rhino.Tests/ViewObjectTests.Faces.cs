@@ -325,7 +325,7 @@ public sealed partial class ViewObjectTests
     {
         Assert.True(global::Rhino.PlugIns.PlugIn.LoadPlugIn(GrasshopperId));
         using var doc = TwoBoxes(); RhinoDoc.ActiveDoc = doc;
-        var id = doc.Objects.AddSurface(new PlaneSurface(new Plane(new Point3d(-1, -.5, -1), Vector3d.ZAxis, Vector3d.XAxis), new Interval(0, 3), new Interval(0, 6)));
+        var id = doc.Objects.AddSurface(new PlaneSurface(new Plane(new Point3d(-1, -.5, -1), Vector3d.XAxis, Vector3d.ZAxis), new Interval(0, 6), new Interval(0, 3)));
         Assert.True(ViewBoxes.Validate(doc, [id]).Single().Ok);
         void SetColour(string value)
         {

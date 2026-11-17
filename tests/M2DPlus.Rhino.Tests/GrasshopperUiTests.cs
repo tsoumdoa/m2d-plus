@@ -47,13 +47,17 @@ public sealed class GrasshopperUiTests(RhinoHost host)
         Assert.Equal("DrawingAttributes", component.Attributes.GetType().Name);
         Assert.Equal("ViewParam", component.Params.Input[1].GetType().Name);
         Assert.IsAssignableFrom<Param_GenericObject>(component.Params.Input[1]);
-        Assert.Equal((5, 11), (component.Params.Input.Count, component.Params.Output.Count));
+        Assert.Equal((6, 11), (component.Params.Input.Count, component.Params.Output.Count));
         Assert.Equal(new Guid("c8d0f9fe-5498-45dd-8caf-10201b80d211"), component.ComponentGuid);
         Assert.Equal(["V", "H", "B", "Fc", "C", "Ha", "?", "F", "i", "Ig", "K"], component.Params.Output.Select(p => p.NickName));
         Assert.Equal(GH_ParamAccess.tree, component.Params.Output[10].Access);
-        Assert.Equal(["G", "V", "T", "S", "D"], component.Params.Input.Select(p => p.NickName));
+        Assert.Equal(["G", "V", "T", "S", "D", "Src"], component.Params.Input.Select(p => p.NickName));
         Assert.Equal(GH_ParamAccess.list, component.Params.Input[4].Access);
         Assert.True(component.Params.Input[4].Optional);
+        Assert.IsType<Param_Plane>(component.Params.Input[5]);
+        Assert.Equal(GH_ParamAccess.list, component.Params.Input[5].Access);
+        Assert.True(component.Params.Input[5].Optional);
+        Assert.Contains("Orient's A", component.Params.Input[5].Description);
         dynamic ui = ((dynamic)component).Ui;
 
         // View input menu: multi-check text values, case-insensitive toggle.
@@ -130,25 +134,35 @@ public sealed class GrasshopperUiTests(RhinoHost host)
             Assert.Equal("ViewParam", again.Params.Input[1].GetType().Name);
             Assert.Null(((dynamic)again).Ui.ReadProblem);
 
-            // A definition saved before the Depth input existed (4 inputs) still reads, and Depth is added empty.
-            var legacy = new GH_Archive();
-            using (var old = new GH_Document())
+            // Four-input and five-input definitions retain every input id and persistent value; new inputs append empty.
+            foreach (var savedCount in new[] { 4, 5 })
             {
-                var four = NewComponent(old, 0, 0);
-                four.Params.UnregisterInputParameter(four.Params.Input[4]);
-                ((dynamic)four.Params.Input[1]).SetTexts(new[] { "Front" }, "test");
-                Assert.True(legacy.AppendObject(old, "Definition"));
+                var legacy = new GH_Archive();
+                Guid[] inputIds;
+                using (var old = new GH_Document())
+                {
+                    var older = NewComponent(old, 0, 0);
+                    while (older.Params.Input.Count > savedCount) older.Params.UnregisterInputParameter(older.Params.Input[^1]);
+                    ((dynamic)older.Params.Input[1]).SetTexts(new[] { "Front" }, "test");
+                    if (savedCount == 5) ((Param_String)older.Params.Input[4]).PersistentData.Append(new global::Grasshopper.Kernel.Types.GH_String("8 m"));
+                    inputIds = older.Params.Input.Select(p => p.InstanceGuid).ToArray();
+                    Assert.True(legacy.AppendObject(old, "Definition"));
+                }
+                var legacyObjects = legacy.GetRootNode.FindChunk("Definition").FindChunk("DefinitionObjects");
+                var legacySaved = Enumerable.Range(0, legacyObjects.GetInt32("ObjectCount")).Select(i => legacyObjects.FindChunk("Object", i))
+                    .Single(o => o.GetGuid("GUID") == component.ComponentGuid);
+                using var upgraded = new GH_Document();
+                var current = NewComponent(upgraded, 0, 0);
+                Assert.True(current.Read(legacySaved.FindChunk("Container")));
+                Assert.Equal(6, current.Params.Input.Count);
+                Assert.Equal(inputIds, current.Params.Input.Take(savedCount).Select(p => p.InstanceGuid));
+                Assert.Equal(["Front"], ViewTexts(current));
+                Assert.Equal("Depth", current.Params.Input[4].Name);
+                Assert.Equal("Source", current.Params.Input[5].Name);
+                Assert.Equal(0, current.Params.Input[5].SourceCount);
+                Assert.Empty(((Param_Plane)current.Params.Input[5]).PersistentData.AllData(true));
+                if (savedCount == 5) Assert.Equal("8 m", ((Param_String)current.Params.Input[4]).PersistentData.AllData(true).Single().ScriptVariable());
             }
-            var legacyObjects = legacy.GetRootNode.FindChunk("Definition").FindChunk("DefinitionObjects");
-            var legacySaved = Enumerable.Range(0, legacyObjects.GetInt32("ObjectCount")).Select(i => legacyObjects.FindChunk("Object", i))
-                .Single(o => o.GetGuid("GUID") == component.ComponentGuid);
-            using var upgraded = new GH_Document();
-            var five = NewComponent(upgraded, 0, 0);
-            Assert.True(five.Read(legacySaved.FindChunk("Container")));
-            Assert.Equal(5, five.Params.Input.Count);
-            Assert.Equal(["Front"], ViewTexts(five));
-            Assert.Equal("Depth", five.Params.Input[4].Name);
-            Assert.Equal(0, five.Params.Input[4].SourceCount);
 
             // Definitions saved before the Ignored output (9 outputs) or before Key (10 outputs, with a wire from
             // Ignored) still read: the old outputs keep their indices, instance ids and wires, and the missing ones are
@@ -178,7 +192,7 @@ public sealed class GrasshopperUiTests(RhinoHost host)
                 using var upgradedOutputs = new GH_Document();
                 var current = NewComponent(upgradedOutputs, 0, 0);
                 Assert.True(current.Read(savedComponent.FindChunk("Container")));
-                Assert.Equal((5, 11), (current.Params.Input.Count, current.Params.Output.Count));
+                Assert.Equal((6, 11), (current.Params.Input.Count, current.Params.Output.Count));
                 Assert.Equal(new Guid("c8d0f9fe-5498-45dd-8caf-10201b80d211"), current.ComponentGuid);
                 Assert.Equal(oldOutputIds, current.Params.Output.Take(savedCount).Select(p => p.InstanceGuid));
                 Assert.Equal(["Visible", "Hidden", "Beyond", "Far clip", "Cut", "Hatch", "Unresolved", "Frame", "Info", "Ignored", "Key"], current.Params.Output.Select(p => p.Name));
@@ -224,7 +238,7 @@ public sealed class GrasshopperUiTests(RhinoHost host)
             var (caption, message, phase, fraction) = states[i];
             var x = 160 + i % 3 * 290f; var y = 100 + i / 3 * 320f; // room for layout B (UX §1), its running footer and caption
             var component = NewComponent(document, x, y);
-            Assert.Equal(5, component.Params.Input.Count);
+            Assert.Equal(6, component.Params.Input.Count);
             dynamic ui = ((dynamic)component).Ui;
             SetProperty(ui, "Runtime", Constant(UiType("Model.DrawingRuntime"),
                 Activator.CreateInstance(UiType("Model.DrawingRuntime"), Enum.Parse(UiType("Model.DrawingPhase"), phase), fraction)!));

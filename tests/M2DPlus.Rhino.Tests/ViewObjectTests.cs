@@ -29,9 +29,9 @@ public sealed partial class ViewObjectTests(RhinoHost host, ITestOutputHelper ou
     private const double Tol = .001, Angle = Math.PI / 180;
     private sealed class Cleanup(Action action) : IDisposable { public void Dispose() => action(); }
 
-    // A vertical 4 × 4 frame at y = −5, its surface normal facing +Y, looking at a 2 × 2 × 2 box at the origin.
+    // A vertical 4 × 4 frame at y = −5, its surface normal facing −Y, looking at a 2 × 2 × 2 box at the origin.
     private static Plane Front => new(new Point3d(-2, -5, 0), Vector3d.XAxis, Vector3d.ZAxis); // normal −Y
-    private static PlaneSurface FrontSurface() => new(new Plane(new Point3d(-2, -5, 0), Vector3d.ZAxis, Vector3d.XAxis), new Interval(0, 4), new Interval(0, 4));
+    private static PlaneSurface FrontSurface() => new(new Plane(new Point3d(-2, -5, 0), Vector3d.XAxis, Vector3d.ZAxis), new Interval(0, 4), new Interval(0, 4));
     private static Brep ModelBox() => Brep.CreateFromBox(new BoundingBox(new Point3d(-1, -1, 0), new Point3d(1, 1, 2)));
 
     private static void AssertVector(Vector3d expected, Vector3d actual, double tolerance = 1e-9) =>
@@ -41,14 +41,14 @@ public sealed partial class ViewObjectTests(RhinoHost host, ITestOutputHelper ou
 
     [RhinoFact] public void EstablishAcceptsRectanglesAndExplainsEveryRefusal() => host.Run(() =>
     {
-        // Good: an untrimmed planar rectangle surface. Frame Y stands up (world Z), X = Y × normal, origin lower-left.
+        // Good: an untrimmed planar rectangle surface. Frame Y follows V (world Z), X follows U, origin at the surface centre.
         var good = ViewBoxes.Establish(FrontSurface().ToBrep(), Tol, Angle);
         Assert.True(good.IsValid, good.Reason);
         var frame = good.Frame!.Value;
         AssertVector(Vector3d.ZAxis, frame.Plane.YAxis);
         Assert.Equal(4, frame.Width, 9); Assert.Equal(4, frame.Height, 9);
         AssertVector(Vector3d.CrossProduct(frame.Plane.YAxis, frame.Plane.ZAxis), frame.Plane.XAxis);
-        AssertPoint(new Point3d(frame.Plane.XAxis.X > 0 ? -2 : 2, -5, 0), frame.Plane.Origin);
+        AssertPoint(new Point3d(0, -5, 2), frame.Plane.Origin);
 
         // Trimmed planar surfaces whose outer loop is a rectangle are fine, including a split (collinear) edge and a
         // rotated rectangle; the frame lies exactly on the loop.
@@ -92,8 +92,8 @@ public sealed partial class ViewObjectTests(RhinoHost host, ITestOutputHelper ou
     [RhinoFact] public void ViewBoxBuildsAndReadsBackExactlyAndFacesTheModel() => host.Run(() =>
     {
         var scene = ModelBox().GetBoundingBox(true);
-        var check = ViewBoxes.Establish(FrontSurface().ToBrep(), Tol, Angle);
-        // The surface normal faces +Y (toward the model), so Face points the view along +Y: frame Z = −Y.
+        var check = ViewBoxes.Establish(new Rectangle3d(Front, 4, 4).ToNurbsCurve(), Tol, Angle);
+        // Rectangle curves retain world-up facing toward the model: frame Z = −Y.
         var faced = ViewBoxes.Face(check.Frame!.Value, scene, Tol);
         AssertVector(-Vector3d.YAxis, faced.Plane.ZAxis);
         AssertVector(Vector3d.XAxis, faced.Plane.XAxis); // looking north with Z up, right is east
@@ -175,7 +175,7 @@ public sealed partial class ViewObjectTests(RhinoHost host, ITestOutputHelper ou
         var obj = doc.Objects.FindId(surfaceId);
         Assert.IsType<ExtrusionObject>(obj);
         Assert.True(ViewBoxes.IsViewBox(obj));
-        Assert.Equal("1", obj.Attributes.GetUserString("m2d.view"));
+        Assert.Equal("2", obj.Attributes.GetUserString("m2d.view"));
         Assert.Equal("M2D View 01", obj.Attributes.Name);
         Assert.All(ViewBoxes.Keys, k => Assert.Equal("default", obj.Attributes.GetUserString("m2d." + k)));
         Assert.Equal("default", obj.Attributes.GetUserString("m2d.color"));
@@ -414,7 +414,7 @@ public sealed partial class ViewObjectTests(RhinoHost host, ITestOutputHelper ou
 
         // A validated view box from a frame at y = −0.5 reaches the back of the scene (B included);
         // Depth = 2 would drop B, but the box wins.
-        var id = doc.Objects.AddSurface(new PlaneSurface(new Plane(new Point3d(-1, -.5, -1), Vector3d.ZAxis, Vector3d.XAxis), new Interval(0, 3), new Interval(0, 6)));
+        var id = doc.Objects.AddSurface(new PlaneSurface(new Plane(new Point3d(-1, -.5, -1), Vector3d.XAxis, Vector3d.ZAxis), new Interval(0, 6), new Interval(0, 3)));
         Assert.True(ViewBoxes.Validate(doc, [id]).Single().Ok);
         var viewBox = Draw(new GH_Brep(id), depth: "2");
         output.WriteLine(viewBox.Info);
@@ -429,7 +429,7 @@ public sealed partial class ViewObjectTests(RhinoHost host, ITestOutputHelper ou
     {
         Assert.True(global::Rhino.PlugIns.PlugIn.LoadPlugIn(GrasshopperId));
         using var doc = TwoBoxes(); RhinoDoc.ActiveDoc = doc;
-        var id = doc.Objects.AddSurface(new PlaneSurface(new Plane(new Point3d(-1, -.5, -1), Vector3d.ZAxis, Vector3d.XAxis), new Interval(0, 3), new Interval(0, 6)));
+        var id = doc.Objects.AddSurface(new PlaneSurface(new Plane(new Point3d(-1, -.5, -1), Vector3d.XAxis, Vector3d.ZAxis), new Interval(0, 6), new Interval(0, 3)));
         Assert.True(ViewBoxes.Validate(doc, [id]).Single().Ok);
         void SetUserText(string key, string value)
         {

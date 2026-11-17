@@ -164,7 +164,7 @@ public sealed class ViewBoxFaceIndex : IDisposable
     private void AddBox(RhinoDoc document, RhinoObject obj)
     {
         if (obj.Geometry is not Extrusion extrusion) return;
-        var check = ViewBoxes.ReadBox(extrusion, document.ModelAbsoluteTolerance, document.ModelAngleToleranceRadians);
+        var check = ViewBoxes.ReadBox(extrusion, document.ModelAbsoluteTolerance, document.ModelAngleToleranceRadians, obj.Attributes);
         if (!check.IsValid) return;
         var frame = check.Frame!.Value;
         var front = Front(frame);
