@@ -121,4 +121,16 @@ public sealed class WorkerMemoryPolicyTests
         var cap=WorkerMemoryPolicy.RetryCap(6*G,memory);
         Assert.True(cap==0 || cap+WorkerMemoryPolicy.HostReplyBytes(budget)<=budget);
     }
+
+    [Fact]
+    public void AnExtraAllowanceRaisesTheCapAndCanReduceTheWorkers()
+    {
+        var memory=new MachineMemory(64*WorkerMemoryPolicy.GiB,48*WorkerMemoryPolicy.GiB); var scene=new SceneCost(81535672,29696,0,5000);
+        var plain=WorkerMemoryPolicy.Size(scene,32,30,memory); var audited=WorkerMemoryPolicy.Size(scene,32,30,memory,0,WorkerMemoryPolicy.GiB);
+        Assert.Equal(plain.CapBytes+WorkerMemoryPolicy.GiB,audited.CapBytes); Assert.Equal(audited.CapBytes,audited.RequiredBytes);
+        Assert.True(audited.Count<=plain.Count); Assert.True(audited.Count*audited.CapBytes<=audited.BudgetBytes-audited.HostReplyBytes);
+        // An explicit cap still wins.
+        Assert.Equal(5*WorkerMemoryPolicy.GiB,WorkerMemoryPolicy.Size(scene,32,30,memory,5*WorkerMemoryPolicy.GiB,WorkerMemoryPolicy.GiB).CapBytes);
+        Assert.Throws<ArgumentOutOfRangeException>(()=>WorkerMemoryPolicy.Size(scene,32,30,memory,0,-1));
+    }
 }

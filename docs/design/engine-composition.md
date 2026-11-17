@@ -125,6 +125,15 @@ class, not one class per chord. A straight candidate seen end-on has no drawing 
 
 ### Cut tubes (stage 2)
 
+Analytic recognition runs in input order, including costly cut-tube recognition and first publication to the content
+cache. Rhino's numerical sphere extraction was observed returning different radius bits for identical geometry
+(`0.1` versus `0.09999999999999998`), even with serial calls; the cached first fit then moved visibility split
+parameters on that sphere and neighbouring pipes. `TryGetSphere` is therefore a type check only: the descriptor uses
+the stored arc's centre/radius on a surface of revolution, or the opposite collapsed pole rows of a full NURBS sphere.
+It must agree with the type check to roundoff (capped below model tolerance); a spherical surface without such stored
+data is refused. Geometry objects are still examined once per view, and the managed visibility solves remain parallel
+with results consumed in candidate order. No coordinate rounding or wider proof tolerance enforces determinism.
+
 A body that is none of the plain shapes is tried as a **cut tube** (`CutTubeRecognition`): a hollow or solid round
 section whose ends, and wall, are cut by planes and by other cylinders (coped and saddle ends, mitres, Boolean pipe
 nodes). Every face must be a plane or a circular cylinder; the body is then a union of cells of the arrangement of
@@ -151,8 +160,17 @@ What the real body may differ from the exact one by is carried, not assumed away
   what is classified; outlines are Rhino's silhouette curves, and the exact ruling is what is classified. The gap
   between the two (across the view and along it) is the candidate's lateral radius and depth range, so a decision is
   one that holds for the drawn line too. A point that does not snap onto its exact curve is Unresolved. For an outline
-  the gap is bounded through the curve's control points (it is linear in the point); for an edge it is measured at 65
-  points and taken a quarter larger.
+  the gap is bounded through the curve's control points (it is linear in the point); for an edge its floor is the sum
+  of its certified distances from the two surfaces divided by a lower bound on their crossing sine. Plane/cylinder
+  gradients give the sine in closed form; cylinder curvature and positive NURBS control hulls bound its variation
+  between samples and throughout the gap neighbourhood. Below sine 0.01, or on a failed/capped certificate, the piece
+  is Unresolved. A snap outside the certified gap is also Unresolved.
+  Cylinder/cylinder intersections also have a closed-form certificate: put the stored point on one cylinder radially,
+  then solve the quadratic along its axis against the other cylinder. Control hulls bound the root domain; the
+  correction is bounded by both a difference-of-squares quotient and its square-root bound. This remains finite at
+  tangent branch endpoints, where a crossing-angle inverse cannot certify the gap. Both axes are tried. Failure,
+  and any interval whose bound is set by the square-root branch, is subdivided locally (with fresh edge residual
+  bounds) to prevent a pinch-out widening the gap of the whole rim. Only an uncertified edge stretch is Unresolved.
 * **Change points** against such bodies are known to a few times that: an undecided run up to eight times (gap +
   largest slack) between decided neighbours of different classes is shared between them; anything else stays
   Unresolved.
@@ -162,16 +180,32 @@ What the real body may differ from the exact one by is carried, not assumed away
 * **Coincident lines.** A Hidden piece under another piece of this class is not drawn twice, and neither is an
   Unresolved piece that lies under a Visible piece of the same source no nearer the viewer than it: that source draws
   a Visible line there whichever class it has (the far edge of a cope seen square-on). Two drawn curves are one locus
-  when they agree to half a tolerance plus their gaps.
+  when they agree to half a tolerance plus their gaps. Coverage may switch between any eligible pieces. Positive
+  NURBS control hulls bound distance from each sample's fixed covering witness and maximum view depth over the whole
+  interval; adaptive bisection stops at 32768 intervals per stretch, with failure/cap retaining the original class.
+  Matching rational bases can instead certify the whole interval by corresponding control-point differences.
+  Closed witnesses are seam-aligned and oriented before matching. A tangent/chord certificate bounds sideways
+  departure and affine-detrended depth by both control hulls; continuity supplies a matching longitudinal coordinate
+  on the witness. Thus smooth coincident pieces need quadratic sag refinement rather than tolerance-spaced travel.
+  A shared 200000-work-unit pass budget includes candidate endpoint preparation and covering-pair checks. Budget or
+  interval caps retain the original class and report their hits in Info.
 
 Recognition is **evidence, not proof**: cells are labelled from Rhino's point-in-solid answers at sample points, the
 volume check is 1 %, and a face with no point two margins clear of every other surface (a sliver that hugs one) cannot
 be compared by point-in-solid answers at all: it is compared with the Brep's own orientation instead (the description,
-with every surface known only to its slack, must allow material just behind it and void just in front). Info says so and gives, for each cut tube, its face
+with every surface known only to its slack, must allow material just behind it and void just in front). Actual probe
+distances, rather than only a sum-of-slacks broad phase, test whether the probes are clear of other real surfaces.
+No interior sample or an ambiguous answer leaves that face locally uncertain; a positive orientation contradiction
+still refuses the body, even if an earlier sample was ambiguous. Its positive-NURBS control hull bounds the footprint,
+inflated in every world axis by at least the tube's wall thickness plus stated slack. The entire resulting box,
+including adjacent cell interiors beyond the surface band, permits both material and void. Neither cell labels,
+required-surface tests nor OnSurface/contact incidence can certify material or void inside it. Sure material outside
+the box may still prove Hidden. The rest of the body stays analytic. Info reports these
+footprints as uncertainty, and recognition evidence as evidence rather than proof, and gives, for each cut tube, its face
 bound, edge bound and largest surface slack. At most `NativeSettings.CutTubeBudget` (128) possible cut tubes are
 examined per view, the first in input order whatever is cached, so that the drawing does not depend on earlier
-solves; the rest stay on native HLD and Info counts them. Recognition runs in parallel over distinct geometry objects
-and honours cancellation; results are kept by content, least recently used first out.
+solves; the rest stay on native HLD and Info counts them. Recognition honours cancellation between objects and during
+cut-tube recognition; results are kept by content, least recently used first out.
 
 The class reports its own progress step, `exact curved`. `engine = native` bypasses this class entirely.
 
@@ -203,6 +237,21 @@ the raw comparison adapter. The cap bounds work rather than wall time: using
 elapsed native time to stop at 10% would make classification depend on machine
 load. Timing is reported separately in phases, never deterministic diagnostics.
 Fully planar scenes never instantiate the verifier and preserve their output.
+
+**Dense audit (internal switch, off by default).** `NativeSettings.DenseAudit` (or `M2D_DENSE_AUDIT=1` for a
+process and its workers) adds a second audit after the sampled one, in exact mode only. Each curved body HLD saw
+becomes a welded mesh made once per definition and kept in the scene cache under the definition's key, with its own
+byte budget and leases (`CertifiedMesh`), every triangle with a band: a bound on its
+distance from the surface taken from the surface's control net (`SurfaceCertificate`), or, where there is none, a
+measured one. A stretch of a native Visible curve is moved to Unresolved when a group of triangles of one body,
+connected in depth, lies wholly more than a tolerance in front of it, has no open boundary near it and is crossed
+an odd number of times (`BandedMeshIndex`); the body the curve lies on is treated like any other, so it also
+catches a line hidden by its own body. Bands are at least five tolerances and the curve's own error (1.5
+tolerances) is added. It only ever adds Unresolved: measured bands and trimmed rims are not proofs, so nothing is
+drawn Hidden on its word. Memory is bounded (about a gigabyte) by working through the drawing in tiles of about
+1.5 million triangles, each with every body that reaches it, whole; a tile that would still need more than four
+million is not audited and Info says how much of the drawing that is. The limits depend on the scene alone, so a
+capped worker and the host draw the same. Info reports spans and world length moved. See `hillclimb/mesh-tier/FINDINGS.md`.
 
 The 2026-11-16 contact decision replaces the planar `tieConvention`. Planar inputs
 carry source identity, adjacent face indices and certified outward face orientation.

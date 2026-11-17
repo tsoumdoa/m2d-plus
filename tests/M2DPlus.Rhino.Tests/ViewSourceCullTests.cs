@@ -73,7 +73,7 @@ public sealed class ViewSourceCullTests(RhinoHost host)
         Assert.True(on.Views[0].Phases.Seconds.ContainsKey("source culling"));
         using var restored = WorkerCodec.RestoreDrawing(WorkerCodec.CaptureDrawing(on.Views[0]));
         Assert.Equal(on.Views[0].Info, restored.Info);
-        Assert.False(WorkerCodec.Decode<WorkerCodec.Request>(WorkerCodec.Encode(new WorkerCodec.Request(default, 0, view, false, false))).CullSources);
+        Assert.False(WorkerCodec.Decode<WorkerCodec.Request>(WorkerCodec.Encode(new WorkerCodec.Request(default, 0, view, false, CullSources: false))).CullSources);
     });
 
     private sealed class InlineProgress(Action<JobProgress> report) : IProgress<JobProgress>

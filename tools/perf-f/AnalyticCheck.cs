@@ -199,6 +199,53 @@ internal static class AnalyticCheck
         }
         bool mixed = variants.Contains("mixed");     // the mixed route, off by default
         var off = new NativeSettings { Analytic = false }; var on = new NativeSettings { AnalyticMixed = mixed };
+        if (variants.Contains("exact-repeat"))
+        {
+            // Fresh-process correctness runs need no native comparison or wall-time measurement. Keep cold and warm
+            // dumps separate: a cache must not conceal a different first result.
+            string? savedDump = Environment.GetEnvironmentVariable("M2D_DUMP");
+            var hashes = new List<string>();
+            try
+            {
+                foreach (string pass in new[] { "cold", "warm" })
+                {
+                    Environment.SetEnvironmentVariable("M2D_DUMP", Path.Combine(output, pass));
+                    using var drawing = SolveView(scene, prepared, view, on, timeout);
+                    string hash = HashExact(drawing); hashes.Add(hash);
+                    Console.WriteLine($"exact-repeat {pass}: {hash}; pieces {drawing.Items.Count()}; native {drawing.NativeCalls}; error {drawing.Error}");
+                    if (drawing.Error is not null) throw new InvalidOperationException(drawing.Error);
+                }
+                double[] V(Vector3d p) => [p.X, p.Y, p.Z]; double[] P(Point3d p) => [p.X, p.Y, p.Z];
+                File.WriteAllText(Path.Combine(output, "recognition.json"), JsonSerializer.Serialize(prepared.Select(p =>
+                {
+                    var (shape, refusal) = AnalyticVisibility.Examine(p.Geometry, tol);
+                    return new { p.Identity, input = GeometryFingerprint.Compute(p.Geometry), refusal, shape = shape?.GetType().Name,
+                        sphere = shape is AnalyticVisibility.SphereShape s ? new { centre = P(s.Centre), s.Radius } : null,
+                        cylinder = shape is AnalyticVisibility.CylinderShape c ? new { origin = P(c.Origin), axis = V(c.Axis), c.Radius, c.InnerRadius,
+                            cap0 = new[] { P(c.Cap0.Origin), V(c.Cap0.Normal) }, cap1 = new[] { P(c.Cap1.Origin), V(c.Cap1.Normal) } } : null };
+                }), new JsonSerializerOptions { WriteIndented = true }));
+                File.WriteAllText(Path.Combine(output, "exact-repeat.json"), JsonSerializer.Serialize(new { hashes, identical = hashes.Distinct().Count() == 1 }));
+                if (hashes.Distinct().Count() != 1) throw new InvalidOperationException("Cold/warm exact drawings differ");
+            }
+            finally { Environment.SetEnvironmentVariable("M2D_DUMP", savedDump); }
+            return;
+        }
+        if (variants.Contains("diagnose"))
+        {
+            using var drawing = SolveView(scene, prepared, view, on, timeout);
+            foreach (var diagnostic in drawing.Diagnostics) Console.WriteLine(diagnostic);
+            File.WriteAllText(Path.Combine(output, stem + "-recognition.json"), JsonSerializer.Serialize(new {
+                view = view.Name, drawing.NativeCalls, route = drawing.Report.Route, diagnostics = drawing.Diagnostics,
+                sources = prepared.Where(p => p.Geometry is Brep).Select(p => {
+                    var (shape, refusal) = AnalyticVisibility.Examine(p.Geometry, tol);
+                    return new { p.Identity, shape = shape?.GetType().Name, refusal,
+                        detail = (shape as AnalyticVisibility.CutTubeShape)?.Note,
+                        surfaces = (shape as AnalyticVisibility.CutTubeShape)?.Surfaces.Select((s, i) => new { index = i, s.Cylinder,
+                            origin = new[] { s.Origin.X, s.Origin.Y, s.Origin.Z }, direction = new[] { s.Direction.X, s.Direction.Y, s.Direction.Z }, s.Radius, s.Slack, role = s.Role.ToString() }),
+                        edges = (shape as AnalyticVisibility.CutTubeShape)?.Edges.Select(e => new { e.Exact, e.Gap, e.Diagnostic, length = e.World.GetLength() }) };
+                }) }, new JsonSerializerOptions { WriteIndented = true }));
+            return;
+        }
         // `why`: what HLD returned in the composed solve, to show beside a flagged sample.
         var heard = new List<(string Id, int Edge, bool Duplicate, LineClass Kind, Curve World)>();
         var listening = !variants.Contains("why") ? on : new NativeSettings { AnalyticMixed = mixed, ObserveCompositionRecord = (id, edge, duplicate, kind, world) => { lock (heard) heard.Add((id, edge, duplicate, kind, world.DuplicateCurve())); } };

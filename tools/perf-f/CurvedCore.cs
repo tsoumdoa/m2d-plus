@@ -38,6 +38,8 @@ public struct Chord
     public int Solid;          // own analytic solid, or -1
     public int OnSurface;      // analytic surfaces of the own solid the candidate lies on (Solid.Outer / Inner bits)
     public bool Tangent;       // a tangent silhouette: the view ray touches OnSurface without crossing it
+    public bool H0, H1;        // mesh-tier spike: a certified parameter box on F0 / F1 inside which the face is not met again
+    public double B0u0, B0u1, B0v0, B0v1, B1u0, B1u1, B1v0, B1v1;
     public readonly V3 At(double t) => A * ((1 - t) * (1 - 2 * t)) + M * (4 * t * (1 - t)) + B * (t * (2 * t - 1));
     public readonly V3 Straight(double t) => A + (B - A) * t;
 }
@@ -262,6 +264,7 @@ public sealed class SolidIndex
 public sealed class SheetMesh
 {
     public int Sheet; public double Eps; public V3[] Vertices = Array.Empty<V3>(); public int[] Triangles = Array.Empty<int>(); public int[] Faces = Array.Empty<int>();
+    public double[]? EpsTri; public double[]? Uv;   // per triangle: certified deviation; parameter box (u0, u1, v0, v1) on its face
 }
 
 public sealed class MeshIndex
@@ -270,7 +273,7 @@ public sealed class MeshIndex
     private readonly double[] _x, _y, _z;           // 3 per triangle
     private readonly int[] _sheet, _face; private readonly byte[] _naked; private readonly double[] _eps;
     private readonly double[] _pa, _pb, _pc, _slope, _zmin, _zmax; private readonly bool[] _steep;
-    private readonly double _gx, _gy;
+    private readonly double _gx, _gy; private readonly double[]? _uv;
 
     public MeshIndex(IReadOnlyList<SheetMesh> sheets)
     {
@@ -278,6 +281,7 @@ public sealed class MeshIndex
         _x = new double[Count * 3]; _y = new double[Count * 3]; _z = new double[Count * 3]; _sheet = new int[Count]; _face = new int[Count]; _naked = new byte[Count]; _eps = new double[Count];
         _pa = new double[Count]; _pb = new double[Count]; _pc = new double[Count]; _slope = new double[Count]; _zmin = new double[Count]; _zmax = new double[Count]; _steep = new bool[Count];
         int t = 0; double sum = 0;
+        if (sheets.Any(s => s.Uv is not null)) { _uv = new double[Count * 4]; Array.Fill(_uv, double.NaN); }
         double gx0 = double.MaxValue, gy0 = double.MaxValue, gx1 = double.MinValue, gy1 = double.MinValue;
         foreach (var s in sheets)
         {
@@ -290,14 +294,15 @@ public sealed class MeshIndex
                     int a = s.Triangles[i + k], b = s.Triangles[i + (k + 1) % 3]; var key = a < b ? (a, b) : (b, a);
                     edges[key] = edges.GetValueOrDefault(key) + 1;
                 }
-                _sheet[t] = s.Sheet; _face[t] = s.Faces[i / 3]; _eps[t] = s.Eps;
+                _sheet[t] = s.Sheet; _face[t] = s.Faces[i / 3]; _eps[t] = s.EpsTri is null ? s.Eps : s.EpsTri[i / 3];
+                if (s.Uv is not null) Array.Copy(s.Uv, i / 3 * 4, _uv!, t * 4, 4);
                 double ax = _x[t * 3], ay = _y[t * 3], az = _z[t * 3], ux = _x[t * 3 + 1] - ax, uy = _y[t * 3 + 1] - ay, uz = _z[t * 3 + 1] - az, vx = _x[t * 3 + 2] - ax, vy = _y[t * 3 + 2] - ay, vz = _z[t * 3 + 2] - az;
                 double nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx, planar = Math.Sqrt(nx * nx + ny * ny);
                 _zmin[t] = Math.Min(az, Math.Min(az + uz, az + vz)); _zmax[t] = Math.Max(az, Math.Max(az + uz, az + vz));
                 if (Math.Abs(nz) <= 1e-9 * planar || nz == 0) _steep[t] = true;
                 else { _pa[t] = -nx / nz; _pb[t] = -ny / nz; _pc[t] = az - _pa[t] * ax - _pb[t] * ay; _slope[t] = planar / Math.Abs(nz); }
                 double x0 = Math.Min(ax, Math.Min(ax + ux, ax + vx)), x1 = Math.Max(ax, Math.Max(ax + ux, ax + vx)), y0 = Math.Min(ay, Math.Min(ay + uy, ay + vy)), y1 = Math.Max(ay, Math.Max(ay + uy, ay + vy));
-                sum += Math.Max(x1 - x0, y1 - y0) + 2 * s.Eps; gx0 = Math.Min(gx0, x0 - s.Eps); gy0 = Math.Min(gy0, y0 - s.Eps); gx1 = Math.Max(gx1, x1 + s.Eps); gy1 = Math.Max(gy1, y1 + s.Eps);
+                sum += Math.Max(x1 - x0, y1 - y0) + 2 * _eps[t]; gx0 = Math.Min(gx0, x0 - _eps[t]); gy0 = Math.Min(gy0, y0 - _eps[t]); gx1 = Math.Max(gx1, x1 + _eps[t]); gy1 = Math.Max(gy1, y1 + _eps[t]);
             }
             t = first;
             for (int i = 0; i < s.Triangles.Length; i += 3, t++)
@@ -361,7 +366,7 @@ public sealed class MeshIndex
     {
         internal int[] Stamp; internal int Id; internal readonly List<int>[] Lists = new List<int>[48];
         internal readonly List<(int Sheet, double Lo, double Hi, int Flags)> Entries = new(); internal readonly List<(double Lo, double Hi, int Tri)> Local = new(); // flags: 1 crossing at the middle, 2 naked edge near, 4 poison (may reach the start)
-        public long Tests, Nodes; public double TraceT = double.NaN; public List<string>? Trace;
+        public long Tests, Nodes, Exempt; public double TraceT = double.NaN; public List<string>? Trace;
         public Scratch(MeshIndex index) { Stamp = new int[index.Count]; for (int i = 0; i < Lists.Length; i++) Lists[i] = new(); }
     }
 
@@ -415,6 +420,12 @@ public sealed class MeshIndex
             if (mine)
             {
                 bool f0 = _face[t] == chord.F0, f1 = !f0 && _face[t] == chord.F1;
+                if (_uv is not null && (f0 ? chord.H0 : f1 && chord.H1))
+                {   // certified: the part of the face over this parameter box is not met again by the ray
+                    int o = t * 4; bool inside = f0 ? _uv[o] >= chord.B0u0 && _uv[o + 1] <= chord.B0u1 && _uv[o + 2] >= chord.B0v0 && _uv[o + 3] <= chord.B0v1
+                                                    : _uv[o] >= chord.B1u0 && _uv[o + 1] <= chord.B1u1 && _uv[o + 2] >= chord.B1v0 && _uv[o + 3] <= chord.B1v1;
+                    if (inside) { own = Math.Max(own, hi); s.Exempt++; continue; }
+                }
                 if (f0 || f1)
                 {
                     double limit = f0 ? chord.S0 : chord.S1;
