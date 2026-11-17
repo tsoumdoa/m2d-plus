@@ -20,7 +20,7 @@ internal static class SectionProjectionBounds
         {
             var distances = corners.Select(plane.DistanceTo).ToArray();
             double magnitude = corners.Max(p => Math.Max(p.DistanceTo(Point3d.Origin), plane.Origin.DistanceTo(Point3d.Origin)));
-            double margin = tolerance + 128 * 2.220446049250313e-16 * Math.Max(1, magnitude);
+            double margin = ViewSourceCull.Margin(tolerance, magnitude);
             if (distances.All(d => d > margin)) return 1;
             return distances.All(d => d < -margin) ? -1 : 0;
         }

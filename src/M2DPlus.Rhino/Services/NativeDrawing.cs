@@ -14,6 +14,8 @@ public sealed record NativeSettings(bool MultipleThreads = false, bool NativeOnl
     internal NativeScheduler Scheduler { get; init; } = NativeScheduler.Global;
     internal bool IsWorker { get; init; }
     internal bool ReverseNativeForAudit { get; init; }
+    /// <summary>Harness switch for byte-for-byte drawing comparisons; production always enables it.</summary>
+    internal bool CullSources { get; init; } = true;
     /// <summary>Exact analytic solids (sphere, cylinder, tube, extruded arc) leave native HLD. Off only for comparisons.</summary>
     internal bool Analytic { get; init; } = true;
     /// <summary>The mixed route of the exact analytic class: a recognised solid that an unrecognised body may hide
@@ -270,8 +272,30 @@ public static class NativeDrawing
             }
             if (view.Cut is { } cut) view = view with { Cut = cut with { SourceDepth = effective.Depth, FarClip = effective.FarClip } };
         }
+        var original = sources;
+        var cullTimer = Stopwatch.StartNew();
+        if (settings.CullSources)
+        {
+            ReportPhase("source culling");
+            sources = ViewSourceCull.Filter(sources, view, scene.Bounds, tolerance, token);
+        }
+        var cullSeconds = cullTimer.Elapsed.TotalSeconds;
+        var drawing = SolveFilteredView(scene, sources, original, view, settings, token, tolerance);
+        if (settings.CullSources)
+        {
+            drawing.Phases.Add("source culling", cullSeconds);
+            drawing.Seconds += cullSeconds;
+            drawing._diagnostics.Add($"culled {original.Count - sources.Count} sources outside the view");
+        }
+        return drawing;
+    }
+
+    private static ViewDrawing SolveFilteredView(PreparedScene scene, IReadOnlyList<PreparedLeaf> sources,
+        IReadOnlyList<PreparedLeaf> original, ViewRequest view, NativeSettings settings, CancellationToken token, double tolerance)
+    {
         if (view.Settings?.Engine == EngineMode.Native) return NativeModeDrawing.Solve(scene, sources, view, settings, token);
-        if (view.Cut is not null && view.Error is null) return SectionDrawing.Solve(scene, sources, view, settings, token);
+        if (view.Cut is not null && view.Error is null) return SectionDrawing.Solve(scene, sources, view, settings, token,
+            DrawingFrames.Resolve(view, original, scene.Bounds, tolerance));
         var result = new ViewDrawing { Name = view.Name, Settings = view.Settings, MultipleThreads = settings.MultipleThreads, Tolerance = tolerance };
         var timer = Stopwatch.StartNew();
         using var glass = new GlassGeometry(sources, view);

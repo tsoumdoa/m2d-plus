@@ -39,7 +39,7 @@ public sealed class DrawingCache : IDisposable
             {
                 // Exact reuses hidden-on visibility. Native hidden generation follows the view setting.
                 // NativeSettings prints its public members only: the dense audit and its limits are internal and change the drawing.
-                var key = scene.Value.VisibilityRevision + "/" + settings + "/audit=" + (settings.DenseAudit ? settings.DenseAuditOptions.ToString() : "off") + "/" + string.Join("|", views.Select(v => (v with { Cut = v.Cut is { } cut ? cut with { SectionerStyle = null } : null }).Revision + "/" +
+                var key = scene.Value.VisibilityRevision + "/" + settings + "/audit=" + (settings.DenseAudit ? settings.DenseAuditOptions.ToString() : "off") + "/cull=" + settings.CullSources + "/" + string.Join("|", views.Select(v => (v with { Cut = v.Cut is { } cut ? cut with { SectionerStyle = null } : null }).Revision + "/" +
                     v.Settings?.VisibilityKey()));
                 LeaseEntry<DrawingBatch>.Lease? lease;
                 long generation;

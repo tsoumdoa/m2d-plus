@@ -45,6 +45,16 @@ Candidate ownership is independent of occluder participation:
 * Points use the same union. Hidden points are withheld. Uncertain points are
   withheld and counted/reported; they are never published confidently.
 
+Before route selection, shared parallel-view source separation can omit sources whose complete
+view-frame bounds miss the crop or lie beyond a participating far plane, reserving modelling
+tolerance and the section-bound floating-point margin. It retains uncertain/contact bounds and
+leaves near-plane handling to the selected route. Preparation already expands blocks with their complete instance transforms.
+No filtered source list is retained across solves: view revisions/settings and source content remain the keys;
+the internal culling comparison switch also keys cache/worker requests. Output clipping remains
+downstream. The strict off/on byte-identity gate has counterexamples; see
+[source-culling evidence](../research/source-culling.md). Geometric separation alone does not
+guarantee identical native segmentation, representation or analytic routing.
+
 Native camera placement uses the same full-scene bounds in both adapters, including
 route C; clipped-input bounds must not change the native camera.
 All engines use the same parallel frame, larger view Z toward the viewer, and

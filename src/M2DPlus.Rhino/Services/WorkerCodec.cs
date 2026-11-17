@@ -75,7 +75,7 @@ internal static class WorkerCodec
         finally { foreach(var owner in owners.Values)owner.Dispose(); }
     }
     /// <summary>DenseAudit and its limits travel with every solve: the host decides, never the worker's own environment.</summary>
-    internal sealed record Request(RequestIdentity Identity, int ViewIndex, ViewRequest View, bool NativeOnly, bool DenseAudit = false, DenseAuditOptions? DenseAuditOptions = null);
+    internal sealed record Request(RequestIdentity Identity, int ViewIndex, ViewRequest View, bool NativeOnly, bool DenseAudit = false, DenseAuditOptions? DenseAuditOptions = null, bool CullSources = true);
     internal sealed record Reply(RequestIdentity Identity, int ViewIndex, byte[] Drawing);
     internal sealed record Piece(string Geometry, string? Depth, string SourceIdentity, int[] SourcePath, int SourceItem, SourceSection Source,
         LineClass Class, LineClass SolvedClass, bool Profile, bool KernelOwned, bool FarCandidate, DepthInterval Depths, double Intensity);

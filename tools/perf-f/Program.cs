@@ -45,7 +45,7 @@ internal static class Program
 #endif
         if (args[1] == "native-point-witness") { NativePointWitnesses.Run(args[2]); return 0; }
         var file = args[1]; var output = Path.GetFullPath(args[2]); Directory.CreateDirectory(output);
-        var viewName = args[3]; var variants = args.Skip(4).ToArray();
+        var viewSelection = args[3]; var variants = args.Skip(4).ToArray();
         var timeout = double.Parse(Environment.GetEnvironmentVariable("PERFF_TIMEOUT") ?? "1500");
         var timer = Stopwatch.StartNew();
         using var document = RhinoDoc.OpenHeadless(file);
@@ -60,9 +60,14 @@ internal static class Program
         var prepareSeconds = timer.Elapsed.TotalSeconds;
         var bounds = scene.Bounds;
 #if !PERFF_BASELINE
-        if (viewName == "mt-census") { MeshTier.Census(scene, prepared, Path.GetFileNameWithoutExtension(file), output, args.Skip(4).ToArray()); return 0; }
-        if (viewName == "ce-census") { CurvedCensus.Run(scene, prepared, Path.GetFileNameWithoutExtension(file), output); return 0; }
+        if (viewSelection == "mt-census") { MeshTier.Census(scene, prepared, Path.GetFileNameWithoutExtension(file), output, args.Skip(4).ToArray()); return 0; }
+        if (viewSelection == "ce-census") { CurvedCensus.Run(scene, prepared, Path.GetFileNameWithoutExtension(file), output); return 0; }
 #endif
+        foreach (var selected in viewSelection.Split(';')) RunView(selected);
+        return 0;
+
+        int RunView(string viewName)
+        {
         var curved = viewName.StartsWith("curved:", StringComparison.Ordinal); if (curved) viewName = viewName[7..];
         var spike = viewName.StartsWith("spike:", StringComparison.Ordinal); if (spike) viewName = viewName[6..];
         var engine = viewName.StartsWith("ce:", StringComparison.Ordinal); if (engine) viewName = viewName[3..];
@@ -78,8 +83,17 @@ internal static class Program
             "long" => ViewRequest.Parse(new Plane(new Point3d(0, bounds.Center.Y, 0), Vector3d.XAxis, Vector3d.ZAxis)) with { Name = "Long-section" },
             "trans" => ViewRequest.Parse(new Plane(new Point3d(bounds.Center.X, 0, 0), Vector3d.YAxis, Vector3d.ZAxis)) with { Name = "Trans-section" },
             "plan" => ViewRequest.Parse(new Plane(new Point3d(0, 0, bounds.Min.Z + Math.Min(1.2, bounds.Diagonal.Z * .4)), Vector3d.XAxis, Vector3d.YAxis)) with { Name = "Plan" },
+            "section" => ViewRequest.Parse(Plane.WorldXY),
+            "sectionbox" => ViewRequest.Parse(new Box(Plane.WorldXY,
+                new Interval(bounds.Center.X - bounds.Diagonal.X / 4, bounds.Center.X + bounds.Diagonal.X / 4),
+                new Interval(bounds.Center.Y - bounds.Diagonal.Y / 4, bounds.Center.Y + bounds.Diagonal.Y / 4), new Interval(-2.5, 0))),
             // The owner's pipe node: a Top-facing view box about the node, its front plane above all the geometry.
             "nodebox" => ViewRequest.Parse(new Box(new Plane(new Point3d(65986, 40014, 14669), Vector3d.XAxis, Vector3d.YAxis), new Interval(-1500, 1500), new Interval(-1500, 1500), new Interval(-3000, 3000))) with { Name = "Node-box" },
+            // A central rectangle covering one tenth of the full Top frame's area; front above the entire model.
+            "tenthbox" => ViewRequest.Parse(new Box(new Plane(new Point3d(bounds.Center.X, bounds.Center.Y, bounds.Max.Z + 10 * scene.Tolerance), Vector3d.ZAxis),
+                new Interval(-bounds.Diagonal.X / Math.Sqrt(40), bounds.Diagonal.X / Math.Sqrt(40)),
+                new Interval(-bounds.Diagonal.Y / Math.Sqrt(40), bounds.Diagonal.Y / Math.Sqrt(40)),
+                new Interval(-bounds.Diagonal.Z - 20 * scene.Tolerance, 0))) with { Name = "Model tenth" },
             _ when viewName.StartsWith("sidecar=", StringComparison.Ordinal) => Sidecar(file, viewName[8..]),
             _ => ViewRequest.Parse(viewName)
         };
@@ -160,6 +174,14 @@ internal static class Program
                     runView = view with { Settings = resolution.Views[0] };
                 }
                 var nativeSettings = new NativeSettings();
+                if (variant.Contains("cull-", StringComparison.Ordinal))
+                {
+                    nativeSettings = nativeSettings with { CullSources = !variant.Contains("cull-off", StringComparison.Ordinal) };
+                    if (variant.StartsWith("native+", StringComparison.Ordinal))
+                        runView = view with { Settings = Settings.Resolve([new("cull-audit", view.Name, view.Kind, view.Cut is not null,
+                            view.Cut?.SourceDepth ?? scene.Bounds.Diagonal.Length * 2, scene.Tolerance)],
+                            [["engine=native", "hidden=on", "beyond=off"]], DocumentUnits.Metres).Views[0] };
+                }
 #if !PERFF_BASELINE
                 if (variant == "census") nativeSettings = nativeSettings with { ObserveCompositionRecord = census.Capture,
                     ObserveNativeInputs = rayEvidence.Capture };
@@ -203,10 +225,22 @@ internal static class Program
                     var path = Path.Combine(output, $"{stem}-{run}-{variant.Replace('+', '_')}.json");
                     File.WriteAllText(path, JsonSerializer.Serialize(dump));
                     hash = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path)));
+                    if (variant.Contains("cull-", StringComparison.Ordinal))
+                    {
+                        // Exact archives of ALL drawing output fields, including depth curves, region edge provenance,
+                        // hatch/style and source paths. Info, timings and work counters deliberately differ under culling.
+                        var wire = WorkerCodec.Decode<WorkerCodec.Drawing>(WorkerCodec.CaptureDrawing(drawing, stable: true));
+                        var bytes = WorkerCodec.Encode(new { wire.Values.Error, wire.Values.Frame, wire.Values.Report.Quarantined,
+                            Pieces = wire.Pieces.OrderBy(p => WorkerCodec.Hash(WorkerCodec.Encode(p)), StringComparer.Ordinal).ToArray(),
+                            Regions = wire.Regions.OrderBy(r => WorkerCodec.Hash(WorkerCodec.Encode(r)), StringComparer.Ordinal).ToArray() });
+                        File.WriteAllBytes(Path.ChangeExtension(path, ".drawing.json"), bytes);
+                        hash = WorkerCodec.Hash(bytes);
+                    }
                     summary = new { drawing.Seconds, drawing.Error, pieces = drawing.Items.Count,
                         classes = drawing.Items.GroupBy(p => p.Class).ToDictionary(g => g.Key.ToString(), g => g.Count()),
                         regions = drawing.Regions.Count, hatches = drawing.Regions.Count(r => r.Region.Hatch is not null),
-                        drawing.Report.Quarantined, drawing.Report.UncertainCount, drawing.Report.InvalidExtractionCount, phases = drawing.Phases.Seconds, dump = path };
+                        drawing.Report.Quarantined, drawing.Report.UncertainCount, drawing.Report.InvalidExtractionCount, drawing.MultipleThreads,
+                        culling = drawing.Diagnostics.FirstOrDefault(d => d.StartsWith("culled ", StringComparison.Ordinal)), phases = drawing.Phases.Seconds, dump = path };
                     failure = drawing.Error;
                 }
             }
@@ -218,10 +252,12 @@ internal static class Program
                 engineSha256 = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(typeof(NativeDrawing).Assembly.Location))),
                 rhino = RhinoApp.Version.ToString(), runtime = Environment.Version.ToString(), logicalProcessors = Environment.ProcessorCount,
                 contention = "shared machine; measured load is recorded per row in machineBusyFraction/foreignCoresEstimate",
-                openSeconds, captureSeconds, prepareSeconds, leaves = prepared.Count, tolerance = scene.Tolerance, multipleThreads = false, rows
+                openSeconds, captureSeconds, prepareSeconds, leaves = prepared.Count, tolerance = scene.Tolerance,
+                multipleThreads = variants.Any(v => v.StartsWith("native+", StringComparison.Ordinal)), rows
             }, new JsonSerializerOptions { WriteIndented = true }));
         }
         return 0;
+        }
     }
 
     /// <summary>A cut plane from the model's JSON sidecar (the suite's own section definitions).</summary>

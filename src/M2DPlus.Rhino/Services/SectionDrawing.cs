@@ -21,7 +21,7 @@ internal static class SectionDrawing
     private sealed record Candidate(PreparedLeaf Source, bool Far = false);
 
     internal static ViewDrawing Solve(PreparedScene scene, IReadOnlyList<PreparedLeaf> sources,
-        ViewRequest view, NativeSettings settings, CancellationToken token)
+        ViewRequest view, NativeSettings settings, CancellationToken token, Rectangle3d? resolvedFrame = null)
     {
         using var work = new SectionWork();
         var timer = Stopwatch.StartNew(); var invalid = 0; var quarantine = scene.HasPotentialOccluderUnsupported;
@@ -30,7 +30,7 @@ internal static class SectionDrawing
         var footprintProofRegions = new List<BoundingBox>();
         SectionResult? preparedSections = null;
         var result = new ViewDrawing { Name = view.Name, Settings = view.Settings, Tolerance = view.Settings?.Tolerance ?? scene.Tolerance, MultipleThreads = settings.MultipleThreads,
-            Frame = DrawingFrames.Resolve(view, sources, scene.Bounds, view.Settings?.Tolerance ?? scene.Tolerance) };
+            Frame = resolvedFrame ?? DrawingFrames.Resolve(view, sources, scene.Bounds, view.Settings?.Tolerance ?? scene.Tolerance) };
         var cut = view.Cut!; var tol = view.Settings?.Tolerance ?? scene.Tolerance;
         var request = new SectionRequest(cut.Plane, tol, .001, cut.Crop, CutMode.Separate, HatchMode.Styles);
         var autoDepth = scene.Bounds.IsValid ? Math.Max(0, -scene.Bounds.GetCorners().Min(cut.Plane.DistanceTo)) + tol * 10 : tol * 10;
