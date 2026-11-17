@@ -33,7 +33,7 @@ public sealed record WorkerOptions
 
 internal sealed class WorkerMemoryException(string message) : IOException(message);
 
-internal sealed class WorkerUnavailableException(string message) : IOException(message);
+internal sealed class WorkerUnavailableException(string message, Exception? innerException = null) : IOException(message, innerException);
 
 internal sealed class WorkerClient : IDisposable
 {
@@ -51,35 +51,44 @@ internal sealed class WorkerClient : IDisposable
     internal bool MemoryLimitHit => _job.MemoryLimitHit;
     internal long ResidentBytes { get { lock(_sync){if(_disposed)return 0;_process.Refresh();return _process.WorkingSet64;} } }
     private WorkerClient(NamedPipeServerStream pipe,WorkerJob job,Process process) { _pipe=pipe;_job=job;_process=process;ProcessId=process.Id; }
-    internal static async Task<WorkerClient> StartAsync(WorkerOptions options, WorkerFingerprint expected, CancellationToken token)
+    internal static Task<WorkerClient> StartAsync(WorkerOptions options, WorkerFingerprint expected, CancellationToken token)
     {
         var executable=Path.Combine(options.Directory,"M2DPlus.Worker.exe");
         if(!File.Exists(executable))throw new WorkerUnavailableException("Worker unavailable: matching .NET " + expected.RuntimeMajor + " executable is missing.");
         var name="m2d-plus-"+Guid.NewGuid().ToString("N");
+        var start=new ProcessStartInfo(executable){UseShellExecute=false,CreateNoWindow=true,RedirectStandardInput=true};
+        start.ArgumentList.Add(name);start.ArgumentList.Add(options.RhinoSystem);
+        if(options.Resolver is {} resolver)start.ArgumentList.Add(resolver);
+        // A net8 apphost may never roll into net10, or vice versa.
+        if(options.TestFault is {} fault)start.Environment["M2DPLUS_WORKER_TEST_FAULT"]=fault;
+        else start.Environment.Remove("M2DPLUS_WORKER_TEST_FAULT");
+        start.Environment["DOTNET_ROLL_FORWARD"]="LatestPatch";
+        // Bound managed kernel parallelism across the whole reservation instead
+        // of advertising all host cores independently to every worker.
+        start.Environment["DOTNET_PROCESSOR_COUNT"]=options.ProcessorLimit.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        start.Environment.Remove("M2DPLUS_WORKER_DIRECTORY");
+        start.Environment["M2DPLUS_WORKER_BUDGET"]=options.MemoryBytes.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        return StartAsync(start,name,options.MemoryBytes,options.ProcessorLimit,options.StartupTimeout,expected,token);
+    }
+    // Starts the supplied bootstrap itself: tests can use a harmless child without loading Rhino.
+    // The optional assignment operation injects failures at the ownership boundary only.
+    internal static async Task<WorkerClient> StartAsync(ProcessStartInfo start,string name,long memoryBytes,int processorLimit,
+        TimeSpan startupTimeout,WorkerFingerprint expected,CancellationToken token,Action<WorkerJob,Process>? assign=null)
+    {
         var pipe=new NamedPipeServerStream(name,PipeDirection.InOut,1,PipeTransmissionMode.Byte,PipeOptions.Asynchronous|PipeOptions.CurrentUserOnly);
         WorkerJob? job=null;Process? process=null;WorkerClient? client=null;
         try
         {
-            job=new(options.MemoryBytes);
-            var start=new ProcessStartInfo(executable){UseShellExecute=false,CreateNoWindow=true,RedirectStandardInput=true};
-            start.ArgumentList.Add(name);start.ArgumentList.Add(options.RhinoSystem);
-            if(options.Resolver is {} resolver)start.ArgumentList.Add(resolver);
-            // A net8 apphost may never roll into net10, or vice versa.
-            if(options.TestFault is {} fault)start.Environment["M2DPLUS_WORKER_TEST_FAULT"]=fault;
-            else start.Environment.Remove("M2DPLUS_WORKER_TEST_FAULT");
-            start.Environment["DOTNET_ROLL_FORWARD"]="LatestPatch";
-            // Bound managed kernel parallelism across the whole reservation instead
-            // of advertising all host cores independently to every worker.
-            start.Environment["DOTNET_PROCESSOR_COUNT"]=options.ProcessorLimit.ToString(System.Globalization.CultureInfo.InvariantCulture);
-            start.Environment.Remove("M2DPLUS_WORKER_DIRECTORY");
-            start.Environment["M2DPLUS_WORKER_BUDGET"]=options.MemoryBytes.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            job=new(memoryBytes);
             process=Process.Start(start)??throw new IOException("Worker process did not start.");
-            client=new(pipe,job,process){MemoryCapBytes=options.MemoryBytes,ProcessorLimit=options.ProcessorLimit};
-            job.Assign(process);
+            if(assign is null)job.Assign(process);else assign(job,process);
+            // A client may terminate through its job only after containment succeeds.
+            // Until then this method owns the bootstrap process directly.
+            client=new(pipe,job,process){MemoryCapBytes=memoryBytes,ProcessorLimit=processorLimit};
             process.PriorityClass=ProcessPriorityClass.BelowNormal;
             // Bootstrap waits on this line before loading any Rhino assembly/native code.
             await process.StandardInput.WriteLineAsync("contained").ConfigureAwait(false);process.StandardInput.Close();
-            using var timeout=CancellationTokenSource.CreateLinkedTokenSource(token);timeout.CancelAfter(options.StartupTimeout);
+            using var timeout=CancellationTokenSource.CreateLinkedTokenSource(token);timeout.CancelAfter(startupTimeout);
             using var kill=timeout.Token.Register(client.Kill);
             await pipe.WaitForConnectionAsync(timeout.Token).ConfigureAwait(false);
             var actual=WorkerCodec.Decode<WorkerFingerprint>(await WorkerFrames.ReadAsync(pipe,timeout.Token,16*1024).ConfigureAwait(false));
@@ -89,10 +98,19 @@ internal sealed class WorkerClient : IDisposable
         }
         catch(Exception ex)
         {
-            if(client is not null)client.Dispose();else {pipe.Dispose();job?.Dispose();if(process is not null){if(!process.HasExited)process.Kill(true);process.Dispose();}}
+            try
+            {
+                if(client is not null)client.Dispose();else DisposeOwned(pipe,job,process);
+            }
+            catch(Exception cleanup)
+            {
+                // Do not downgrade unconfirmed cleanup into unavailable-worker fallback
+                // or caller cancellation. Retain both failures for diagnosis.
+                throw new IOException("Owned worker startup cleanup failed: "+cleanup.Message,new AggregateException(ex,cleanup));
+            }
             token.ThrowIfCancellationRequested();
             if(ex is WorkerUnavailableException)throw;
-            throw new WorkerUnavailableException("Worker unavailable: startup/handshake failed: "+ex.Message);
+            throw new WorkerUnavailableException("Worker unavailable: startup/handshake failed: "+ex.Message,ex);
         }
     }
     internal Task<byte[]> CallAsync(string kind,byte[] payload,TimeSpan timeout,CancellationToken token) =>
@@ -140,10 +158,30 @@ internal sealed class WorkerClient : IDisposable
     {
         lock(_sync)
         {
-            if(_disposed)return;_job.Kill();
-            // Death, not cancellation, releases this slot. Never start its replacement while native is alive.
-            if(!_process.WaitForExit(10000))throw new IOException("Owned worker did not exit after job termination.");
-            _pipe.Dispose();_job.Dispose();_process.Dispose();_disposed=true;
+            if(_disposed)return;
+            DisposeOwned(_pipe,_job,_process);
+            // A failed reap must never turn the next Dispose into a successful no-op.
+            _disposed=true;
+        }
+    }
+    private static void DisposeOwned(NamedPipeServerStream pipe,WorkerJob? job,Process? process)
+    {
+        try
+        {
+            // Closing the job also applies KILL_ON_JOB_CLOSE if termination fails.
+            try{job?.Kill();}finally{job?.Dispose();}
+            if(process is null)return;
+            // Assignment may have failed, leaving an owned bootstrap outside the job.
+            // Kill only this exact child handle; assigned descendants belong to the job.
+            try{if(!process.HasExited)process.Kill();}
+            catch(InvalidOperationException) when(process.HasExited) { }
+            catch(System.ComponentModel.Win32Exception) when(process.HasExited) { }
+            // Death, not cancellation, releases this slot.
+            if(!process.WaitForExit(10000))throw new IOException("Owned worker did not exit after termination.");
+        }
+        finally
+        {
+            try{pipe.Dispose();}finally{process?.Dispose();}
         }
     }
 }
