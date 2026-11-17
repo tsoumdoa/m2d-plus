@@ -8,7 +8,9 @@ public static partial class Settings
 {
     public sealed record Assignment(string View, string Key, string Value, int Line);
 
-    /// <summary>Parses one GH branch (all text items joined); throws with a line number on malformed syntax.</summary>
+    /// <summary>Parses one GH branch (all text items joined); throws with a line number on malformed syntax.
+    /// Header names are decoded; assignment values retain their authored text, including JSON quotes and escapes.
+    /// Does not bind views or validate typed values.</summary>
     public static IReadOnlyList<Assignment> Parse(IEnumerable<string> items)
     {
         var result = new List<Assignment>();
@@ -21,17 +23,11 @@ public static partial class Settings
             // [#2] is a view-index header, not a comment. Comments may follow a header.
             if (line.StartsWith('['))
             {
-                var end = line.IndexOf(']');
-                if (end <= 1)
-                    throw new FormatException($"Line {lineNumber}: invalid view header.");
-                var tail = line[(end + 1)..].Trim();
-                if (tail.Length > 0 && !tail.StartsWith('#'))
-                    throw new FormatException($"Line {lineNumber}: invalid view header.");
-                view = line[1..end].Trim();
-                if (view.Length == 0) throw new FormatException($"Line {lineNumber}: empty view header.");
+                try { view = ReadHeader(line); }
+                catch (FormatException e) { throw new FormatException($"Line {lineNumber}: {e.Message}", e); }
                 continue;
             }
-            line = line.Split('#', 2)[0].Trim();
+            line = StripComment(line).Trim();
             if (line.Length == 0) continue;
             var separator = line.IndexOf('=');
             if (separator <= 0 || separator == line.Length - 1)
