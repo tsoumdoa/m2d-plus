@@ -125,7 +125,6 @@ public sealed class BandedMeshIndexTests
     {
         // A fold: two layers closer than their bands, so their depth ranges join into one group crossed twice.
         var fold = new BandedSheet { Vertices = [V(0, 0, 1), V(1, 0, 1), V(1, 1, 1.004), V(0, 1, 1.004), V(1, 0, 1.008), V(0, 0, 1.008)], Triangles = [0, 1, 2, 0, 2, 3, 3, 2, 4, 3, 4, 5], Bands = [.01, .01, .01, .01] };
-        Assert.All(Run(new BandedMeshIndex([fold]), V(.3, .3, 0), V(.7, .6, 0)), p => Assert.NotEqual(VisibilityClass.Visible, p.Class));
         Assert.All(Run(new BandedMeshIndex([fold]), V(.3, .3, 0), V(.7, .6, 0)), p => Assert.Equal(VisibilityClass.Unresolved, p.Class));
         var one = new BandedSheet { Id = 1, Vertices = [V(0, 0, 1), V(1, 0, 1), V(1, 1, 1), V(0, 1, 1)], Triangles = [0, 1, 2, 0, 2, 3], Bands = [.01, .01] };
         var two = new BandedSheet { Id = 2, Vertices = [V(0, 0, 1.01), V(1, 0, 1.01), V(1, 1, 1.01), V(0, 1, 1.01)], Triangles = [0, 1, 2, 0, 2, 3], Bands = [.01, .01] };

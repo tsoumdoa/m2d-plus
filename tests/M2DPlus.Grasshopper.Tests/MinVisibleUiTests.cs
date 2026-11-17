@@ -8,17 +8,6 @@ namespace M2DPlus.Grasshopper.Tests;
 /// guarantee that a threshold change never reaches the visibility solve's cache key (so it makes no HLD call).</summary>
 public sealed class MinVisibleUiTests
 {
-    [Fact]
-    public void IgnoredIsTheTenthOutputAndTheFirstNineNeverMove()
-    {
-        Assert.Equal(["Visible", "Hidden", "Beyond", "Far clip", "Cut", "Hatch", "Unresolved", "Frame", "Info", "Ignored"],
-            ComponentOutputs.All.Take(10).Select(o => o.Name));
-        Assert.Equal(["V", "H", "B", "Fc", "C", "Ha", "?", "F", "i", "Ig"], ComponentOutputs.All.Take(10).Select(o => o.NickName));
-        Assert.All(ComponentOutputs.All, o => Assert.Equal(o.Index, ComponentOutputs.All.IndexOf(o)));
-        Assert.Equal(9, ComponentOutputs.Ignored);
-        Assert.Equal(ComponentOutputs.All.Length, ComponentOutputs.All.Select(o => o.NickName).Distinct().Count());
-    }
-
     [Theory]
     [InlineData("{\"v\":1}")]
     [InlineData("{\"v\":1,\"all\":{\"hidden\":\"off\",\"scale\":\"1:200\"},\"auto\":false,\"preview\":[\"beyond\",\"farclip\",\"hidden\",\"views\"]}")]

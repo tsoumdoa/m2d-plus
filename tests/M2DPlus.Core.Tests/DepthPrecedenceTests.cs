@@ -68,21 +68,4 @@ public sealed class DepthPrecedenceTests
         // No instruction, no remark; auto/explicit "auto" is not an instruction worth a remark either.
         Assert.Empty(Settings.Resolve([Box()], [["depth = auto"]], DocumentUnits.Metres).Diagnostics);
     }
-
-    [Fact]
-    public void PerKeyPrecedenceIsInputThenViewObjectThenMenuThenDefault()
-    {
-        var views = new[] { Plane("a", "A"), Plane("b", "B") };
-        var menu = Row(("hidden", "off"), ("scale", "50"), ("fade", "on"));
-        var objects = new[] { KeyValuePair.Create("a", Row(("scale", "200"), ("fade", "off"))) };
-        var result = Settings.Resolve(views, [["[A]", "fade = on"]], DocumentUnits.Metres, new EditorSettings(menu, objects));
-        Assert.Empty(result.Diagnostics);
-        var a = result.Views[0]; var b = result.Views[1];
-        Assert.True(a.Fade); Assert.Equal("set by input", a["fade"].SourceDescription);
-        Assert.Equal(200, a.Scale); Assert.Equal("view object", a["scale"].SourceDescription);
-        Assert.False(a.Hidden); Assert.Equal("component menu", a["hidden"].SourceDescription);
-        Assert.False(a.Seams); Assert.Equal("default", a["seams"].SourceDescription);
-        Assert.Equal(50, b.Scale); Assert.Equal("component menu", b["scale"].SourceDescription);
-        Assert.True(b.Fade);
-    }
 }

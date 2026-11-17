@@ -109,16 +109,24 @@ public sealed class SettingsTests
     [Fact]
     public void PrecedenceIsPerKeyAndInputAutoRetainsInputLock()
     {
-        var editor = new EditorSettings(Row(("depth", "12 m"), ("hidden", "off"), ("scale", "50")),
-            new[] { KeyValuePair.Create("a", Row(("depth", "9 m"), ("scale", "200"))) });
+        var editor = new EditorSettings(Row(("depth", "12 m"), ("hidden", "off"), ("scale", "50"), ("fade", "on")),
+            new[] { KeyValuePair.Create("a", Row(("depth", "9 m"), ("scale", "200"), ("fade", "off"))) });
         var context = View();
-        var result = Settings.Resolve([context], [new[] { "depth = auto", "seams = on" }], DocumentUnits.Metres, editor);
+        var result = Settings.Resolve([context, View("B", "b")], [new[] { "[Section A]", "depth = auto", "seams = on", "fade = on" }], DocumentUnits.Metres, editor);
+        Assert.Empty(result.Diagnostics);
         var s = result.Views[0];
         Assert.Equal(20, s.Depth); Assert.Equal(SettingSource.Auto, s["depth"].Source);
         Assert.Equal(SettingSource.Input, s["depth"].AssignedBy); Assert.True(s["depth"].IsSetByInput);
         Assert.Contains("set by input", s["depth"].SourceDescription);
         Assert.Equal(200, s.Scale); Assert.Equal(SettingSource.EditorView, s["scale"].Source);
+        Assert.Equal("view object", s["scale"].SourceDescription);
         Assert.False(s.Hidden); Assert.Equal(SettingSource.EditorAll, s["hidden"].Source);
+        Assert.Equal("component menu", s["hidden"].SourceDescription);
+        Assert.True(s.Fade); Assert.Equal("set by input", s["fade"].SourceDescription);
+        var b = result.Views[1];
+        Assert.False(b.Seams); Assert.Equal("default", b["seams"].SourceDescription);
+        Assert.Equal(50, b.Scale); Assert.Equal("component menu", b["scale"].SourceDescription);
+        Assert.True(b.Fade);
         Assert.Equal(9, Settings.Resolve([context], [], DocumentUnits.Metres, editor).Views[0].Depth);
         Assert.Equal("9 m", editor.Views["a"].Values["depth"]);
     }

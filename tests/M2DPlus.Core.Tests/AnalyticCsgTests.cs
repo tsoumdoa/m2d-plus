@@ -56,15 +56,6 @@ public sealed class AnalyticCsgTests
             foreach (var c in Cutters) if (Radial(x, c.O, c.U) < c.R) return false;
             return true;
         }
-        /// <summary>Distance to the nearest bounding surface (not to the solid): small means the oracle is near a boundary.</summary>
-        public double Clearance(Vertex x)
-        {
-            double r = Radial(x, O, U), d = Math.Min(Math.Abs(r - R), Ri > 0 ? Math.Abs(r - Ri) : double.MaxValue);
-            foreach (var (p, n) in Planes) d = Math.Min(d, Math.Abs((x.X - p.X) * n.X + (x.Y - p.Y) * n.Y + (x.Z - p.Z) * n.Z));
-            foreach (var c in Cutters) d = Math.Min(d, Math.Abs(Radial(x, c.O, c.U) - c.R));
-            if (Mitre is { } m) d = Math.Min(d, Math.Abs((x.X - m.P.X) * m.N.X + (x.Y - m.P.Y) * m.N.Y + (x.Z - m.P.Z) * m.N.Z));
-            return d;
-        }
         public AnalyticCsg Solid(double slack = 0)
         {
             var list = new List<CsgPrimitive> { new(true, O, U, R, CsgRole.Inside, slack) };
@@ -118,16 +109,16 @@ public sealed class AnalyticCsgTests
         return new Cut(o, u, r, ri, planes, cutters);
     }
 
-    /// <summary>Marches the ray in front of p. Returns the longest run of inside samples and the smallest clearance met.</summary>
-    private static (int Longest, double Clearance) March(Cut cut, Vertex p, double step = 1e-3, double far = 12)
+    /// <summary>Marches the ray in front of p. Returns the longest run of inside samples.</summary>
+    private static int March(Cut cut, Vertex p, double step = 1e-3, double far = 12)
     {
-        int run = 0, longest = 0; double clearance = double.MaxValue;
+        int run = 0, longest = 0;
         for (double s = Tol + step; s < far; s += step)
         {
-            var x = V(p.X, p.Y, p.Z + s); clearance = Math.Min(clearance, cut.Clearance(x));
+            var x = V(p.X, p.Y, p.Z + s);
             if (cut.Inside(x)) longest = Math.Max(longest, ++run); else run = 0;
         }
-        return (longest, clearance);
+        return longest;
     }
 
     [Theory]
@@ -142,10 +133,10 @@ public sealed class AnalyticCsgTests
             for (int k = 0; k < 12; k++)
             {
                 var p = V(cut.O.X + random.NextDouble() * 4 - 2, cut.O.Y + random.NextDouble() * 4 - 2, cut.O.Z - 4 + random.NextDouble() * 6);
-                var answer = solid.Occlusion(p, Tol); var (longest, _) = March(cut, p);
+                var answer = solid.Occlusion(p, Tol); var longest = March(cut, p);
                 if (answer == Unresolved) { unresolved++; continue; }
                 // Decisive only: 4 samples in a row (3 mm) is cover; none at all, with the four rays beside it also clear, is none.
-                bool clear = longest == 0 && new[] { (2e-5, 0d), (-2e-5, 0d), (0d, 2e-5), (0d, -2e-5) }.All(o => March(cut, V(p.X + o.Item1, p.Y + o.Item2, p.Z)).Longest == 0);
+                bool clear = longest == 0 && new[] { (2e-5, 0d), (-2e-5, 0d), (0d, 2e-5), (0d, -2e-5) }.All(o => March(cut, V(p.X + o.Item1, p.Y + o.Item2, p.Z)) == 0);
                 if (longest >= 4) { Assert.True(answer == Hidden, $"trial {trial}, point {k}: {longest} mm of cover called {answer}"); hidden++; }
                 else if (clear) { Assert.True(answer == Visible, $"trial {trial}, point {k}: no cover called {answer}"); visible++; }
                 else skipped++;
@@ -174,7 +165,7 @@ public sealed class AnalyticCsgTests
                 {
                     double angle = random.NextDouble() * 2 * Math.PI, rho = radius * Math.Sqrt(random.NextDouble());
                     var q = V(p.X + rho * Math.Cos(angle), p.Y + rho * Math.Sin(angle), p.Z + spread * (2 * random.NextDouble() - 1));
-                    var (longest, _) = March(cut, q); checkedRays++;
+                    var longest = March(cut, q); checkedRays++;
                     if (answer == Hidden) Assert.True(longest >= 1, $"trial {trial}: certified Hidden over radius {radius}, but a ray in the disc has no cover");
                     else Assert.True(longest <= 1, $"trial {trial}: certified Visible over radius {radius}, but a ray in the disc has {longest} mm of cover");
                 }
@@ -206,8 +197,8 @@ public sealed class AnalyticCsgTests
                     var p = candidate.At(t); int longest = 0; bool clear = true;
                     foreach (var cut in cuts)
                     {
-                        var (run, _) = March(cut, p, 2e-3); longest = Math.Max(longest, run);
-                        if (run != 0 || new[] { (2e-5, 0d), (-2e-5, 0d), (0d, 2e-5), (0d, -2e-5) }.Any(o => March(cut, V(p.X + o.Item1, p.Y + o.Item2, p.Z), 2e-3).Longest != 0)) clear = false;
+                        var run = March(cut, p, 2e-3); longest = Math.Max(longest, run);
+                        if (run != 0 || new[] { (2e-5, 0d), (-2e-5, 0d), (0d, 2e-5), (0d, -2e-5) }.Any(o => March(cut, V(p.X + o.Item1, p.Y + o.Item2, p.Z), 2e-3) != 0)) clear = false;
                     }
                     if (longest >= 3) { Assert.True(interval.Class == Hidden, $"trial {trial}: Visible interval {interval.Start}..{interval.End} has cover at t={t}"); hidden++; }
                     else if (clear) { Assert.True(interval.Class == Visible, $"trial {trial}: Hidden interval {interval.Start}..{interval.End} has no cover at t={t}"); visible++; }
