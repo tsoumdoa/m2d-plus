@@ -71,6 +71,8 @@ internal sealed record PreparedLeaf(string Identity, int[] Path, GeometryBase Ge
     internal SourceSection Section { get; init; } = SourceSection.Plain;
     /// <summary>Definition-local shape for work shared between congruent instances; null under a non-similar transform.</summary>
     internal Sections.SectionCanonical? Canonical { get; init; }
+    /// <summary>Definition-local to world, when <see cref="Canonical"/> is set: places work done once on the definition.</summary>
+    internal Transform? Placement { get; init; }
 }
 
 /// <summary>Owns definition-local leases and lazily prepared world copies. Access serialized by the global scheduler.</summary>
@@ -163,7 +165,7 @@ public sealed class PreparedScene : IDisposable
                     // Transform reverses closed-solid orientation for odd reflections. Normalize after the whole chain.
                     if (geometry is Brep { SolidOrientation: BrepSolidOrientation.Inward } brep) brep.Flip();
                     if (geometry is Mesh { IsClosed: true } mesh && mesh.SolidOrientation() < 0) mesh.Flip(true, true, true);
-                    prepared.Add(new(leaf.Identity, leaf.Path, geometry) { Section = leaf.Section, SourceItem = leaf.SourceItem, KernelClassifiedGeometry = geometry, KernelTolerance = Tolerance, KernelEligible = PlanarExtraction.MayProduceKernelCandidates(geometry,Tolerance), Canonical = Canonical(leaf, transform) });
+                    prepared.Add(new(leaf.Identity, leaf.Path, geometry) { Section = leaf.Section, SourceItem = leaf.SourceItem, KernelClassifiedGeometry = geometry, KernelTolerance = Tolerance, KernelEligible = PlanarExtraction.MayProduceKernelCandidates(geometry,Tolerance), Canonical = Canonical(leaf, transform), Placement = transform });
                 }
                 catch { geometry.Dispose(); throw; }
             }
