@@ -12,6 +12,67 @@ public sealed class BakeTests
     private static readonly Plane3 South = new(Vector3.Zero, Vector3.UnitX, Vector3.UnitZ);
 
     [Theory]
+    [InlineData(LineClass.Cut, 0xff000000u, 0xff000000u)]
+    [InlineData(LineClass.Cut, 0xffffffffu, 0xff999999u)]
+    [InlineData(LineClass.Cut, 0xffff0000u, 0xff990000u)]
+    [InlineData(LineClass.Visible, 0xff000000u, 0xff000000u)]
+    [InlineData(LineClass.Visible, 0xffffffffu, 0xffffffffu)]
+    [InlineData(LineClass.Visible, 0xffff0000u, 0xffff0000u)]
+    [InlineData(LineClass.Profile, 0xff000000u, 0xff000000u)]
+    [InlineData(LineClass.Profile, 0xffffffffu, 0xffffffffu)]
+    [InlineData(LineClass.Profile, 0xffff0000u, 0xffff0000u)]
+    [InlineData(LineClass.Hidden, 0xff000000u, 0xff666666u)]
+    [InlineData(LineClass.Hidden, 0xffffffffu, 0xffffffffu)]
+    [InlineData(LineClass.Hidden, 0xffff0000u, 0xffc97d7du)]
+    [InlineData(LineClass.Beyond, 0xff000000u, 0xff737373u)]
+    [InlineData(LineClass.Beyond, 0xffffffffu, 0xffffffffu)]
+    [InlineData(LineClass.Beyond, 0xffff0000u, 0xffff7373u)]
+    [InlineData(LineClass.FarClip, 0xff000000u, 0xff000000u)]
+    [InlineData(LineClass.FarClip, 0xffffffffu, 0xffffffffu)]
+    [InlineData(LineClass.FarClip, 0xffff0000u, 0xffff0000u)]
+    [InlineData(LineClass.Hatch, 0xff000000u, 0xff999999u)]
+    [InlineData(LineClass.Hatch, 0xffffffffu, 0xffffffffu)]
+    [InlineData(LineClass.Hatch, 0xffff0000u, 0xffff9999u)]
+    [InlineData(LineClass.Ignored, 0xff000000u, 0xffbfbfbfu)]
+    [InlineData(LineClass.Ignored, 0xffffffffu, 0xffffffffu)]
+    [InlineData(LineClass.Ignored, 0xffff0000u, 0xffffbfbfu)]
+    [InlineData(LineClass.Unresolved, 0xff000000u, 0xffe07a00u)]
+    [InlineData(LineClass.Unresolved, 0xffffffffu, 0xffe07a00u)]
+    [InlineData(LineClass.Unresolved, 0xffff0000u, 0xffe07a00u)]
+    [InlineData(LineClass.Cut, 0x80ff0000u, 0x80990000u)]
+    public void LayerShadeTableUsesSourceColoursIncludingBlackAndWhite(LineClass kind, uint source, uint expected) =>
+        Assert.Equal(expected, BakeColours.Shade(source, kind));
+
+    [Fact] public void LayerShadesRejectUnknownClasses() =>
+        Assert.Throws<ArgumentOutOfRangeException>(() => BakeColours.Shade(0xff000000, (LineClass)999));
+
+    [Theory]
+    [InlineData(BakeLayout.ViewLayer, 2)]
+    [InlineData(BakeLayout.LayerView, 1)]
+    [InlineData(BakeLayout.Layer, 1)]
+    [InlineData(BakeLayout.ViewType, 3)]
+    public void SourceMirrorMappingUsesPathPositionAndExcludesDrawingTypeAndGrasshopper(BakeLayout layout, int sourceFrom)
+    {
+        // Names can collide with category/drawing labels: only source positions count.
+        var path = BakeNames.Layer(layout, "Visible", LineClass.Visible, "Visible::Walls::Visible");
+        Assert.Equal(3, path.SourceCount);
+        Assert.Equal(sourceFrom, path.SourceFrom);
+        for (var i = -1; i <= path.Segments.Length; i++)
+            Assert.Equal(i == sourceFrom ? "Visible" : i == sourceFrom + 1 ? "Visible::Walls"
+                : i == sourceFrom + 2 ? "Visible::Walls::Visible" : null, path.SourceLayerPrefix(i));
+        foreach (var source in new string?[] { null, "" })
+        {
+            var gh = BakeNames.Layer(layout, "Visible", LineClass.Visible, source);
+            Assert.Equal(0, gh.SourceCount);
+            Assert.All(Enumerable.Range(0, gh.Segments.Length), i => Assert.Null(gh.SourceLayerPrefix(i)));
+        }
+        var single = BakeNames.Layer(layout, "Plan", LineClass.Cut, "Walls");
+        Assert.Equal("Walls", single.SourceLayerPrefix(sourceFrom));
+        Assert.Null(single.SourceLayerPrefix(sourceFrom + 1));
+        Assert.Equal(4, BakeNames.Layouts.Length);
+    }
+
+    [Theory]
     [InlineData(LineClass.Visible, "Visible")]
     [InlineData(LineClass.Profile, "Visible")]
     [InlineData(LineClass.Hidden, "Hidden")]

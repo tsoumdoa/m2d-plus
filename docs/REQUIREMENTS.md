@@ -226,13 +226,23 @@ From the owner's first real use of v0.1.0-beta.1 on a ~6,000-object model.
 ## Bake layer layout (owner decision, 2026-11-16, for beta.4)
 
 - **Setting:** `bake = view-layer | layer-view | layer | view-type`, from Settings, view-object `m2d.bake` user text, or
-  *Bake layers ▸ View › Layer · Layer › View · Layer only · View › Type (classic)*. Normal precedence applies.
+  *Bake layers ▸ Per drawing · Merged*. Normal precedence applies.
+- **Owner decision, 2026-11-17:** the menu offers only `view-layer` (Per drawing, default) and `layer` (Merged).
+  `layer-view` and `view-type` remain text-only options in Settings, `m2d.bake` and saved files. New line-type layers
+  shade source display/print colours independently: Cut = 60 % source RGB; Visible/profile and Far clip = source; Hidden =
+  half desaturated, 60 % + 40 % white; Hatch layer = 40 % + 60 % white; Beyond = 55 % source + 45 % white; Ignored = 25 % source + 75 % white; Unresolved = orange `#E07A00`.
+  Source grouping levels copy their corresponding prefixes' exact colours; classic type parents stay black (except
+  orange Unresolved), with source shades only on their source sublayers. Shaded layers carry `m2d.shade = v1`; objects on
+  untagged layers (earlier betas, classic type parents) still get class lightening per object. Root/drawing and GH groups stay black. Existing layers keep their
+  colours, including earlier-beta layers. Per-object depth fading starts from the layer shade without repeating class
+  lightening. `weights = layers` keeps its prior per-object source colour and class/depth fading even on existing black
+  layers; section-style cut/hatch object colours and the beta.3 legacy cleanup signature are unchanged. See UX §3.6/§8.1.
 - **Layouts** (under the `M2D+` root, source layer paths mirrored as nested sublayers):
   - **`view-layer`, the new default:** `M2D+ › <drawing> › <source layer path…> › <line type>`.
   - `layer-view`: `M2D+ › <source layer path…> › <drawing> › <line type>`.
   - `layer`: `M2D+ › <source layer path…> › <line type>`; every drawing is merged into the same layers.
   - `view-type`: the layout of beta.3 and earlier (`M2D+ › <drawing> › <line type> › <source layer path…>`), kept
-    unchanged for existing files.
+    for existing files.
 - **The line type is the leaf** (Visible, Hidden, Beyond, Far clip, Cut, Hatch, Unresolved, Ignored). **GH geometry**
   has no source layer and goes under a `Grasshopper (no layer)` group at the source-layer level (classic keeps its old place). Rhino refuses layer names starting with `(` or `[`, so the requested `(Grasshopper)` name became `Grasshopper (no layer)`.
 - **Every bake rule stays:** line-type styling when a layer is created; re-baking never restyles a layer the user

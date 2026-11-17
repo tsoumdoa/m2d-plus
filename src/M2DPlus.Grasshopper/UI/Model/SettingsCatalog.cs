@@ -45,8 +45,8 @@ public static class SettingsCatalog
         new("tree", "Output tree", "Output", FieldKind.Choice, [O("auto", "Auto"), O("layer", "By layer"), O("object", "By object")],
             "tree = auto | layer | object: how outputs split into branches. By layer: {view; layer index}. By object: {view; Geometry path; item}. Auto: by layer for the document or referenced objects, by object as soon as Geometry holds Grasshopper geometry. The Key output labels each branch."),
         new("bake", "Bake layers", "Bake", FieldKind.Choice,
-            [O("view-layer", "View › Layer"), O("layer-view", "Layer › View"), O("layer", "Layer only"), O("view-type", "View › Type (classic)")],
-            "bake = view-layer | layer-view | layer | view-type: how Bake arranges its layers under M2D+. The line type (Visible, Hidden, Cut…) is always the last level. View › Layer: drawing, then the source layers. Layer › View: source layers, then the drawing. Layer only: every drawing shares the source layers. View › Type: drawing, line type, then source layers (beta.3 and earlier). Bake time only: changing it never redraws."),
+            [O("view-layer", "Per drawing"), O("layer", "Merged")],
+            "Bake layers under M2D+: Per drawing (bake = view-layer, default) puts each drawing above its source layers and line types. Merged (bake = layer) shares source layers and line types across drawings. Text-only: layer-view puts source layers above drawings; view-type puts drawings above line types and source layers (beta.3 and earlier). All four work in Settings and m2d.bake user text. Bake time only: changing it never redraws."),
     ];
 
     public static FieldSpec Spec(string key) => Fields.First(f => f.Key == key);

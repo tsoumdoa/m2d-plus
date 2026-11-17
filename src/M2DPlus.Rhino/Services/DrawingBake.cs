@@ -94,7 +94,11 @@ public static class DrawingBake
                             var attributes = new ObjectAttributes { LayerIndex = layer.Index };
                             pending.Add((item, attributes, "", layer.Id.ToString()));
                             var kind = item.Profile && item.Class == LineClass.Visible ? LineClass.Profile : item.Class;
-                            var intensity = ViewRange.QuantizeForBake(item.Intensity) * weights[item.Class].InkIntensity;
+                            // A layer M2D+ created with a class shade (m2d.shade) carries the class's ink rule, so only the
+                            // depth fade is per object. Any other layer (earlier betas, classic type parents, user layers)
+                            // still gets the class lightening per object; weights=layers keeps its original override.
+                            var objectClassShade = weights.UseSourceLayers || layer.GetUserString(BakeColours.ShadeTag) != BakeColours.ShadeVersion;
+                            var intensity = ViewRange.QuantizeForBake(item.Intensity) * (objectClassShade ? weights[item.Class].InkIntensity : 1);
                             if (weights.UseSourceLayers || intensity < 1 || item.Class == LineClass.Unresolved)
                             {
                                 var ink = item.Class == LineClass.Unresolved ? Color.FromArgb(224, 122, 0) : weights.UseSourceLayers ? Argb(item.Style.LayerColour) : layer.Color;
@@ -181,8 +185,8 @@ public static class DrawingBake
             return doc.Linetypes.Add(type);
         }
         // Creates the missing levels of a bake layer. Styled levels (the line type, UX §8.1) get the preset width, the Hidden
-        // linetype and m2d.weights; grouping levels stay plain. Each created layer records its style (m2d.style), so a later
-        // cleanup can tell it from a layer the user changed.
+        // linetype and m2d.weights; source grouping levels mirror their source colours. Each created layer records its
+        // style (m2d.style), so a later cleanup can tell it from a layer the user changed.
         Layer EnsureLayer(BakeLayerPath path, BakeLayout layout, LineClass kind, LineWeightPreset weights, SourceSection source)
         {
             var parent = Guid.Empty; var full = "";
@@ -194,6 +198,20 @@ public static class DrawingBake
                 if (isNew)
                 {
                     using var layer = NewLayer(path.Segments[i], parent, styled, layout, kind, weights, source);
+                    var sourcePrefix = path.SourceLayerPrefix(i);
+                    // A type leaf in the new layouts uses the full source path. Classic type parents stay neutral.
+                    var sourcePath = sourcePrefix ?? (styled && layout != BakeLayout.ViewType ? source.LayerPath : null);
+                    var sourceIndex = sourcePath is null ? -1 : doc.Layers.FindByFullPath(sourcePath, -1);
+                    var sourceLayer = sourceIndex < 0 ? null : doc.Layers[sourceIndex];
+                    var colour = sourceLayer?.Color ?? (sourcePath == source.LayerPath ? Argb(source.LayerColour) : Color.Black);
+                    var plotColour = sourceLayer is null || sourceLayer.PlotColor.IsEmpty ? colour : sourceLayer.PlotColor;
+                    if (styled && (sourcePath is not null || kind == LineClass.Unresolved))
+                    {
+                        colour = Argb(BakeColours.Shade(unchecked((uint)colour.ToArgb()), kind));
+                        plotColour = Argb(BakeColours.Shade(unchecked((uint)plotColour.ToArgb()), kind));
+                        layer.SetUserString(BakeColours.ShadeTag, BakeColours.ShadeVersion);
+                    }
+                    layer.Color = colour; layer.PlotColor = plotColour;
                     layer.SetUserString(BakeLayerStyle.Created, component.ToString());
                     layer.SetUserString(BakeLayerStyle.Tag, Style(layer).Signature);
                     index = doc.Layers.Add(layer);
@@ -222,8 +240,8 @@ public static class DrawingBake
             }
             return doc.Layers.FindId(parent);
         }
-        // A layer as M2D+ creates it. The classic layout keeps beta.3's colours on every level it creates; the others colour
-        // only the styled (line type) level, so grouping layers stay plain.
+        // Base styling, also used unchanged by Classic() to recognise beta.3's untagged legacy layers.
+        // EnsureLayer applies source colours only when creating a new layer.
         Layer NewLayer(string name, Guid parent, bool styled, BakeLayout layout, LineClass kind, LineWeightPreset weights, SourceSection? source)
         {
             var coloured = styled || layout == BakeLayout.ViewType;

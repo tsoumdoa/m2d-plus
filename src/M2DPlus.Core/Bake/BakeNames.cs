@@ -8,11 +8,17 @@ public sealed record DrawingNameRequest(ViewSourceKind Source, Plane3 Plane, boo
     string? SourceName = null, string? OverrideName = null, int SectionNumber = 1);
 
 /// <summary>The bake layer of one piece (UX §8.1): its full path from the <c>M2D+</c> root, and the first level that takes the
-/// line type's styling (print width, Hidden linetype, <c>m2d.weights</c>). Levels above it are plain grouping layers.</summary>
+/// line type's styling (print width, Hidden linetype, <c>m2d.weights</c>). Source grouping levels mirror source colours.</summary>
 public sealed record BakeLayerPath(ImmutableArray<string> Segments, int StyledFrom)
 {
+    public int SourceFrom { get; init; } = -1;
+    /// <summary>Number of real source-layer levels, excluding the synthetic Grasshopper group.</summary>
+    public int SourceCount { get; init; }
     public string FullPath => string.Join("::", Segments);
     public bool IsStyled(int level) => level >= StyledFrom;
+    /// <summary>The source layer prefix mirrored at this level; null for drawing, type and GH grouping levels.</summary>
+    public string? SourceLayerPrefix(int level) => level >= SourceFrom && level < SourceFrom + SourceCount
+        ? string.Join("::", Segments.Skip(SourceFrom).Take(level - SourceFrom + 1)) : null;
     public override string ToString() => FullPath;
 }
 
@@ -55,6 +61,7 @@ public static class BakeNames
         ValidateSegment(drawing);
         var source = string.IsNullOrEmpty(sourceLayerPath) ? [] : sourceLayerPath.Split("::", StringSplitOptions.None);
         foreach (var segment in source) ValidateSegment(segment);
+        var sourceCount = source.Length;
         if (source.Length == 0 && layout != BakeLayout.ViewType) source = [Grasshopper];
         var type = Category(lineClass);
         ImmutableArray<string> segments = layout switch
@@ -65,7 +72,11 @@ public static class BakeNames
             BakeLayout.ViewType => [Root, drawing, type, .. source],
             _ => throw new ArgumentOutOfRangeException(nameof(layout))
         };
-        return new(segments, layout == BakeLayout.ViewType ? 2 : segments.Length - 1);
+        return new(segments, layout == BakeLayout.ViewType ? 2 : segments.Length - 1)
+        {
+            SourceFrom = layout switch { BakeLayout.ViewLayer => 2, BakeLayout.ViewType => 3, _ => 1 },
+            SourceCount = sourceCount
+        };
     }
 
     /// <summary>The classic (<c>view-type</c>) path; kept for callers and files from beta.3 and earlier.</summary>
