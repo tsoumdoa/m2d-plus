@@ -290,7 +290,11 @@ public sealed class AnalyticVisibilityTests(RhinoHost host, ITestOutputHelper ou
         Assert.Empty(failures);
     });
 
-    [RhinoFact] public void CutTubesSeenFromOtherSidesAgreeWithTheWitness() => host.Run(() =>
+    [RhinoFact] public void CutTubesOnTheirSideAgreeWithTheWitness() => host.Run(() => Turned(0));
+    [RhinoFact] public void CutTubesEndOnAndTiltedAgreeWithTheWitness() => host.Run(() => Turned(1));
+    [RhinoFact] public void CutTubesAtAGeneralAngleAgreeWithTheWitness() => host.Run(() => Turned(2));
+
+    private void Turned(int which)
     {
         // The same check with each body turned, which is the same as other views: on its side (outlines of its
         // cylinders, a cope seen square-on with its far edge exactly under its near one), and at a general angle. Five
@@ -318,7 +322,7 @@ public sealed class AnalyticVisibilityTests(RhinoHost host, ITestOutputHelper ou
         };
         var failures = new List<string>();
         foreach (var (name, make) in bodies)
-            foreach (var (turned, turn) in turns)
+            foreach (var (turned, turn) in new[] { turns[which] })
             {
                 using var body = make(); Assert.True(body.Transform(turn), name); Assert.True(body.IsValid, name);
                 var (shape, refusal) = AnalyticVisibility.Examine(body, BodyTol);
@@ -330,7 +334,7 @@ public sealed class AnalyticVisibilityTests(RhinoHost host, ITestOutputHelper ou
                 if (view.NativeCalls != 0 || wrong != 0 || judged < 8 || unresolved > .05 * total) failures.Add($"{name}, {turned}");
             }
         Assert.Empty(failures);
-    });
+    }
 
     [RhinoFact] public void BodiesThatAreMoreThanACutTubeAreRefusedOrDrawnRight() => host.Run(() =>
     {
@@ -422,7 +426,22 @@ public sealed class AnalyticVisibilityTests(RhinoHost host, ITestOutputHelper ou
                     if (inside) longest = Math.Max(longest, ++run); else { if (run is > 0 and < 3) grazed++; run = 0; }
                 }
                 if (longest >= 3) { judged++; if (piece.Class != LineClass.Hidden) { wrong++; output.WriteLine($"WRONG Visible at {w}: {longest * step * 1000:F0} mm of cover; source {piece.SourceIdentity}"); } }
-                else if (longest == 0 && grazed == 0) { judged++; if (piece.Class != LineClass.Visible) { wrong++; output.WriteLine($"WRONG Hidden at {w}: no cover; source {piece.SourceIdentity}"); } }
+                else if (longest == 0 && grazed == 0)
+                {
+                    if (piece.Class == LineClass.Visible) { judged++; continue; }
+                    // A ray that runs along the body's own surface (a hole seen along its axis) has no material in it,
+                    // yet by the closed-solid convention the surface covers it. That is a tie, and it shows as a Hidden
+                    // piece with a Visible piece drawn at the same place nearer the viewer: the same ink. Not judged.
+                    bool tie = false;
+                    foreach (var other in view.Items)
+                    {
+                        if (other.Class != LineClass.Visible || other.DepthGeometry is not Curve deep) continue;
+                        using var g = other.CopyGeometry(); if (g is not Curve flat || !flat.ClosestPoint(new Point3d(w.X, w.Y, 0), out double t, 1e-4)) continue;
+                        if (deep.PointAt(deep.Domain.ParameterAt(flat.Domain.NormalizedParameterAt(t))).Z >= w.Z) { tie = true; break; }
+                    }
+                    if (tie) continue;
+                    judged++; wrong++; output.WriteLine($"WRONG Hidden at {w}: no cover; source {piece.SourceIdentity}");
+                }
             }
         }
         return (judged, wrong);

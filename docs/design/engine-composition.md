@@ -148,17 +148,18 @@ What the real body may differ from the exact one by is carried, not assumed away
 * **Change points** against such bodies are known to a few times that: an undecided run up to eight times (gap +
   largest slack) between decided neighbours of different classes is shared between them; anything else stays
   Unresolved.
-* **Contact.** Surfaces of two bodies that agree to within their slacks are one surface: a line on it is in contact
-  with the other body, and contact is not cover. The exact rim where two mitred cutters meet is also on their mitre
-  plane by construction.
+* **Contact** is the same surface to a tolerance (a coped end on its neighbour's cylinder), or every sampled point of
+  the exact curve within the graze width of the other surface. Agreement merely within two bodies' slacks is not
+  contact. The exact rim where two mitred cutters meet is also on their mitre plane by construction.
 * **Coincident lines.** A Hidden piece under another piece of this class is not drawn twice, and neither is an
   Unresolved piece that lies under a Visible piece of the same source no nearer the viewer than it: that source draws
   a Visible line there whichever class it has (the far edge of a cope seen square-on). Two drawn curves are one locus
   when they agree to half a tolerance plus their gaps.
 
 Recognition is **evidence, not proof**: cells are labelled from Rhino's point-in-solid answers at sample points, the
-both-sides check of a face is skipped where every point of it is within two margins of another surface (a sliver that
-hugs it; counted and reported), and the volume check is 1 %. Info says so and gives, for each cut tube, its face
+volume check is 1 %, and a face with no point two margins clear of every other surface (a sliver that hugs one) cannot
+be compared by point-in-solid answers at all: it is compared with the Brep's own orientation instead (the description,
+with every surface known only to its slack, must allow material just behind it and void just in front). Info says so and gives, for each cut tube, its face
 bound, edge bound and largest surface slack. At most `NativeSettings.CutTubeBudget` (128) possible cut tubes are
 examined per view, the first in input order whatever is cached, so that the drawing does not depend on earlier
 solves; the rest stay on native HLD and Info counts them. Recognition runs in parallel over distinct geometry objects

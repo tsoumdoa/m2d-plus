@@ -409,6 +409,9 @@ internal static class AnalyticCheck
                 for (double h = 2 * tol; h < mine.Box.Diagonal.Length; h *= 1.15)
                 {
                     var q = p + e * h; bool inside = material.IsPointInside(q, tol / 10, true);
+                    // Within four bounds of the line itself, which is on an edge stored that loosely, Rhino's answer is
+                    // not evidence either way (recognition keeps the same distance from loose edges): seen, not judged.
+                    if (h < 4 * bound) { thin |= inside; last = false; continue; }
                     bool deep = inside && material.IsPointInside(q + normal * bound, tol / 10, true) && material.IsPointInside(q - normal * bound, tol / 10, true) &&
                         material.IsPointInside(q + across * bound, tol / 10, true) && material.IsPointInside(q - across * bound, tol / 10, true);
                     if (deep && last) return 1;
