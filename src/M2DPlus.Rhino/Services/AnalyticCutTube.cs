@@ -33,13 +33,30 @@ internal static class CutTubeRecognition
     /// <param name="Exact">The stored edge stands for the exact intersection of its two surfaces: every point of it
     /// snaps onto that curve (<see cref="Onto"/>), which is what is classified. Otherwise (where the two surfaces meet
     /// at too flat an angle to snap reliably) the stored curve is classified with its slack.</param>
-    internal sealed record Edge(Curve World, int On, double Slack, bool Exact);
+    /// <param name="Gap">How far the stored curve, which is what is drawn, may be from the curve that is classified.</param>
+    internal sealed record Edge(Curve World, int On, double Slack, bool Exact, double Gap);
 
     /// <summary>Faces may be this far from their surface, and edges from the surfaces they join: 256 tolerances, and
     /// never more than a sixteenth of the wall thickness or radius. Beyond that the body is not a cut tube here.</summary>
     internal static double Limit(double outer, double inner, double tol) => Math.Min(256 * tol, Math.Min(outer, inner > 0 ? outer - inner : outer) / 16);
 
-    internal static AnalyticVisibility.Shape? Recognise(Brep brep, double tol, Func<string, AnalyticVisibility.Shape?> no)
+    /// <summary>The cheap part of recognition: could this body be a cut tube at all? A closed solid of at most 48
+    /// faces, each a plane or near a circular cylinder, at least one of them a cylinder. The costly part (thousands of
+    /// point-in-solid questions) is only spent on bodies that pass, and only on a bounded number of them per view.</summary>
+    internal static bool Plausible(Brep brep, double tol)
+    {
+        if (brep.Faces.Count > 48 || !brep.IsSolid) return false;
+        bool round = false;
+        foreach (var face in brep.Faces)
+        {
+            if (face.TryGetPlane(out _, tol)) continue;
+            if (!face.TryGetCylinder(out _, tol) && Ruled(face, tol) is null) return false;
+            round = true;
+        }
+        return round;
+    }
+
+    internal static AnalyticVisibility.Shape? Recognise(Brep brep, double tol, Func<string, AnalyticVisibility.Shape?> no, CancellationToken token = default)
     {
         if (brep.Faces.Count > 48) return no("more than 48 faces");
         if (!brep.IsValid) return no("invalid Brep");
@@ -80,6 +97,8 @@ internal static class CutTubeRecognition
         if (onAxis.Any(i => Math.Abs(nominal[i]!.Value.R - ro) > tol && Math.Abs(nominal[i]!.Value.R - ri) > tol)) return no("not one tube: more than two radii on its axis");
         double limit = Limit(ro, ri, tol); if (!(limit > 8 * tol)) return no("radius or wall below 128 tolerances");
         if (ri > 0 && ri >= ro - 8 * tol) return no("bore not inside the tube");
+        // The body's own looseness: the tolerances stored on its edges and vertices.
+        double loose = Math.Max(brep.Edges.Max(e => e.Tolerance), brep.Vertices.Max(v => v.Tolerance)); if (!(loose >= 0) || loose > limit) return no("edge or vertex tolerances beyond the limit");
         foreach (var face in brep.Faces)
         {
             var s = nominal[face.FaceIndex]!.Value;
@@ -99,10 +118,19 @@ internal static class CutTubeRecognition
             int outward = natural * normal > 0 ? 1 : -1;
             // A face fitted loosely (a NURBS near-cylinder, often one of several pieces of the same surface) joins an
             // existing cylinder it agrees with to a quarter of the limit; its bound is then taken against that one.
-            double same = fitted[face.FaceIndex] ? limit / 4 : tol;
+            // So do faces whose surfaces agree to within the body's own looseness: a body whose edges are stored to
+            // 0.03 cannot hold two different surfaces 0.008 apart (two pieces of one cope, fitted separately), and a
+            // slab that thin between them would be a cell nothing could be learned about.
+            double same = Math.Max(fitted[face.FaceIndex] ? limit / 4 : tol, Math.Min(loose, limit / 4));
             int index = surfaces.FindIndex(k => k.Cylinder == s.Cylinder && (s.Cylinder
                 ? Math.Abs(k.Radius - s.R) <= same && Vector3d.CrossProduct(k.Direction, s.D).Length * span <= same && new Line(k.Origin, k.Origin + k.Direction).DistanceTo(s.O, false) <= same
-                : Along(k.Direction, s.D) && Math.Abs(new Plane(k.Origin, k.Direction).DistanceTo(s.O)) <= tol));
+                : Vector3d.CrossProduct(k.Direction, s.D).Length * span <= same && Math.Abs(new Plane(k.Origin, k.Direction).DistanceTo(s.O)) <= same));
+            // Or the face itself lies on an existing surface to within that looseness, by the certified bound: two
+            // fitted axes can differ in direction by more than the whole body's extent allows and still be the same
+            // surface as far as this face reaches.
+            if (index < 0 && same > tol)
+                index = surfaces.FindIndex(k => k.Cylinder == s.Cylinder && Math.Abs(k.Radius - s.R) <= same && Vector3d.CrossProduct(k.Direction, s.D).Length <= 1e-3 &&
+                    Math.Abs(Distance(k, at)) <= 4 * same && Deviation(face, k.Cylinder, k.Origin, k.Direction, k.Radius, same / 4, same) <= same);
             if (index < 0)
             {
                 bool tube = OnAxis(s, 0);
@@ -122,17 +150,43 @@ internal static class CutTubeRecognition
         // The certified bound of every face against its surface.
         foreach (var face in brep.Faces)
         {
+            token.ThrowIfCancellationRequested();
             int index = faceSurface[face.FaceIndex]; var s = surfaces[index];
             double bound = Deviation(face, s.Cylinder, s.Origin, s.Direction, s.Radius, tol / 8, limit);
             if (!(bound <= limit)) return no($"face {face.FaceIndex} is further than {limit:G3} from its plane or cylinder (certified bound {bound:G3})");
             if (bound > s.Slack) surfaces[index] = s with { Slack = bound };
         }
         double faceBound = surfaces.Max(s => s.Slack);
+        // Nothing of the body may lie beyond the tube's outer cylinder (a branch stub, a lug): the exact solid is
+        // inside it by construction. Every edge is bounded through its control points; a planar face lies within its
+        // edges' hull and so inside the cylinder with them. A cylindrical face can bulge out between edges that do
+        // not (a blister): those are looked at where points on them can be found, which is evidence, not a bound.
+        foreach (var edge in brep.Edges)
+        {
+            token.ThrowIfCancellationRequested();
+            using var curve = edge.DuplicateCurve(); double reach = Reach(curve, axisPoint, axis, ro + limit);
+            if (!(reach <= ro + limit)) return no($"material beyond the tube's outer cylinder (edge {edge.EdgeIndex} reaches {reach - ro:G3} outside it)");
+        }
+        foreach (var face in brep.Faces)
+        {
+            if (!surfaces[faceSurface[face.FaceIndex]].Cylinder || surfaces[faceSurface[face.FaceIndex]].Role != CsgRole.Free) continue;
+            foreach (var (at, _) in InteriorPoints(face, 9))
+                if (axisLine.DistanceTo(at, false) > ro + limit) return no($"material beyond the tube's outer cylinder (face {face.FaceIndex})");
+        }
 
         // ---- Two planes across the axis just beyond the body: the tube ends there whatever its end cuts are.
         var frame = new Plane(axisPoint, axis); var local = brep.GetBoundingBox(frame);
         if (!local.IsValid) return no("no extent along the axis");
-        double pad = 16 * tol + 4 * faceBound, h0 = local.Min.Z - pad, h1 = local.Max.Z + pad;
+        // Points are compared with the body only where they are clear of every surface by more than the body's own
+        // looseness: its faces' bound and the tolerances stored on its edges and vertices.
+        double margin = Math.Max(16 * tol, 4 * Math.Max(faceBound, loose));
+        // At least six margins beyond the body, so that a point two margins in front of an end face is still clear of
+        // them; and a whole number of the sampling grid's steps, so that the grid's layers start and end with the body
+        // (square ends then fall between layers, and the volume the layers add up to is not a layer out).
+        int nTheta = 96, nBody = (int)Math.Clamp((local.Max.Z - local.Min.Z) / (2 * Math.PI * ro / nTheta), 8, 1500);
+        double layer = (local.Max.Z - local.Min.Z) / nBody; if (!(layer > 0)) return no("no extent along the axis");
+        int padLayers = (int)Math.Clamp(Math.Ceiling(6 * margin / layer), 1, 64);
+        double pad = Math.Max(6 * margin, padLayers * layer), h0 = local.Min.Z - pad, h1 = local.Max.Z + pad;
         int real = surfaces.Count;
         surfaces.Add(new(false, axisPoint + axis * h1, axis, 0, CsgRole.Inside, 0, true, 1)); surfaces.Add(new(false, axisPoint + axis * h0, -axis, 0, CsgRole.Inside, 0, true, 1));
         // Two cutting cylinders of one radius whose axes meet (two members mitred together, both cut into this tube)
@@ -181,11 +235,8 @@ internal static class CutTubeRecognition
         AnalyticCsg probe;
         try { probe = new AnalyticCsg(primitives, W(box.Min), W(box.Max)); }
         catch (ArgumentException) { return no("surfaces the exact solid refuses"); }
-        // Points are compared with the body only where they are clear of every surface by more than the body's own
-        // looseness: its faces' bound and the tolerances stored on its edges and vertices.
-        double loose = Math.Max(brep.Edges.Max(e => e.Tolerance), brep.Vertices.Max(v => v.Tolerance)); if (!(loose >= 0) || loose > limit) return no("edge or vertex tolerances beyond the limit");
-        double margin = Math.Max(16 * tol, 4 * Math.Max(faceBound, loose)), length = h1 - h0;
-        int nTheta = 96, nH = (int)Math.Clamp(length / (2 * Math.PI * ro / nTheta), 8, 1500), nRho = ri > 0 ? 3 : 12;
+        double length = h1 - h0;
+        int nH = pad == padLayers * layer ? nBody + 2 * padLayers : (int)Math.Clamp(length / (2 * Math.PI * ro / nTheta), 8, 1700), nRho = ri > 0 ? 3 : 12;
         Point3d Sample(int ih, int it, int ir)
         {   // Equal volumes: rho² uniform between the radii.
             double rho = Math.Sqrt(ri * ri + (ro * ro - ri * ri) * (ir + .5) / nRho), theta = 2 * Math.PI * (it + .5) / nTheta, h = h0 + length * (ih + .5) / nH;
@@ -227,6 +278,7 @@ internal static class CutTubeRecognition
         }
         bool Learn(int cell, Point3d x, bool strong, string where, int most)
         {
+            if ((asked & 63) == 0) token.ThrowIfCancellationRequested();
             if (mixed.Contains(cell) || askedOf.GetValueOrDefault(cell) >= most && label.TryGetValue(cell, out var seen) && (seen.Strong || !strong)) return true;
             askedOf[cell] = askedOf.GetValueOrDefault(cell) + 1;
             bool here = brep.IsPointInside(x, tol, false); asked++;
@@ -339,24 +391,38 @@ internal static class CutTubeRecognition
         catch (ArgumentException) { return no("cells the exact solid refuses"); }
 
         // ---- The description against the body once more: both sides of every face, and the volume.
+        int uncompared = 0; double uncomparedArea = 0;
         foreach (var face in brep.Faces)
         {
+            token.ThrowIfCancellationRequested();
             int checks = 0, own = faceSurface[face.FaceIndex], points = 0, clear = 0; string seen = "";
-            foreach (var (at, normal) in InteriorPoints(face, 5))
+            // Five points first; a face none of them could be compared at gets sixty more before it is given up on.
+            foreach (int wanted in new[] { 5, 65, 600 })
             {
-                var behind = at - normal * (2 * margin); var front = at + normal * (2 * margin); points++;
-                // Only where no other surface is near enough to decide the point instead.
-                if (!Clear(surfaces, own, behind, margin) || !Clear(surfaces, own, front, margin)) continue;
-                clear++; seen += $" [{world.Contains(W(behind), margin)?.ToString() ?? "?"}/{world.Contains(W(front), margin)?.ToString() ?? "?"}]";
-                if (world.Contains(W(behind), margin) == false) return no($"material missing behind face {face.FaceIndex}");
-                if (world.Contains(W(front), margin) == true) return no($"material in front of face {face.FaceIndex}");
-                if (world.Contains(W(behind), margin) == true && world.Contains(W(front), margin) == false) checks++;
+                if (checks != 0) break;
+                foreach (var (at, normal) in InteriorPoints(face, wanted).Skip(points))
+                {
+                    var behind = at - normal * (2 * margin); var front = at + normal * (2 * margin); points++;
+                    // Only where no other surface is near enough to decide the point instead.
+                    if (!Clear(surfaces, own, behind, margin) || !Clear(surfaces, own, front, margin)) continue;
+                    clear++; if (clear <= 5) seen += $" [{world.Contains(W(behind), margin)?.ToString() ?? "?"}/{world.Contains(W(front), margin)?.ToString() ?? "?"}]";
+                    if (world.Contains(W(behind), margin) == false) return no($"material missing behind face {face.FaceIndex}");
+                    if (world.Contains(W(front), margin) == true) return no($"material in front of face {face.FaceIndex}");
+                    if (world.Contains(W(behind), margin) == true && world.Contains(W(front), margin) == false) checks++;
+                }
             }
-            // A face every point of which is within the margin of another surface (a sliver between two cutting
-            // cylinders near where they cross) cannot be compared on its own; its cells are the other surface's, and
-            // what the samples did not reach stays unknown. A sizeable face with no point found at all is refused.
-            if (checks == 0 && clear == 0 && points > 0) continue;
-            if (checks == 0 && areas[face.FaceIndex] > 4096 * margin * margin) return no($"face {face.FaceIndex} could not be checked against the cells (area {areas[face.FaceIndex]:G4}, margin {margin:G3}, interior points {points}, clear of other surfaces {clear}, behind/front{seen})");
+            if (checks != 0) continue;
+            // No comparison succeeded. Two cases.
+            // Every one of up to 600 points of the face is within two margins of another surface: a sliver that hugs
+            // that surface (the cut face where two equal pipes pinch out against each other). Point-in-solid answers
+            // cannot be trusted that close to two surfaces, so the face cannot be compared by this method whatever
+            // its area. Its cells are learned where they are wider, or stay unknown; the face is counted and Info
+            // gives the count and area.
+            // Or some points are clear but the cells beside them are unknown: let through only when the face is small
+            // (no more than sixteen margins square), refused otherwise.
+            if (clear != 0 && areas[face.FaceIndex] > 256 * margin * margin)
+                return no($"face {face.FaceIndex} could not be checked against the cells (area {areas[face.FaceIndex]:G4}, margin {margin:G3}, interior points {points}, clear of other surfaces {clear}, behind/front{seen})");
+            uncompared++; uncomparedArea += areas[face.FaceIndex];
         }
         long solidCells = count.Where(k => inside.Contains(k.Key)).Sum(k => k.Value), unknownCells = count.Where(k => !inside.Contains(k.Key) && !outside.Contains(k.Key)).Sum(k => k.Value);
         double cellVolume = Math.PI * (ro * ro - ri * ri) * length / cells, expected = cellVolume * solidCells;
@@ -364,25 +430,30 @@ internal static class CutTubeRecognition
         if (cellVolume * unknownCells > .01 * volume) return no("too much of the tube in cells that could not be classified");
 
         // ---- Edges between different surfaces are the lines drawn.
-        var edges = new List<Edge>(); double edgeBound = 0;
+        // Where two faces meet, the real faces do not end on the exact intersection of their surfaces: each runs on to
+        // the stored edge (and to its own trim, within the edge's stored tolerance of that). So the real body can
+        // differ from the exact one, next to a surface, by the edge's distance from that surface plus the stored
+        // tolerances: that is added to the surface's slack, beside its faces' own bound.
+        var edges = new List<Edge>(); double edgeBound = 0; var grow = new double[surfaces.Count];
         foreach (var edge in brep.Edges)
         {
+            token.ThrowIfCancellationRequested();
             var faces = edge.AdjacentFaces(); if (faces.Length != 2) { if (edge.Valence == EdgeAdjacency.Interior) continue; return no("an edge that is not shared by two faces"); }
             int a = faceSurface[faces[0]], b = faceSurface[faces[1]]; if (a == b) continue;
+            using var whole = edge.DuplicateCurve();
+            // The edge's distance from each of its two surfaces, bounded through its control points like a face's.
+            double da = Deviation(whole, surfaces[a], tol / 8, limit), db = Deviation(whole, surfaces[b], tol / 8, limit), slack = Math.Max(da, db);
+            if (!(slack <= limit)) return no($"an edge further than {limit:G3} from the surfaces it joins (certified bound {slack:G3})");
+            double stored = edge.Tolerance + Math.Max(edge.StartVertex?.Tolerance ?? 0, edge.EndVertex?.Tolerance ?? 0);
+            if (!(stored >= 0) || slack + stored > limit) return no($"an edge whose distance from its surfaces and stored tolerance together exceed {limit:G3}");
+            grow[a] = Math.Max(grow[a], slack + stored); grow[b] = Math.Max(grow[b], slack + stored);
             // A smooth join between two faces is not a line of the drawing (tangent edges are off whenever this class runs).
             if (edge.IsSmoothManifoldEdge(Math.PI / 180)) continue;
-            double slack = 0;
-            for (int k = 0; k <= 16; k++)
-            {
-                var q = edge.PointAt(edge.Domain.ParameterAt(k / 16.0));
-                slack = Math.Max(slack, Math.Max(Math.Abs(Distance(surfaces[a], q)), Math.Abs(Distance(surfaces[b], q))));
-            }
-            if (slack > limit) return no($"an edge further than {limit:G3} from the surfaces it joins ({slack:G3})");
             edgeBound = Math.Max(edgeBound, slack);
             // Where the two surfaces cross cleanly the edge is exact: its points snap onto their intersection, moving
             // by no more than the limit. Runs of the edge where they do not (two cylinders touching where a cope
             // pinches out) stay as stored. The edge is cut into such runs.
-            using var whole = edge.DuplicateCurve(); const int parts = 64; var clean = new bool[parts + 1]; double move = 0;
+            const int parts = 64; var clean = new bool[parts + 1]; double move = 0;
             for (int k = 0; k <= parts; k++)
             {
                 var q = whole.PointAt(whole.Domain.ParameterAt((double)k / parts));
@@ -395,13 +466,31 @@ internal static class CutTubeRecognition
                 bool exact = clean[from] && clean[from + 1]; int to = from + 1;
                 while (to < parts && (clean[to] && clean[to + 1]) == exact) to++;
                 var piece = from == 0 && to == parts ? whole.DuplicateCurve() : whole.Trim(whole.Domain.ParameterAt((double)from / parts), whole.Domain.ParameterAt((double)to / parts));
-                if (piece is not null) edges.Add(new(piece, (1 << a) | (1 << b), exact ? 0 : slack * 1.25, exact));
+                // The drawn piece is the stored edge. An exact piece stands for the intersection curve, at most the
+                // largest move seen away (measured at 65 points, taken a quarter larger, and never less than the
+                // certified distance from the two surfaces); any other piece is classified as it is, with its slack.
+                // An exact piece can also lie in one of the separating planes (the rim where two mitred cutters meet lies
+                // in their mitre plane). The exact curve is then on that plane by construction, like on its own two
+                // surfaces, and which side of it a ray leaves on is a matter of the ray's direction, not of a distance.
+                int on = (1 << a) | (1 << b);
+                if (exact)
+                    for (int k = real; k < surfaces.Count; k++)
+                    {
+                        if (surfaces[k].Cylinder || surfaces[k].Role != CsgRole.Free) continue;
+                        bool lies = true;
+                        for (int m = from; m <= to && lies; m++)
+                            lies = Onto(surfaces[a], surfaces[b], whole.PointAt(whole.Domain.ParameterAt((double)m / parts))) is { } x && Math.Abs(Distance(surfaces[k], x)) <= 1e-9 * (1 + span);
+                        if (lies) on |= 1 << k;
+                    }
+                if (piece is not null) edges.Add(new(piece, on, exact ? 0 : slack * 1.25, exact, exact ? Math.Max(slack, move * 1.25) : slack * 1.25));
                 from = to;
             }
         }
+        for (int i = 0; i < real; i++) if (grow[i] > surfaces[i].Slack) surfaces[i] = surfaces[i] with { Slack = grow[i] };
         int unknownKinds = count.Keys.Count(k => !inside.Contains(k) && !outside.Contains(k)) + mixed.Count(k => !count.ContainsKey(k));
         return new AnalyticVisibility.CutTubeShape(surfaces, box, edges, faceSurface, real, faceBound, edgeBound, inside, outside)
-            { Note = $"cells: {inside.Count} solid, {outside.Count} void, {unknownKinds} unknown holding {100.0 * unknownCells / cells:F3} % of the tube's wall; {asked} points asked; {mixed.Count} cells left unknown because weak answers disagreed" };
+            { Note = $"cells: {inside.Count} solid, {outside.Count} void, {unknownKinds} unknown holding {100.0 * unknownCells / cells:F3} % of the tube's wall; {asked} points asked; {mixed.Count} cells left unknown because weak answers disagreed; {uncompared} faces ({uncomparedArea:G3} in area) too close to another surface, or too small, to be compared with the cells; surface slack up to {surfaces.Max(k => k.Slack):G3}",
+              Unchecked = uncompared, SurfaceBound = surfaces.Max(k => k.Slack) };
     }
 
     /// <summary>Signed distance to a surface: negative inside a cylinder or behind a plane.</summary>
@@ -567,6 +656,70 @@ internal static class CutTubeRecognition
                 for (int k = 0; k < knots.Count; k++) if (values.Count == 0 || knots[k] > values[^1]) values.Add(knots[k]);
                 for (int k = 0; k + 1 < values.Count; k++) knots.InsertKnot((values[k] + values[k + 1]) / 2, 1);
             }
+        }
+        return bound;
+    }
+
+    /// <summary>
+    /// A certified bound on how far a curve is from a surface, by the same argument as for a face: the curve is in the
+    /// hull of its control points span by span, distance to a plane is linear and distance to an axis is convex.
+    /// Infinity when no bound can be given.
+    /// </summary>
+    internal static double Deviation(Curve curve, Surface s, double target, double limit)
+    {
+        using var nurbs = curve.ToNurbsCurve(); if (nurbs is null) return double.PositiveInfinity;
+        var direction = s.Direction; if (!direction.Unitize()) return double.PositiveInfinity;
+        double bound = double.PositiveInfinity, previous = double.PositiveInfinity;
+        for (int round = 0; round < 14; round++)
+        {
+            int n = nurbs.Points.Count, degree = nurbs.Degree; var across = new Vector3d[n]; bound = 0;
+            for (int i = 0; i < n; i++)
+            {
+                var point = nurbs.Points[i]; if (!(point.Weight > 0) || !double.IsFinite(point.Weight)) return double.PositiveInfinity;
+                var w = point.Location - s.Origin;
+                if (!s.Cylinder) bound = Math.Max(bound, Math.Abs(w * direction)); else across[i] = w - direction * (w * direction);
+            }
+            if (s.Cylinder)
+                for (int i = 0; i + degree < n; i++)
+                {
+                    var mean = Vector3d.Zero; double far = 0;
+                    for (int k = 0; k <= degree; k++) { mean += across[i + k]; far = Math.Max(far, across[i + k].Length); }
+                    if (!mean.Unitize()) return double.PositiveInfinity;
+                    double near = double.PositiveInfinity;
+                    for (int k = 0; k <= degree; k++) near = Math.Min(near, across[i + k] * mean);
+                    bound = Math.Max(bound, Math.Max(far - s.Radius, s.Radius - near));
+                }
+            if (bound <= target || !s.Cylinder && nurbs.Degree == 1) break;          // against a plane a polyline's bound is exact
+            if (round >= 3 && bound > limit && bound > previous * .5) break;
+            if (round >= 2 && bound > previous * .97) break;
+            if (n > 20000) break;
+            previous = bound;
+            var values = new List<double>();
+            for (int k = 0; k < nurbs.Knots.Count; k++) if (values.Count == 0 || nurbs.Knots[k] > values[^1]) values.Add(nurbs.Knots[k]);
+            for (int k = 0; k + 1 < values.Count; k++) nurbs.Knots.InsertKnot((values[k] + values[k + 1]) / 2, 1);
+        }
+        return bound;
+    }
+
+    /// <summary>A certified upper bound on how far from an axis a curve gets (its control points, refined until the
+    /// bound is under <paramref name="enough"/> or no longer improves).</summary>
+    private static double Reach(Curve curve, Point3d origin, Vector3d axis, double enough)
+    {
+        using var nurbs = curve.ToNurbsCurve(); if (nurbs is null || !axis.Unitize()) return double.PositiveInfinity;
+        double bound = double.PositiveInfinity, previous = double.PositiveInfinity;
+        for (int round = 0; round < 12; round++)
+        {
+            bound = 0;
+            foreach (var point in nurbs.Points)
+            {
+                if (!(point.Weight > 0) || !double.IsFinite(point.Weight)) return double.PositiveInfinity;
+                var w = point.Location - origin; bound = Math.Max(bound, (w - axis * (w * axis)).Length);
+            }
+            if (bound <= enough || nurbs.Degree == 1 || round >= 2 && bound > previous - (previous - enough) * .25 || nurbs.Points.Count > 20000) break;
+            previous = bound;
+            var values = new List<double>();
+            for (int k = 0; k < nurbs.Knots.Count; k++) if (values.Count == 0 || nurbs.Knots[k] > values[^1]) values.Add(nurbs.Knots[k]);
+            for (int k = 0; k + 1 < values.Count; k++) nurbs.Knots.InsertKnot((values[k] + values[k + 1]) / 2, 1);
         }
         return bound;
     }

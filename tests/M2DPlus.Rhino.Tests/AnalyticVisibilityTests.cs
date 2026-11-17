@@ -133,8 +133,8 @@ public sealed class AnalyticVisibilityTests(RhinoHost host, ITestOutputHelper ou
         var refused = new Dictionary<string, (Func<GeometryBase> Make, string Why)>
         {
             ["box"] = (() => Plate(0, 0, 0, 1, 1, 1), "planar faces only"),
-            ["cone"] = (() => new Cone(Plane.WorldXY, 2, 1).ToBrep(true), "neither a plane nor near a circular cylinder"),
-            ["torus"] = (() => Ring(Point3d.Origin, 2, .5), "neither a plane nor near a circular cylinder"),
+            ["cone"] = (() => new Cone(Plane.WorldXY, 2, 1).ToBrep(true), "a face that is not a plane, cylinder or sphere"),
+            ["torus"] = (() => Ring(Point3d.Origin, 2, .5), "a face that is not a plane, cylinder or sphere"),
             ["cylinder with one cap missing"] = (() => new Cylinder(new Circle(Plane.WorldXY, 1), 2).ToBrep(true, false), "open Brep"),
             ["two cylinders joined end to end with different radii"] = (() =>
             {
@@ -276,6 +276,9 @@ public sealed class AnalyticVisibilityTests(RhinoHost host, ITestOutputHelper ou
             double unresolved = Length(view, LineClass.Unresolved), total = Length(view, LineClass.Visible) + Length(view, LineClass.Hidden) + unresolved;
             output.WriteLine($"{name}: {cut.Surfaces.Count} surfaces, face bound {cut.FaceBound:G3}, edge bound {cut.EdgeBound:G3}; {cut.Note}");
             output.WriteLine($"    native calls {view.NativeCalls}; lines {total:F3}, Unresolved {unresolved:F4}; witness judged {judged}, wrong {wrong}");
+            if (unresolved > .02 * total)
+                foreach (var piece in view.Items.Where(p => p.Class == LineClass.Unresolved))
+                { using var g = piece.CopyGeometry(); if (g is Curve c && piece.DepthGeometry is Curve w) output.WriteLine($"    Unresolved {c.GetLength():F4} from {w.PointAtStart} by {w.PointAt(w.Domain.Mid)} to {w.PointAtEnd}"); }
             if (view.NativeCalls != 0 || wrong != 0 || judged < 8 || unresolved > .02 * total) failures.Add(name);
         }
         Assert.Empty(failures);
@@ -657,7 +660,7 @@ public sealed class AnalyticVisibilityTests(RhinoHost host, ITestOutputHelper ou
         Assert.Equal(0, batch.Views[0].NativeCalls); Assert.Contains("exact analytic solids=1", batch.Views[0].Report.Route);
         Assert.Equal(Math.PI, Assert.Single(batch.Views[0].Regions).Region.Area, 4);
         Assert.Equal(0, batch.Views[1].NativeCalls); Assert.Contains("exact analytic solids=1", batch.Views[1].Report.Route);
-        Assert.Contains(batch.Views[1].Diagnostics, d => d.StartsWith("Cut tubes drawn exactly to a stated bound", StringComparison.Ordinal));
+        Assert.Contains(batch.Views[1].Diagnostics, d => d.StartsWith("Cut tubes, recognised from point-in-solid evidence", StringComparison.Ordinal));
         Assert.Contains(batch.Views[1].Regions, r => Math.Abs(r.Region.Area - 8) < 1e-4);          // the column's cut face: 2 wide, 4 high
         Assert.Equal(0, batch.Views[2].NativeCalls); Assert.Contains("exact analytic solids=1", batch.Views[2].Report.Route);
         Assert.Single(batch.Views[2].Regions);

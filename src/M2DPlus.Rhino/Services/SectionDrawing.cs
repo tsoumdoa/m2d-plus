@@ -169,7 +169,7 @@ internal static class SectionDrawing
             }
             phase.Next("section output construction");
             if (!settings.NativeOnly && (registered.Any(r => PlanarExtraction.MayProduceKernelCandidates(r.Geometry,tol)) ||
-                AnalyticVisibility.Applies(registered.Select(r => r.Geometry), result.Frame.Plane, tol, view, settings)))
+                AnalyticVisibility.Applies(registered.Select(r => r.Geometry), result.Frame.Plane, tol, view, settings, token)))
             {
                 phase.Pause();
                 using var routed = new ViewDrawing { Frame = result.Frame, Tolerance = tol };

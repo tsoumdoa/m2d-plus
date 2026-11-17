@@ -47,6 +47,7 @@ public sealed class AnalyticCsg : AnalyticSolid
     private readonly CsgPrimitive[] _primitives; private readonly int[] _bit; private readonly HashSet<int> _in, _out;
     private readonly Vertex _centre; private readonly int _free;
     public IReadOnlyList<CsgPrimitive> Primitives => _primitives;
+    public override double Slack { get; }
 
     /// <param name="inside">Cells of the free surfaces that are in the solid; null when there is no free surface.
     /// Bit k of a cell is the k-th free surface in list order, set when the point is inside it.</param>
@@ -63,6 +64,7 @@ public sealed class AnalyticCsg : AnalyticSolid
             _bit[i] = p.Role == CsgRole.Free ? _free++ : -1;
         }
         if (_free > 26) throw new ArgumentException("More than 26 free surfaces");
+        Slack = _primitives.Max(p => p.Slack);
         _in = inside is null ? [] : [.. inside]; _out = outside is null ? [] : [.. outside];
         if (_free == 0) { _in.Clear(); _in.Add(0); _out.Clear(); }
         if (_in.Overlaps(_out) || _in.Concat(_out).Any(c => c < 0 || c >= 1 << _free)) throw new ArgumentException("Invalid cells");

@@ -390,14 +390,35 @@ internal static class AnalyticCheck
             // Its own body: the ray itself; if that is blocked or grazing, step sideways both ways (a line on an outline
             // grazes its own surface). Visible when either side is clear, hidden when both are blocked; two steps agree.
             var centre = Blocked(p, tol, 20 * tol, only: own);
+            // An exact solid's own material in front of the point, however thin sideways: a line on a bore (its outline,
+            // an end cut's inner rim) has the wall just beside the ray, a few tolerances thick where the ray is about to
+            // leave through an end cut, and a ray cast misses it. Rhino's point-in-solid test along the ray does not:
+            // two consecutive steps strictly inside the body are cover beyond a tolerance, which is Hidden by the depth rule.
+            // The body is only known to its stated bound (a cut tube's surfaces, with their stored tolerances), so the
+            // material must be inside by more than that to count; material thinner than the bound is not judged
+            // either way, as a ray that skims a surface a few degrees off it is in or out by less than the bound.
+            bool thin = false;
+            if (exactOwn && bodies.FirstOrDefault(b => b.Id == own) is { Brep: { IsSolid: true } material } mine)
+            {
+                // (For a plain shape the bound is what Rhino itself stores on the body's edges.)
+                double bound = tol + Math.Max(material.Edges.Max(edge => edge.Tolerance), AnalyticVisibility.Recognise(mine.Geometry, tol) is AnalyticVisibility.CutTubeShape loose ? loose.SurfaceBound : 0);
+                bool last = false;
+                for (double h = 2 * tol; h < mine.Box.Diagonal.Length; h *= 1.15)
+                {
+                    bool inside = material.IsPointInside(p + e * h, bound, true);
+                    if (inside && last) return 1;
+                    last = inside;
+                    if (!inside && !thin && h < 64 * bound + 64) thin = material.IsPointInside(p + e * h, tol / 10, true);
+                }
+            }
+            // Material in front that is thinner than the body's bound: the real body may or may not cover the point.
+            if (thin) return -1;
             if (centre == false) return 0;
             // The ray grazes its own body. An outline of a hole (a bore) has the hole on one side, so "one side clear"
             // says nothing there: first ask Rhino whether the ray itself runs through the body's material. A point
             // strictly inside by a tenth of a tolerance has more than the depth rule's cover around it.
             if (centre is null && bodies.FirstOrDefault(b => b.Id == own) is { Brep: { IsSolid: true } solid } body)
             {
-                for (double h = 2 * tol; h < body.Box.Diagonal.Length; h *= 1.5)
-                    if (solid.IsPointInside(p + e * h, tol / 10, true)) return 1;
                 // No material found in front, but there is some on the same line behind the point: the line touches a
                 // hole from inside the material, and whatever is in front is thinner sideways than this test resolves
                 // (the ray leaves through an end cut within a fraction of a millimetre). Not judged.
@@ -492,6 +513,18 @@ internal static class AnalyticCheck
                             note.Append($" | engine: on surfaces [{string.Join(",", close.Select(i => $"{i}:{(cutShape.Surfaces[i].Cylinder ? $"cyl r={cutShape.Surfaces[i].Radius:F2}" : "plane")} {cutShape.Surfaces[i].Role}{(cutShape.Surfaces[i].Virtual ? "*" : "")}"))}]; moved {at.DistanceTo(where):E2}; no own bits {solid.Occlusion(v, tol)}; all near as own {solid.Occlusion(v, tol, close.Aggregate(0, (m, i) => m | 1 << i))}; tangent {solid.Occlusion(v, tol, close.Aggregate(0, (m, i) => m | 1 << i), true)}");
                             if (mine.Brep is not null) note.Append("; Rhino point-in-solid above the point at " + string.Join(", ", new[] { 10.0, 100, 1000, 3000 }.Select(k => $"{k * tol:G3}: {mine.Brep.IsPointInside(at + e * (k * tol), tol / 10, true)}")));
                             foreach (int i in close) note.Append($"; n{i}·e {(cutShape.Surfaces[i].Cylinder ? "(cyl)" : (cutShape.Surfaces[i].Direction * e).ToString("F4"))}");
+                        }
+                        if (variants.Contains("why"))
+                        {   // Which exact solids the engine says hide this point (no own-surface rule), and Rhino's point-in-solid along the ray for each.
+                            var at = OnFaces(where, piece.SourceIdentity); var v = AnalyticVisibility.Project(plane, at);
+                            foreach (var body in bodies.Where(b => b.Exact))
+                            {
+                                var k = AnalyticVisibility.Solid(AnalyticVisibility.Recognise(body.Geometry, tol)!, plane).Occlusion(v, tol);
+                                var inside = new List<double>();
+                                if (body.Brep is { IsSolid: true } solidBrep) for (double h = 2 * tol; h < 4 * body.Box.Diagonal.Length; h *= 1.15) if (solidBrep.IsPointInside(at + e * h, tol / 10, true)) inside.Add(h);
+                                if (k != M2DPlus.Core.Visibility.VisibilityClass.Visible || inside.Count != 0)
+                                    note.Append($" | replay {body.Id[^12..]}{(body.Id == piece.SourceIdentity ? " (own)" : "")}: engine {k}; Rhino inside along the ray at {inside.Count} steps{(inside.Count == 0 ? "" : $" from {inside[0]:G4} to {inside[^1]:G4}")}");
+                            }
                         }
                         if (variants.Contains("why"))
                             foreach (var h in heard)
