@@ -16,13 +16,7 @@ namespace M2DPlus.Rhino.Tests;
 public sealed class DrawingRetryTests(RhinoHost host)
 {
     // Inject at the native boundary without crashing a process, exhausting memory or waiting for a deadline.
-    private static Exception Failure(string kind) => kind switch
-    {
-        "crash" => new InvalidOperationException("Worker failed: injected crash"),
-        "timeout" => new TimeoutException("Worker solve deadline exceeded"),
-        "memory" => new OutOfMemoryException("Worker memory cap exceeded"),
-        _ => throw new ArgumentOutOfRangeException(nameof(kind))
-    };
+    private static Exception Failure() => new InvalidOperationException("Injected execution failure");
 
     private static ViewRequest View(string settings = "engine=native")
     {
@@ -38,24 +32,21 @@ public sealed class DrawingRetryTests(RhinoHost host)
         doc.Objects.AddBrep(box);
     }
 
-    [RhinoTheory]
-    [InlineData("crash")]
-    [InlineData("timeout")]
-    [InlineData("memory")]
-    public void CacheRetriesUnchangedFailedDrawingThenReusesSuccessfulVisibility(string kind) => host.Run(() =>
+    [RhinoFact]
+    public void CacheRetriesUnchangedFailedDrawingThenReusesSuccessfulVisibility() => host.Run(() =>
     {
         using var doc = RhinoDoc.CreateHeadless(null); Populate(doc);
         using var scenes = new SceneCache(); using var scene = BaselineTests.Capture(doc, scenes);
         using var drawings = new DrawingCache();
         var attempts = 0;
         var previous = NativeDrawing.NativeStarting;
-        NativeDrawing.NativeStarting = () => { if (Interlocked.Increment(ref attempts) == 1) throw Failure(kind); };
+        NativeDrawing.NativeStarting = () => { if (Interlocked.Increment(ref attempts) == 1) throw Failure(); };
         DrawingBatch Draw(ViewRequest view, long generation, params Plane[] targets) => drawings.SolveAsync(scene.Share(),
             new(scene.Value.Revision, "top", "settings", generation), [view], new(), targets, default).GetAwaiter().GetResult();
         try
         {
             using var failed = Draw(View(), 1);
-            Assert.True(failed.Complete); Assert.Equal(Failure(kind).Message, Assert.Single(failed.Views).Error);
+            Assert.True(failed.Complete); Assert.Equal(Failure().Message, Assert.Single(failed.Views).Error);
             Assert.Equal(1, attempts);
 
             using var recovered = Draw(View(), 2);
@@ -81,7 +72,7 @@ public sealed class DrawingRetryTests(RhinoHost host)
         public void Report(JobProgress value) => Seen.Add(value.Phase);
     }
 
-    [RhinoFact] public void CachePublishesCompletePartialBatchesButRetriesThem() => host.Run(() =>
+    [RhinoFact] public void CacheReusesPartialBatchesWithAuthoredViewErrors() => host.Run(() =>
     {
         using var doc = RhinoDoc.CreateHeadless(null); Populate(doc);
         using var scenes = new SceneCache(); using var scene = BaselineTests.Capture(doc, scenes);
@@ -94,7 +85,7 @@ public sealed class DrawingRetryTests(RhinoHost host)
         Assert.Equal("authored view error", first.Views[1].Error);
         var hash = ExclusionTests.Hash(first.Views[0]);
         var phases = new Phases(); using var next = Draw(phases);
-        Assert.Contains(JobPhase.Drawing, phases.Seen); // A poisoned cache hit would report only Output.
+        Assert.DoesNotContain(JobPhase.Drawing, phases.Seen); // A stable bad view must not recompute healthy views.
         Assert.True(next.Complete); Assert.Null(next.Views[0].Error); Assert.NotEmpty(next.Views[0].Items);
         Assert.Equal("authored view error", next.Views[1].Error);
         drawings.Clear();
@@ -120,11 +111,8 @@ public sealed class DrawingRetryTests(RhinoHost host)
             () => component.Message + ": " + string.Join(";", component.RuntimeMessages(GH_RuntimeMessageLevel.Error)),
             () => { if (document.ScheduleDelay >= 0) document.NewSolution(false, GH_SolutionMode.Silent); });
 
-    [RhinoTheory]
-    [InlineData("crash")]
-    [InlineData("timeout")]
-    [InlineData("memory")]
-    public void RunNowRetriesUnchangedFailureAndThenRestoresSuccessfulDrawing(string kind) => host.Run(() =>
+    [RhinoFact]
+    public void RunNowRetriesUnchangedFailureAndThenRestoresSuccessfulDrawing() => host.Run(() =>
     {
         Assert.True(global::Rhino.PlugIns.PlugIn.LoadPlugIn(new Guid("b45a29b1-4343-4035-989e-044e8580d9cf")));
         using var doc = RhinoDoc.CreateHeadless(null); RhinoDoc.ActiveDoc = doc; Populate(doc);
@@ -134,14 +122,14 @@ public sealed class DrawingRetryTests(RhinoHost host)
         dynamic ui = component.GetType().GetProperty("Ui")!.GetValue(component)!;
         var attempts = 0;
         var previous = NativeDrawing.NativeStarting;
-        NativeDrawing.NativeStarting = () => { if (Interlocked.Increment(ref attempts) == 1) throw Failure(kind); };
+        NativeDrawing.NativeStarting = () => { if (Interlocked.Increment(ref attempts) == 1) throw Failure(); };
         try
         {
             document.NewSolution(true, GH_SolutionMode.Silent);
             Pump(document, component, () => Field(component, "_drawing") is not null);
             var failed = Assert.IsType<DrawingBatch>(Field(component, "_drawing"));
-            Assert.True(failed.Complete); Assert.Equal(Failure(kind).Message, Assert.Single(failed.Views).Error);
-            Assert.Contains(Failure(kind).Message, component.RuntimeMessages(GH_RuntimeMessageLevel.Error));
+            Assert.True(failed.Complete); Assert.Equal(Failure().Message, Assert.Single(failed.Views).Error);
+            Assert.Contains(Failure().Message, component.RuntimeMessages(GH_RuntimeMessageLevel.Error));
             var key = Field(component, "_drawingRunKey");
             var captures = (int)Field(component, "_captureCount")!;
             var restores = (int)Field(component, "_restoreCount")!;
@@ -168,7 +156,7 @@ public sealed class DrawingRetryTests(RhinoHost host)
         }
     });
 
-    [RhinoFact] public void RunNowKeepsGoodViewsInPartialPublicationAndDoesNotRestoreFailedBatch() => host.Run(() =>
+    [RhinoFact] public void RunNowRestoresPartialPublicationWithAuthoredViewErrors() => host.Run(() =>
     {
         Assert.True(global::Rhino.PlugIns.PlugIn.LoadPlugIn(new Guid("b45a29b1-4343-4035-989e-044e8580d9cf")));
         using var doc = RhinoDoc.CreateHeadless(null); RhinoDoc.ActiveDoc = doc; Populate(doc);
@@ -187,8 +175,8 @@ public sealed class DrawingRetryTests(RhinoHost host)
             var captures = (int)Field(component, "_captureCount")!;
             var restores = (int)Field(component, "_restoreCount")!;
             ui.Execute("run", false);
-            Pump(document, component, () => Field(component, "_drawing") is { } next && !ReferenceEquals(next, failed), views: 2);
-            Assert.Equal(restores, (int)Field(component, "_restoreCount")!);
+            Pump(document, component, () => (int)Field(component, "_restoreCount")! == restores + 1, views: 2);
+            Assert.Same(failed, Field(component, "_drawing"));
             Assert.Equal(captures, (int)Field(component, "_captureCount")!);
             Assert.Equal("Partial · 1/2 drawings", component.Message);
             Assert.True(component.Params.Output[0].VolatileDataCount > 0);

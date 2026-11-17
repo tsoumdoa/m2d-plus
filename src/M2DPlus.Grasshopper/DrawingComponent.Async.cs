@@ -499,10 +499,11 @@ public sealed partial class DrawingComponent
     /// bake-time text (<c>m2d.bake</c>) changed.</summary>
     private void ViewsChanged() { Park(); Refresh(false); }
     /// <summary>Takes the drawing down like <see cref="Invalidate"/>, but keeps successful results for <see cref="Restore"/>.
-    /// A complete batch can contain failed views; Run now must retry those even with unchanged inputs.</summary>
+    /// Authored view errors are stable; Run now must retry execution failures even with unchanged inputs.</summary>
     private void Park()
     {
-        if (_drawing is { Complete: true } drawing && drawing.Views.All(v => v.Error is null) &&
+        if (_drawing is { Complete: true } drawing &&
+            drawing.Views.Select((v, i) => v.Error is null || _views[i].Error is not null).All(reusable => reusable) &&
             _drawingRunKey is not null && _drawingSources is not null)
         {
             DisposeParked();
