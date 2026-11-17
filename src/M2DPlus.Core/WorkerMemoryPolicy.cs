@@ -29,9 +29,11 @@ public static class WorkerMemoryPolicy
         return Math.Min(memory.PhysicalBytes / 100 * (large ? 75 : 60),
             Math.Min(memory.AvailableBytes, memory.PhysicalBytes) / 100 * (large ? 85 : 80));
     }
-    // The measured L view needs ~5 GiB including output archives. Factor 3 plus a 1 GiB
-    // process/serialization allowance rounds its 1.62 GiB scene estimate to a 6 GiB cap.
-    public static long Required(SceneCost scene) => RoundUp(Math.Max(2 * GiB, checked(scene.Estimate(1) * 3 + GiB)));
+    // Preserve planar M/L calibration (3/6 GiB). Curved topology reserves native working
+    // memory separately; multiplying it by the preparation/archive factor again would triple count it.
+    // See docs/research/worker-memory-sizing.md for the small-model measurements and extrapolation.
+    public static long Required(SceneCost scene) => RoundUp(Math.Max(2 * GiB,
+        checked(scene.PreparationEstimate(1) * 3 + scene.NativeHldWorkingBytes + GiB)));
     private static long RoundUp(long bytes) => checked((bytes + GiB - 1) / GiB * GiB);
     public static WorkerSizing Size(SceneCost scene, int views, int cpuLimit, MachineMemory memory, long overrideCap = 0)
     {
@@ -45,11 +47,17 @@ public static class WorkerMemoryPolicy
             "Worker unavailable: available memory cannot fit one view's cap plus the host reply reservation. Close other applications or reduce the scene/view complexity and run again." : null)
             { HostReplyBytes = reply };
     }
-    /// <summary>After every original worker has exited, allow one isolated retry, never an identical-cap retry.</summary>
-    public static long RetryCap(long previousCap, MachineMemory memory)
+    /// <summary>After every original worker has exited, allow one isolated retry, never an identical-cap retry.
+    /// A measured job peak gets 50% growth plus 1 GiB for allocation/serialization bursts. Peaks at a hard cap
+    /// are censored observations, not the unknown allocation that failed. Without a peak retain the doubling fallback.</summary>
+    public static long RetryCap(long previousCap, MachineMemory memory, long observedPeak = 0)
     {
         var budget = Budget(memory);
-        var cap = Math.Min(checked(previousCap * 2), (budget - HostReplyBytes(budget)) / GiB * GiB);
-        return cap > previousCap ? cap : 0;
+        var target = observedPeak > 0
+            ? RoundUp(Math.Max(checked(previousCap + GiB), checked(observedPeak + observedPeak / 2 + GiB)))
+            : checked(previousCap * 2);
+        var cap = Math.Min(target, (budget - HostReplyBytes(budget)) / GiB * GiB);
+        // A larger cap below the peak already observed would be a known-futile retry.
+        return cap > previousCap && (observedPeak <= 0 || cap > observedPeak) ? cap : 0;
     }
 }

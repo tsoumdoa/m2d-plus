@@ -76,6 +76,44 @@ public sealed class WorkerMemoryPolicyTests
         Assert.Equal(1,p.Count);Assert.Equal(4*G,p.CapBytes);
         Assert.Equal(0,WorkerMemoryPolicy.Size(Large,8,4,new(16*G,12*G),10*G).Count);
     }
+    [Fact] public void RetryUsesObservedPeakAndFallsBackOnlyWhenItIsUnavailable()
+    {
+        var memory=new MachineMemory(64*G,40*G);
+        Assert.Equal(9*G,WorkerMemoryPolicy.RetryCap(2*G,memory,5*G));
+        Assert.Equal(4*G,WorkerMemoryPolicy.RetryCap(2*G,memory));
+        Assert.Equal(10*G,WorkerMemoryPolicy.RetryCap(6*G,memory,6*G));
+        Assert.Equal(7*G,WorkerMemoryPolicy.RetryCap(6*G,memory,G));
+        Assert.Equal(0,WorkerMemoryPolicy.RetryCap(2*G,new(16*G,8*G),5*G));
+    }
+    [Theory]
+    [InlineData(5794888,1334,500,750,2632,2)]
+    [InlineData(247204,49,25,33,72,2)]
+    [InlineData(292088,54,8,32,166,2)]
+    [InlineData(57948880,13340,5000,7500,26320,6)]
+    public void SmallCurvedMeasurementsAndTenfoldTopologyPrediction(long bytes,long faces,int sources,long curvedFaces,long curvedEdges,int cap)
+    {
+        var cost=new SceneCost(bytes,faces,0,sources){CurvedBrepFaces=curvedFaces,CurvedBrepEdges=curvedEdges};
+        Assert.Equal(cap*G,WorkerMemoryPolicy.Required(cost));
+        var plan=WorkerMemoryPolicy.Size(cost,8,8,new(16*G,12*G));
+        Assert.True(plan.Count*plan.CapBytes+plan.HostReplyBytes<=plan.BudgetBytes);
+        Assert.True(plan.CapBytes>=cost.Estimate(1));
+    }
+    [Fact] public void CurvedWorkScalesPerViewAndPreventsHeavyHostFallback()
+    {
+        var planar=new SceneCost(57948880,13340,0,5000);
+        var curved=planar with{CurvedBrepFaces=7500,CurvedBrepEdges=26320};
+        Assert.True(planar.Admitted(1,512*1024*1024));
+        Assert.False(curved.Admitted(1,512*1024*1024));
+        Assert.Equal(curved.NativeHldWorkingBytes,curved.Estimate(1)-planar.Estimate(1));
+        Assert.Equal(4*curved.NativeHldWorkingBytes,curved.Estimate(4)-planar.Estimate(4));
+    }
+    [Theory] [InlineData(16,12)] [InlineData(32,24)] [InlineData(64,48)] [InlineData(128,96)]
+    public void ObservedPeakCannotOverrideFreshBudgetOrHostReplyReservation(int ram,int available)
+    {
+        var memory=new MachineMemory(ram*G,available*G);var budget=WorkerMemoryPolicy.Budget(memory);
+        var cap=WorkerMemoryPolicy.RetryCap(6*G,memory,30*G);
+        Assert.True(cap==0 || cap>6*G && cap+WorkerMemoryPolicy.HostReplyBytes(budget)<=budget);
+    }
     [Theory] [InlineData(16,12)] [InlineData(32,24)] [InlineData(64,48)] [InlineData(128,96)]
     public void IsolatedRetryAlsoReservesHostReceiveBuffers(int ram,int available)
     {
