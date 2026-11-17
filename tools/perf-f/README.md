@@ -107,6 +107,10 @@ sh tools/perf-f/pair.sh <label> <model.3dm> <view>     # main, then this tree: c
 `PERFF_TIMEOUT` (seconds, default 1500) bounds one view solve. The harness calls the view solver
 directly, so it bypasses the in-process admission cap and the tolerance census.
 
+`dotnet $exe $r round-cover-bench <output folder>` generates 400 stacked round columns in memory, solves Top three
+times and checks 200 different-seam coincident circle pairs. It writes `round-cover-bench.json`; hold the shared
+`Local\M2DPlusLocalModelSuiteRhino` timing mutex for this benchmark. No model or document is saved.
+
 Native verification measurements (one owned Rhino process at a time):
 
 ```powershell

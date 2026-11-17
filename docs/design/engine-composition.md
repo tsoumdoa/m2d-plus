@@ -149,8 +149,9 @@ What the real body may differ from the exact one by is carried, not assumed away
   Cylinder/cylinder intersections also have a closed-form certificate: put the stored point on one cylinder radially,
   then solve the quadratic along its axis against the other cylinder. Control hulls bound the root domain; the
   correction is bounded by both a difference-of-squares quotient and its square-root bound. This remains finite at
-  tangent branch endpoints, where a crossing-angle inverse cannot certify the gap. Both axes are tried. Failure is
-  subdivided locally and only an uncertified edge stretch is Unresolved.
+  tangent branch endpoints, where a crossing-angle inverse cannot certify the gap. Both axes are tried. Failure,
+  and any interval whose bound is set by the square-root branch, is subdivided locally (with fresh edge residual
+  bounds) to prevent a pinch-out widening the gap of the whole rim. Only an uncertified edge stretch is Unresolved.
 * **Change points** against such bodies are known to a few times that: an undecided run up to eight times (gap +
   largest slack) between decided neighbours of different classes is shared between them; anything else stays
   Unresolved.
@@ -164,16 +165,23 @@ What the real body may differ from the exact one by is carried, not assumed away
   NURBS control hulls bound distance from each sample's fixed covering witness and maximum view depth over the whole
   interval; adaptive bisection stops at 32768 intervals per stretch, with failure/cap retaining the original class.
   Matching rational bases can instead certify the whole interval by corresponding control-point differences.
+  Closed witnesses are seam-aligned and oriented before matching. A tangent/chord certificate bounds sideways
+  departure and affine-detrended depth by both control hulls; continuity supplies a matching longitudinal coordinate
+  on the witness. Thus smooth coincident pieces need quadratic sag refinement rather than tolerance-spaced travel.
+  A shared 200000-work-unit pass budget includes candidate endpoint preparation and covering-pair checks. Budget or
+  interval caps retain the original class and report their hits in Info.
 
 Recognition is **evidence, not proof**: cells are labelled from Rhino's point-in-solid answers at sample points, the
 volume check is 1 %, and a face with no point two margins clear of every other surface (a sliver that hugs one) cannot
 be compared by point-in-solid answers at all: it is compared with the Brep's own orientation instead (the description,
 with every surface known only to its slack, must allow material just behind it and void just in front). Actual probe
 distances, rather than only a sum-of-slacks broad phase, test whether the probes are clear of other real surfaces.
-No interior sample or an ambiguous/contradictory answer leaves that face locally uncertain. Its positive-NURBS
-control hull bounds the footprint, inflated for the body's stated slack. Within that footprint and the face's surface
-band, CSG allows both material and void; OnSurface/contact incidence cannot waive it. Sure material elsewhere may
-still prove Hidden, but a possible cover cannot prove Visible. The rest of the body stays analytic. Info reports these
+No interior sample or an ambiguous answer leaves that face locally uncertain; a positive orientation contradiction
+still refuses the body, even if an earlier sample was ambiguous. Its positive-NURBS control hull bounds the footprint,
+inflated in every world axis by at least the tube's wall thickness plus stated slack. The entire resulting box,
+including adjacent cell interiors beyond the surface band, permits both material and void. Neither cell labels,
+required-surface tests nor OnSurface/contact incidence can certify material or void inside it. Sure material outside
+the box may still prove Hidden. The rest of the body stays analytic. Info reports these
 footprints as uncertainty, and recognition evidence as evidence rather than proof, and gives, for each cut tube, its face
 bound, edge bound and largest surface slack. At most `NativeSettings.CutTubeBudget` (128) possible cut tubes are
 examined per view, the first in input order whatever is cached, so that the drawing does not depend on earlier

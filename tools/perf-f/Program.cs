@@ -40,6 +40,9 @@ internal static class Program
     private static int Run(string[] args)
     {
         using var core = new RhinoCore(new[] { "/nosplash", "/notemplate" }, WindowStyle.NoWindow);
+#if !PERFF_BASELINE
+        if (args[1] == "round-cover-bench") { RoundCoverBench.Run(Path.GetFullPath(args[2])); return 0; }
+#endif
         if (args[1] == "native-point-witness") { NativePointWitnesses.Run(args[2]); return 0; }
         var file = args[1]; var output = Path.GetFullPath(args[2]); Directory.CreateDirectory(output);
         var viewName = args[3]; var variants = args.Skip(4).ToArray();

@@ -355,6 +355,8 @@ internal sealed class AnalyticVisibility
     internal bool Any => _removed.Count != 0;
     internal string Route => Any ? $"; exact analytic solids={_removed.Count}" : "";
     private readonly List<string> _notes = [];
+    private readonly List<string> _lateNotes = [];
+    internal IEnumerable<string> LateDiagnostics => _lateNotes;
     internal IEnumerable<string> Diagnostics => (_recognised == 0 ? [] : new[]
         { $"Analytic solids: recognised={_recognised}; exact={_removed.Count}; of those, beside unrecognised bodies (lines also checked by native HLD)={_beside}; kept on native HLD because an unrecognised body may hide them={_recognised - _removed.Count}; own candidate curves={_candidates.Count}; given to native HLD={_asked.Count}." })
         .Concat(_notes);
@@ -919,6 +921,7 @@ internal sealed class AnalyticVisibility
         // so a stack of n coincident rims costs n comparisons, not n squared.
         var gone = new bool[made.Count];
         using var tree = new RTree();
+        var coverWork = new BoundedCurveCover.WorkBudget();
         try
         {
             for (int i = 0; i < made.Count; i++)
@@ -932,6 +935,7 @@ internal sealed class AnalyticVisibility
                 token.ThrowIfCancellationRequested(); var piece = made[i];
                 if (piece.Class == LineClass.Visible || flat[i] is not { } mine) { kept.Add(piece); continue; }
                 bool undecided = piece.Class != LineClass.Hidden;
+                if (coverWork.Used >= coverWork.Limit) { coverWork.CapHits++; kept.Add(piece); continue; }
                 var others = new List<int>(); var reach = mine.GetBoundingBox(true); reach.Inflate(known[i]);
                 tree.Search(reach, (_, a) =>
                 {
@@ -940,18 +944,23 @@ internal sealed class AnalyticVisibility
                 });
                 if (others.Count == 0) { kept.Add(piece); continue; }
                 others.Sort();
+                var coverPieces = others.Select(j => new BoundedCurveCover.Piece(made[j].Curve, flat[j]!, known[j])).ToArray();
                 var cuts = new SortedSet<double> { mine.Domain.Min, mine.Domain.Max };
+                bool preparationCapped = false;
                 foreach (int j in others)
+                {
+                    if (!coverWork.Spend()) { preparationCapped = true; break; }
                     foreach (var end in new[] { flat[j]!.PointAtStart, flat[j]!.PointAtEnd })
                         if (mine.ClosestPoint(end, out double t, _tol + known[i] + known[j])) cuts.Add(t);
+                }
+                if (preparationCapped) { coverWork.CapHits++; kept.Add(piece); continue; }
                 var ends = cuts.ToArray(); double start = double.NaN; gone[i] = true;
                 for (int k = 0; k + 1 < ends.Length; k++)
                 {
                     // Different covering pieces may witness different subintervals (a far rim can double back across
                     // their join). Both suppression rules require a certificate over every point, including depth.
                     bool covered = BoundedCurveCover.Covers(piece.Curve, mine, new(ends[k], ends[k + 1]),
-                        others.Select(j => new BoundedCurveCover.Piece(made[j].Curve, flat[j]!, known[j])).ToArray(),
-                        _plane, _tol, known[i], undecided, token);
+                        coverPieces, _plane, _tol, known[i], undecided, token, budget: coverWork);
                     if (!covered) gone[i] = false;
                     if (!covered && double.IsNaN(start)) start = ends[k];
                     if ((covered || k + 2 == ends.Length) && !double.IsNaN(start))
@@ -965,6 +974,8 @@ internal sealed class AnalyticVisibility
             }
         }
         finally { foreach (var p in flat) p?.Dispose(); }
+        if (coverWork.Used != 0)
+            _lateNotes.Add($"Analytic curve cover: cap hits={coverWork.CapHits}; work={coverWork.Used}/{coverWork.Limit}; first-order certificates={coverWork.FirstOrderProofs}; uncertified Hidden/Unresolved stretches retained.");
         return kept;
     }
 
@@ -1027,7 +1038,7 @@ internal sealed class AnalyticVisibility
         for (int i = 0; i < runs.Count; i++)
         {
             var run = runs[i];
-            if (run.Class != VisibilityClass.Unresolved || run.Length > absorb) continue;
+            if (run.Class != VisibilityClass.Unresolved || run.Length > absorb || occluders.HasUncertainRegions) continue;
             bool left = i > 0, right = i + 1 < runs.Count;
             bool changePoint = left && right && runs[i - 1].Class != runs[i + 1].Class;
             if (!changePoint && (slack > 0 || run.Length > _tol)) continue;

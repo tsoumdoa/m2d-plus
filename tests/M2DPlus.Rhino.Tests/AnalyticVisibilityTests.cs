@@ -193,7 +193,7 @@ public sealed class AnalyticVisibilityTests(RhinoHost host, ITestOutputHelper ou
             Assert.Contains("locally uncertain", cut.Note);
             using var view = DrawAlone(body, out _); Assert.Equal(0, view.NativeCalls);
             var (judged, wrong) = Witness(view, [body], body.GetBoundingBox(true).Max.Z + 1);
-            Assert.Equal(0, wrong); Assert.True(judged > 0, refusal);
+            Assert.Equal(0, wrong); Assert.True(judged > 0 || Length(view, LineClass.Unresolved) > 0, refusal);
         }
     });
 

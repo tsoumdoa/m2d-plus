@@ -18,8 +18,8 @@ public enum CsgRole
 /// <param name="Slack">How far the real face may be from this surface (a certified bound from recognition).</param>
 public readonly record struct CsgPrimitive(bool Cylinder, Vertex Origin, Vertex Direction, double Radius, CsgRole Role, double Slack = 0);
 
-/// <summary>A face whose orientation could not be checked. Only its bounded footprint and its surface's slack
-/// band are uncertain; cells and sure material elsewhere keep their ordinary certificates.</summary>
+/// <summary>A face whose orientation could not be checked. Cell labels throughout its inflated box are unknown,
+/// including the material on both sides of the face; the uncertainty is not confined to a surface band.</summary>
 public readonly record struct CsgUncertainPatch(int Surface, Vertex Min, Vertex Max, double Slack = 0);
 
 /// <summary>
@@ -53,6 +53,7 @@ public sealed class AnalyticCsg : AnalyticSolid
     private readonly CsgUncertainPatch[] _patches;
     public IReadOnlyList<CsgPrimitive> Primitives => _primitives;
     public override double Slack { get; }
+    public override bool HasUncertainRegions => _patches.Length != 0;
 
     /// <param name="inside">Cells of the free surfaces that are in the solid; null when there is no free surface.
     /// Bit k of a cell is the k-th free surface in list order, set when the point is inside it.</param>
@@ -102,7 +103,7 @@ public sealed class AnalyticCsg : AnalyticSolid
         Span<double> inLo = stackalloc double[n], inHi = stackalloc double[n], outLo = stackalloc double[n], outHi = stackalloc double[n];
         Span<double> cuts = stackalloc double[4 * n + 2 + 2 * _patches.Length]; int nc = 0; cuts[nc++] = 0; double error = 0;
         foreach (var patch in _patches)
-            if (Across(patch, start, lateral) && patch.Max.Z + spread > start.Z)
+            if (Across(patch, start, lateral) && patch.Max.Z + spread >= start.Z)
             {
                 cuts[nc++] = Math.Max(0, patch.Min.Z - start.Z - spread);
                 cuts[nc++] = patch.Max.Z - start.Z + spread;
@@ -200,7 +201,8 @@ public sealed class AnalyticCsg : AnalyticSolid
             if (ih > il && !(ol <= il && oh >= ih)) { ol = Math.Min(ol, il); oh = Math.Max(oh, ih); }
             inLo[i] = il; inHi[i] = ih; outLo[i] = ol; outHi[i] = oh;
             // A surface the whole solid is inside of, and the ray never possibly is: nothing to cover with.
-            if (s.Role == CsgRole.Inside && !(oh > Math.Max(ol, 0))) return VisibilityClass.Visible;
+            if (s.Role == CsgRole.Inside && !(oh > Math.Max(ol, 0)) &&
+                !_patches.Any(patch => Across(patch, start, lateral) && patch.Max.Z + spread >= start.Z)) return VisibilityClass.Visible;
             if (ih > il) { if (il > 0) cuts[nc++] = il; if (ih > 0 && double.IsFinite(ih)) cuts[nc++] = ih; }
             if (oh > ol) { if (ol > 0) cuts[nc++] = ol; if (oh > 0 && double.IsFinite(oh)) cuts[nc++] = oh; }
         }
@@ -231,6 +233,10 @@ public sealed class AnalyticCsg : AnalyticSolid
     private int State(double t, ReadOnlySpan<double> inLo, ReadOnlySpan<double> inHi, ReadOnlySpan<double> outLo, ReadOnlySpan<double> outHi, int along,
         Vertex start, double lateral, double spread)
     {
+        // A failed face supplies no evidence for either adjacent cell. The complete box is unknown, even where
+        // nominal surface/cell tests would report sure material (or sure void) away from the face's slack band.
+        foreach (var patch in _patches)
+            if (Across(patch, start, lateral) && start.Z + t + spread >= patch.Min.Z && start.Z + t - spread <= patch.Max.Z) return 1;
         int value = 0, unknown = 0; bool possible = true, sure = true;
         for (int i = 0; i < _primitives.Length; i++)
         {
@@ -244,12 +250,6 @@ public sealed class AnalyticCsg : AnalyticSolid
                     if (surelyIn) value |= 1 << _bit[i]; else if (possiblyIn) unknown |= 1 << _bit[i];
                     break;
             }
-        }
-        foreach (var patch in _patches)
-        {
-            int i = patch.Surface;
-            if (Across(patch, start, lateral) && start.Z + t + spread >= patch.Min.Z && start.Z + t - spread <= patch.Max.Z &&
-                t >= outLo[i] && t <= outHi[i] && !(t >= inLo[i] && t <= inHi[i])) return 1;
         }
         if (_free != 0)
         {

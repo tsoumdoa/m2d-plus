@@ -474,11 +474,14 @@ internal static class CutTubeRecognition
                     // Surface residuals alone do not bound distance to their intersection: divide their SUM by a lower
                     // bound on the crossing sine over the whole piece and its gap neighbourhood. Pinch-outs refuse this
                     // certificate; sampled snap distances are never a substitute for it.
+                    double pieceDa = from == 0 && to == parts ? da : Math.Min(da, Deviation(piece, surfaces[a], fine, limit));
+                    double pieceDb = from == 0 && to == parts ? db : Math.Min(db, Deviation(piece, surfaces[b], fine, limit));
                     double lowerSine = 0;
-                    double gap = exact ? CylinderGap(piece, surfaces[a], surfaces[b], da, db, limit) : double.PositiveInfinity;
+                    bool squareRoot = false;
+                    double gap = exact ? CylinderGap(piece, surfaces[a], surfaces[b], pieceDa, pieceDb, limit, out squareRoot) : double.PositiveInfinity;
                     bool closedForm = double.IsFinite(gap);
-                    if (exact && !closedForm) gap = IntersectionGap(piece, surfaces[a], surfaces[b], da, db, limit, out lowerSine, token);
-                    if (exact && !double.IsFinite(gap) && to - from > 1)
+                    if (exact && !closedForm) gap = IntersectionGap(piece, surfaces[a], surfaces[b], pieceDa, pieceDb, limit, out lowerSine, token);
+                    if (exact && (!double.IsFinite(gap) || squareRoot) && to - from > 1)
                     {
                         // A pinch-out may be between the initial samples. Localise the failure instead of withholding
                         // the entire otherwise clean rim; even the smallest piece still needs the whole-piece bound.
@@ -500,7 +503,7 @@ internal static class CutTubeRecognition
                             if (lies) on |= 1 << k;
                         }
                     edges.Add(new(piece, on, 0, exact, exact ? gap : 0) { Diagnostic = FormattableString.Invariant(
-                        $"edge {edge.EdgeIndex}, parts {from}..{to}/64, surfaces {a}/{b}, da {da:R}, db {db:R}, sin lower {lowerSine:R}, gap {gap:R}, exact {exact}, closed form {closedForm}") });
+                        $"edge {edge.EdgeIndex}, parts {from}..{to}/64, surfaces {a}/{b}, da {pieceDa:R}, db {pieceDb:R}, sin lower {lowerSine:R}, gap {gap:R}, exact {exact}, closed form {closedForm}, sqrt bound {squareRoot}") });
                 }
             }
             for (int i = 0; i < real; i++) if (grow[i] > surfaces[i].Slack) surfaces[i] = surfaces[i] with { Slack = grow[i] };
@@ -522,13 +525,14 @@ internal static class CutTubeRecognition
                 {
                     token.ThrowIfCancellationRequested();
                     if (SliverFailure(InteriorPoints(brep.Faces[index], 65), faceSurface[index], surfaces, stated, tol) is not { } failure) continue;
+                    if (failure == OrientationContradiction) return no($"face {index}: {failure}");
                     // No evidence for this face is no evidence for this face, not a reason to discard the other
                     // faces and their learned cells. Quarantine its complete positive-NURBS control hull, inflated
-                    // for stored face/edge slack. The CSG predicate treats the surface band there as unknown and
-                    // never uses an OnSurface/contact exemption there. Sure material elsewhere can still hide it.
+                    // through at least the entire wall on both sides, as well as stored face/edge slack. Failed
+                    // orientation evidence cannot certify adjacent cell labels anywhere inside that box.
                     int own = faceSurface[index]; var footprint = FaceHull(brep.Faces[index]);
                     if (!footprint.IsValid) footprint = box;
-                    footprint.Inflate(surfaces.Max(s => s.Slack) + 4 * tol);
+                    footprint.Inflate((ri > 0 ? ro - ri : 2 * ro) + surfaces.Max(s => s.Slack) + 4 * tol);
                     uncertainFaces.Add((own, footprint, surfaces[own].Slack + 4 * tol));
                     localNotes.Add($"face {index} locally uncertain: {failure}");
                 }
@@ -573,9 +577,13 @@ internal static class CutTubeRecognition
     /// N/(|x|+|x'|) and sqrt(N). The latter remains finite at a pinch-out; there is no inverse crossing-angle
     /// assumption. Positive NURBS control hulls bound y and x over the complete piece. Both axes are tried.</summary>
     internal static double CylinderGap(Curve curve, Surface a, Surface b, double da, double db, double limit)
+        => CylinderGap(curve, a, b, da, db, limit, out _);
+
+    internal static double CylinderGap(Curve curve, Surface a, Surface b, double da, double db, double limit, out bool squareRoot)
     {
-        double One(Surface first, Surface second, double residual)
+        double One(Surface first, Surface second, double residual, out bool rootBound)
         {
+            rootBound = false;
             if (CylinderFrame(first, second) is not { } frame) return double.PositiveInfinity;
             using var n = curve.ToNurbsCurve();
             if (n is null || n.Points.Any(p => !(p.Weight > 0) || !double.IsFinite(p.Weight))) return double.PositiveInfinity;
@@ -602,11 +610,15 @@ internal static class CutTubeRecognition
             x0 -= residual + guard; x1 += residual + guard;
             double near = x0 > 0 ? x0 : x1 < 0 ? -x1 : 0;
             double e = da + db + guard, numerator = e * (2 * second.Radius + e);
-            double delta = Math.Min(Math.Sqrt(numerator), near + root > 0 ? numerator / (near + root) : double.PositiveInfinity);
+            double quotient = near + root > 0 ? numerator / (near + root) : double.PositiveInfinity;
+            rootBound = Math.Sqrt(numerator) <= quotient;
+            double delta = Math.Min(Math.Sqrt(numerator), quotient);
             return residual + delta / Math.Abs(frame.Along) + guard;
         }
+        squareRoot = false;
         if (!(da >= 0 && db >= 0)) return double.PositiveInfinity;
-        double gap = Math.Min(One(a, b, da), One(b, a, db));
+        double ga = One(a, b, da, out bool ra), gb = One(b, a, db, out bool rb);
+        double gap = Math.Min(ga, gb); squareRoot = ga <= gb ? ra : rb;
         return gap <= limit ? gap : double.PositiveInfinity;
     }
 
@@ -630,7 +642,7 @@ internal static class CutTubeRecognition
     internal static string? SliverFailure(IEnumerable<(Point3d At, Vector3d Normal)> points, int own,
         IReadOnlyList<Surface> surfaces, AnalyticCsg stated, double tol)
     {
-        int found = 0; double off = surfaces[own].Slack + 4 * tol;
+        int found = 0; double off = surfaces[own].Slack + 4 * tol; string? noEvidence = null;
         foreach (var (at, normal) in points)
         {
             found++;
@@ -643,12 +655,13 @@ internal static class CutTubeRecognition
                 // Test the actual probes against the other surface's certified band. The scalar sum-of-slacks
                 // test is only a broad phase: at an oblique crossing it can reject probes that are both clear.
                 if (Math.Min(db, df) <= surfaces[i].Slack + guard)
-                    return FormattableString.Invariant($"overlapping slack bands at sample {found}, surfaces {own}/{i}, distance {Math.Abs(Distance(surfaces[i], at)):R}, own slack {surfaces[own].Slack:R}, other slack {surfaces[i].Slack:R}, threshold {off + surfaces[i].Slack:R}, probe distances {db:R}/{df:R}");
+                    noEvidence ??= FormattableString.Invariant($"overlapping slack bands at sample {found}, surfaces {own}/{i}, distance {Math.Abs(Distance(surfaces[i], at)):R}, own slack {surfaces[own].Slack:R}, other slack {surfaces[i].Slack:R}, threshold {off + surfaces[i].Slack:R}, probe distances {db:R}/{df:R}");
             }
-            if (!stated.May(new(behind.X, behind.Y, behind.Z)).Solid || !stated.May(new(front.X, front.Y, front.Z)).Void) return "orientation contradicts cells";
+            if (!stated.May(new(behind.X, behind.Y, behind.Z)).Solid || !stated.May(new(front.X, front.Y, front.Z)).Void) return OrientationContradiction;
         }
-        return found == 0 ? "no interior sample (found=0)" : null;
+        return found == 0 ? "no interior sample (found=0)" : noEvidence;
     }
+    internal const string OrientationContradiction = "orientation contradicts cells";
 
     /// <summary>Certified edge-to-intersection distance. For unit signed-distance gradients, the least correction
     /// has speed at most (|da|+|db|)/sin(theta). Plane curvature is zero, cylinder curvature is 1/rho. Bound the

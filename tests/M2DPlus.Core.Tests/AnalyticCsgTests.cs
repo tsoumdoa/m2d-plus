@@ -13,10 +13,12 @@ public sealed class AnalyticCsgTests
     private const VisibilityClass Visible = VisibilityClass.Visible, Hidden = VisibilityClass.Hidden, Unresolved = VisibilityClass.Unresolved;
     private static Vertex V(double x, double y, double z) => new(x, y, z);
 
-    [Fact] public void UncheckedFaceIsOnlyPossibleMaterialInItsFootprintAndSurfaceBand()
+    [Fact] public void UncheckedFaceMakesTheWholeWallInItsBoxUnknown()
     {
         CsgPrimitive[] surfaces = [new(true, V(0, 0, 0), V(0, 0, 1), 10, CsgRole.Inside),
-            new(false, V(0, 0, 0), V(0, 0, 1), 0, CsgRole.Free, .05)];
+            new(false, V(0, 0, 0), V(0, 0, 1), 0, CsgRole.Free, .05),
+            new(false, V(0, 0, .1), V(0, 0, 1), 0, CsgRole.Inside),
+            new(false, V(0, 0, -.1), V(0, 0, -1), 0, CsgRole.Inside)];
         var patch = new CsgUncertainPatch(1, V(-1, -1, -.1), V(1, 1, .1), .05);
         var empty = new AnalyticCsg(surfaces, V(-10, -10, -3), V(10, 10, 3), [], [0, 1], [patch]);
         Assert.Equal(Unresolved, empty.Occlusion(V(0, 0, -1), Tol));
@@ -26,9 +28,10 @@ public sealed class AnalyticCsgTests
         Assert.Equal(Unresolved, empty.Occlusion(V(0, 0, 0), Tol, own: 2));
         Assert.Equal(Unresolved, empty.Evaluate(V(1.1, 0, -1), .2, -1, -1, Tol));
         Assert.Equal(Visible, empty.Evaluate(V(1.21, 0, -1), .2, -1, -1, Tol));
-        // Sure material beyond the patch is still a complete Hidden certificate.
+        // Nominal sure material outside the surface band but inside the box is not a Hidden certificate.
         var full = new AnalyticCsg(surfaces, V(-10, -10, -3), V(10, 10, 3), [0, 1], [], [patch]);
-        Assert.Equal(Hidden, full.Occlusion(V(0, 0, -1), Tol));
+        Assert.Equal(Unresolved, full.Occlusion(V(0, 0, -1), Tol));
+        Assert.Equal(Hidden, full.Occlusion(V(2, 0, -1), Tol));
     }
 
     /// <summary>The test's own description of a cut tube: independent of the engine's surface list.</summary>

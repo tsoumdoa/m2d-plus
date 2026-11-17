@@ -47,6 +47,25 @@ public sealed class AnalyticSoundnessTests(RhinoHost host)
     });
 
     private static CutTubeRecognition.Surface Cylinder(Point3d o, Vector3d d, double slack = 0) => new(true, o, d, 1, CsgRole.Free, slack, false, 1);
+
+    [RhinoFact] public void CoincidentCirclesWithDifferentSeamsHaveAFastCoverCertificate() => host.Run(() =>
+    {
+        using var u = new Circle(new Plane(new Point3d(0, 0, -1), Vector3d.ZAxis), 100).ToNurbsCurve();
+        using var v = new Circle(Plane.WorldXY, 100).ToNurbsCurve(); Assert.True(v.ChangeClosedCurveSeam(.371));
+        using var uf = Flat(u); using var vf = Flat(v); var budget = new BoundedCurveCover.WorkBudget();
+        Assert.True(BoundedCurveCover.Covers(u, uf, u.Domain, [new(v, vf, 0)], Plane.WorldXY, .001, 0, true, cap: 8192, budget: budget));
+        Assert.Equal(0, budget.CapHits); Assert.True(budget.Used < 12000, $"Work {budget.Used}");
+        Assert.True(budget.FirstOrderProofs > 0);
+    });
+
+    [RhinoFact] public void SharedCoverBudgetBoundsTheWholePass() => host.Run(() =>
+    {
+        using var u = new PolylineCurve(new Point3d[] { new(0, 0, -1), new(1, 0, -1), new(0, 0, -1) });
+        using var v = new LineCurve(Point3d.Origin, new Point3d(1, 0, 0)); using var uf = Flat(u); using var vf = Flat(v);
+        var budget = new BoundedCurveCover.WorkBudget(3);
+        for (int i = 0; i < 10; i++) Assert.False(BoundedCurveCover.Covers(u, uf, u.Domain, [new(v, vf, 0)], Plane.WorldXY, .001, 0, true, budget: budget));
+        Assert.Equal(3, budget.Used); Assert.Equal(10, budget.CapHits);
+    });
     private static CutTubeRecognition.Surface PlaneSurface(Point3d o, Vector3d n, double slack = 0) => new(false, o, n, 0, CsgRole.Free, slack, false, 1);
 
     [RhinoFact] public void ShallowPlaneCylinderGapIncludesTheInverseCrossingSine() => host.Run(() =>
@@ -91,6 +110,9 @@ public sealed class AnalyticSoundnessTests(RhinoHost host)
         // .015 < .01+.01+4tol would reject this face. Both actual probes move parallel to the other plane,
         // remain .015 from it, and are outside its .01 band: the closed-form distances prove they are clear.
         Assert.True(CutTubeRecognition.CheckSliver([(Point3d.Origin, Vector3d.ZAxis)], 0, [a, oblique], independent, .001));
+        // An earlier ambiguous sample cannot conceal positive evidence contradicting the orientation later.
+        Assert.Equal(CutTubeRecognition.OrientationContradiction,
+            CutTubeRecognition.SliverFailure([(Point3d.Origin, Vector3d.ZAxis), (new Point3d(0, 0, .5), Vector3d.ZAxis)], 0, [a, b], csg, .001));
     });
 
     [RhinoFact] public void ClosedCylinderGapRemainsBoundedAtATangentBranchEndpoint() => host.Run(() =>
@@ -107,5 +129,18 @@ public sealed class AnalyticSoundnessTests(RhinoHost host)
             Assert.True(p.DistanceTo(q) <= gap);
             Assert.InRange(Math.Abs(CutTubeRecognition.Distance(a, q)) + Math.Abs(CutTubeRecognition.Distance(b, q)), 0, 1e-9);
         }
+    });
+
+    [RhinoFact] public void PinchSquareRootBoundShrinksAwayFromTheEndpoint() => host.Run(() =>
+    {
+        var a = Cylinder(Point3d.Origin, Vector3d.ZAxis); var b = Cylinder(Point3d.Origin, Vector3d.YAxis);
+        using var edge = new ArcCurve(new Arc(Plane.WorldXY, 1, Math.PI / 2)).ToNurbsCurve();
+        var lift = Transform.Identity; lift.M21 = 1; lift.M22 = 0; lift.M23 = 1e-6; Assert.True(edge.Transform(lift));
+        double da = CutTubeRecognition.Deviation(edge, a, 1e-8, .1), db = CutTubeRecognition.Deviation(edge, b, 1e-8, .1);
+        double whole = CutTubeRecognition.CylinderGap(edge, a, b, da, db, .1, out bool root);
+        Assert.True(root); Assert.True(double.IsFinite(whole));
+        using var regular = edge.Trim(edge.Domain.ParameterAt(.5), edge.Domain.ParameterAt(.75));
+        double local = CutTubeRecognition.CylinderGap(regular, a, b, da, db, .1, out bool localRoot);
+        Assert.False(localRoot); Assert.True(local < whole / 100, $"whole {whole:R}, local {local:R}");
     });
 }
