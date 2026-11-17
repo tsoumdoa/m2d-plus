@@ -76,6 +76,13 @@ adjudicates differences with direct ray/Brep intersections. `CurvedCore.cs` has 
 | `PERFF_CE_RHINO_SILHOUETTES=1` | Use Rhino's silhouettes for exact solids too, not the closed-form outlines. |
 | `PERFF_CE_TRACE=0\|1` | Print why samples the ray check calls wrong were classified as they were (1 adds triangles). |
 
+## Mesh-tier spike
+
+`PERFF_MT=1` makes the `ce:` prototype take its own-face exemptions and per-triangle deviation bounds from
+control-net certificates (`MeshTier.cs`) instead of Rhino ray tests; `mt-census` (in place of the view) reports face
+kinds, bound against measured deviation and silhouette accuracy. `mt_run.py` runs one view under the shared Rhino
+mutex. Switches and results: [hillclimb/mesh-tier/FINDINGS.md](../../hillclimb/mesh-tier/FINDINGS.md).
+
 ## Stage 1 check of the exact analytic tier
 
 `av:<view>` checks the production analytic tier (`AnalyticVisibility`, Core `AnalyticSolids`). It solves the view

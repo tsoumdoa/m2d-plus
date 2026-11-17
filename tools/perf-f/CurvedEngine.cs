@@ -95,11 +95,17 @@ internal static class CurvedEngine
         var unsupported = new List<string>(); var kinds = new Dictionary<string, int>();
         long triangles = 0, oracle = 0; int spanMixed = 0, spanTurn = 0; int chordChecks = 0, chordOver = 0, kinks = 0; double worstRatio = 0;
         var mode = Environment.GetEnvironmentVariable("PERFF_CE_CAND") ?? "edges";
+        // Mesh-tier spike: own-face exemptions and deviation bounds from control-net certificates (MeshTier.cs), no Rhino ray tests.
+        bool mt = Environment.GetEnvironmentVariable("PERFF_MT") == "1"; double cellSize = double.Parse(Environment.GetEnvironmentVariable("PERFF_MT_CELL") ?? "0.05", System.Globalization.CultureInfo.InvariantCulture);
+        var mtClock = new Stopwatch(); double pullSeconds = 0, boxSeconds = 0, uvSeconds = 0; long boxTests = 0, exempt = 0; var mtCells = new List<FaceCert.Cell>();
+        int[] boxed = new int[2], unboxed = new int[2]; var certWhy = new SortedDictionary<string, int>(StringComparer.Ordinal); var boxWhy = new SortedDictionary<string, double>(StringComparer.Ordinal); var certified = new List<double>(); long certTriangles = 0;
         MeshIndex.StrictChain = Environment.GetEnvironmentVariable("PERFF_CE_CHAIN") switch { "strict" => 1, "loose" => 2, _ => 0 };
         bool closedForm = Environment.GetEnvironmentVariable("PERFF_CE_RHINO_SILHOUETTES") != "1"; var shapes = new List<Shape>(); bool closedFormOutlines = closedForm;
         var notes = Environment.GetEnvironmentVariable("PERFF_CE_TRACE") is not null ? new Dictionary<int, string>() : null;
         // Rhino's mesher does not hold Tolerance by itself (curved spike, finding A): ask for half and measure what came back.
-        var mp = new MeshingParameters { Tolerance = eps / 2, RelativeTolerance = 0, MinimumEdgeLength = 0, MaximumEdgeLength = 0, GridAngle = RhinoMath.ToRadians(20), GridAspectRatio = 6,
+        double meshFraction = double.Parse(Environment.GetEnvironmentVariable("PERFF_MT_MESH") ?? "0.5", System.Globalization.CultureInfo.InvariantCulture);
+        FaceCert.Cache.Clear(); FaceCert.Hits = 0;
+        var mp = new MeshingParameters { Tolerance = eps * meshFraction, RelativeTolerance = 0, MinimumEdgeLength = 0, MaximumEdgeLength = 0, GridAngle = RhinoMath.ToRadians(20), GridAspectRatio = 6,
             GridAmplification = 1, GridMinCount = 16, GridMaxCount = 0, RefineAngle = 0, RefineGrid = true, SimplePlanes = true, JaggedSeams = false, DoublePrecision = true };
 
         for (int index = 0; index < items.Length; index++)
@@ -178,6 +184,18 @@ internal static class CurvedEngine
 
             // ---- Chords, with what is known about the candidate's own surface
             var faceKinds = solid >= 0 ? Array.Empty<FaceKind>() : brep.Faces.Select(f => Kind(f, tol)).ToArray();
+            var certs = new FaceCert?[brep.Faces.Count];
+            if (mt && solid < 0)
+            {
+                foreach (var f in brep.Faces)
+                {
+                    if (Exact(faceKinds[f.FaceIndex])) continue;
+                    using var surface = f.UnderlyingSurface(); var (bu, bv) = MeshTier.ParameterBox(f);
+                    var cert = FaceCert.Build(surface, bu, bv, Project, cellSize, tol); certs[f.FaceIndex] = cert;
+                    string label = cert.Ok ? (cert.Rational ? "rational" : "polynomial") : cert.Why; certWhy[label] = certWhy.GetValueOrDefault(label) + 1;
+                }
+                Lap("certificates");
+            }
             for (int ci = firstCandidate; ci < candidates.Count; ci++)
             {
                 var c = candidates[ci]; c.First = chords.Count;
@@ -188,14 +206,14 @@ internal static class CurvedEngine
                 // the other none, the crossing depth passes through zero in between (a tangential change point): undecidable.
                 var cuts = new SortedSet<double> { c.Curve.Domain.Min, c.Curve.Domain.Max };
                 for (int k = 0; k < c.Curve.SpanCount; k++) { var d = c.Curve.SpanDomain(k); cuts.Add(d.Min); cuts.Add(d.Max); }
-                if (solid < 0) foreach (double t in c.Curve.DivideByLength(.05, false) ?? Array.Empty<double>()) cuts.Add(t);
+                if (solid < 0 && !mt) foreach (double t in c.Curve.DivideByLength(.05, false) ?? Array.Empty<double>()) cuts.Add(t);
                 var stations = cuts.Where(t => t >= c.Curve.Domain.Min && t <= c.Curve.Domain.Max).ToArray();
                 var limits = new ((double Limit, bool Crossing, double Facing), (double Limit, bool Crossing, double Facing))[solid < 0 ? stations.Length : 0];
                 for (int k = 0; k < limits.Length; k++)
                 {
                     var q = c.Curve.PointAt(stations[k]); double reach = reachZ - Project(q).Z + 1e-3;
-                    limits[k] = (c.F0 >= 0 ? Clearance(brep.Faces[c.F0], faceKinds[c.F0], q, e, tol, c.Tangent, reach, ref oracle) : (double.NegativeInfinity, false, double.NaN),
-                                 c.F1 >= 0 ? Clearance(brep.Faces[c.F1], faceKinds[c.F1], q, e, tol, c.Tangent, reach, ref oracle) : (double.NegativeInfinity, false, double.NaN));
+                    limits[k] = (c.F0 >= 0 && (!mt || Exact(faceKinds[c.F0])) ? Clearance(brep.Faces[c.F0], faceKinds[c.F0], q, e, tol, c.Tangent, reach, ref oracle) : (double.NegativeInfinity, false, double.NaN),
+                                 c.F1 >= 0 && (!mt || Exact(faceKinds[c.F1])) ? Clearance(brep.Faces[c.F1], faceKinds[c.F1], q, e, tol, c.Tangent, reach, ref oracle) : (double.NegativeInfinity, false, double.NaN));
                 }
                 bool edgeCandidate = !c.Tangent;
                 double Between((double Limit, bool Crossing, double Facing) p, (double Limit, bool Crossing, double Facing) q)
@@ -207,11 +225,35 @@ internal static class CurvedEngine
                     return Math.Min(p.Limit, q.Limit);
                 }
                 for (int k = 0; k + 1 < stations.Length; k++)
-                    foreach (var (ta, tb) in Subdivide(c.Curve, stations[k], stations[k + 1], sag, hMax))
+                    foreach (var (ta, tb) in Subdivide(c.Curve, stations[k], stations[k + 1], sag, mt && solid < 0 ? Math.Min(hMax, .1) : hMax))
                     {
                         var chord = new Chord { A = Project(c.Curve.PointAt(ta)), M = Project(c.Curve.PointAt((ta + tb) / 2)), B = Project(c.Curve.PointAt(tb)), Sheet = solid >= 0 ? -1 : index, F0 = c.F0, F1 = c.F1, Solid = solid, Tangent = c.Tangent,
                             OnSurface = (c.F0 >= 0 ? tags[c.F0] : 0) | (c.F1 >= 0 ? tags[c.F1] : 0), S0 = double.NegativeInfinity, S1 = double.NegativeInfinity, X0 = x0, X1 = x1 };
                         if (solid < 0) { chord.S0 = Between(limits[k].Item1, limits[k + 1].Item1); chord.S1 = Between(limits[k].Item2, limits[k + 1].Item2); }
+                        if (mt && solid < 0)
+                            for (int slot = 0; slot < 2; slot++)
+                            {
+                                int fi = slot == 0 ? c.F0 : c.F1; if (fi < 0 || certs[fi] is not { Ok: true } cert) continue;
+                                var face = brep.Faces[fi]; var uv = new Point2d[3]; var normals = new (double, double)[3]; bool good = true; double marginU = 0, marginV = 0; string fail = "certificate fails on the smallest box";
+                                mtClock.Restart();
+                                for (int n = 0; n < 3 && good; n++)
+                                {
+                                    var point = c.Curve.PointAt(n == 0 ? ta : n == 1 ? (ta + tb) / 2 : tb);
+                                    if (!face.ClosestPoint(point, out var u, out var v) || !face.Evaluate(u, v, 1, out var on, out var ders) || on.DistanceTo(point) > 4 * tol) { good = false; fail = "no point on the face"; break; }
+                                    uv[n] = new(u, v); var normal = Direction(Vector3d.CrossProduct(ders[0], ders[1])); double flat = Math.Sqrt(normal.X * normal.X + normal.Y * normal.Y);
+                                    // A silhouette point must be on the fold (to a thousandth of a radian) and have a drawing normal.
+                                    if (c.Tangent) { if (flat <= 0 || Math.Abs(normal.Z) > 1e-3 * flat) { good = false; fail = "not on the fold"; } else normals[n] = (normal.X / flat, normal.Y / flat); }
+                                    if (n == 1) { marginU = 2 * eps / Math.Max(1e-12, ders[0].Length); marginV = 2 * eps / Math.Max(1e-12, ders[1].Length); }
+                                }
+                                // A closed face: the three points must not straddle the seam.
+                                if (good && (Math.Abs(uv[0].X - uv[2].X) > .5 * face.Domain(0).Length || Math.Abs(uv[0].Y - uv[2].Y) > .5 * face.Domain(1).Length)) { good = false; fail = "straddles the seam"; }
+                                pullSeconds += mtClock.Elapsed.TotalSeconds; mtClock.Restart();
+                                double u0 = 0, u1 = 0, v0 = 0, v1 = 0;
+                                bool has = good && MeshTier.OwnBox(cert, c.Tangent, uv, normals, marginU, marginV, mtCells, ref boxTests, out u0, out u1, out v0, out v1);
+                                boxSeconds += mtClock.Elapsed.TotalSeconds;
+                                if (has) boxed[c.Tangent ? 1 : 0]++; else { unboxed[c.Tangent ? 1 : 0]++; string whyKey = (c.Tangent ? "silhouette: " : "edge: ") + fail; boxWhy[whyKey] = boxWhy.GetValueOrDefault(whyKey) + Math.Sqrt((chord.B.X - chord.A.X) * (chord.B.X - chord.A.X) + (chord.B.Y - chord.A.Y) * (chord.B.Y - chord.A.Y)); }
+                                if (slot == 0) { chord.H0 = has; chord.B0u0 = u0; chord.B0u1 = u1; chord.B0v0 = v0; chord.B0v1 = v1; } else { chord.H1 = has; chord.B1u0 = u0; chord.B1u1 = u1; chord.B1v0 = v0; chord.B1v1 = v1; }
+                            }
                         if (notes is not null && solid < 0)
                         {
                             Point3d qa = c.Curve.PointAt(stations[k]), qb = c.Curve.PointAt(stations[k + 1]);
@@ -229,6 +271,7 @@ internal static class CurvedEngine
             Lap("meshing");
             if (meshes is null || meshes.Length != brep.Faces.Count) { unsupported.Add(id); continue; }
             var lookup = new Dictionary<Point3d, int>(); var vertices = new List<V3>(); var tris = new List<int>(); var faces = new List<int>(); double worst = 0;
+            var epsTri = mt ? new List<double>() : null; var uvTri = mt ? new List<double>() : null;
             for (int f = 0; f < meshes.Length; f++)
             {
                 var mesh = meshes[f]; mesh.Faces.ConvertQuadsToTriangles();
@@ -240,11 +283,39 @@ internal static class CurvedEngine
                     map[v] = w;
                 }
                 int count = mesh.Faces.Count, stride = Math.Max(1, count / 64); var face = brep.Faces[f]; bool planar = face.IsPlanar(tol);
+                Point2d[]? vertexUv = null; double[]? vertexOff = null;
+                if (mt && certs[f] is { Ok: true })
+                {   // Harness stand-in for a tessellator that knows its parameters: pull every vertex back onto the face.
+                    mtClock.Restart(); vertexUv = new Point2d[mesh.Vertices.Count]; vertexOff = new double[vertexUv.Length];
+                    for (int v = 0; v < vertexUv.Length; v++)
+                    {
+                        var p = mesh.Vertices.Point3dAt(v);
+                        if (face.ClosestPoint(p, out var pu, out var pv)) { vertexUv[v] = new(pu, pv); vertexOff[v] = face.PointAt(pu, pv).DistanceTo(p); } else { vertexUv[v] = new(double.NaN, double.NaN); vertexOff[v] = double.PositiveInfinity; }
+                    }
+                    uvSeconds += mtClock.Elapsed.TotalSeconds;
+                }
                 for (int t = 0; t < count; t++)
                 {
                     var mf = mesh.Faces[t]; int a = map[mf.A], b = map[mf.B], c = map[mf.C];
                     if (a == b || b == c || a == c) continue;
                     tris.Add(a); tris.Add(b); tris.Add(c); faces.Add(f);
+                    if (mt)
+                    {
+                        double bound = planar ? tol : double.NaN, bu0 = double.NaN, bu1 = double.NaN, bv0 = double.NaN, bv1 = double.NaN;
+                        if (vertexUv is not null)
+                        {
+                            Point2d qa = vertexUv[mf.A], qb = vertexUv[mf.B], qc = vertexUv[mf.C];
+                            bu0 = Math.Min(qa.X, Math.Min(qb.X, qc.X)); bu1 = Math.Max(qa.X, Math.Max(qb.X, qc.X)); bv0 = Math.Min(qa.Y, Math.Min(qb.Y, qc.Y)); bv1 = Math.Max(qa.Y, Math.Max(qb.Y, qc.Y));
+                            // A triangle whose corners were pulled to either side of a seam has no parameter box.
+                            if (double.IsNaN(bu0 + bv0) || bu1 - bu0 > .5 * face.Domain(0).Length || bv1 - bv0 > .5 * face.Domain(1).Length) { bu0 = bu1 = bv0 = bv1 = double.NaN; }
+                            else
+                            {
+                                bound = certs[f]!.Deviation(qa.X, qa.Y, qb.X, qb.Y, qc.X, qc.Y, mtCells) + Math.Max(vertexOff![mf.A], Math.Max(vertexOff[mf.B], vertexOff[mf.C])) + tol / 16;
+                                if (double.IsInfinity(bound)) bound = double.NaN; else { certified.Add(bound); certTriangles++; }
+                            }
+                        }
+                        epsTri!.Add(bound); uvTri!.Add(bu0); uvTri.Add(bu1); uvTri.Add(bv0); uvTri.Add(bv1);
+                    }
                     if (planar || t % stride != 0) continue;
                     Point3d pa = mesh.Vertices.Point3dAt(mf.A), pb = mesh.Vertices.Point3dAt(mf.B), pc = mesh.Vertices.Point3dAt(mf.C);
                     foreach (var q in new[] { (pa + pb + pc) / 3, (pa + pb) / 2, (pb + pc) / 2, (pa + pc) / 2 })
@@ -258,6 +329,8 @@ internal static class CurvedEngine
             worstRatio = Math.Max(worstRatio, worst / eps);
             // The bound used for this sheet is what was measured (with a margin), never the request alone.
             var sheet = new SheetMesh { Sheet = index, Eps = Math.Max(eps, 1.25 * worst), Vertices = vertices.ToArray(), Triangles = tris.ToArray(), Faces = faces.ToArray() };
+            // Triangles with no certified bound keep the measured one for the whole body.
+            if (mt) { double floor = tol * double.Parse(Environment.GetEnvironmentVariable("PERFF_MT_FLOOR") ?? "0", System.Globalization.CultureInfo.InvariantCulture); sheet.EpsTri = epsTri!.Select(x => double.IsNaN(x) ? sheet.Eps : Math.Max(x, floor)).ToArray(); sheet.Uv = uvTri!.ToArray(); }
             sheets.Add(sheet); triangles += faces.Count;
             Lap("weld + chord check");
         }
@@ -281,8 +354,13 @@ internal static class CurvedEngine
         Parallel.For(0, chordArray.Length, new ParallelOptions { MaxDegreeOfParallelism = threads }, () => new ChordSolver.Scratch(meshIndex), (i, _, scratch) =>
         {
             var list = new List<Piece>(2); ChordSolver.Solve(chordArray[i], solidIndex, meshIndex, tol, hMin, scratch, list); pieces[i] = list; return scratch;
-        }, scratch => { Interlocked.Add(ref meshTests, scratch.Mesh.Tests); Interlocked.Add(ref solidTests, scratch.SolidTests); Interlocked.Add(ref nodes, scratch.Mesh.Nodes); });
+        }, scratch => { Interlocked.Add(ref meshTests, scratch.Mesh.Tests); Interlocked.Add(ref solidTests, scratch.SolidTests); Interlocked.Add(ref nodes, scratch.Mesh.Nodes); Interlocked.Add(ref exempt, scratch.Mesh.Exempt); });
         Lap("solve");
+        if (mt)
+        {   // Split the harness stand-ins out of the phases they ran in.
+            phase["chords + local analysis"] -= pullSeconds + boxSeconds; phase["pull-back (Rhino closest point)"] = pullSeconds; phase["own-face certificates"] = boxSeconds;
+            phase["weld + chord check"] -= uvSeconds; phase["vertex parameters (harness stand-in)"] = uvSeconds;
+        }
         double engineSeconds = phase.Values.Sum(); var engineBusy = busy.Stop();
 
         // ---- Output, lengths and loci
@@ -297,7 +375,7 @@ internal static class CurvedEngine
                 length[(int)p.Class] += l; why[p.Why] += l; engineLocus.Add(a.X, a.Y, b.X, b.Y, (byte)p.Class);
                 if (p.Class == Cls.Unresolved)
                 {
-                    var ch = chordArray[i]; bool noLimit = ch.F0 >= 0 && double.IsNegativeInfinity(ch.S0) || ch.F1 >= 0 && double.IsNegativeInfinity(ch.S1);
+                    var ch = chordArray[i]; bool noLimit = mt && ch.Solid < 0 ? ch.F0 >= 0 && !ch.X0 && !ch.H0 || ch.F1 >= 0 && !ch.X1 && !ch.H1 : ch.F0 >= 0 && double.IsNegativeInfinity(ch.S0) || ch.F1 >= 0 && double.IsNegativeInfinity(ch.S1);
                     string key = p.Why == 4 ? "near another object" : (ch.Tangent ? "silhouette" : "edge") + (noLimit ? ", own face undecidable" : ", own mesh too coarse here");
                     unresolvedWhy[key] = unresolvedWhy.GetValueOrDefault(key) + l;
                 }
@@ -484,6 +562,9 @@ internal static class CurvedEngine
         Console.WriteLine($"    sources {items.Length} (candidate mode {mode}, {kinks} split at kinks, chain {(MeshIndex.StrictChain == 1 ? "strict" : MeshIndex.StrictChain == 2 ? "loose" : "default")}): {string.Join(", ", kinds.Select(k => $"{k.Key} {k.Value}"))}; unsupported {unsupported.Count}; candidates {candidates.Count} ({candidates.Count(c => c.Tangent)} silhouettes); chords {chordArray.Length}; triangles {triangles}; measured chord deviation worst {worstRatio:F2} eps, {chordOver}/{chordChecks} checks over eps; mesh tests {meshTests}, nodes {nodes}, solid tests {solidTests}, own-face ray tests {oracle}");
         Console.WriteLine($"    engine length m: Visible {length[0]:F1} Hidden {length[1]:F1} Unresolved {length[2]:F1} ({length[2] / Math.Max(1e-9, length.Sum()):P2} of all, {length[2] / Math.Max(1e-9, length[0] + length[2]):P2} of non-hidden); by reason: exact hidden {why[0]:F1}, mesh hidden {why[1]:F1}, visible {why[2]:F1}, unresolved own {why[3]:F1}, unresolved other {why[4]:F1}");
         Console.WriteLine($"    unresolved m: {string.Join("; ", unresolvedWhy.Select(u => $"{u.Key} {u.Value:F1}"))}");
+        static double Pick(List<double> list, double q) { if (list.Count == 0) return double.NaN; list.Sort(); return list[Math.Min(list.Count - 1, (int)(q * list.Count))]; }
+        double harness = pullSeconds + uvSeconds;
+        if (mt) Console.WriteLine($"    mesh tier: cell {cellSize:G4} m, mesh tolerance {meshFraction:G3} eps, distinct certificates {FaceCert.Cache.Values.Sum(v => v.Count)} (reused {FaceCert.Hits}); faces {string.Join(", ", certWhy.Select(k => $"{k.Key} {k.Value}"))}; chord faces with a certified box: edges {boxed[0]} of {boxed[0] + unboxed[0]}, silhouettes {boxed[1]} of {boxed[1] + unboxed[1]}; box tests {boxTests}; exempt triangle visits {exempt}; certified triangles {certTriangles} of {triangles}, bound mm median {Pick(certified, .5) * 1000:G4} p90 {Pick(certified, .9) * 1000:G4} p99 {Pick(certified, .99) * 1000:G4} max {Pick(certified, 1) * 1000:G4}, over eps {certified.Count(x => x > eps)}; engine without harness stand-ins {engineSeconds - harness:F3}s ({nativeWall / Math.Max(1e-9, engineSeconds - harness):F1}x); no box, drawing m: {string.Join("; ", boxWhy.Select(k => $"{k.Key} {k.Value:F1}"))}");
         lock (Refusals) { Console.WriteLine($"    own-face tests refused: {string.Join("; ", Refusals.Select(r => $"{r.Key} {r.Value}"))}; spans refused between stations: crossing appears {spanMixed}, face turns away {spanTurn}"); Refusals.Clear(); }
         Console.WriteLine($"    native length m: Visible {nativeLength[0]:F1} Hidden {nativeLength[1]:F1} Unresolved {nativeLength[2]:F1}");
         Console.WriteLine($"    engine drawn -> native within {strict * 1000:G3} mm (Visible / Hidden / Unresolved / no line): V {Row(matrix, 0)} | H {Row(matrix, 1)} | U {Row(matrix, 2)}; shadowed duplicates {shadowed:F1}");
@@ -494,7 +575,8 @@ internal static class CurvedEngine
         if (engineOnlyNotes.Count > 0) Console.WriteLine("    engine lines with no native line, examples: " + string.Join(" | ", engineOnlyNotes));
         return new
         {
-            name = "engine", multiple, eps, tier1, engineSeconds, nativeWall, speedup = nativeWall / engineSeconds, threads, engineBusy, phases = phase, sources = items.Length, kinds, unsupported, candidates = candidates.Count,
+            name = "engine", mt, mtHarnessSeconds = pullSeconds + uvSeconds, mtBoxed = boxed, mtUnboxed = unboxed, mtCertTriangles = certTriangles, mtBoundP50 = Pick(certified, .5), mtBoundP99 = Pick(certified, .99), mtBoundMax = Pick(certified, 1), mtOverEps = certified.Count(x => x > eps),
+            multiple, eps, tier1, engineSeconds, nativeWall, speedup = nativeWall / engineSeconds, threads, engineBusy, phases = phase, sources = items.Length, kinds, unsupported, candidates = candidates.Count,
             silhouettes = candidates.Count(c => c.Tangent), chords = chordArray.Length, triangles, worstRatio, chordOver, chordChecks, meshTests, nodes, solidTests, ownFaceRayTests = oracle, mode, kinks,
             length = new { visible = length[0], hidden = length[1], unresolved = length[2] }, reasons = new { exactHidden = why[0], meshHidden = why[1], visible = why[2], unresolvedOwn = why[3], unresolvedOther = why[4] },
             unresolvedWhy, nativeLength = new { visible = nativeLength[0], hidden = nativeLength[1], unresolved = nativeLength[2] },

@@ -57,6 +57,7 @@ internal static class Program
         var prepareSeconds = timer.Elapsed.TotalSeconds;
         var bounds = scene.Bounds;
 #if !PERFF_BASELINE
+        if (viewName == "mt-census") { MeshTier.Census(scene, prepared, Path.GetFileNameWithoutExtension(file), output, args.Skip(4).ToArray()); return 0; }
         if (viewName == "ce-census") { CurvedCensus.Run(scene, prepared, Path.GetFileNameWithoutExtension(file), output); return 0; }
 #endif
         var curved = viewName.StartsWith("curved:", StringComparison.Ordinal); if (curved) viewName = viewName[7..];
