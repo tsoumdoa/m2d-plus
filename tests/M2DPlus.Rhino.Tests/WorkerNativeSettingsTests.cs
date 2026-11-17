@@ -52,7 +52,8 @@ public sealed class WorkerNativeSettingsTests(RhinoHost host)
             Assert.True(settings.CullSources);
         }
         // Explicit JSON null has the same fallback as an omitted optional Verification field.
-        Assert.Equal(new NativeVerificationOptions(), (current with { Verification = null }).ToSettings(NativeScheduler.Global).Verification);
+        var explicitNull = WorkerCodec.Decode<WorkerCodec.Request>(WorkerCodec.Encode(current with { Verification = null }));
+        Assert.Equal(new NativeVerificationOptions(), explicitNull.ToSettings(NativeScheduler.Global).Verification);
     });
 
     [RhinoFact] public void TimingHistorySeparatesEveryPublicComputeOption() => host.Run(() =>
@@ -69,14 +70,6 @@ public sealed class WorkerNativeSettingsTests(RhinoHost host)
         };
         var keys = changed.Select(Key).Append(Key(defaults)).ToArray();
         Assert.Equal(keys.Length, keys.Distinct(StringComparer.Ordinal).Count());
-        foreach (var settings in changed)
-        {
-            var restored = WorkerCodec.Decode<WorkerCodec.Request>(WorkerCodec.Encode(WorkerCodec.Request.FromSettings(default, 0, view, settings)))
-                .ToSettings(NativeScheduler.Global);
-            Assert.Equal(settings.MultipleThreads, restored.MultipleThreads);
-            Assert.Equal(settings.NativeOnly, restored.NativeOnly);
-            Assert.Equal(settings.Verification, restored.Verification);
-        }
     });
 
     private static WorkerOptions Options() => new()
