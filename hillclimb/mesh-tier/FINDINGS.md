@@ -6,6 +6,8 @@ pushed, installed or published.
 
 ## 1. Verdict
 
+**Update, same day:** steps A to C are built; their numbers are in [section 9](#9-steps-a-to-c-built-2026-11-17-on-main-at-43c6e95).
+
 **Build with caveats. Do not drop native from exact mode on this evidence.**
 
 1. **Sound: yes, with certificates in place of the sampled own-face rule.** The two pieces the curved-engine spike
@@ -196,6 +198,82 @@ campus, measured under the mutex:
 
 Until then: exact mode keeps native for what the tier cannot decide, with step C's audit on top.
 
+## 9. Steps A to C built (2026-11-17, on `main` at `43c6e95`)
+
+The owner chose to build A to C now and decide on the full tier (D, E) later against section 8. This section is what
+was built and measured. Sections 1 to 8 stand as the research; where they say "not measured", look here first.
+
+### What was built
+
+| Step | Code | Tests |
+|---|---|---|
+| A | `M2DPlus.Core/Visibility/SurfaceCertificate.cs`: deviation, graph and fold certificates from piecewise Bezier control nets, polynomial and rational, in any rigid frame (the view axes are arguments, so one certificate serves every instance and view). Creases are refused where a second-derivative argument would cross them. The fold test takes a range of normal directions, not three samples. `BandedMeshIndex.cs`: the Hidden and Visible tests on triangles with bands, with the candidate's own error added to every band. No Rhino types. | 16 Core tests: bounds against surfaces evaluated independently, a sphere against its closed form (400 random segments, no wrong answer, over 97 % decided), open sheets, folds. |
+| B | `M2DPlus.Rhino/Services/CertifiedMesh.cs`: one welded mesh per definition, cached; instances place it. Rhino's mesh, every vertex pulled back for its parameters, a control-net band per triangle, a measured one where there is none. Revolved surfaces use their NURBS form's parameters; poles are handled. `PreparedLeaf.Placement` carries the instance transform. | Rhino tests: bands hold on a sphere, a torus and a freeform sheet; one build serves three instances. |
+| C | `DenseNativeAudit.cs`, behind `NativeSettings.DenseAudit` (off; `M2D_DENSE_AUDIT=1` for a trial). Exact mode only, in the composed route and the native fallback, after the sampled audit. Native Visible that the meshes prove Hidden goes to Unresolved, never to Hidden. Works through the drawing in strips so memory is bounded. | Rhino tests: covered stretch moved and nothing else; a line behind its own body; off by default; strips equal one index; over-limit strip reported. 8 pass. |
+
+Not done from the plan's step A: outward rounding (enclosures are padded by a relative 1e-12 instead). The harness
+still has its own copy of the certificates (`tools/perf-f/MeshTier.cs`) for the `ce:` prototype. Section views
+(`SectionDrawing`) are not audited.
+
+### B: the cost that was estimated at 7 to 9 s
+
+Section 4 estimated curved S SW at 7 to 9 s for the whole tier once certificates, meshing and welding (15.5 s, paid
+per instance in the prototype) are paid per definition. Measured in the product on that view: the eight definitions
+are meshed and certified once in about 2 s, and placing and indexing all 500 instances (6.8 M triangles) takes
+2.2 s per solve. With the prototype's other phases unchanged that is 21.9 - 15.5 + 2.2 = **8.6 s**, against
+native's 26 to 29 s. The mesh part is measured; the rest is still the prototype's, which was not rewired onto the
+product's meshes.
+
+The one-off cost is not small on models whose definitions are heavy: curved-steel's eight bodies come back from
+Rhino as 1.1 M triangles and cost 13 s to pull back and certify, once per process.
+
+### C: what the audit moves, and what it costs
+
+Mutex held, n = 1, band 1 mm, floor 0.5 mm (five tolerances). "Moved" is native Visible length in the drawing that
+became Unresolved. "Audit s" is the audit's own phase in a warm solve. Campus and curved M were run once (no warm
+repeat), so their figure includes the one-off mesh build.
+
+| Model, view | View s, off | Audit s | First solve adds | Moved m | Share of native Visible | Ray check: covered / not |
+|---|---:|---:|---:|---:|---:|---|
+| curved S SW | 28.4 | 3.2 | 2 s | 50.4 | 3.4 % | 737 / 0 |
+| curved S North | 23.2 | 3.0 | 3 s | 33.0 | 3.8 % | 621 / 0 |
+| curved M SW | 354 | 47 (once) | in it | 292.7 | 4.6 % | 610 / 0 |
+| diagrid SW | 4.0 | 0.6 | 7.5 s | 4.3 | 6.0 % | 126 / 0 |
+| curved-steel SW | 1.7 | 1.2 | 13 s | 0.3 | 0.3 % | 6 / 0 |
+| curved-steel Top | 1.9 | 1.1 | 13 s | 1.4 | 1.5 % | 42 / 0 |
+| curved-facade SW | 1.9 | 0.6 | 6 s | 2.5 | 1.8 % | 78 / 0 |
+| campus Top | 200 | 30 (once, 18.5 of it meshes) | in it | 1.0 | 0.02 % | 18 / 0 |
+
+- **Nothing it moved was wrong.** 2,238 points on moved stretches were ray-checked against the original bodies;
+  every one has more than four tolerances of cover.
+- **It finds 3 to 6 % of native's Visible length on four of the five curved-model views** (less on curved-steel and
+  the facade) that the sampled audit left Visible, and almost nothing on campus, where the round columns are
+  already in the analytic class.
+- **Self-occlusion** (the twisted RHS of curved-steel, Top, from Sol's evidence): 384 of the 435 witness points lie
+  on a stretch the audit moved. The other 51 were not moved; I take them to be within a band of the body's own
+  wall, where the audit says nothing, but did not trace them. A 0.25 mm band covered 177 before a bug fix that
+  the 1 mm run then had (whole curves were skipped); it was not repeated after.
+- **Cost is 11 to 13 % on the large curved views**, more on small ones in relative terms (curved-steel: 1.2 s on a
+  1.7 s view), plus the one-off build.
+- **Large models need the strips.** With one index, curved M (68 M triangles) and campus (20 M) did not fit a
+  sensible limit, and coarsening the band did not help: Rhino returned 26.6 M triangles for curved M at 8 mm. In
+  strips of about four million triangles they run in 18 and 5 strips.
+
+### Should C be on by default? Not yet.
+
+It is sound in everything measured and it catches real errors, so it should become the default. Three things stand
+between it and that, none of them research:
+
+1. **The first solve.** 6 to 13 s once per process on small models is too much for a switch nobody asked for, and
+   drawing sets run in worker processes, each of which would build its own meshes. The meshes belong in the scene
+   cache and in what a worker is sent, or the pull-back has to go (a tessellator of our own knows its parameters).
+2. **The worker route and .NET 10 were not run.** A strip holds 1 to 2 GB while it is indexed (an estimate from
+   array sizes, not a measurement); the workers' memory caps have not seen that.
+3. **The gate.** The 233-view gate has not been run with it on. It adds Unresolved linework (curved S SW:
+   134 m to 185 m), which the gate's expectations may count against a view.
+
+Until then: on for the owner's own trials with `M2D_DENSE_AUDIT=1`, off in the product.
+
 ## Reproduce
 
 ```sh
@@ -210,3 +288,10 @@ python -B tools/perf-f/mt_run.py <label> curved/curved-perf-S-blocks.3dm ce:SW e
 curved-engine findings. `PERFF_MT_MESH` is the tolerance asked of Rhino's mesher as a fraction of the band,
 `PERFF_MT_CELL` the certificate cell size in model units, `PERFF_MT_FLOOR` the least band in tolerances. Output
 (git-ignored): `artifacts/mesh-tier/<label>/`.
+
+The product's audit, off and on, with a ray check of what moved (`quick`: one solve each, for views that take minutes):
+
+```sh
+python -B tools/perf-f/mt_run.py <label> curved/curved-perf-S-blocks.3dm da:SW
+python -B tools/perf-f/mt_run.py <label> large/frame2d-large-campus.3dm da:Top quick
+```

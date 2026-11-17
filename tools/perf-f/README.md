@@ -81,7 +81,9 @@ adjudicates differences with direct ray/Brep intersections. `CurvedCore.cs` has 
 `PERFF_MT=1` makes the `ce:` prototype take its own-face exemptions and per-triangle deviation bounds from
 control-net certificates (`MeshTier.cs`) instead of Rhino ray tests; `mt-census` (in place of the view) reports face
 kinds, bound against measured deviation and silhouette accuracy. `mt_run.py` runs one view under the shared Rhino
-mutex. Switches and results: [hillclimb/mesh-tier/FINDINGS.md](../../hillclimb/mesh-tier/FINDINGS.md).
+mutex. `da:<view>` solves a view with the product's dense native audit off and on, reports what moved to Unresolved and
+its cost, and ray-checks the moved stretches (`quick`: one solve each; `PERFF_DA_WITNESSES=<json>` counts witness
+points that lie on a moved stretch). Switches and results: [hillclimb/mesh-tier/FINDINGS.md](../../hillclimb/mesh-tier/FINDINGS.md).
 
 ## Stage 1 check of the exact analytic tier
 
