@@ -166,6 +166,7 @@ internal sealed class WorkerClient : IDisposable
     }
     private static void DisposeOwned(NamedPipeServerStream pipe,WorkerJob? job,Process? process)
     {
+        var exited=process is null;
         try
         {
             // Closing the job also applies KILL_ON_JOB_CLOSE if termination fails.
@@ -178,10 +179,12 @@ internal sealed class WorkerClient : IDisposable
             catch(System.ComponentModel.Win32Exception) when(process.HasExited) { }
             // Death, not cancellation, releases this slot.
             if(!process.WaitForExit(10000))throw new IOException("Owned worker did not exit after termination.");
+            exited=true;
         }
         finally
         {
-            try{pipe.Dispose();}finally{process?.Dispose();}
+            // Preserve the process handle after a failed reap so a later Dispose can confirm its exit.
+            try{pipe.Dispose();}finally{if(exited)process?.Dispose();}
         }
     }
 }
