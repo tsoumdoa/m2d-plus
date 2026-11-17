@@ -1,6 +1,6 @@
 # M2D+ agent notes
 
-MIT open-source Make2D-style drawings for Rhino 8 on Windows. **Beta (0.1.0-beta.7):**
+MIT open-source Make2D-style drawings for Rhino 8 on Windows. **Beta:**
 one M2D+ Drawing component with exact/native drawing engines, sections, Target
 placement, preview, Bake and headless drawing workers.
 Read [PLAN.md](docs/PLAN.md), [REQUIREMENTS.md](docs/REQUIREMENTS.md) and
