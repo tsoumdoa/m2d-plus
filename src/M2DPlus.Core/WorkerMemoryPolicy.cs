@@ -33,10 +33,11 @@ public static class WorkerMemoryPolicy
     // process/serialization allowance rounds its 1.62 GiB scene estimate to a 6 GiB cap.
     public static long Required(SceneCost scene) => RoundUp(Math.Max(2 * GiB, checked(scene.Estimate(1) * 3 + GiB)));
     private static long RoundUp(long bytes) => checked((bytes + GiB - 1) / GiB * GiB);
-    public static WorkerSizing Size(SceneCost scene, int views, int cpuLimit, MachineMemory memory, long overrideCap = 0)
+    /// <param name="extra">Bytes a solve needs on top of what the scene alone implies (the dense audit's tiles).</param>
+    public static WorkerSizing Size(SceneCost scene, int views, int cpuLimit, MachineMemory memory, long overrideCap = 0, long extra = 0)
     {
-        if (views <= 0 || cpuLimit <= 0 || overrideCap < 0) throw new ArgumentOutOfRangeException(nameof(views));
-        var required = Required(scene);
+        if (views <= 0 || cpuLimit <= 0 || overrideCap < 0 || extra < 0) throw new ArgumentOutOfRangeException(nameof(views));
+        var required = RoundUp(checked(Required(scene) + extra));
         var cap = overrideCap > 0 ? overrideCap : required;
         var budget = Budget(memory);
         var reply = HostReplyBytes(budget);

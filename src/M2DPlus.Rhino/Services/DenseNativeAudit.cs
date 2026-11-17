@@ -42,6 +42,9 @@ internal sealed class DenseNativeAudit : IDisposable
     private readonly List<LeaseEntry<CertifiedMesh>.Lease> _leases = [];
     /// <summary>Releases the cached meshes this audit used.</summary>
     public void Dispose() { foreach (var lease in _leases) lease.Dispose(); _leases.Clear(); }
+    /// <summary>What a worker's cap allows for the audit on top of the scene: the largest tile (about 250 bytes a triangle
+    /// at <see cref="DenseAuditOptions.MaxTileTriangles"/>). Measured on curved S: 0.6 to 1.2 GiB over the same solve without it.</summary>
+    internal const long WorkerAllowanceBytes = 1024L * 1024 * 1024;
     private sealed record Body(CertifiedMesh? Mesh, Transform Placement, double Scale, Mesh? Plain, double X0, double X1, double Y0, double Y1, long Triangles);
     private readonly record struct Chord(int Curve, double A, double B, Vertex Pa, Vertex Pb);
 

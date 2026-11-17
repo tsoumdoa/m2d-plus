@@ -59,7 +59,7 @@ public sealed class DrawingWorkerPool : IDisposable
                 try{resident+=slot.Client?.ResidentBytes??0;}finally{slot.Gate.Release();}
             }
             memory=memory with{AvailableBytes=Math.Min(memory.PhysicalBytes,checked(memory.AvailableBytes+resident))};
-            var plan=WorkerMemoryPolicy.Size(cost,views.Count,_options.Count,memory,_options.MemoryBytes);LastSizing=plan;
+            var plan=WorkerMemoryPolicy.Size(cost,views.Count,_options.Count,memory,_options.MemoryBytes,settings.DenseAudit?DenseNativeAudit.WorkerAllowanceBytes:0);LastSizing=plan;
             if(plan.Count==0)throw new WorkerUnavailableException(plan.Refusal!);
             var processors=Math.Max(1,WorkerMemoryPolicy.CpuLimit(Environment.ProcessorCount)/plan.Count);
             // Retire excess/changed-cap clients before starting any new process. Thus retained idle clients

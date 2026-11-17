@@ -132,7 +132,7 @@ internal static class DenseAuditCheck
         if (Environment.GetEnvironmentVariable("PERFF_DA_TRIANGLES") is { Length: > 0 } triangles) options = options with { TileTriangles = long.Parse(triangles, invariant) };
         string configuration = Path.GetFileName(Path.GetDirectoryName(AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar))!);
         string directory = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../../src/M2DPlus.Worker/bin", configuration, "net" + Environment.Version.Major + ".0-windows"));
-        using var pool = new DrawingWorkerPool(new WorkerOptions { Count = 1, Directory = directory, IdleTimeout = TimeSpan.FromMinutes(30), SolveTimeout = TimeSpan.FromHours(2) });
+        using var pool = new DrawingWorkerPool(new WorkerOptions { Count = 1, Directory = directory, MemoryBytes = long.Parse(Environment.GetEnvironmentVariable("PERFF_DP_CAP_MIB") ?? "0", invariant) * 1048576, IdleTimeout = TimeSpan.FromMinutes(30), SolveTimeout = TimeSpan.FromHours(2) });
         if (!pool.Installed) throw new InvalidOperationException("No worker at " + directory + ": build src/M2DPlus.Worker in the same configuration first.");
         long generation = 0; var rows = new List<object>(); byte[]? pooled = null;
         (double Wall, double[] Lengths, long Sampled, long JobPeak, string Info, double Phase) Pooled(bool audit, string label)
@@ -159,6 +159,8 @@ internal static class DenseAuditCheck
             return result;
         }
         Console.WriteLine($"=== {stem} dense audit through one worker, runtime {Environment.Version}, worker {directory}");
+        var machine = WorkerMachineMemory.Read();
+        Console.WriteLine($"    pool sizing: scene needs a cap of {WorkerMemoryPolicy.Required(scene.Cost) / 1048576.0:F0} MiB; machine {machine.PhysicalBytes / 1048576.0:F0} MiB physical, {machine.AvailableBytes / 1048576.0:F0} MiB available; budget {WorkerMemoryPolicy.Budget(machine) / 1048576.0:F0} MiB");
         var off = Pooled(false, "off"); var first = Pooled(true, "on first"); var again = Pooled(true, "on again");
         bool? identical = null;
         if (variants.Contains("check"))
