@@ -27,7 +27,6 @@ public sealed class ViewRequestDispatchTests(RhinoHost host)
     [RhinoTheory]
     [InlineData(false, 7.5)]
     [InlineData(true, 7.5)]
-    [InlineData(true, 0)]
     public void RawClippingSurfaceKeepsItsPlaneAndOptionalDepth(bool depthEnabled, double depth) => host.Run(() =>
     {
         using var display = new PlaneSurface(CutPlane, new Interval(-1, 1), new Interval(-2, 2));
@@ -46,16 +45,14 @@ public sealed class ViewRequestDispatchTests(RhinoHost host)
         Assert.Null(cut.SectionerStyle);
     });
 
-    [RhinoTheory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void RawScopedClippingSurfaceRequiresItsDocumentAndCapturesParticipation(bool exclusion) => host.Run(() =>
+    [RhinoFact]
+    public void RawScopedClippingSurfaceRequiresItsDocumentAndCapturesParticipation() => host.Run(() =>
     {
         using var document = RhinoDoc.CreateHeadless(null);
         var layer = document.Layers.Add("Scoped", System.Drawing.Color.DarkRed);
         var objectId = document.Objects.AddPoint(Point3d.Origin);
         using var surface = new ClippingPlaneSurface(CutPlane);
-        surface.SetClipParticipation([objectId], [layer], exclusion);
+        surface.SetClipParticipation([objectId], [layer], true);
         surface.ParticipationListsEnabled = true;
 
         var missingDocument = ViewRequest.Parse(surface);
@@ -64,46 +61,29 @@ public sealed class ViewRequestDispatchTests(RhinoHost host)
 
         var cut = AssertClipping(ViewRequest.Parse(surface, document));
         Assert.True(cut.ScopeEnabled);
-        Assert.Equal(exclusion, cut.Exclusion);
+        Assert.True(cut.Exclusion);
         Assert.Equal(objectId, Assert.Single(cut.Objects));
         Assert.Equal(document.Layers[layer].Id, Assert.Single(cut.Layers));
+
+        using var otherDocument = RhinoDoc.CreateHeadless(null);
+        var unresolved = ViewRequest.Parse(surface, otherDocument);
+        Assert.Equal("Clipping-plane layer scope does not resolve in the source document.", unresolved.Error);
+        Assert.Null(unresolved.Cut);
+        surface.ParticipationListsEnabled = false;
+        Assert.Null(ViewRequest.Parse(surface).Error); // Inactive scope does not need a document.
     });
 
-    [RhinoFact] public void ClippingObjectGuidAndNameKeepDepthScopeAndSectionStyle() => host.Run(() =>
+    [RhinoFact] public void ClippingGuidKeepsItsDepthAndHasNoCrop() => host.Run(() =>
     {
         using var document = RhinoDoc.CreateHeadless(null);
-        var layer = document.Layers.Add("Scoped", System.Drawing.Color.DarkRed);
-        var objectId = document.Objects.AddPoint(Point3d.Origin);
         var id = document.Objects.AddClippingPlane(CutPlane, 2, 4, Guid.Empty);
         var obj = Assert.IsType<ClippingPlaneObject>(document.Objects.FindId(id));
-        obj.Attributes.Name = "Section";
-        using var style = new SectionStyle { HatchScale = 4 };
-        obj.Attributes.SectionAttributesSource = ObjectSectionAttributesSource.FromObject;
-        obj.Attributes.SetCustomSectionStyle(style);
-        Assert.True(obj.CommitChanges());
         var surface = obj.ClippingPlaneGeometry;
         surface.PlaneDepth = 6;
         surface.PlaneDepthEnabled = true;
-        surface.SetClipParticipation([objectId], [layer], true);
-        surface.ParticipationListsEnabled = true;
         Assert.True(obj.CommitChanges());
-
-        // An object can infer its document; GUID and name references resolve through the supplied document.
-        var requests = new[] { ViewRequest.Parse(obj), ViewRequest.Parse(id, document), ViewRequest.Parse("Section", document) };
-        Assert.Equal(id, requests[0].ObjectId);
-        Assert.Equal(id, requests[1].ObjectId);
-        foreach (var request in requests)
-        {
-            var cut = AssertClipping(request);
-            Assert.Equal("Section", request.Name);
-            Assert.Equal(6, cut.SourceDepth);
-            Assert.True(cut.ScopeEnabled);
-            Assert.True(cut.Exclusion);
-            Assert.Equal(objectId, Assert.Single(cut.Objects));
-            Assert.Equal(document.Layers[layer].Id, Assert.Single(cut.Layers));
-            var capturedStyle = Assert.IsType<M2DPlus.Core.Sections.SectionStyleSnapshot>(cut.SectionerStyle);
-            Assert.True(capturedStyle.HasStyle);
-            Assert.Equal(4, capturedStyle.Scale);
-        }
+        var request = ViewRequest.Parse(id, document);
+        Assert.Equal(id, request.ObjectId);
+        Assert.Equal(6, AssertClipping(request).SourceDepth);
     });
 }

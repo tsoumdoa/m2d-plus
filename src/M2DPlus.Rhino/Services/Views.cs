@@ -107,11 +107,18 @@ public sealed record ViewRequest(string Name, Vector3d Direction, string? Error 
     {
         surface.GetClipParticipation(out var objects, out var layers, out var exclude);
         if (surface.ParticipationListsEnabled && document is null) return new(name, default, "Scoped clipping plane requires its source document.");
-        var layerIds = layers.Select(i => document!.Layers[i].Id).ToArray();
+        var layerIds = new List<Guid>();
+        if (surface.ParticipationListsEnabled)
+            foreach (var index in layers)
+            {
+                if (index < 0 || index >= document!.Layers.Count || document.Layers[index] is not { IsDeleted: false } layer)
+                    return new(name, default, "Clipping-plane layer scope does not resolve in the source document.");
+                layerIds.Add(layer.Id);
+            }
         var section = obj is not null && document is not null ? SectionCapture.Capture(document, obj, null).Style : null;
         return FromPlane(surface.Plane, name) with { Kind = ViewSourceKind.ClippingPlane, Cut = new(surface.Plane, null,
             surface.PlaneDepthEnabled ? surface.PlaneDepth : null, surface.ParticipationListsEnabled, exclude,
-            objects.ToArray(), layerIds, section) };
+            objects.ToArray(), layerIds.ToArray(), section) };
     }
     private static ViewRequest FromViewport(string name, ViewportInfo viewport)
     {
