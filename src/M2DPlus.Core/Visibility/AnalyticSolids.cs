@@ -31,6 +31,8 @@ public abstract class AnalyticSolid
     /// <summary>How far the real body's faces may be from this solid's surfaces (0 for the closed-form shapes). A change
     /// point against this solid is known no better than that.</summary>
     public virtual double Slack => 0;
+    /// <summary>Uncertainty about cell labels is not a tolerance-sized visibility change point.</summary>
+    public virtual bool HasUncertainRegions => false;
 
     /// <summary>
     /// own: surfaces of this solid the point is known to lie on (it is moved exactly onto them).
@@ -359,11 +361,13 @@ public sealed class AnalyticOccluders
     public int Count => _solids.Length;
     /// <summary>The largest slack of any solid in the set.</summary>
     public double Slack { get; }
+    public bool HasUncertainRegions { get; }
     public AnalyticOccluders(IReadOnlyList<AnalyticSolid> solids)
     {
         _solids = solids.ToArray(); _nx = _ny = 1; _cell = 1;
         if (_solids.Length == 0) return;
         Slack = _solids.Max(s => s.Slack);
+        HasUncertainRegions = _solids.Any(s => s.HasUncertainRegions);
         _x0 = _solids.Min(s => s.X0); _y0 = _solids.Min(s => s.Y0); double x1 = _solids.Max(s => s.X1), y1 = _solids.Max(s => s.Y1);
         _cell = Math.Max(1e-9, 2 * _solids.Average(s => Math.Max(s.X1 - s.X0, s.Y1 - s.Y0)));
         _nx = Math.Clamp((int)((x1 - _x0) / _cell) + 1, 1, 1024); _ny = Math.Clamp((int)((y1 - _y0) / _cell) + 1, 1, 1024);
