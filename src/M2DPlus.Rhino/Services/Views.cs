@@ -28,6 +28,8 @@ public sealed record ViewRequest(string Name, Vector3d Direction, string? Error 
         if (value is ClippingPlaneObject clippingObject) return FromClippingPlane(clippingObject.ClippingPlaneGeometry, clippingObject.Name, document ?? clippingObject.Document, clippingObject)
             with { ObjectId = clippingObject.Id };
         if (value is RhinoObject viewObject) return FromViewObject(viewObject, document ?? viewObject.Document, scene);
+        // ClippingPlaneSurface is a Surface, but its display rectangle is not a view crop.
+        if (value is ClippingPlaneSurface clippingSurface) return FromClippingPlane(clippingSurface, "Clipping plane", document, null);
         if (value is Extrusion or Brep or Surface or Curve && value is GeometryBase frameGeometry)
         {
             var tolerance = document?.ModelAbsoluteTolerance ?? .001;
@@ -39,7 +41,6 @@ public sealed record ViewRequest(string Name, Vector3d Direction, string? Error 
             var faced = Faced(check.Frame!.Value, document, scene, []);
             return FromPlane(faced.Plane, label, faced) with { Kind = ViewSourceKind.Rectangle };
         }
-        if (value is ClippingPlaneSurface clippingSurface) return FromClippingPlane(clippingSurface, "Clipping plane", document, null);
         if (value is Plane plane) return FromPlane(plane, "Plane") with { Kind = ViewSourceKind.Plane };
         if (value is Rectangle3d rectangle) return rectangle.IsValid ? FromPlane(rectangle.Plane, "Rectangle", rectangle) with { Kind = ViewSourceKind.Rectangle } : new("Rectangle", default, "Invalid view rectangle.");
         if (value is Box box)
@@ -106,11 +107,18 @@ public sealed record ViewRequest(string Name, Vector3d Direction, string? Error 
     {
         surface.GetClipParticipation(out var objects, out var layers, out var exclude);
         if (surface.ParticipationListsEnabled && document is null) return new(name, default, "Scoped clipping plane requires its source document.");
-        var layerIds = layers.Select(i => document!.Layers[i].Id).ToArray();
+        var layerIds = new List<Guid>();
+        if (surface.ParticipationListsEnabled)
+            foreach (var index in layers)
+            {
+                if (index < 0 || index >= document!.Layers.Count || document.Layers[index] is not { IsDeleted: false } layer)
+                    return new(name, default, "Clipping-plane layer scope does not resolve in the source document.");
+                layerIds.Add(layer.Id);
+            }
         var section = obj is not null && document is not null ? SectionCapture.Capture(document, obj, null).Style : null;
         return FromPlane(surface.Plane, name) with { Kind = ViewSourceKind.ClippingPlane, Cut = new(surface.Plane, null,
             surface.PlaneDepthEnabled ? surface.PlaneDepth : null, surface.ParticipationListsEnabled, exclude,
-            objects.ToArray(), layerIds, section) };
+            objects.ToArray(), layerIds.ToArray(), section) };
     }
     private static ViewRequest FromViewport(string name, ViewportInfo viewport)
     {
