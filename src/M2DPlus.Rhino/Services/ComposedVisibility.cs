@@ -195,6 +195,29 @@ internal static class ComposedVisibility
                     records = verified; verifier.Report();
                 }
                 else output._diagnostics.Add("Native ray verifier disabled by sample budget; native confidence unverified.");
+                if (settings.DenseAudit)
+                {   // Like the ray audit, this sees the curved bodies HLD saw; the exact planar union comes after.
+                    using var audit = new DenseNativeAudit(curved, output, settings.DenseAuditOptions, token);
+                    if (audit.Active)
+                    {
+                        audit.Prepare(records.Where(r => r.Class == LineClass.Visible && !r.Duplicate).Select(r => r.World).ToArray(), token);
+                        var audited = new List<NativeRecord>();
+                        foreach (var record in records)
+                        {
+                            if (record.Class != LineClass.Visible || record.Duplicate) { audited.Add(record); continue; }
+                            var spans = audit.Spans(record.World, record.Class, token);
+                            var parts = spans.Count == 1 && spans[0].Class == record.Class ? null : spans.Select(span => record.World.Trim(span.A, span.B)).ToArray();
+                            if (parts is null || parts.Any(part => part is null)) { if (parts is not null) foreach (var part in parts) part?.Dispose(); audited.Add(record); continue; }
+                            for (int i = 0; i < parts.Length; i++)
+                            {
+                                owned.Add(parts[i]); audited.Add(record with { World = parts[i], Class = spans[i].Class });
+                                if (spans[i].Class == LineClass.Unresolved) { audit.Moved(parts[i]); settings.ObserveDenseAuditSpan?.Invoke(parts[i]); }
+                            }
+                        }
+                        records = audited;
+                    }
+                    audit.Report(output);
+                }
                 phase.Next("native extraction and duplicates");
                 var retained = new List<NativeRecord>();
                 if (records.Any(r => r.Duplicate) && kernel.Intervals.Any(i => i.Class == VisibilityClass.Hidden))

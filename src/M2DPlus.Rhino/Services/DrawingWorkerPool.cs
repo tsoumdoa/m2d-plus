@@ -59,7 +59,7 @@ public sealed class DrawingWorkerPool : IDisposable
                 try{resident+=slot.Client?.ResidentBytes??0;}finally{slot.Gate.Release();}
             }
             memory=memory with{AvailableBytes=Math.Min(memory.PhysicalBytes,checked(memory.AvailableBytes+resident))};
-            var plan=WorkerMemoryPolicy.Size(cost,views.Count,_options.Count,memory,_options.MemoryBytes);LastSizing=plan;
+            var plan=WorkerMemoryPolicy.Size(cost,views.Count,_options.Count,memory,_options.MemoryBytes,settings.DenseAudit?DenseNativeAudit.WorkerAllowanceBytes:0);LastSizing=plan;
             if(plan.Count==0)throw new WorkerUnavailableException(plan.Refusal!);
             var processors=Math.Max(1,WorkerMemoryPolicy.CpuLimit(Environment.ProcessorCount)/plan.Count);
             // Retire excess/changed-cap clients before starting any new process. Thus retained idle clients
@@ -71,7 +71,7 @@ public sealed class DrawingWorkerPool : IDisposable
                 finally{slot.Gate.Release();}
             }
             if(_historyScene!=identity.SceneRevision){_viewSeconds.Clear();_historyScene=identity.SceneRevision;}
-            var keys=views.Select(v=>WorkerCodec.Hash(WorkerCodec.Encode(new WorkerCodec.Request(default,0,v,settings.NativeOnly)))).ToArray();
+            var keys=views.Select(v=>WorkerCodec.Hash(WorkerCodec.Encode(new WorkerCodec.Request(default,0,v,settings.NativeOnly,settings.DenseAudit,settings.DenseAuditOptions)))).ToArray();
             var order=Enumerable.Range(0,views.Count).OrderByDescending(i=>_viewSeconds.GetValueOrDefault(keys[i])).ThenBy(i=>i).ToArray();
             var pending=new System.Collections.Concurrent.ConcurrentQueue<int>(order);var seconds=new double[views.Count];
             progress?.Report(new(JobPhase.Drawing,0,views.Count){Workers=plan.Count,Step="starting workers"});
@@ -207,7 +207,7 @@ public sealed class DrawingWorkerPool : IDisposable
                     progress.Report(new(JobPhase.Drawing,Volatile.Read(ref done),views.Count){Workers=plan.Count,View=views[index].Name,Step=p.Step,StepFraction=p.StepFraction});
                 });
                 var clock=System.Diagnostics.Stopwatch.StartNew();
-                var drawing=await slot.Client.CallAsync("solve",EncodedRequest?.Invoke(index)??WorkerCodec.Encode(new WorkerCodec.Request(identity,index,views[index],settings.NativeOnly)),_options.SolveTimeout,token,bytes=>
+                var drawing=await slot.Client.CallAsync("solve",EncodedRequest?.Invoke(index)??WorkerCodec.Encode(new WorkerCodec.Request(identity,index,views[index],settings.NativeOnly,settings.DenseAudit,settings.DenseAuditOptions)),_options.SolveTimeout,token,bytes=>
                 {
                     var reply=WorkerCodec.Decode<WorkerCodec.Reply>(bytes);
                     reply=ObserveReply?.Invoke(reply)??reply;

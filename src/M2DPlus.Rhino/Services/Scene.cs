@@ -71,6 +71,11 @@ internal sealed record PreparedLeaf(string Identity, int[] Path, GeometryBase Ge
     internal SourceSection Section { get; init; } = SourceSection.Plain;
     /// <summary>Definition-local shape for work shared between congruent instances; null under a non-similar transform.</summary>
     internal Sections.SectionCanonical? Canonical { get; init; }
+    /// <summary>Definition-local to world, when <see cref="Canonical"/> is set: places work done once on the definition.</summary>
+    internal Transform? Placement { get; init; }
+    /// <summary>The cache key of the definition (stable identity and content fingerprint), and the cache for work kept under it.</summary>
+    internal string? DefinitionKey { get; init; }
+    internal SceneCache? MeshCache { get; init; }
 }
 
 /// <summary>Owns definition-local leases and lazily prepared world copies. Access serialized by the global scheduler.</summary>
@@ -86,6 +91,8 @@ public sealed class PreparedScene : IDisposable
     private List<PreparedLeaf>? _prepared;
     /// <summary>Section validation verdicts, reused by every view of this scene and cleared with it.</summary>
     internal Sections.SectionVerdictCache SectionVerdicts { get; } = new();
+    /// <summary>Where the certified meshes of this scene are kept: the cache that made the scene, or the process-wide one in a worker.</summary>
+    internal SceneCache MeshCache { get; init; } = SceneCache.Shared;
     internal IReadOnlyDictionary<string, int> Unsupported { get; }
     internal IReadOnlyList<string> Conversions { get; }
     public string Revision { get; }
@@ -163,7 +170,7 @@ public sealed class PreparedScene : IDisposable
                     // Transform reverses closed-solid orientation for odd reflections. Normalize after the whole chain.
                     if (geometry is Brep { SolidOrientation: BrepSolidOrientation.Inward } brep) brep.Flip();
                     if (geometry is Mesh { IsClosed: true } mesh && mesh.SolidOrientation() < 0) mesh.Flip(true, true, true);
-                    prepared.Add(new(leaf.Identity, leaf.Path, geometry) { Section = leaf.Section, SourceItem = leaf.SourceItem, KernelClassifiedGeometry = geometry, KernelTolerance = Tolerance, KernelEligible = PlanarExtraction.MayProduceKernelCandidates(geometry,Tolerance), Canonical = Canonical(leaf, transform) });
+                    prepared.Add(new(leaf.Identity, leaf.Path, geometry) { Section = leaf.Section, SourceItem = leaf.SourceItem, KernelClassifiedGeometry = geometry, KernelTolerance = Tolerance, KernelEligible = PlanarExtraction.MayProduceKernelCandidates(geometry,Tolerance), Canonical = Canonical(leaf, transform), Placement = transform, DefinitionKey = leaf.Key, MeshCache = MeshCache });
                 }
                 catch { geometry.Dispose(); throw; }
             }
@@ -203,7 +210,39 @@ public sealed class SceneCache : IDisposable
     private readonly Dictionary<string, LeaseEntry<PreparedScene>> _scenes = new();
     private readonly object _sync = new();
     private readonly ByteLru<string> _retention;
-    public SceneCache(long retainedBudget = 128L * 1024 * 1024) => _retention = new(retainedBudget);
+    // Certified meshes (mesh tier) have a budget of their own: they are large and cheap to rebuild next to a scene,
+    // and must never push captured geometry or a prepared scene out.
+    private readonly Dictionary<string, LeaseEntry<CertifiedMesh>> _meshes = new();
+    private readonly HashSet<string> _unmeshable = new();
+    private readonly ByteLru<string> _meshRetention;
+    public SceneCache(long retainedBudget = 128L * 1024 * 1024, long meshBudget = 1024L * 1024 * 1024) { _retention = new(retainedBudget); _meshRetention = new(meshBudget); }
+    public long RetainedMeshBytes { get { lock (_sync) return _meshRetention.RetainedBytes; } }
+    public int MeshHits { get; private set; }
+    /// <summary>
+    /// A lease on the certified mesh of a definition, built on first use and kept by content: the key is the
+    /// definition's own cache key (stable identity and content fingerprint) with the tolerance and band it was made
+    /// for. Null when the definition cannot be meshed, which is remembered too. The mesh is owned data; eviction
+    /// retires the entry and leaves leases valid. Building takes seconds and is not done under the lock of the cache:
+    /// two callers may build the same mesh, and the first to finish is kept. If building throws, nothing is remembered.
+    /// </summary>
+    internal LeaseEntry<CertifiedMesh>.Lease? Mesh(string key, Func<CertifiedMesh?> create)
+    {
+        lock (_sync)
+        {
+            if (_meshes.TryGetValue(key, out var found)) { MeshHits++; _meshRetention.Touch(key); return found.Acquire(); }
+            if (_unmeshable.Contains(key)) return null;
+        }
+        var value = create();
+        lock (_sync)
+        {
+            if (value is null) { if (_unmeshable.Count >= MaximumFingerprints) _unmeshable.Clear(); _unmeshable.Add(key); return null; }
+            if (_meshes.TryGetValue(key, out var raced)) { value.Dispose(); _meshRetention.Touch(key); return raced.Acquire(); }
+            var entry = new LeaseEntry<CertifiedMesh>(value); var lease = entry.Acquire();
+            _meshes.Add(key, entry);
+            _meshRetention.Add(key, value.Bytes, () => { _meshes.Remove(key); entry.Dispose(); });
+            return lease;
+        }
+    }
     public long RetainedBytes { get { lock (_sync) return _retention.RetainedBytes; } }
     public int GeometryHits { get; private set; }
     public int SceneHits { get; private set; }
@@ -266,7 +305,7 @@ public sealed class SceneCache : IDisposable
             {
                 SceneHits++; _retention.Touch("s/" + key); foreach (var leaf in leaves) leaf.Geometry.Dispose(); return found.Acquire();
             }
-            var scene = new PreparedScene(key, leaves, unsupported, tolerance);
+            var scene = new PreparedScene(key, leaves, unsupported, tolerance) { MeshCache = this };
             var added = new LeaseEntry<PreparedScene>(scene); var lease = added.Acquire();
             _scenes.Add(key, added);
             _retention.Add("s/" + key, scene.EstimatedBytes, () => { _scenes.Remove(key); added.Dispose(); });
@@ -277,7 +316,7 @@ public sealed class SceneCache : IDisposable
     {
         lock (_sync)
         {
-            _retention.Dispose();
+            _retention.Dispose(); _meshRetention.Dispose(); _unmeshable.Clear();
             _fingerprints.Clear();
         }
     }

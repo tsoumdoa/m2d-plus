@@ -1,0 +1,412 @@
+# Mesh tier (stage 3) — can meshes decide visibility for freeform sources, soundly and at native's speed?
+
+Research date: 2026-11-17. Base: `main` at `fa3f1e0`. Harness only (`tools/perf-f/MeshTier.cs`, `mt_run.py`, a
+`PERFF_MT=1` path in `CurvedEngine.cs` / `CurvedCore.cs`, an `mt-census` switch). No product code changed. Nothing
+pushed, installed or published.
+
+## 1. Verdict
+
+**Update, same day:** steps A to C are built; their numbers are in [section 9](#9-steps-a-to-c-built-2026-11-17-on-main-at-43c6e95). After review, the first-solve cost and the worker route are in [section 10](#10-after-review-the-two-blockers-for-default-on-2026-11-1718).
+
+**Build with caveats. Do not drop native from exact mode on this evidence.**
+
+1. **Sound: yes, with certificates in place of the sampled own-face rule.** The two pieces the curved-engine spike
+   left open (section 6, stage 3a) were built from the surfaces' control nets, with no Rhino ray test and no
+   heuristic. Over the final runs the independent ray check settled about 3,900 samples and contradicted none. Two
+   holes were found on the way and closed (section 5); both are the kind that only show on awkward models.
+2. **Fast enough: on one of five views.** Curved S SW runs in 21.9 s against native's 25.9 s (1.2× faster). The North
+   elevation is 0.6×, and the three small models are 0.1–0.5×. Most of the gap is cost the harness pays per
+   instance that a product would pay per definition; that is an estimate, not a measurement (section 4).
+3. **Unresolved is the real problem.** The tier leaves 7–28 % of the linework Unresolved where native leaves
+   0.5–6 %. On curved S SW: 483 m against 134 m. Native's lower figure is partly false confidence: the tier proves
+   Hidden about 32 m that native draws Visible on that view, confirmed by the ray check. But an owner who switches
+   native off today gets three to four times as much orange.
+4. **It cannot cover everything native covers.** Welded and non-planar meshes (107 sources on campus) have no
+   candidate rule here, and analytic members in contact must stay with the analytic tier.
+
+What to build first is the part that pays whatever is decided later: the certificates and the per-definition mesh
+as a **dense audit** of native output (replacing the 4,096-ray sample), then the tier as an occluder and candidate
+class behind a switch, then the decision in section 8.
+
+## 2. Conditions
+
+| Item | Value |
+|---|---|
+| Rhino / runtime | 8.36.26296.17001 / .NET 8, Windows x64 |
+| Machine | Ryzen AI MAX+ 395, shared with other agents; machine busy 7–25 % during runs |
+| Process rule | One owned Rhino.Inside process at a time. The final runs held `Local\M2DPlusLocalModelSuiteRhino`. |
+| Samples | n = 1. Read differences under 10 % as noise. |
+| Native time | `NativeDrawing.SolveView`, warm, ray audit off, same prepared scene and process |
+| Tier time | Everything from native's inputs to classified pieces, less one harness stand-in (section 4) |
+| Settings | Band asked: 1 mm (10 × tolerance). Mesh asked of Rhino at 0.2 mm. Certificate cells 12.5 mm. Band floor 0.5 mm. |
+| Views | Uncut parallel views of all-curved models |
+
+Not run: curved M (three native solves of 7 min each), campus, .NET 10, sections. The pipe node could not be run:
+the harness takes native's inputs, and the product makes no native call there since stage 2. Space-frame and the
+round tower are entirely analytic, so the tier has nothing to do on them.
+
+## 3. What was built
+
+### The bound: certify Rhino's mesh, do not trust it
+
+Rhino's mesher does not hold its tolerance (15 × the band asked for on one curved S definition), and its texture
+coordinates are packed, not surface parameters, so they cannot be used to find a triangle's place on the surface.
+
+`FaceCert` cuts each face's surface into Bezier cells and keeps an enclosure of S_u, S_v, S_uu, S_uv, S_vv per cell.
+Polynomial surfaces take these from control-point differences. Rational surfaces (71 % of the freeform faces here:
+swept pipes, tori) use the quotient rule on enclosures of numerator and weight about a local origin.
+
+For a triangle with known parameters the distance between surface and flat triangle is at most a sixth of the
+largest edge value of (M_uu + M_uv) du² + (M_vv + M_uv) dv². Each triangle carries its own band, so one bad
+triangle no longer widens the whole body.
+
+| | Measured deviation | Certified bound | Ratio |
+|---|---|---|---|
+| Polynomial faces, 100 mm cells | 0.46–0.88 mm median | 1.0–1.5 mm median | 1.7–2.2× |
+| Rational faces, 50 mm cells | ≤ 0.8 mm | 4.9 mm median | about 6× |
+| Rational faces, 12.5 mm cells | ≤ 0.8 mm | 1.7 mm median | about 2× |
+
+To certify 1 mm, Rhino has to be asked for 0.2 mm: 5.8 M triangles on curved S instead of 2.4 M. An own
+tessellator that places vertices by the bound would need fewer. Triangles with no certificate (9 % on curved S,
+19 % on curved-steel: faces whose NURBS form has other parameters, and triangles across a seam or a crease) fall
+back to the measured body-wide bound, which is not a proof.
+
+### The own-face test: two certificates on a parameter box
+
+The ray starts on the candidate's own surface, so the band says nothing there. The spike's stand-in was a Rhino
+line/face intersection at stations; it was wrong three times. Replaced by:
+
+- **Edges: the box is a graph.** If the drawing directions of S_u and S_v stay in two cones with a cross product
+  of one sign over the box, the box projects one-to-one, so a ray from a point of it never meets it again.
+- **Silhouettes: the box is a clean fold.** With g the lateral position in the drawing and h the height over the
+  plane through the ray, h is strictly convex along every curve g = const in the box (one interval expression in
+  the first and second derivatives). A ray that touches the box then meets it only at the touching point.
+
+Triangles wholly inside the certified box are exempt. Every other triangle of the face is an ordinary occluder
+with its band. No depth limits, stations or chains remain. Boxes grow by doubling from 2 × band until the
+certificate fails.
+
+| Model, view | Edge chords with a box | Silhouette chords with a box |
+|---|---|---|
+| curved S SW | 90 % | 80 % |
+| curved S North | 84 % | 70 % |
+| diagrid SW | 92 % | 94 % |
+| curved-steel SW | 90 % | 76 % |
+| curved-facade SW | 87 % | 85 % |
+
+### Silhouettes: Rhino's `Silhouette.Compute`
+
+No reason was found to trace silhouettes ourselves. It is cheap (1.5–1.9 s for the 500 sources of curved S, 0.1 s
+for diagrid) and accurate: distance from the curve to the true fold was at most 0.0001 mm on curved S and
+0.04 mm on diagrid, against a 0.1 mm tolerance. The drawn line stays Rhino's curve; what is classified is the
+fold, which the certificate needs the point to be on.
+
+The cost that does matter is finding each point's surface parameters (3.2–4.0 s on curved S, by closest point). For
+edges the trim curves give them for free; for silhouettes a tracer of our own would, and that is the only argument
+for writing one.
+
+## 4. Numbers
+
+Lengths in metres. "Tier s" excludes one stand-in a product would not have: pulling every mesh vertex back onto
+its face to learn its parameters (20.8 s on curved S SW). Finding the parameters of candidate points is included. Curved S North and curved-facade were run before the band
+floor of section 5 was added.
+
+| Model, view | Native s | Tier s | Speed | Native Unresolved | Tier Unresolved | Tier Hidden where native draws Visible | Ray check: right / wrong |
+|---|---:|---:|---:|---:|---:|---:|---|
+| curved S SW | 25.9 | 21.9 | 1.2× | 134 (3.0 %) | 483 (10.3 %) | 31.8 | 1,316 / 0 |
+| curved S North | 22.2 | 36.3 | 0.6× | 201 (6.0 %) | 739 (14.8 %) | 22.7 | 715 / 0 |
+| diagrid SW | 2.1 | 3.9 | 0.5× | 7.3 (2.9 %) | 18.9 (7.3 %) | 0.6 | 755 / 0 |
+| curved-steel SW | 0.5 | 6.1 | 0.1× | 1.0 (0.5 %) | 57.6 (28.0 %) | 0.9 | 501 / 0 |
+| curved-facade SW | 1.3 | 2.5 | 0.5× | 6.8 (2.2 %) | 24.7 (10.0 %) | 2.2 | 617 / 0 |
+
+"Tier Hidden where native draws Visible" counts only samples more than 25 mm from any native line of the tier's
+class. Another 65 m on curved S SW differs within 25 mm of a change point. The GPU spike's 11.6 m on this view was
+what its raster could prove after the product's audit; the two are not the same measure.
+
+**Where the time goes, curved S SW (21.9 s):** certificates 7.7, meshing 3.8, welding 4.0, parameters of candidate
+points 3.2, index 2.1, silhouettes 1.5, own-face boxes 1.5, solve 0.8.
+
+- Certificates, meshing and welding (15.5 s) are paid here per instance: 584 faces, 189 distinct certificates
+  after sharing between translated copies. The model has **six** non-analytic definitions and 39,000 triangles at
+  1 mm. Paid per definition and cached in the scene, this is a fraction of a second. That would put curved S SW
+  near 7–9 s, about 3× native. **Not measured.**
+- The North solve takes 11.2 s (1.16 billion triangle tests) because every layer along a ray is visited. A
+  depth-ordered early-out, or the GPU spike's conservative CPU raster as a broad phase, is the fix. Not built.
+- curved-steel is slow because Rhino returns 1.1 M triangles for eight objects at 0.2 mm.
+
+**Where the Unresolved comes from, curved S SW (483 m):**
+
+| Cause | m | Reducible? |
+|---|---:|---|
+| Silhouette, band reaches the own surface outside the box | 193 | Yes: tighter certified band (own tessellation), larger boxes |
+| Silhouette, no certificate | 138 | Mostly: 220 m of silhouette chords fail "on the fold to 0.001 rad"; cause not broken down |
+| Near another object | 86 | Partly: lines within the band of another body's outline. On North this is 494 m (objects in a grid, one exactly behind the other) |
+| Edge, band reaches the own surface outside the box | 48 | Yes, as the first row |
+| Edge, no certificate | 19 | Partly: faces seen edge-on have none by nature |
+
+Shrinking the band alone does not help: at 0.3 mm (17.3 M triangles) the total was 364 m against 329 m at 1 mm,
+both before the floor.
+
+## 5. What the ray check caught
+
+| | Failure | Fix |
+|---|---|---|
+| 1 | curved-steel: one sample drawn Visible that is Hidden, and one Hidden that is Visible. A swept section is one face with creases inside it; the fold argument assumed a smooth box, and a triangle across a crease got a second-derivative bound that does not exist. | Knots of full multiplicity are creases. No fold box may span one; a triangle across one has no certified bound. |
+| 2 | curved-steel: one silhouette piece drawn Hidden that is Visible, 12 mm from a change point. Certified bands had become 0.07 mm, thinner than what the candidate itself is known to (chord sagitta of half a tolerance, the curve's own accuracy, welded vertices). | A floor under the band (0.5 mm here). The product must add the candidate's own error to the band, as stage 2 does with its gap, not use a constant. |
+
+After both, curved-steel: 501 right, 0 wrong. The first is a proof gap that was closed; the second was closed by
+a constant, so it stays open until the candidate's error is carried explicitly.
+
+Still not proofs in this harness: the normal direction for the fold test is taken at three points of a chord, not
+enclosed over it; interval arithmetic is not outward-rounded; the mesh region near a trim is assumed to follow
+the trim curve; uncertified triangles use a measured bound.
+
+## 6. The five items deferred from stage 2's review
+
+| | Item | Mesh tier subsumes it? | Recommendation |
+|---|---|---|---|
+| 1 | Rule (a) is tested at three points per stretch | No. It is a coincidence test between two curves, not an occlusion question. The tier meets the same case (a far edge whose ray passes through the near edge) and needs the same rule. | Standalone fix now, as designed by stage 2's author: cover by the nearest of any piece with a Lipschitz step bound. Put it in the shared locus code so the tier uses it too. |
+| 2 | Cut-tube gap measured at 65 points, unbounded at shallow crossings | Yes, as a fallback. The tier classifies the stored edge itself, so drawn and classified are one curve and there is no gap. | Do both: the standalone floor (sum of edge-to-surface distances over the sine of the least crossing angle) keeps tubes exact with nothing Unresolved; a tube that fails it goes to the tier, not to native. |
+| 3 | Sliver check weak when slacks overlap; faces with no test point skipped | Yes. The tier needs no cell labels, so nothing rests on point-in-solid samples. | Make recognition strict: any sliver face that can only be checked by orientation refuses the body. That costs nothing once the tier catches the refusals. Until then keep the check as is. |
+| 4 | Independent check is a 4 mm march, 10–12 % not judged | Yes. The tier's Hidden and Visible certificates are a second, unrelated code path with a resolution of the band, not 4 mm, and they are dense. | Use the tier as the witness for the analytic class in tests and the gate once it exists. No standalone fix. |
+| 5 | Far rim not dropped under the near Visible rim down the cutter axis | No. Same family as item 1 (the projection doubles back, so no cut is made where two Visible pieces meet). | Standalone fix with item 1. |
+
+## 7. Implementation plan
+
+| Step | What | Size | Risk |
+|---|---|---|---|
+| A | `FaceCert` in Core: Bezier cells, polynomial and rational enclosures, deviation, graph and fold certificates, creases, outward rounding, normal enclosed over the chord. Tests against closed forms. | ~700 lines | Low–medium |
+| B | Per-definition mesh with parameters and per-triangle bounds, cached in the scene. First with Rhino's mesh pulled back once per definition; own trim-conforming tessellator only if step D shows it is needed. | ~500 lines (+ ~900 for the tessellator) | Medium (tessellator: high) |
+| C | **Dense audit of native output**: every native Visible piece the tier proves Hidden goes to Unresolved. Replaces the sampled ray audit on curved sources. Ships alone. | ~400 lines | Low |
+| D | `MeshIndex` and solver in Core with a depth early-out; fourth class in `ComposedVisibility` behind an internal switch, off by default; candidates from edges and `Silhouette.Compute`; candidate error carried in the band; composition both ways with planar and analytic occluders. | ~1,400 lines | Medium–high |
+| E | Gate: ray check on every curved view, tier-against-analytic cross-check, crease and seam fixtures. | ~600 lines | Medium |
+
+About 3,600 lines, 4–6 weeks. A to C are about half of that and are worth having whatever is decided about native.
+
+## 8. Decision rule for dropping native from exact mode
+
+Drop it when all four hold on every view of the curved suite (S, M, facade, steel, diagrid, tangent, SubD) and
+campus, measured under the mutex:
+
+1. **No wrong line.** 0 flagged by the independent ray check and 0 by the tier-against-analytic cross-check.
+2. **Speed.** Wall time at most 1.2 × today's exact mode. Today: met on 1 of 5 views.
+3. **Unresolved.** At most native's Unresolved plus the length native is proved wrong on, or 5 % of the view's
+   linework, whichever is larger. Today: 7–28 %. This is the bar the tier is furthest from, and it is the owner's
+   to set; the speed bar alone would let through a drawing with a quarter of its lines orange.
+4. **Every source has a route.** Welded and non-planar meshes need a candidate rule, or an explicit decision that
+   they are Unresolved whole in exact mode. Without one, campus cannot leave native.
+
+Until then: exact mode keeps native for what the tier cannot decide, with step C's audit on top.
+
+## 9. Steps A to C built (2026-11-17, on `main` at `43c6e95`)
+
+The owner chose to build A to C now and decide on the full tier (D, E) later against section 8. This section is what
+was built and measured. Sections 1 to 8 stand as the research; where they say "not measured", look here first.
+
+### What was built
+
+| Step | Code | Tests |
+|---|---|---|
+| A | `M2DPlus.Core/Visibility/SurfaceCertificate.cs`: deviation, graph and fold certificates from piecewise Bezier control nets, polynomial and rational, in any rigid frame (the view axes are arguments, so one certificate serves every instance and view). Creases are refused where a second-derivative argument would cross them. The fold test takes a range of normal directions, not three samples. `BandedMeshIndex.cs`: the Hidden and Visible tests on triangles with bands, with the candidate's own error added to every band. No Rhino types. | 16 Core tests: bounds against surfaces evaluated independently, a sphere against its closed form (400 random segments, no wrong answer, over 97 % decided), open sheets, folds. |
+| B | `M2DPlus.Rhino/Services/CertifiedMesh.cs`: one welded mesh per definition, cached; instances place it. Rhino's mesh, every vertex pulled back for its parameters, a control-net band per triangle, a measured one where there is none. Revolved surfaces use their NURBS form's parameters; poles are handled. `PreparedLeaf.Placement` carries the instance transform. | Rhino tests: bands hold on a sphere, a torus and a freeform sheet; one build serves three instances. |
+| C | `DenseNativeAudit.cs`, behind `NativeSettings.DenseAudit` (off; `M2D_DENSE_AUDIT=1` for a trial). Exact mode only, in the composed route and the native fallback, after the sampled audit. Native Visible that the meshes prove Hidden goes to Unresolved, never to Hidden. Works through the drawing in strips so memory is bounded. | Rhino tests: covered stretch moved and nothing else; a line behind its own body; off by default; strips equal one index; over-limit strip reported. 8 pass. |
+
+Not done from the plan's step A: outward rounding (enclosures are padded by a relative 1e-12 instead). The harness
+still has its own copy of the certificates (`tools/perf-f/MeshTier.cs`) for the `ce:` prototype. Section views
+(`SectionDrawing`) are not audited.
+
+### B: the cost that was estimated at 7 to 9 s
+
+Section 4 estimated curved S SW at 7 to 9 s for the whole tier once certificates, meshing and welding (15.5 s, paid
+per instance in the prototype) are paid per definition. Measured in the product on that view: the eight definitions
+are meshed and certified once in about 2 s, and placing and indexing all 500 instances (6.8 M triangles) takes
+2.2 s per solve. With the prototype's other phases unchanged that is 21.9 - 15.5 + 2.2 = **8.6 s**, against
+native's 26 to 29 s. The mesh part is measured; the rest is still the prototype's, which was not rewired onto the
+product's meshes.
+
+The one-off cost is not small on models whose definitions are heavy: curved-steel's eight bodies come back from
+Rhino as 1.1 M triangles and cost 13 s to pull back and certify, once per process.
+
+### C: what the audit moves, and what it costs
+
+Mutex held, n = 1, band 1 mm, floor 0.5 mm (five tolerances). "Moved" is native Visible length in the drawing that
+became Unresolved. "Audit s" is the audit's own phase in a warm solve. Campus and curved M were run once (no warm
+repeat), so their figure includes the one-off mesh build.
+
+| Model, view | View s, off | Audit s | First solve adds | Moved m | Share of native Visible | Ray check: covered / not |
+|---|---:|---:|---:|---:|---:|---|
+| curved S SW | 28.4 | 3.2 | 2 s | 50.4 | 3.4 % | 737 / 0 |
+| curved S North | 23.2 | 3.0 | 3 s | 33.0 | 3.8 % | 621 / 0 |
+| curved M SW | 354 | 47 (once) | in it | 292.7 | 4.6 % | 610 / 0 |
+| diagrid SW | 4.0 | 0.6 | 7.5 s | 4.4 | 6.0 % | 126 / 0 |
+| curved-steel SW | 1.7 | 1.2 | 13 s | 0.4 | 0.3 % | 6 / 0 |
+| curved-steel Top | 1.9 | 1.1 | 13 s | 1.4 | 1.5 % | 42 / 0 |
+| curved-facade SW | 1.9 | 0.6 | 6 s | 2.5 | 1.8 % | 78 / 0 |
+| campus Top | 200 | 30 (once, 18.5 of it meshes) | in it | 1.0 | 0.02 % | 18 / 0 |
+
+- **Nothing it moved was wrong.** 2,238 points on moved stretches were ray-checked against the original bodies;
+  every one has more than four tolerances of cover.
+- **It finds 3 to 6 % of native's Visible length on four of the seven curved-model views** (less on curved-steel and
+  the facade) that the sampled audit left Visible, and almost nothing on campus, where the round columns are
+  already in the analytic class.
+- **Self-occlusion** (the twisted RHS of curved-steel, Top, from Sol's evidence): 384 of the 435 witness points lie
+  on a stretch the audit moved. The other 51 were not moved; I take them to be within a band of the body's own
+  wall, where the audit says nothing, but did not trace them. A 0.25 mm band covered 177 before a bug fix that
+  the 1 mm run then had (whole curves were skipped); it was not repeated after.
+- **Cost is 11 to 13 % on the large curved views**, more on small ones in relative terms (curved-steel: 1.2 s on a
+  1.7 s view), plus the one-off build.
+- **Large models need the strips.** With one index, curved M (68 M triangles) and campus (20 M) did not fit a
+  sensible limit, and coarsening the band did not help: Rhino returned 26.6 M triangles for curved M at 8 mm. In
+  strips of about four million triangles they run in 18 and 5 strips.
+
+### Should C be on by default? Not yet.
+
+(Superseded in part by section 10: the first solve is cheaper, workers and .NET 10 were run, and strips became tiles.)
+
+It is sound in everything measured and it catches real errors, so it should become the default. Three things stand
+between it and that, none of them research:
+
+1. **The first solve.** 6 to 13 s once per process on small models is too much for a switch nobody asked for, and
+   drawing sets run in worker processes, each of which would build its own meshes. The meshes belong in the scene
+   cache and in what a worker is sent, or the pull-back has to go (a tessellator of our own knows its parameters).
+2. **The worker route and .NET 10 were not run.** A strip holds 1 to 2 GB while it is indexed (an estimate from
+   array sizes, not a measurement); the workers' memory caps have not seen that.
+3. **The gate.** The 233-view gate has not been run with it on. It adds Unresolved linework (curved S SW:
+   134 m to 185 m), which the gate's expectations may count against a view.
+
+Until then: on for the owner's own trials with `M2D_DENSE_AUDIT=1`, off in the product.
+
+## 10. After review: the two blockers for default-on (2026-11-17/18)
+
+Branch `t3/mesh-tier-default-on-blockers`, on top of the review's merge-off fixes (`6e7b40d`). Fast models only, by
+the owner's direction; campus and curved M were not re-measured (their figures below are from earlier runs and say
+so). One worker, mutex held, n = 1.
+
+### What changed
+
+| | Change | Why |
+|---|---|---|
+| Parameters | Vertex parameters come from Rhino's unpacked texture coordinates (the surface's own parameters over its whole domain), each checked by evaluating the surface there. Closest point is the fallback for a vertex that does not fit and for faces meshed in their NURBS form's parameters (revolved surfaces). | The pull-back was most of the first solve. A worker can now rebuild meshes cheaply, so nothing new is sent to workers and the codec is untouched. Shipping meshes was the other option: more protocol, more memory in transit, and it would not have helped the host's first solve. |
+| Scene cache | Meshes live in `SceneCache` under the definition's own key (stable identity and content fingerprint) plus tolerance and band, with a byte budget of their own (1 GiB) and leases; `Clear` retires them. The audit holds leases while it runs. Only vertices, triangles and bands are kept. A failure to mesh is not remembered. | Review findings 1 and 5. Repeat solves, other views and other scenes with the same definitions reuse them. |
+| Tiles | The drawing is audited in tiles of about 1.5 M triangles (4 M at most), cut along either axis, replacing strips of 4 to 24 M. The limits depend on the scene alone. | Review finding 2. A tile costs about a gigabyte at most, in a capped worker as in the host, and both draw the same. |
+| Workers | The solve message carries `DenseAudit` and its limits. The cap gets a 1 GiB allowance when the audit is on. | Review finding 3; and curved S peaked at 1.95 GiB under a 2 GiB cap without the allowance. |
+| Rounding | Derivative enclosures are padded from the size of their operands. | Review finding 6. |
+| Info | Names what is measured rather than proved, and counts bodies that failed to mesh. | Review finding 4. |
+
+Not done from the review: certifying the measured steps (finding 4 beyond wording), and the two low items (Graph and
+Fold have no production caller; two threads may build one definition's mesh at once, the first is kept).
+
+### First and repeat solve, in process (.NET 8)
+
+"Audit s" is the audit's own phase. Before = section 9.
+
+| Model, view | View s, off | Audit s, first solve (before) | Audit s, repeat (before) | Moved m | Ray check: covered / not |
+|---|---:|---:|---:|---:|---|
+| curved S SW | 24.9 | 5.5 (5.3) | 4.0 (3.2) | 50.2 | 738 / 0 |
+| diagrid SW | 3.6 | 3.6 (8.1) | 0.2 (0.6) | 4.4 | 126 / 0 |
+| curved-steel SW | 1.7 | 5.3 (13.7) | 0.8 (1.2) | 0.4 | 6 / 0 |
+| curved-facade SW | 1.9 | 2.1 (6.6) | 0.2 (0.6) | 2.5 | 78 / 0 |
+| pipe node Top | 3.6 | 0 | 0 | 0 | — |
+
+- The first solve costs 2 to 5 s where it cost 6 to 14 s. What is left on curved-steel (4.0 s for 1.1 M triangles):
+  certificates 1.7 s, Rhino's mesher 1.2 s, bounds and parameters 0.8 s.
+- Curved S got slower on repeat (4.0 s against 3.2 s): ten tiles are indexed where two strips were. That is the
+  price of the memory bound.
+- The pipe node makes no native call, so the audit has nothing to do and costs nothing.
+- Known from before, not re-measured: campus Top, first solve, +38 s on 172 s (14.9 s of it meshes; 2.9 M of its
+  vertices are on revolved faces and still go through closest point), peak 5.7 GiB to 7.3 GiB in process, 51 tiles,
+  none over the limit.
+
+### Through a worker, both runtimes
+
+Every worker drawing with the audit on was byte-identical to the in-process one (10 of 10). Peak is the worker's
+private bytes while the solve ran; the cap is 2 GiB without the audit and 3 GiB with it on all of these.
+
+| Model, view | Runtime | Off: wall s, peak GiB | On, first: wall s, audit s, peak GiB | On, repeat: wall s, audit s, peak GiB |
+|---|---|---|---|---|
+| curved S SW | .NET 8 | 29.5, 0.73 | 32.9, 5.1, 1.36 | 33.5, 4.0, 1.76 |
+| curved S SW | .NET 10 | 31.3, 0.74 | 36.5, 4.6, 1.32 | 33.3, 3.3, 1.84 |
+| diagrid SW | .NET 8 | 4.5, 0.57 | 8.5, 3.7, 0.57 | 3.7, 0.2, 0.77 |
+| diagrid SW | .NET 10 | 6.1, 0.57 | 10.6, 4.1, 0.57 | 5.1, 0.3, 0.84 |
+| curved-steel SW | .NET 8 | 3.3, 0.55 | 12.9, 5.9, 0.83 | 2.7, 0.8, 1.07 |
+| curved-steel SW | .NET 10 | 3.8, 0.55 | 9.3, 5.2, 0.79 | 2.7, 0.7, 1.16 |
+| curved-facade SW | .NET 8 | 6.7, 0.56 | 9.0, 2.3, 0.56 | 2.3, 0.3, 0.73 |
+| curved-facade SW | .NET 10 | 7.0, 0.56 | 8.8, 2.0, 0.56 | 2.6, 0.4, 0.78 |
+| pipe node Top | .NET 8 | 8.0, 0.33 | 9.0, 0, 0.33 | 3.9, 0, 0.32 |
+| pipe node Top | .NET 10 | 12.5, 0.32 | 12.6, 0, 0.32 | 3.8, 0, 0.32 |
+
+- **The audit adds 0.2 to 1.1 GiB to a worker's peak** (most on curved S, the only one here with several tiles), under
+  a cap raised by 1 GiB. The highest peak was 1.84 GiB of 3 GiB.
+- The peak is higher on the repeat solve than on the first. The managed heap is not collected between solves; it is
+  garbage, not retention, but it is why the allowance is a whole gigabyte.
+- A worker builds its own meshes on its first solve (it has its own cache), then keeps them: the first-solve audit
+  cost in a worker is the same 2 to 6 s, and it is paid once per worker, not once per process.
+- .NET 10 behaves as .NET 8 does.
+
+### Found on the way: the worker cap on main is too small for curved M SW
+
+This is not the audit's; it fails with the audit off, on both runtimes.
+
+- **Where.** `WorkerMemoryPolicy.Required` (`src/M2DPlus.Core/WorkerMemoryPolicy.cs`): the cap is
+  max(2 GiB, 3 × `SceneCost.Estimate(1)` + 1 GiB), rounded up to a GiB. `DrawingWorkerPool` asks
+  `WorkerMemoryPolicy.Size` for it once per batch; after a cap is hit, `RetryCap` allows one retry at twice the cap.
+- **What it uses.** `SceneCost` (`src/M2DPlus.Core/Admission.cs`) is summed over leaves in `PreparedScene`: geometry
+  bytes (Rhino's `MemoryEstimate` of each leaf's definition), Brep faces, mesh triangles and source count.
+  `Estimate(1)` is 4.125 × bytes + 2,560 × faces + 120 × triangles + 4,608 × sources + 64 KiB. It is linear in the
+  input. For curved M (5,000 small Breps) that gives the 2 GiB floor.
+- **What HLD needed.** The worker's peak on curved M SW with the audit off was **4.48 GiB** (.NET 8) and
+  **4.55 GiB** (.NET 10), measured with the cap raised to 14 GB. At the policy's cap the view fails at 2 GiB, the
+  one retry fails at 4 GiB, and the view is reported as over its cap. Native HLD's memory on this view goes with
+  what it produces (43,000 m of Hidden and Visible linework, 68 M triangles of render mesh behind it), which the
+  input sizes do not predict.
+- **Also seen.** With the cap raised by hand, a second solve was refused because the first, still-resident worker
+  had lowered the machine's free memory below cap plus reply reservation; and campus Top (cap 13 GiB) cannot get a
+  worker at all on this machine while other work leaves under about 21 GiB free.
+
+A fix belongs with the workers, not here: a curved-source term in the estimate, or retries that climb to the budget
+instead of stopping at one doubling.
+
+### Recommendation on default-on
+
+Closer, and still not yet.
+
+- **Blocker 1, the first solve: mostly gone.** 2 to 5 s once per process on the small models, against a view of 2 to
+  4 s. That is still visible on a small drawing. The rest is certificates and Rhino's mesher.
+- **Blocker 2, workers and .NET 10: gone on what was run.** Byte-identical, both runtimes, memory bounded and inside
+  the cap. Curved M and campus through a worker with the audit on were not measured, because main cannot run them
+  through a worker without it either.
+- **Blocker 3, the gate: open.** Terra is running the suite and the light gate with the audit off and on.
+- **New: it is unreviewed.** The parameter source, the tiles, the cache move and the worker message are all after the
+  review of `580f5ee`.
+
+I would turn it on by default when the gate is clean with it on and the second review is in; and I would first fix
+the worker cap, because on the models where the audit finds most (curved M: 293 m) the worker route does not work
+today with or without it.
+
+## Reproduce
+
+```sh
+dotnet build tools/perf-f -c Release
+export M2D_RHINO_INSIDE=<Rhino.Inside_v8_net8.0.dll>
+dotnet $EXE $M2D_RHINO_INSIDE $M/curved/curved-perf-S-blocks.3dm <out> mt-census eps:10      # faces, bounds, silhouettes
+export PERFF_MT=1 PERFF_MT_MESH=0.2 PERFF_MT_CELL=0.0125 PERFF_MT_FLOOR=5
+python -B tools/perf-f/mt_run.py <label> curved/curved-perf-S-blocks.3dm ce:SW eps:10 adjudicate:250   # holds the mutex
+```
+
+`PERFF_MT=1` turns the certificates on in the `ce:` prototype; without it the prototype is as in the
+curved-engine findings. `PERFF_MT_MESH` is the tolerance asked of Rhino's mesher as a fraction of the band,
+`PERFF_MT_CELL` the certificate cell size in model units, `PERFF_MT_FLOOR` the least band in tolerances. Output
+(git-ignored): `artifacts/mesh-tier/<label>/`.
+
+The product's audit, off and on, with a ray check of what moved (`quick`: one solve each, for views that take minutes):
+
+```sh
+python -B tools/perf-f/mt_run.py <label> curved/curved-perf-S-blocks.3dm da:SW
+python -B tools/perf-f/mt_run.py <label> large/frame2d-large-campus.3dm da:Top quick
+```
+
+The same through one worker, with peak memory and a byte comparison against in-process (`DOTNET_ROLL_FORWARD=LatestMajor` for .NET 10; build `src/M2DPlus.Worker -c Release` first):
+
+```sh
+python -B tools/perf-f/mt_run.py <label> curved/curved-perf-S-blocks.3dm dp:SW check
+```

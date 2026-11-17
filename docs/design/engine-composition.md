@@ -228,6 +228,21 @@ elapsed native time to stop at 10% would make classification depend on machine
 load. Timing is reported separately in phases, never deterministic diagnostics.
 Fully planar scenes never instantiate the verifier and preserve their output.
 
+**Dense audit (internal switch, off by default).** `NativeSettings.DenseAudit` (or `M2D_DENSE_AUDIT=1` for a
+process and its workers) adds a second audit after the sampled one, in exact mode only. Each curved body HLD saw
+becomes a welded mesh made once per definition and kept in the scene cache under the definition's key, with its own
+byte budget and leases (`CertifiedMesh`), every triangle with a band: a bound on its
+distance from the surface taken from the surface's control net (`SurfaceCertificate`), or, where there is none, a
+measured one. A stretch of a native Visible curve is moved to Unresolved when a group of triangles of one body,
+connected in depth, lies wholly more than a tolerance in front of it, has no open boundary near it and is crossed
+an odd number of times (`BandedMeshIndex`); the body the curve lies on is treated like any other, so it also
+catches a line hidden by its own body. Bands are at least five tolerances and the curve's own error (1.5
+tolerances) is added. It only ever adds Unresolved: measured bands and trimmed rims are not proofs, so nothing is
+drawn Hidden on its word. Memory is bounded (about a gigabyte) by working through the drawing in tiles of about
+1.5 million triangles, each with every body that reaches it, whole; a tile that would still need more than four
+million is not audited and Info says how much of the drawing that is. The limits depend on the scene alone, so a
+capped worker and the host draw the same. Info reports spans and world length moved. See `hillclimb/mesh-tier/FINDINGS.md`.
+
 The 2026-11-16 contact decision replaces the planar `tieConvention`. Planar inputs
 carry source identity, adjacent face indices and certified outward face orientation.
 Only closed, outward-oriented Breps/meshes supply that orientation; open geometry
