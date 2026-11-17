@@ -32,7 +32,7 @@ public sealed partial class DrawingComponent
     /// rows, Depth, Target, units and tolerance. The published drawing keeps the key it was drawn with.</summary>
     private string? _runKey, _drawingRunKey;
     private long _drawingGeneration;
-    /// <summary>The drawing taken down by the last expiry. If the next run's key and the document are unchanged (only
+    /// <summary>The successful drawing taken down by the last expiry. If the next run's key and the document are unchanged (only
     /// <c>bake</c> changed), it is published again as it is: no visibility solve and no presentation.</summary>
     private sealed record Parked(DrawingBatch Batch, TreeSources Sources, string RunKey, long Generation);
     private Parked? _parked;
@@ -498,10 +498,12 @@ public sealed partial class DrawingComponent
     /// <summary>A change to view objects only: re-run from the captured scene, or republish the drawing when only their
     /// bake-time text (<c>m2d.bake</c>) changed.</summary>
     private void ViewsChanged() { Park(); Refresh(false); }
-    /// <summary>Takes the drawing down like <see cref="Invalidate"/>, but keeps it for <see cref="Restore"/>.</summary>
+    /// <summary>Takes the drawing down like <see cref="Invalidate"/>, but keeps successful results for <see cref="Restore"/>.
+    /// A complete batch can contain failed views; Run now must retry those even with unchanged inputs.</summary>
     private void Park()
     {
-        if (_drawing is { } drawing && _drawingRunKey is not null && _drawingSources is not null)
+        if (_drawing is { Complete: true } drawing && drawing.Views.All(v => v.Error is null) &&
+            _drawingRunKey is not null && _drawingSources is not null)
         {
             DisposeParked();
             _parked = new(drawing, _drawingSources, _drawingRunKey, _drawingGeneration);
@@ -533,7 +535,7 @@ public sealed partial class DrawingComponent
     {
         if (!_internalRefresh)
         {
-            // Any expiry (an input, the menu, Run now) parks the drawing; the next run republishes it if only bake changed.
+            // Any expiry (an input, the menu, Run now) parks a successful drawing; unchanged failures must retry.
             Park();
             if (Params.Input.Count > 1 && Params.Input[1].Sources.Count == 0 &&
                 Params.Input[1] is global::Grasshopper.Kernel.Parameters.Param_GenericObject { PersistentDataCount: 0 })

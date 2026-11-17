@@ -54,7 +54,10 @@ public sealed class DrawingCache : IDisposable
                     var owner = new LeaseEntry<DrawingBatch>(raw); lease = owner.Acquire();
                     lock (_sync)
                     {
-                        if (generation == _generation) { _entry?.Dispose(); _entry = owner; _key = key; }
+                        // Complete means execution finished, including partial failures. Publish those once,
+                        // but let the next identical request retry a crash, timeout or memory failure.
+                        if (generation == _generation && raw.Complete && raw.Views.All(v => v.Error is null))
+                        { _entry?.Dispose(); _entry = owner; _key = key; }
                         else owner.Dispose();
                     }
                 }
