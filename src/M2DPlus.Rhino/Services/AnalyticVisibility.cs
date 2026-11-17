@@ -144,7 +144,13 @@ internal sealed class AnalyticVisibility
         {
             if (face.TryGetPlane(out var plane, tol)) planes.Add((face.FaceIndex, plane));
             else if (face.TryGetCylinder(out var cylinder, tol)) cylinders.Add((face.FaceIndex, cylinder));
-            else if (face.TryGetSphere(out var sphere, tol)) spheres.Add(sphere);
+            else if (face.TryGetSphere(out var sphere, tol))
+            {
+                // TryGetSphere can return different last radius bits even when calls are serial. Use it only as
+                // a type check; the descriptor comes from the surface's stored primitive/control net instead.
+                if (!StoredSphere(face.UnderlyingSurface(), sphere, tol, out var stored)) return no("spherical face without stable stored sphere parameters");
+                spheres.Add(stored);
+            }
             else return no("a face that is not a plane, cylinder or sphere");
         }
         if (!brep.IsValid) return no("invalid Brep");
@@ -223,6 +229,45 @@ internal sealed class AnalyticVisibility
     }
     private const double RhinoMathAngle = Math.PI / 180;
 
+    /// <summary>A sphere descriptor from owned geometry data, without a second numerical surface fit. A revolved
+    /// arc stores its centre/radius directly. A full NURBS sphere stores two opposite collapsed pole rows; their
+    /// midpoint and half-separation determine the sphere. Require agreement with Rhino's type check to roundoff,
+    /// capped below its tolerance, rather than rounding a fitted parameter onto an arbitrary grid.</summary>
+    internal static bool StoredSphere(Surface surface, Sphere fitted, double tolerance, out Sphere sphere)
+    {
+        sphere = Sphere.Unset;
+        double guard = Math.Min(tolerance / 64, 128 * 2.220446049250313e-16 * (1 + fitted.Center.DistanceTo(Point3d.Origin) + fitted.Radius));
+        if (surface is RevSurface revolution)
+        {
+            using var curve = revolution.Curve;
+            if (curve is not ArcCurve circular) return false;
+            var arc = circular.Arc; var direction = revolution.Axis.Direction;
+            if (!direction.Unitize() || revolution.Axis.DistanceTo(arc.Center, false) > guard ||
+                Math.Abs(arc.Plane.Normal * direction) * arc.Radius > guard) return false;
+            sphere = new(arc.Center, arc.Radius);
+        }
+        else if (surface is NurbsSurface nurbs)
+        {
+            bool Poles(bool alongU, out Point3d a, out Point3d b)
+            {
+                int count = alongU ? nurbs.Points.CountU : nurbs.Points.CountV, last = (alongU ? nurbs.Points.CountV : nurbs.Points.CountU) - 1;
+                ControlPoint At(int i, int j) => alongU ? nurbs.Points.GetControlPoint(i, j) : nurbs.Points.GetControlPoint(j, i);
+                a = At(0, 0).Location; b = At(0, last).Location;
+                for (int i = 0; i < count; i++)
+                {
+                    var p = At(i, 0); var q = At(i, last);
+                    if (!(p.Weight > 0) || !(q.Weight > 0) || p.Location.DistanceTo(a) > guard || q.Location.DistanceTo(b) > guard) return false;
+                }
+                return a != b;
+            }
+            Point3d a, b;
+            if (!(nurbs.IsClosed(0) && Poles(true, out a, out b)) && !(nurbs.IsClosed(1) && Poles(false, out a, out b))) return false;
+            sphere = new(a + (b - a) / 2, a.DistanceTo(b) / 2);
+        }
+        else return false;
+        return sphere.IsValid && sphere.Center.DistanceTo(fitted.Center) <= guard && Math.Abs(sphere.Radius - fitted.Radius) <= guard;
+    }
+
     /// <summary>An extruded arc: one cylindrical face bounded by rulings and by arcs in planes square to the axis.</summary>
     private static Shape? Sheet(Brep brep, Cylinder sheet, double tol, Func<string, Shape?> refuse)
     {
@@ -276,12 +321,15 @@ internal sealed class AnalyticVisibility
     {
         var plan = new (Shape?, bool, int, string?)[geometries.Count]; var toView = Transform.PlaneToPlane(plane, Plane.WorldXY);
         var foreign = new List<(BoundingBox Box, int Index)>(); bool any = false;
-        // Each geometry object once, whatever number of sources share it; different objects in parallel.
+        // Each geometry object once, in input order, including the first writer of the content cache. Publication
+        // order alone is too late to canonicalise recognition. Sphere parameters additionally come from stored
+        // geometry (see StoredSphere): serialising Rhino's numerical fitter alone does not fix its last-bit drift.
+        // The managed visibility solves remain parallel.
         var distinct = new List<GeometryBase>(); var seen = new HashSet<GeometryBase>(ReferenceEqualityComparer.Instance);
         foreach (var g in geometries) if (g is Brep or Extrusion or Surface && seen.Add(g)) distinct.Add(g);
-        var options = new ParallelOptions { MaxDegreeOfParallelism = Math.Min(Environment.ProcessorCount, 8), CancellationToken = token };
         var entries = new Entry[distinct.Count];
-        Parallel.For(0, distinct.Count, options, i => entries[i] = Look(distinct[i], tol, false, token));
+        for (int i = 0; i < distinct.Count; i++)
+        { token.ThrowIfCancellationRequested(); entries[i] = Look(distinct[i], tol, false, token); }
         var eligible = new List<int>(); var over = new HashSet<GeometryBase>(ReferenceEqualityComparer.Instance); int possible = 0;
         for (int i = 0; i < distinct.Count; i++)
         {
@@ -291,7 +339,8 @@ internal sealed class AnalyticVisibility
             if (!candidate) continue;
             if (possible++ < budget) eligible.Add(i); else over.Add(distinct[i]);
         }
-        Parallel.For(0, eligible.Count, options, k => entries[eligible[k]] = Look(distinct[eligible[k]], tol, true, token));
+        foreach (int i in eligible)
+        { token.ThrowIfCancellationRequested(); entries[i] = Look(distinct[i], tol, true, token); }
         var byObject = new Dictionary<GeometryBase, Entry>(ReferenceEqualityComparer.Instance);
         for (int i = 0; i < distinct.Count; i++) byObject[distinct[i]] = entries[i];
         for (int i = 0; i < geometries.Count; i++)

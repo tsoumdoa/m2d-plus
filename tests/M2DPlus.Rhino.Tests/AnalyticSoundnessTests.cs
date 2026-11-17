@@ -14,6 +14,55 @@ public sealed class AnalyticSoundnessTests(RhinoHost host)
         var flat = curve.DuplicateCurve(); Assert.True(flat.Transform(Transform.PlanarProjection(Plane.WorldXY))); return flat;
     }
 
+    [RhinoFact] public void StoredSphereParametersDoNotDependOnNativeFitRadiusBits() => host.Run(() =>
+    {
+        var centre = new Point3d(-3.903413578933414, 3.6, 4.556683270954679);
+        using var body = new Sphere(centre, .1).ToBrep();
+        var surface = body.Faces[0].UnderlyingSurface();
+        foreach (double radius in new[] { .1, .10000000000000009, .09999999999999998 })
+        {
+            Assert.True(AnalyticVisibility.StoredSphere(surface, new Sphere(centre, radius), .0001, out var stored));
+            Assert.Equal(centre, stored.Center); Assert.Equal(.1, stored.Radius);
+        }
+        // A different primitive is not made spherical by supplying a nearby fitted radius.
+        using var torus = new Torus(Plane.WorldXY, .01, .1).ToRevSurface();
+        Assert.False(AnalyticVisibility.StoredSphere(torus, new Sphere(Point3d.Origin, .1), .0001, out _));
+    });
+
+    [RhinoFact] public void FreshSphereRecognitionPreservesExactSplitDefinitions() => host.Run(() =>
+    {
+        using var surface = new Sphere(Point3d.Origin, .1).ToNurbsSurface(); using var prototype = surface.ToBrep();
+        string[]? expected = null;
+        for (int run = 0; run < 6; run++)
+        {
+            var bodies = new List<Brep>();
+            try
+            {
+                for (int i = 0; i < 48; i++)
+                {
+                    var body = prototype.DuplicateBrep();
+                    Assert.True(body.Transform(Transform.Translation(i % 8 * .13, i / 8 * .13, i % 3 * .07)));
+                    bodies.Add(body);
+                }
+                var plane = new Plane(Point3d.Origin, new Vector3d(-1, -1, 1));
+                using var drawing = new ViewDrawing { Frame = new(plane, new Interval(-2, 2), new Interval(-2, 2)), Tolerance = .0001 };
+                var input = bodies.Select((b, i) => new VisibilityInput(b, new PreparedLeaf(i.ToString(System.Globalization.CultureInfo.InvariantCulture), [i], b))).ToArray();
+                ComposedVisibility.Solve(input, drawing, ViewRequest.Parse("SW"), new(), default);
+                Assert.Equal(0, drawing.NativeCalls);
+                Assert.Contains(drawing.Items, p => p.Class == M2DPlus.Core.LineClass.Visible);
+                Assert.Contains(drawing.Items, p => p.Class == M2DPlus.Core.LineClass.Hidden);
+                var definitions = drawing.Items.Select(p =>
+                {
+                    using var g = p.CopyGeometry(); using var n = Assert.IsAssignableFrom<Curve>(g).ToNurbsCurve();
+                    return $"{p.Class}|{p.SourceIdentity}|{p.Profile}|{n.Degree}|" + string.Join(",", n.Knots.Select(k => k.ToString("R", System.Globalization.CultureInfo.InvariantCulture))) + "|" +
+                        string.Join(";", n.Points.Select(c => FormattableString.Invariant($"{c.Location.X:R},{c.Location.Y:R},{c.Location.Z:R},{c.Weight:R}")));
+                }).Order(StringComparer.Ordinal).ToArray();
+                if (expected is null) expected = definitions; else Assert.Equal(expected, definitions);
+            }
+            finally { foreach (var body in bodies) body.Dispose(); }
+        }
+    });
+
     [RhinoFact] public void WiggleTouchingOnlyTheOldThreeSamplesIsNotCovered() => host.Run(() =>
     {
         // The former quarter/middle/three-quarter test passed despite the long excursions between those points.

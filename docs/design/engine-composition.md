@@ -115,6 +115,15 @@ class, not one class per chord. A straight candidate seen end-on has no drawing 
 
 ### Cut tubes (stage 2)
 
+Analytic recognition runs in input order, including costly cut-tube recognition and first publication to the content
+cache. Rhino's numerical sphere extraction was observed returning different radius bits for identical geometry
+(`0.1` versus `0.09999999999999998`), even with serial calls; the cached first fit then moved visibility split
+parameters on that sphere and neighbouring pipes. `TryGetSphere` is therefore a type check only: the descriptor uses
+the stored arc's centre/radius on a surface of revolution, or the opposite collapsed pole rows of a full NURBS sphere.
+It must agree with the type check to roundoff (capped below model tolerance); a spherical surface without such stored
+data is refused. Geometry objects are still examined once per view, and the managed visibility solves remain parallel
+with results consumed in candidate order. No coordinate rounding or wider proof tolerance enforces determinism.
+
 A body that is none of the plain shapes is tried as a **cut tube** (`CutTubeRecognition`): a hollow or solid round
 section whose ends, and wall, are cut by planes and by other cylinders (coped and saddle ends, mitres, Boolean pipe
 nodes). Every face must be a plane or a circular cylinder; the body is then a union of cells of the arrangement of
@@ -185,8 +194,8 @@ the box may still prove Hidden. The rest of the body stays analytic. Info report
 footprints as uncertainty, and recognition evidence as evidence rather than proof, and gives, for each cut tube, its face
 bound, edge bound and largest surface slack. At most `NativeSettings.CutTubeBudget` (128) possible cut tubes are
 examined per view, the first in input order whatever is cached, so that the drawing does not depend on earlier
-solves; the rest stay on native HLD and Info counts them. Recognition runs in parallel over distinct geometry objects
-and honours cancellation; results are kept by content, least recently used first out.
+solves; the rest stay on native HLD and Info counts them. Recognition honours cancellation between objects and during
+cut-tube recognition; results are kept by content, least recently used first out.
 
 The class reports its own progress step, `exact curved`. `engine = native` bypasses this class entirely.
 

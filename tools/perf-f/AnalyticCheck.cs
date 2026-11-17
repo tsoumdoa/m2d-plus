@@ -199,6 +199,37 @@ internal static class AnalyticCheck
         }
         bool mixed = variants.Contains("mixed");     // the mixed route, off by default
         var off = new NativeSettings { Analytic = false }; var on = new NativeSettings { AnalyticMixed = mixed };
+        if (variants.Contains("exact-repeat"))
+        {
+            // Fresh-process correctness runs need no native comparison or wall-time measurement. Keep cold and warm
+            // dumps separate: a cache must not conceal a different first result.
+            string? savedDump = Environment.GetEnvironmentVariable("M2D_DUMP");
+            var hashes = new List<string>();
+            try
+            {
+                foreach (string pass in new[] { "cold", "warm" })
+                {
+                    Environment.SetEnvironmentVariable("M2D_DUMP", Path.Combine(output, pass));
+                    using var drawing = SolveView(scene, prepared, view, on, timeout);
+                    string hash = HashExact(drawing); hashes.Add(hash);
+                    Console.WriteLine($"exact-repeat {pass}: {hash}; pieces {drawing.Items.Count()}; native {drawing.NativeCalls}; error {drawing.Error}");
+                    if (drawing.Error is not null) throw new InvalidOperationException(drawing.Error);
+                }
+                double[] V(Vector3d p) => [p.X, p.Y, p.Z]; double[] P(Point3d p) => [p.X, p.Y, p.Z];
+                File.WriteAllText(Path.Combine(output, "recognition.json"), JsonSerializer.Serialize(prepared.Select(p =>
+                {
+                    var (shape, refusal) = AnalyticVisibility.Examine(p.Geometry, tol);
+                    return new { p.Identity, input = GeometryFingerprint.Compute(p.Geometry), refusal, shape = shape?.GetType().Name,
+                        sphere = shape is AnalyticVisibility.SphereShape s ? new { centre = P(s.Centre), s.Radius } : null,
+                        cylinder = shape is AnalyticVisibility.CylinderShape c ? new { origin = P(c.Origin), axis = V(c.Axis), c.Radius, c.InnerRadius,
+                            cap0 = new[] { P(c.Cap0.Origin), V(c.Cap0.Normal) }, cap1 = new[] { P(c.Cap1.Origin), V(c.Cap1.Normal) } } : null };
+                }), new JsonSerializerOptions { WriteIndented = true }));
+                File.WriteAllText(Path.Combine(output, "exact-repeat.json"), JsonSerializer.Serialize(new { hashes, identical = hashes.Distinct().Count() == 1 }));
+                if (hashes.Distinct().Count() != 1) throw new InvalidOperationException("Cold/warm exact drawings differ");
+            }
+            finally { Environment.SetEnvironmentVariable("M2D_DUMP", savedDump); }
+            return;
+        }
         if (variants.Contains("diagnose"))
         {
             using var drawing = SolveView(scene, prepared, view, on, timeout);

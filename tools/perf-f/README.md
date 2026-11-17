@@ -92,6 +92,13 @@ dotnet $EXE $R <model.3dm> <out> "av:sidecar=Section transverse" why
 python tools/perf-f/av_report.py <out>                        # markdown tables from every *-av.json in the folder
 ```
 
+`av:SW exact-repeat` is a correctness-only determinism check: two analytic solves (cold and warm), with separate
+`cold-exact-<count>.txt` and `warm-exact-<count>.txt` dumps, exact hashes in `exact-repeat.json`, and the recognised
+dimensions and source fingerprints in `recognition.json`. It skips native comparison, ray sampling and timing.
+For fresh-process coverage, invoke it sequentially about 30 times with a different output folder each time and compare
+the complete dump SHA-256 hashes, including cold versus warm. No timing mutex is needed; keep one owned Rhino host
+at a time. Recognition includes sphere centres/radii: their last bits can move another source's split parameters.
+
 ## Comparing against main
 
 The same sources build against a tree without the section-reuse internals:
