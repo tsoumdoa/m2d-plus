@@ -14,5 +14,5 @@ out.mkdir(parents=True, exist_ok=True)
 with SerialRhino(wait_seconds=None):
     done = subprocess.run(['dotnet', str(exe), resolver, str(models / model), str(out), view, *switches], capture_output=True, text=True, encoding='utf-8', errors='replace')
 (out / 'log.txt').write_text(done.stdout + done.stderr, encoding='utf-8')
-keep = ('===', '---', '    phases', '    engine length', '    unresolved', '    mesh tier', '    adjudication', '    native length', '    engine certain', '    sources')
+keep = ('===', '---', '    off:', '    Dense', '    ray check', '    witnesses', '    phases', '    engine length', '    unresolved', '    mesh tier', '    adjudication', '    native length', '    engine certain', '    sources')
 print('\n'.join(line[:1800] for line in done.stdout.splitlines() if line.startswith(keep)))
