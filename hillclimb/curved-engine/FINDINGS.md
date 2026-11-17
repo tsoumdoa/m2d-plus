@@ -964,6 +964,10 @@ and one of 0.19 mm2 on a third are compared this way. Info gives the count and a
 - Coincidence tests ((a), and the Hidden-under rule) are at three points per stretch.
 - The witness in the tests is Rhino's point-in-solid test marched along the ray at 4 mm steps: it does not see cover
   thinner than that.
+- Seen along a cutter's axis (a cope looked at down the hole), the far rims are drawn Hidden under the near rim's
+  Visible line instead of being dropped as coincident. The ink is the same; why the coincidence rule does not take
+  them is not found. The witness counts a Hidden piece with a Visible piece of the same place nearer the viewer as a
+  tie, not as an error.
 
 ### Timings
 
