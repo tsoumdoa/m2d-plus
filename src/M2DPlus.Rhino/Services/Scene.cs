@@ -39,11 +39,18 @@ internal sealed class OwnedGeometry : IDisposable
     internal long Bytes { get; }
     internal string? Conversion { get; }
     internal long BrepFaces { get; }
+    internal long CurvedBrepFaces { get; }
+    internal long CurvedBrepEdges { get; }
     internal long MeshTriangles { get; }
     internal OwnedGeometry(GeometryBase geometry, string? conversion)
     {
         _geometry = geometry; Conversion = conversion; Bytes = (long)geometry.MemoryEstimate();
         BrepFaces = geometry is Brep brep ? brep.Faces.Count : 0;
+        if (geometry is Brep curved)
+        {
+            CurvedBrepFaces = curved.Faces.LongCount(f => !f.IsPlanar());
+            if (CurvedBrepFaces > 0) CurvedBrepEdges = curved.Edges.Count;
+        }
         MeshTriangles = geometry is Mesh mesh ? mesh.Faces.TriangleCount + 2L * mesh.Faces.QuadCount : 0;
     }
     internal GeometryBase Copy()
@@ -126,16 +133,17 @@ public sealed class PreparedScene : IDisposable
             .Concat(leaves.Where(l => Combined(l.Chain).SimilarityType == TransformSimilarityType.NotSimilarity)
                 .Select(l => $"{l.Identity}: nonuniform transform; deformable geometry (curves to NURBS where required)")).ToArray());
         var bounds = BoundingBox.Empty;
-        long bytes = 0, faces = 0, triangles = 0;
+        long bytes = 0, faces = 0, triangles = 0, curvedFaces = 0, curvedEdges = 0;
         foreach (var leaf in leaves)
         {
             var transform = Combined(leaf.Chain);
             bounds.Union(leaf.Geometry.Value.Bounds(transform));
             bytes += leaf.Geometry.Value.Bytes;
             faces += leaf.Geometry.Value.BrepFaces; triangles += leaf.Geometry.Value.MeshTriangles;
+            curvedFaces += leaf.Geometry.Value.CurvedBrepFaces; curvedEdges += leaf.Geometry.Value.CurvedBrepEdges;
         }
         Bounds = bounds;
-        Cost = new(bytes, faces, triangles, leaves.Count);
+        Cost = new(bytes, faces, triangles, leaves.Count) { CurvedBrepFaces = curvedFaces, CurvedBrepEdges = curvedEdges };
         EstimatedBytes = Cost.Estimate(1);
     }
     internal static Transform Combined(IEnumerable<Transform> chain)

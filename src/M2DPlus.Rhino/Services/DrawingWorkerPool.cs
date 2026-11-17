@@ -52,14 +52,25 @@ public sealed class DrawingWorkerPool : IDisposable
             ObjectDisposedException.ThrowIf(_disposed,this);
             // Idle clients belong to this reservation and can be reclaimed, unlike other applications' memory.
             var memory=_options.ReadMemory();
-            long resident=0;
+            long resident=0;bool retained=false;
             foreach(var slot in _slots)
             {
                 await slot.Gate.WaitAsync(token).ConfigureAwait(false);
-                try{resident+=slot.Client?.ResidentBytes??0;}finally{slot.Gate.Release();}
+                try{resident+=slot.Client?.ResidentBytes??0;retained|=slot.Client is not null;}finally{slot.Gate.Release();}
             }
             memory=memory with{AvailableBytes=Math.Min(memory.PhysicalBytes,checked(memory.AvailableBytes+resident))};
-            var plan=WorkerMemoryPolicy.Size(cost,views.Count,_options.Count,memory,_options.MemoryBytes,settings.DenseAudit?DenseNativeAudit.WorkerAllowanceBytes:0);LastSizing=plan;
+            long extra=settings.DenseAudit?DenseNativeAudit.WorkerAllowanceBytes:0;
+            var plan=WorkerMemoryPolicy.Size(cost,views.Count,_options.Count,memory,_options.MemoryBytes,extra);
+            if(plan.Count==0 && retained)
+            {
+                // Working-set credit cannot restore paged-out private commit. Reap only our idle clients,
+                // then use actual fresh RAM/commit before refusing; never credit another application's memory.
+                await CloseAll().ConfigureAwait(false);
+                token.ThrowIfCancellationRequested();
+                memory=_options.ReadMemory();
+                plan=WorkerMemoryPolicy.Size(cost,views.Count,_options.Count,memory,_options.MemoryBytes,extra);
+            }
+            LastSizing=plan;
             if(plan.Count==0)throw new WorkerUnavailableException(plan.Refusal!);
             var processors=Math.Max(1,WorkerMemoryPolicy.CpuLimit(Environment.ProcessorCount)/plan.Count);
             // Retire excess/changed-cap clients before starting any new process. Thus retained idle clients
@@ -75,7 +86,7 @@ public sealed class DrawingWorkerPool : IDisposable
             var order=Enumerable.Range(0,views.Count).OrderByDescending(i=>_viewSeconds.GetValueOrDefault(keys[i])).ThenBy(i=>i).ToArray();
             var pending=new System.Collections.Concurrent.ConcurrentQueue<int>(order);var seconds=new double[views.Count];
             progress?.Report(new(JobPhase.Drawing,0,views.Count){Workers=plan.Count,Step="starting workers"});
-            var retry=new bool[views.Count];var done=0;
+            var retry=new bool[views.Count];var retryPeaks=new long[views.Count];var done=0;
             using var startup=CancellationTokenSource.CreateLinkedTokenSource(token);
             var shownSync=new object();var shown=-1;long shownAt=0; // the view whose inner step the status shows
             var unavailable=new System.Collections.Concurrent.ConcurrentDictionary<Slot,byte>();
@@ -105,7 +116,7 @@ public sealed class DrawingWorkerPool : IDisposable
                 {
                     if(!retry[i])continue;token.ThrowIfCancellationRequested();
                     var retryMemory=_options.ReadMemory();
-                    var cap=WorkerMemoryPolicy.RetryCap(plan.CapBytes,retryMemory);
+                    var cap=WorkerMemoryPolicy.RetryCap(plan.CapBytes,retryMemory,retryPeaks[i]);
                     if(cap==0){Failure(i,MemoryFailure(plan.CapBytes,"No larger isolated cap fits the current memory budget."));continue;}
                     var slot=_slots[0];await slot.Gate.WaitAsync(token).ConfigureAwait(false);
                     try
@@ -116,7 +127,7 @@ public sealed class DrawingWorkerPool : IDisposable
                             var drawing=await SolveView(slot,i,cap,true,limit).ConfigureAwait(false);
                             if(IsMemoryFailure(drawing.Error) || slot.Client!.MemoryLimitHit)
                             {drawing.Dispose();Failure(i,MemoryFailure(cap,"The one isolated retry also exceeded its cap."));}
-                            else {results[i]?.Dispose();results[i]=drawing;drawing._diagnostics.Add($"Worker memory recovery: retried once alone at {cap/(double)WorkerMemoryPolicy.GiB:F1} GiB.");}
+                            else {results[i]?.Dispose();results[i]=drawing;drawing._diagnostics.Add($"Worker memory recovery: retried once alone at {cap/(double)WorkerMemoryPolicy.GiB:F1} GiB (observed job peak {retryPeaks[i]/(double)WorkerMemoryPolicy.GiB:F2} GiB).");}
                         }
                         catch(Exception ex) when(ex is not OperationCanceledException)
                         {Failure(i,MemoryFailure(cap,"The one isolated retry failed: "+ex.Message));}
@@ -156,7 +167,7 @@ public sealed class DrawingWorkerPool : IDisposable
                         {
                             var drawing=await SolveView(slot,i,plan.CapBytes,false,plan.ReplyExpandedLimit).ConfigureAwait(false);
                             if(IsMemoryFailure(drawing.Error) || slot.Client!.MemoryLimitHit)
-                            {drawing.Dispose();retry[i]=true;Failure(i,MemoryFailure(plan.CapBytes,"Queued for an isolated retry."));slot.Client?.Dispose();slot.Client=null;}
+                            {retryPeaks[i]=slot.Client!.PeakBytes;drawing.Dispose();retry[i]=true;Failure(i,MemoryFailure(plan.CapBytes,"Queued for an isolated retry."));slot.Client?.Dispose();slot.Client=null;}
                             else results[i]=drawing;
                         }
                         catch(WorkerUnavailableException ex)
@@ -168,6 +179,7 @@ public sealed class DrawingWorkerPool : IDisposable
                         catch(Exception ex) when(ex is not OperationCanceledException)
                         {
                             retry[i]=ex is WorkerMemoryException || IsMemoryFailure(ex.Message) || slot.Client?.MemoryLimitHit==true;
+                            if(retry[i])retryPeaks[i]=slot.Client?.PeakBytes??0;
                             Failure(i,retry[i]?MemoryFailure(plan.CapBytes,"Queued for an isolated retry."):"Worker failed for this view (crash, timeout or invalid reply): "+ex.Message);
                             slot.Client?.Dispose();slot.Client=null;
                         }

@@ -222,7 +222,9 @@ public sealed class WorkerTests(RhinoHost host)
         {
             lock(initial)
             {
-                if(retry){Assert.Single(pool.ProcessIds);Assert.Equal(2*WorkerMemoryPolicy.GiB,cap);retries.Add(index);}
+                if(retry){Assert.Single(pool.ProcessIds);Assert.InRange(cap,2*WorkerMemoryPolicy.GiB,
+                    WorkerMemoryPolicy.Budget(new(16*WorkerMemoryPolicy.GiB,12*WorkerMemoryPolicy.GiB))-
+                    WorkerMemoryPolicy.HostReplyBytes(WorkerMemoryPolicy.Budget(new(16*WorkerMemoryPolicy.GiB,12*WorkerMemoryPolicy.GiB))));retries.Add(index);}
                 else initial.Add(index);
             }
         };
