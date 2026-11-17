@@ -1,7 +1,8 @@
 # Licensed Rhino integration tests
 
 Plain `dotnet test` discovers skipped integration tests and never initializes Rhino.
-The pre-commit hook and Pack-Yak run Core tests only. Integration tests are serial
+The pre-commit hook runs Core and GH UI-model tests; Pack-Yak runs Core tests only.
+Neither initializes licensed Rhino. Integration tests are serial
 and share one in-process RhinoCore on one STA host thread; they never attach
 to or terminate an interactive Rhino session. A compatible Windows x64 runtime,
 installed licensed Rhino 8 and McNeel Rhino.Inside resolver are required.

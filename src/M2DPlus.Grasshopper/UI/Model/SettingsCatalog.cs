@@ -124,11 +124,4 @@ public static class SettingsCatalog
                $"Visible {W(preset[LineClass.Visible].PrintWidthMillimetres)}{breakOrDot}Hidden {W(preset[LineClass.Hidden].PrintWidthMillimetres)} · " +
                $"Beyond {W(preset[LineClass.Beyond].PrintWidthMillimetres)} mm ({preset.BandName} preset)";
     }
-
-    public static string SourceLabel(ViewSettingsContext view) => view.Source switch
-    {
-        ViewSourceKind.Rectangle => "Rectangle", ViewSourceKind.Plane => "Plane", ViewSourceKind.Box => "Box",
-        ViewSourceKind.ClippingPlane => "Clipping plane", ViewSourceKind.NamedView => "Named view",
-        ViewSourceKind.Vector => "Vector", _ => "Direction"
-    } + (view.IsCut ? " · cuts" : "");
 }

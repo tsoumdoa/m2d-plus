@@ -51,7 +51,6 @@ public sealed class AnalyticCsg : AnalyticSolid
     private readonly CsgPrimitive[] _primitives; private readonly int[] _bit; private readonly HashSet<int> _in, _out;
     private readonly Vertex _centre; private readonly int _free;
     private readonly CsgUncertainPatch[] _patches;
-    public IReadOnlyList<CsgPrimitive> Primitives => _primitives;
     public override double Slack { get; }
     public override bool HasUncertainRegions => _patches.Length != 0;
 

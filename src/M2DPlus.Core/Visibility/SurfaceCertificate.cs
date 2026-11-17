@@ -53,11 +53,6 @@ public sealed class SurfaceCertificate
     public bool Rational { get; }
     public int DegreeU { get; }
     public int DegreeV { get; }
-    public int CellCount => _cells.Count;
-    public double MinU => _u[0];
-    public double MaxU => _u[^1];
-    public double MinV => _v[0];
-    public double MaxV => _v[^1];
 
     private SurfaceCertificate(int p, int q, bool rational, double[] u, double[] v, double[] kinkU, double[] kinkV)
     {

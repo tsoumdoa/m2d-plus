@@ -88,6 +88,5 @@ public sealed record RigidPlacement(Plane3 Source, Plane3 Target)
 {
     public Vector3 Map(Vector3 point) { var p = Source.Coordinates(point); return Target.At(p.X, p.Y, p.Z); }
     public Vector3 MapVector(Vector3 vector) => Target.X * vector.Dot(Source.X) + Target.Y * vector.Dot(Source.Y) + Target.Z * vector.Dot(Source.Z);
-    public Vector3 Map2D(double u, double v) => Target.At(u, v);
     public RigidPlacement Inverse() => new(Target, Source);
 }

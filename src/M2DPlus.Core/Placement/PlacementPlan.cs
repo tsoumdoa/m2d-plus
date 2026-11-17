@@ -27,9 +27,6 @@ public static class AnchorRules
         var plane = new Plane3(sceneFrontPoint, up.Cross(z), up);
         return plane.AtOrigin(plane.Project(Vector3.Zero));
     }
-
-    public static bool Crops(ViewSourceKind source, CropMode crop) => source is ViewSourceKind.Rectangle or ViewSourceKind.Box ||
-        source == ViewSourceKind.NamedView && crop == CropMode.Auto;
 }
 
 /// <summary>ProjectionPlane is supplied for named views: the camera target defines the lateral anchor,
