@@ -43,6 +43,7 @@ internal sealed class AnalyticVisibility
         /// <summary>The largest slack of a surface: its faces' bound, and how far its edges and their stored
         /// tolerances let the real faces run past the exact surfaces.</summary>
         internal double SurfaceBound { get; init; }
+        internal IReadOnlyList<(int Surface, BoundingBox Bounds, double Slack)> UncertainFaces { get; init; } = [];
     }
 
     /// <summary>What is known of one geometry object. Pending: none of the plain shapes, but it could be a cut tube and
@@ -83,7 +84,7 @@ internal sealed class AnalyticVisibility
     {
         if (geometry is not (Brep or Extrusion or Surface)) return (null, null);
         var entry = Look(geometry, tolerance, true, token);
-        return (entry.Shape, entry.Refusal);
+        lock (entry) return (entry.Shape, entry.Refusal);
     }
 
     /// <summary>The plain shapes always; the cut tube only when `deep` (see <see cref="Entry.Pending"/>).</summary>
@@ -108,7 +109,7 @@ internal sealed class AnalyticVisibility
             if (entry.Shape is null) entry.Refusal ??= "not recognised"; else entry.Refusal = null;
             Cache.AddOrUpdate(geometry, entry);
         }
-        if (!deep || !entry.Pending) return entry;
+        if (!deep) return entry;
         lock (entry)
         {
             if (!entry.Pending) return entry;
@@ -285,7 +286,8 @@ internal sealed class AnalyticVisibility
         for (int i = 0; i < distinct.Count; i++)
         {
             // Possible cut tubes are counted from the scene alone: a body recognised in an earlier solve counts too.
-            bool candidate = entries[i].Pending || entries[i].Shape is CutTubeShape || entries[i].Refusal?.Contains("; as a cut tube: ", StringComparison.Ordinal) == true;
+            bool candidate;
+            lock (entries[i]) candidate = entries[i].Pending || entries[i].Shape is CutTubeShape || entries[i].Refusal?.Contains("; as a cut tube: ", StringComparison.Ordinal) == true;
             if (!candidate) continue;
             if (possible++ < budget) eligible.Add(i); else over.Add(distinct[i]);
         }
@@ -296,7 +298,10 @@ internal sealed class AnalyticVisibility
         {
             if (!byObject.TryGetValue(geometries[i], out var entry)) { plan[i] = (null, false, -1, null); continue; }
             bool skipped = over.Contains(geometries[i]);
-            var shape = skipped ? null : entry.Shape; plan[i] = (shape, false, -1, skipped ? OverBudget : shape is null ? entry.Refusal : null); any |= shape is not null;
+            lock (entry)
+            {
+                var shape = skipped ? null : entry.Shape; plan[i] = (shape, false, -1, skipped ? OverBudget : shape is null ? entry.Refusal : null); any |= shape is not null;
+            }
         }
         if (!any) return plan;
         for (int i = 0; i < geometries.Count; i++)
@@ -334,6 +339,7 @@ internal sealed class AnalyticVisibility
         public double Loose => Math.Max(Slack, Gap);
         /// <summary>An unrecognised body may hide this line: native HLD is asked as well.</summary>
         public bool Native { get; init; }
+        public bool Unresolved { get; init; }
     }
     /// <summary>What native HLD said about a stretch of a candidate it was asked about.</summary>
     private enum Said { Visible, Hidden, Unresolved, Covered }
@@ -373,7 +379,7 @@ internal sealed class AnalyticVisibility
             _notes.Add("Cut tubes, recognised from point-in-solid evidence at sample points (not a proof that the body is that tube) and drawn to a stated bound " +
                 "(faces: certified distance of each face from its plane or cylinder; edges: distance of the drawn edges from the exact curves classified; " +
                 "surfaces: the looseness allowed for at each surface, stored edge and vertex tolerances included): " +
-                string.Join("; ", cut.Take(limit).Select(i => { var t = (CutTubeShape)plan[i].Shape!; return $"{curved[i].Source.Identity} faces {t.FaceBound:G3}, edges {t.EdgeBound:G3}, surfaces {t.SurfaceBound:G3}"; })) +
+                string.Join("; ", cut.Take(limit).Select(i => { var t = (CutTubeShape)plan[i].Shape!; return $"{curved[i].Source.Identity} faces {t.FaceBound:G3}, edges {t.EdgeBound:G3}, surfaces {t.SurfaceBound:G3}; {t.Edges.Count(e => !e.Exact)} edge pieces Unresolved (no crossing/gap certificate); {t.UncertainFaces.Count} locally uncertain face footprints"; })) +
                 (cut.Length > limit ? $"; and {cut.Length - limit} more." : "."));
         int over = plan.Count(p => p.Refusal == OverBudget);
         if (over != 0)
@@ -413,7 +419,13 @@ internal sealed class AnalyticVisibility
             var v = Project(plane, corner);
             min = new(Math.Min(min.X, v.X), Math.Min(min.Y, v.Y), Math.Min(min.Z, v.Z)); max = new(Math.Max(max.X, v.X), Math.Max(max.Y, v.Y), Math.Max(max.Z, v.Z));
         }
-        return new AnalyticCsg(t.Surfaces.Select(s => new CsgPrimitive(s.Cylinder, Project(plane, s.Origin), Direction(plane, s.Direction), s.Radius, s.Role, s.Slack)).ToArray(), min, max, t.Inside, t.Outside);
+        var patches = t.UncertainFaces.Select(p => {
+            var corners = p.Bounds.GetCorners().Select(q => Project(plane, q)).ToArray();
+            return new CsgUncertainPatch(p.Surface,
+                new(corners.Min(v => v.X), corners.Min(v => v.Y), corners.Min(v => v.Z)),
+                new(corners.Max(v => v.X), corners.Max(v => v.Y), corners.Max(v => v.Z)), p.Slack);
+        });
+        return new AnalyticCsg(t.Surfaces.Select(s => new CsgPrimitive(s.Cylinder, Project(plane, s.Origin), Direction(plane, s.Direction), s.Radius, s.Role, s.Slack)).ToArray(), min, max, t.Inside, t.Outside, patches);
     }
 
     /// <summary>The surfaces of a shape that another solid's line can lie on, with the bit that names each to the solid.</summary>
@@ -689,11 +701,12 @@ internal sealed class AnalyticVisibility
                     bool Profile(Point3d p) => pair.Length == 2 && (Out(pair[0], p) * e > 0) != (Out(pair[1], p) * e > 0);
                     // The exact curve behind a stored edge: the intersection of its two surfaces. When every point of
                     // the edge snaps onto it (the surfaces cross cleanly there), that is what is classified, with no
-                    // slack; otherwise the stored edge is classified with its measured slack.
+                    // slack; otherwise the stored edge stays Unresolved.
                     Func<Point3d, Point3d?>? snap = null;
-                    if (edge.Exact && pair.Length == 2) snap = q => CutTubeRecognition.Onto(pair[0], pair[1], q);
+                    if (edge.Exact && pair.Length == 2) snap = q =>
+                        CutTubeRecognition.Onto(pair[0], pair[1], q, edge.Gap) is { } on && on.DistanceTo(q) <= edge.Gap ? on : null;
                     // The drawn edge is within its gap of that curve, in any direction.
-                    yield return new(Drawable(edge.World), input, solid, edge.On, false, Profile, edge.Slack, null, snap, edge.Exact ? edge.Gap : 0, edge.Exact ? edge.Gap : edge.Slack);
+                    yield return new(Drawable(edge.World), input, solid, edge.On, false, Profile, edge.Slack, null, snap, edge.Exact ? edge.Gap : 0, edge.Exact ? edge.Gap : edge.Slack) { Unresolved = !edge.Exact };
                 }
                 // Outlines of its cylindrical faces, from Rhino's silhouette of the body: each is a ruling of the face's
                 // cylinder, already cut to the face. The ray there touches that cylinder.
@@ -849,10 +862,14 @@ internal sealed class AnalyticVisibility
                 if (!endOn[i])
                 {
                     var c = _candidates[i];
-                    chords[i] = Cut(c.Curve, _all, c.Solid, c.OnSurface, c.Tangent, c.Loose, token, c.Contacts, c.Snap, c.Slack == 0 && c.Gap == 0);
-                    // A drawn edge is known to its slack or gap, and a solid's surface to its own slack: change points
-                    // are known to a few times that.
-                    solved[i] = Solve(c.Curve, chords[i], _all, c.Loose, Math.Max(_tol, 8 * (c.Loose + _all.Slack)), token, c.Depth);
+                    if (c.Unresolved) solved[i] = [(c.Curve.Domain, VisibilityClass.Unresolved)];
+                    else
+                    {
+                        chords[i] = Cut(c.Curve, _all, c.Solid, c.OnSurface, c.Tangent, c.Loose, token, c.Contacts, c.Snap, c.Slack == 0 && c.Gap == 0);
+                        // A drawn edge is known to its slack or gap, and a solid's surface to its own slack: change points
+                        // are known to a few times that.
+                        solved[i] = Solve(c.Curve, chords[i], _all, c.Loose, Math.Max(_tol, 8 * (c.Loose + _all.Slack)), token, c.Depth);
+                    }
                 }
                 NativeDrawing.ReportStep(ViewSteps.ExactCurved, Interlocked.Increment(ref done), chords.Length);
             });
@@ -896,7 +913,6 @@ internal sealed class AnalyticVisibility
     private List<(Curve, ComposedVisibility.Tag, LineClass, bool)> WithoutCoveredHidden(
         List<(Curve Curve, ComposedVisibility.Tag Tag, LineClass Class, bool Profile)> made, List<double> known, List<GeometryBase> owned, CancellationToken token)
     {
-        double Depth(Point3d p) => (p - _plane.Origin) * _plane.ZAxis;
         var kept = new List<(Curve, ComposedVisibility.Tag, LineClass, bool)>(made.Count);
         var projection = Transform.PlanarProjection(_plane); var flat = new Curve?[made.Count];
         // A piece dropped whole takes no further part: whatever covered it is still there and covers the same stretch,
@@ -931,14 +947,11 @@ internal sealed class AnalyticVisibility
                 var ends = cuts.ToArray(); double start = double.NaN; gone[i] = true;
                 for (int k = 0; k + 1 < ends.Length; k++)
                 {
-                    // Covered: one other piece lies within half a tolerance (and what the two are known to) at three
-                    // points of this stretch; for an undecided piece, no further from the viewer than it there.
-                    bool covered = others.Any(j => new[] { .25, .5, .75 }.All(f =>
-                    {
-                        double t = ends[k] + (ends[k + 1] - ends[k]) * f;
-                        if (!flat[j]!.ClosestPoint(mine.PointAt(t), out double tj, _tol / 2 + known[i] + known[j])) return false;
-                        return !undecided || Depth(made[j].Curve.PointAt(tj)) >= Depth(piece.Curve.PointAt(t)) - _tol - known[i] - known[j];
-                    }));
+                    // Different covering pieces may witness different subintervals (a far rim can double back across
+                    // their join). Both suppression rules require a certificate over every point, including depth.
+                    bool covered = BoundedCurveCover.Covers(piece.Curve, mine, new(ends[k], ends[k + 1]),
+                        others.Select(j => new BoundedCurveCover.Piece(made[j].Curve, flat[j]!, known[j])).ToArray(),
+                        _plane, _tol, known[i], undecided, token);
                     if (!covered) gone[i] = false;
                     if (!covered && double.IsNaN(start)) start = ends[k];
                     if ((covered || k + 2 == ends.Length) && !double.IsNaN(start))

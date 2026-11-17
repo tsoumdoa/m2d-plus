@@ -199,6 +199,22 @@ internal static class AnalyticCheck
         }
         bool mixed = variants.Contains("mixed");     // the mixed route, off by default
         var off = new NativeSettings { Analytic = false }; var on = new NativeSettings { AnalyticMixed = mixed };
+        if (variants.Contains("diagnose"))
+        {
+            using var drawing = SolveView(scene, prepared, view, on, timeout);
+            foreach (var diagnostic in drawing.Diagnostics) Console.WriteLine(diagnostic);
+            File.WriteAllText(Path.Combine(output, stem + "-recognition.json"), JsonSerializer.Serialize(new {
+                view = view.Name, drawing.NativeCalls, route = drawing.Report.Route, diagnostics = drawing.Diagnostics,
+                sources = prepared.Where(p => p.Geometry is Brep).Select(p => {
+                    var (shape, refusal) = AnalyticVisibility.Examine(p.Geometry, tol);
+                    return new { p.Identity, shape = shape?.GetType().Name, refusal,
+                        detail = (shape as AnalyticVisibility.CutTubeShape)?.Note,
+                        surfaces = (shape as AnalyticVisibility.CutTubeShape)?.Surfaces.Select((s, i) => new { index = i, s.Cylinder,
+                            origin = new[] { s.Origin.X, s.Origin.Y, s.Origin.Z }, direction = new[] { s.Direction.X, s.Direction.Y, s.Direction.Z }, s.Radius, s.Slack, role = s.Role.ToString() }),
+                        edges = (shape as AnalyticVisibility.CutTubeShape)?.Edges.Select(e => new { e.Exact, e.Gap, e.Diagnostic, length = e.World.GetLength() }) };
+                }) }, new JsonSerializerOptions { WriteIndented = true }));
+            return;
+        }
         // `why`: what HLD returned in the composed solve, to show beside a flagged sample.
         var heard = new List<(string Id, int Edge, bool Duplicate, LineClass Kind, Curve World)>();
         var listening = !variants.Contains("why") ? on : new NativeSettings { AnalyticMixed = mixed, ObserveCompositionRecord = (id, edge, duplicate, kind, world) => { lock (heard) heard.Add((id, edge, duplicate, kind, world.DuplicateCurve())); } };

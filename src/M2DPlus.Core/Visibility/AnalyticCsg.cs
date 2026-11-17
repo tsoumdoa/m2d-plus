@@ -18,6 +18,10 @@ public enum CsgRole
 /// <param name="Slack">How far the real face may be from this surface (a certified bound from recognition).</param>
 public readonly record struct CsgPrimitive(bool Cylinder, Vertex Origin, Vertex Direction, double Radius, CsgRole Role, double Slack = 0);
 
+/// <summary>A face whose orientation could not be checked. Only its bounded footprint and its surface's slack
+/// band are uncertain; cells and sure material elsewhere keep their ordinary certificates.</summary>
+public readonly record struct CsgUncertainPatch(int Surface, Vertex Min, Vertex Max, double Slack = 0);
+
 /// <summary>
 /// A solid bounded by planes and circular cylinders: a tube whose ends are cut by planes and by other cylinders (a
 /// pipe coped to fit a node). A point is in the solid when it is inside every <see cref="CsgRole.Inside"/> surface,
@@ -46,13 +50,15 @@ public sealed class AnalyticCsg : AnalyticSolid
 {
     private readonly CsgPrimitive[] _primitives; private readonly int[] _bit; private readonly HashSet<int> _in, _out;
     private readonly Vertex _centre; private readonly int _free;
+    private readonly CsgUncertainPatch[] _patches;
     public IReadOnlyList<CsgPrimitive> Primitives => _primitives;
     public override double Slack { get; }
 
     /// <param name="inside">Cells of the free surfaces that are in the solid; null when there is no free surface.
     /// Bit k of a cell is the k-th free surface in list order, set when the point is inside it.</param>
     /// <param name="outside">Cells that are not in the solid. Every other cell is unknown.</param>
-    public AnalyticCsg(IReadOnlyList<CsgPrimitive> primitives, Vertex min, Vertex max, IEnumerable<int>? inside = null, IEnumerable<int>? outside = null)
+    public AnalyticCsg(IReadOnlyList<CsgPrimitive> primitives, Vertex min, Vertex max, IEnumerable<int>? inside = null, IEnumerable<int>? outside = null,
+        IEnumerable<CsgUncertainPatch>? uncertainPatches = null)
     {
         if (primitives.Count is 0 or > 30) throw new ArgumentException("Between 1 and 30 surfaces");
         _primitives = new CsgPrimitive[primitives.Count]; _bit = new int[primitives.Count];
@@ -71,6 +77,10 @@ public sealed class AnalyticCsg : AnalyticSolid
         if (!(min.X <= max.X && min.Y <= max.Y && min.Z <= max.Z) || !double.IsFinite(Size(min) + Size(max))) throw new ArgumentException("Invalid bounds");
         X0 = min.X; Y0 = min.Y; X1 = max.X; Y1 = max.Y; ZMax = max.Z;
         _centre = new((min.X + max.X) / 2, (min.Y + max.Y) / 2, (min.Z + max.Z) / 2);
+        _patches = uncertainPatches?.ToArray() ?? [];
+        if (_patches.Any(p => p.Surface < 0 || p.Surface >= primitives.Count ||
+            !(p.Min.X <= p.Max.X && p.Min.Y <= p.Max.Y && p.Min.Z <= p.Max.Z) || !(p.Slack >= 0) || !double.IsFinite(Size(p.Min) + Size(p.Max) + p.Slack)))
+            throw new ArgumentException("Invalid uncertain face footprint");
     }
 
     public override VisibilityClass Occlusion(Vertex p, double tolerance, int own = 0, bool tangent = false) => Evaluate(p, 0, p.Z, p.Z, tolerance, own, tangent);
@@ -90,11 +100,22 @@ public sealed class AnalyticCsg : AnalyticSolid
         int n = _primitives.Length; double zc = (zLow + zHigh) / 2, spread = (zHigh - zLow) / 2; var start = new Vertex(p.X, p.Y, zc);
         // For each surface: the ray is surely inside it on [inLo, inHi] and possibly inside on [outLo, outHi].
         Span<double> inLo = stackalloc double[n], inHi = stackalloc double[n], outLo = stackalloc double[n], outHi = stackalloc double[n];
-        Span<double> cuts = stackalloc double[4 * n + 2]; int nc = 0; cuts[nc++] = 0; double error = 0;
+        Span<double> cuts = stackalloc double[4 * n + 2 + 2 * _patches.Length]; int nc = 0; cuts[nc++] = 0; double error = 0;
+        foreach (var patch in _patches)
+            if (Across(patch, start, lateral) && patch.Max.Z + spread > start.Z)
+            {
+                cuts[nc++] = Math.Max(0, patch.Min.Z - start.Z - spread);
+                cuts[nc++] = patch.Max.Z - start.Z + spread;
+            }
         int border = 0;      // free surfaces the rays run in (the start lies on them and the view is along them)
         for (int i = 0; i < n; i++)
         {
             var s = _primitives[i]; bool mine = (own & (1 << i)) != 0;
+            // OnSurface is an exemption from slack. A ray meeting an unchecked face must instead pass the ordinary
+            // sure/possible surface tests, even when it starts on that nominal surface or a shared contact.
+            foreach (var patch in _patches)
+                if (patch.Surface == i && Across(patch, start, lateral) && patch.Max.Z + spread >= start.Z)
+                { mine = false; s = s with { Slack = Math.Max(s.Slack, patch.Slack) }; }
             var w = Sub(start, s.Origin); double delta = 8 * Epsilon * (Size(w) + s.Radius);
             double il, ih, ol, oh;
             if (!s.Cylinder)
@@ -192,7 +213,7 @@ public sealed class AnalyticCsg : AnalyticSolid
             double a = cuts[k], b = k + 1 < nc ? cuts[k + 1] : double.PositiveInfinity;
             if (!(b > a)) continue;
             double at = double.IsFinite(b) ? (a + b) / 2 : a + 1;
-            int state = State(at, inLo, inHi, outLo, outHi, border);       // 2: surely in the solid, 1: possibly, 0: surely not
+            int state = State(at, inLo, inHi, outLo, outHi, border, start, lateral, spread);       // 2: surely in the solid, 1: possibly, 0: surely not
             if (state == 2) { if (double.IsNaN(sureFrom)) sureFrom = a; } else if (!double.IsNaN(sureFrom)) { if (Cover(sureFrom, a, tolerance) - 2 * error >= tolerance / 8) return VisibilityClass.Hidden; sureFrom = double.NaN; }
             if (state != 0) { if (double.IsNaN(maybeFrom)) maybeFrom = a; } else if (!double.IsNaN(maybeFrom)) { if (Cover(maybeFrom, a, tolerance) + 2 * error > tolerance / 16) undecided = true; maybeFrom = double.NaN; }
         }
@@ -204,7 +225,11 @@ public sealed class AnalyticCsg : AnalyticSolid
     /// <summary>The depth rule: cover counts from one tolerance in front of the start.</summary>
     private static double Cover(double from, double to, double tolerance) => to - Math.Max(from, tolerance);
 
-    private int State(double t, ReadOnlySpan<double> inLo, ReadOnlySpan<double> inHi, ReadOnlySpan<double> outLo, ReadOnlySpan<double> outHi, int along)
+    private static bool Across(CsgUncertainPatch patch, Vertex p, double lateral) =>
+        p.X + lateral >= patch.Min.X && p.X - lateral <= patch.Max.X && p.Y + lateral >= patch.Min.Y && p.Y - lateral <= patch.Max.Y;
+
+    private int State(double t, ReadOnlySpan<double> inLo, ReadOnlySpan<double> inHi, ReadOnlySpan<double> outLo, ReadOnlySpan<double> outHi, int along,
+        Vertex start, double lateral, double spread)
     {
         int value = 0, unknown = 0; bool possible = true, sure = true;
         for (int i = 0; i < _primitives.Length; i++)
@@ -219,6 +244,12 @@ public sealed class AnalyticCsg : AnalyticSolid
                     if (surelyIn) value |= 1 << _bit[i]; else if (possiblyIn) unknown |= 1 << _bit[i];
                     break;
             }
+        }
+        foreach (var patch in _patches)
+        {
+            int i = patch.Surface;
+            if (Across(patch, start, lateral) && start.Z + t + spread >= patch.Min.Z && start.Z + t - spread <= patch.Max.Z &&
+                t >= outLo[i] && t <= outHi[i] && !(t >= inLo[i] && t <= inHi[i])) return 1;
         }
         if (_free != 0)
         {
