@@ -37,7 +37,14 @@ internal static class SectionDrawing
         var range = new ViewRange(cut.SourceDepth ?? autoDepth, farClip: cut.FarClip, tolerance: tol);
         Plane? far = range.ClipsFar ? new Plane(cut.Plane.Origin - cut.Plane.Normal * range.Depth, -cut.Plane.XAxis, cut.Plane.YAxis) : null;
         var participating = sources.Where(cut.Participates).ToArray();
-        var bodies = participating.Where(s => s.Geometry is Brep or Mesh).ToArray();
+        // A separated source needs no section topology/provenance certificate.
+        // Keep it on the ordinary projection route, or exclude it when wholly
+        // outside the retained halfspaces. An uncertain/touching bound, including
+        // a crossing of the far plane, still takes the full section pipeline.
+        var bodyRelations = participating.Where(s => s.Geometry is Brep or Mesh)
+            .ToDictionary(s => s.Identity, s => SectionProjectionBounds.Classify(s.Geometry, cut.Plane, far, tol), StringComparer.Ordinal);
+        var bodies = participating.Where(s => bodyRelations.GetValueOrDefault(s.Identity) == SectionProjectionRelation.Section &&
+            s.Geometry is Brep or Mesh).ToArray();
         var owned = new List<GeometryBase>();
         var suppression = new List<Curve>(); var cutLoci = new List<Curve>(); var farLoci = new List<Curve>();
         var sourceTrim = new Dictionary<string, List<Curve>>(StringComparer.Ordinal);
@@ -126,6 +133,9 @@ internal static class SectionDrawing
                 if (!cut.Participates(source)) { registered.Add((source.Geometry, new(source))); continue; }
                 if (source.Geometry is Brep or Mesh)
                 {
+                    if (bodyRelations[source.Identity] == SectionProjectionRelation.Excluded) continue;
+                    if (bodyRelations[source.Identity] == SectionProjectionRelation.Projection)
+                    { registered.Add((source.Geometry, new(source))); continue; }
                     if (!sections.Visibility.TryGetValue(source.Identity, out var clip) || !clip.Succeeded) continue;
                     foreach (var piece in clip.Pieces)
                     {
