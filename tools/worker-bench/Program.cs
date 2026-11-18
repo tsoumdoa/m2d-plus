@@ -12,6 +12,8 @@ internal static class Program
     {
         try
         {
+            if(args.Length == 0) throw new ArgumentException("Expected command");
+            if(args[0]=="pipe-poc" && (args.Length != 5 || args[4] is not ("SW" or "Top"))) throw new ArgumentException("pipe-poc resolver.dll input.3dm new-drawing.3dm SW|Top");
             if(args[0]=="envelope"){EnvelopeBench.Run(args[1]);return 0;}
             if(args[0] is "workers" or "identity" or "pool" or "load" or "memory-worker")
             {
@@ -26,6 +28,7 @@ internal static class Program
                 if(args[0]=="identity")Inspect(args[1],args.Length>2?args[2]:null).GetAwaiter().GetResult();else Measure(args[1],args[2],int.Parse(args[3]),args.Length>4?int.Parse(args[4]):0).GetAwaiter().GetResult();return 0;
             }
             var resolver=Assembly.LoadFrom(args[1]);resolver.GetType("RhinoInside.Resolver",true)!.GetMethod("Initialize",[typeof(string)])!.Invoke(null,["C:/Program Files/Rhino 8/System"]);
+            if(args[0]=="pipe-poc"){PipeDrawing.Run(args[2],args[3],args[4]);return 0;}
             if(args[0]=="memory-export"){MemoryCapBench.Export(args[2],args[3]);return 0;}
             if(args[0]=="hld"){NativeHldBench.Run(args[2],args[3],args[4]);return 0;}
             if(args[0]=="engine"){EngineFastBench.Run(args[2],args[3],args.Length>4?args[4]:"curved");return 0;}

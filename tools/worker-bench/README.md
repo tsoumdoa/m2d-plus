@@ -4,6 +4,8 @@ Build the solution and this project in Debug or Release; use an existing compati
 Rhino.Inside resolver. All Rhino processes are owned by the harness. Models/evidence
 stay outside git under `~/.t3/m2d-plus-models`; never overwrite existing evidence.
 
+The [pipe-node proof of concept](PipePoc/README.md) exports a layered 2D drawing for comparing direct surface visibility with native HLD.
+
 Current commands (see Program.cs for the complete replay/transport arguments):
 
 - `engine <resolver> <model> <new-output-folder>` profiles threaded HLD, hidden on/off.
