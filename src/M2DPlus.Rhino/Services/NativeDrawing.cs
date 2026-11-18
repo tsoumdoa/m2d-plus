@@ -250,12 +250,20 @@ public static class NativeDrawing
             sources = ViewSourceCull.Filter(sources, view, scene.Bounds, tolerance, token);
         }
         var cullSeconds = cullTimer.Elapsed.TotalSeconds;
+        var meshTimer = Stopwatch.StartNew();
+        using var meshCrop = new MeshViewCrop(sources, view, scene.Bounds, tolerance, token, settings.CullSources);
+        var meshSeconds = meshTimer.Elapsed.TotalSeconds;
+        sources = meshCrop.Sources;
         var drawing = SolveFilteredView(scene, sources, original, view, settings, token, tolerance);
         if (settings.CullSources)
         {
             drawing.Phases.Add("source culling", cullSeconds);
             drawing.Seconds += cullSeconds;
             drawing._diagnostics.Add($"culled {original.Count - sources.Count} sources outside the view");
+            drawing.Phases.Add("mesh face crop", meshSeconds);
+            drawing.Seconds += meshSeconds;
+            if (meshCrop.ReducedMeshes > 0)
+                drawing._diagnostics.Add($"Mesh face crop: dropped {meshCrop.DroppedFaces} faces across {meshCrop.ReducedMeshes} meshes (XY only).");
         }
         return drawing;
     }
