@@ -110,12 +110,9 @@ internal sealed class PipeRayFaces : IDisposable
             cylinderBlocks = new CylinderBlock[blocks.Length];
             for (int g = 0; g < blocks.Length; g++)
             {
-                if (cylinderBlocks is not null)
-                {
-                    var lanes = new Patch[4];
-                    for (int k = 0; k < 4; k++) lanes[k] = patches[Math.Min(g * 4 + k, patches.Count - 1)];
-                    cylinderBlocks[g] = new CylinderBlock(lanes);
-                }
+                var lanes = new Patch[4];
+                for (int k = 0; k < 4; k++) lanes[k] = patches[Math.Min(g * 4 + k, patches.Count - 1)];
+                cylinderBlocks[g] = new CylinderBlock(lanes);
                 var a = patches[g * 4].ViewBox; var b = patches[Math.Min(g * 4 + 1, patches.Count - 1)].ViewBox;
                 var c = patches[Math.Min(g * 4 + 2, patches.Count - 1)].ViewBox; var d = patches[Math.Min(g * 4 + 3, patches.Count - 1)].ViewBox;
                 blocks[g] = new(Vector256.Create(a.Min.X, b.Min.X, c.Min.X, d.Min.X), Vector256.Create(a.Max.X, b.Max.X, c.Max.X, d.Max.X),

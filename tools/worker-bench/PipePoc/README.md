@@ -17,7 +17,7 @@ $drawing = 'C:/models/pipes-sw-drawing.3dm'
 dotnet tools/worker-bench/bin/Release/net8.0-windows/M2DPlus.WorkerBench.dll pipe-poc $resolver $inputModel $drawing SW
 ```
 
-Choose a fresh output filename and either `Top` or `SW`. Open the exported file in Rhino's Top viewport. The drawing lies in World XY. Toggle the Hidden layer to inspect the visible edges. Object names carry the visibility class and source object GUID. The reference image uses dashed strokes for the Hidden layer.
+Choose a fresh output filename and either `Top` or `SW`. Open the exported file in Rhino's Top viewport. The drawing lies in World XY. Toggle the Hidden layer to inspect the visible edges. The export includes visible and hidden curves. Loose points appear only when visible. Object names carry the visibility class and source object GUID. The reference image uses dashed strokes for the Hidden layer.
 
 ## How it works
 
@@ -29,6 +29,6 @@ Choose a fresh output filename and either `Top` or `SW`. Open the exported file 
 
 On the five-pipe fixture, the research harness measured first-drawing medians of **198 ms custom versus 425 ms native in Top**, and **148 ms versus 452 ms in SW**. Each figure covers six fresh Rhino 8.36 hosts on a Ryzen AI Max+ 395 with a ReadyToRun build. Timing covered the complete drawing calculation and excluded host startup, model loading and disk writes. One of the six Top pairs missed the 2× target. The source model and benchmark archives live outside the repository.
 
-A separate smoke test ran this extracted command on the same fixture. SW produced 94 visible and 153 hidden curves. Top produced 112 visible and 132 hidden curves. Both matched the audited drawing's source IDs and classes. At 33 stations per curve the maximum positional difference after aligning the drawing planes was below 0.001 mm. The timing medians above belong to the research harness.
+A separate smoke test ran this extracted command on the same fixture. SW produced 94 visible and 153 hidden curves. Top produced 112 visible and 132 hidden curves. Both matched the audited drawing's source IDs and classes. At 33 stations per curve the maximum positional difference after aligning the drawing planes was below 5 × 10⁻¹¹ mm on both views. The timing medians above belong to the research harness.
 
 The demo covers opaque, closed, valid Breps with optional loose curves and points in millimetres. Projected silhouettes, depth-event sampling and near-contact refinement can miss short intervals. Sections, blocks, arbitrary freeform drawings and Grasshopper integration have additional requirements. Shipping drawings continue to use Rhino HLD.
