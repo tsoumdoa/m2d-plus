@@ -9,7 +9,7 @@ using Rhino.Geometry;
 
 namespace M2DPlus.Rhino.Services;
 
-/// <summary>Schema 4: threaded HLD only; no kernel/audit request or result state.</summary>
+/// <summary>Schema 4 result transport; scene metadata includes units/angle for pipes admission. Exact assembly fingerprints identify the engine.</summary>
 internal static class WorkerCodec
 {
     internal const int Schema = 4;
@@ -51,7 +51,7 @@ internal static class WorkerCodec
     internal static string Hash(byte[] bytes) => Convert.ToHexString(SHA256.HashData(bytes));
     internal sealed record Definition(string Archive, string? Conversion);
     internal sealed record Leaf(string Identity, string Key, int[] Path, Transform[] Chain, SourceSection Section, int SourceItem);
-    internal sealed record Scene(string Revision, double Tolerance, Dictionary<string,Definition> Definitions, Leaf[] Leaves, Dictionary<string,int> Unsupported);
+    internal sealed record Scene(string Revision, double Tolerance, Dictionary<string,Definition> Definitions, Leaf[] Leaves, Dictionary<string,int> Unsupported, bool Millimetres, double AngleTolerance);
     internal static byte[] Capture(PreparedScene scene, CancellationToken token)
     {
         var definitions = new Dictionary<string,Definition>();
@@ -62,7 +62,7 @@ internal static class WorkerCodec
             using var copy = leaf.Geometry.Value.Copy();
             definitions.Add(leaf.Key,new(Archive(copy),leaf.Geometry.Value.Conversion));
         }
-        return Encode(new Scene(scene.Revision,scene.Tolerance,definitions,scene.TransportLeaves.Select(l=>new Leaf(l.Identity,l.Key,l.Path,l.Chain,l.Section,l.SourceItem)).ToArray(),new(scene.Unsupported)));
+        return Encode(new Scene(scene.Revision,scene.Tolerance,definitions,scene.TransportLeaves.Select(l=>new Leaf(l.Identity,l.Key,l.Path,l.Chain,l.Section,l.SourceItem)).ToArray(),new(scene.Unsupported),scene.Millimetres,scene.AngleTolerance));
     }
     internal static PreparedScene RestoreScene(byte[] bytes)
     {
@@ -71,7 +71,7 @@ internal static class WorkerCodec
         {
             foreach(var d in dto.Definitions) owners.Add(d.Key,new(new OwnedGeometry(Restore(d.Value.Archive),d.Value.Conversion)));
             foreach(var l in dto.Leaves) leaves.Add(new(l.Identity,l.Key,l.Path,l.Chain,owners[l.Key].Acquire(),l.Section){SourceItem=l.SourceItem});
-            return new(dto.Revision,leaves,dto.Unsupported,dto.Tolerance);
+            return new(dto.Revision,leaves,dto.Unsupported,dto.Tolerance,dto.Millimetres,dto.AngleTolerance);
         }
         catch { foreach(var l in leaves)l.Geometry.Dispose(); throw; }
         finally { foreach(var owner in owners.Values)owner.Dispose(); }

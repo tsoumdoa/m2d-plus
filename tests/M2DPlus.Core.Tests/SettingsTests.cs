@@ -62,11 +62,12 @@ public sealed class SettingsTests
             min visible = 2 mm
             engine = native
             cutonly = on
+            visibility = pipes
             bake = layer-view
             """, View(source: ViewSourceKind.NamedView));
         Assert.DoesNotContain(result.Diagnostics, d => d.Severity != DiagnosticSeverity.Remark);
         var s = Assert.Single(result.Views);
-        Assert.Equal(25, s.Values.Count); Assert.False(s.Get<bool>("joints")); Assert.True(s.CutOnly); Assert.Equal(.002, s.MinVisible, 12); Assert.Equal(EngineMode.Native, s.Get<EngineMode>("engine")); Assert.Equal(BakeLayout.LayerView, s.Bake);
+        Assert.Equal(26, s.Values.Count); Assert.Equal(VisibilityMode.Pipes, s.Visibility); Assert.False(s.Get<bool>("joints")); Assert.True(s.CutOnly); Assert.Equal(.002, s.MinVisible, 12); Assert.Equal(EngineMode.Native, s.Get<EngineMode>("engine")); Assert.Equal(BakeLayout.LayerView, s.Bake);
         Assert.Equal(8, s.Depth); Assert.Equal(3, s.Beyond); Assert.Equal(FarClipMode.Line, s.FarClip);
         Assert.True(s.Fade); Assert.Equal(25, s.FadeStart); Assert.Equal(90, s.FadeEnd); Assert.Equal(10, s.FadeLimit);
         Assert.False(s.Crop); Assert.False(s.Hidden); Assert.True(s.Tangents); Assert.True(s.Seams);

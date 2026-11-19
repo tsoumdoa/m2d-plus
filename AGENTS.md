@@ -100,8 +100,13 @@ Layered cache keys use content fingerprints plus stable identity, never CRC alon
 
 Pre-HLD exclusion (owner, 2026-11-19): before capture, objects and block instances whose cheap bounding box lies completely outside every requested view volume (outside the profile; for cut participants, wholly in front of the front face or beyond the back face where far clip applies) are excluded: their geometry is never copied, fingerprinted or normalised, though they stay watch dependencies. Applies only when every view has a fixed volume: an M2D+ view box, a GH Box, or a Rectangle with authored axes and explicit depth; other requests keep the whole scene. Scene bounds are the survivors' bounds, which changes only the HLD camera radius, so outputs are compared by locus, not bytes.
 
-Visibility is always threaded Rhino HLD, using physical Route C sections. No custom
-visibility classifiers or joint suppression. Legacy engine/joints values load with
+Visibility defaults to threaded Rhino HLD, using physical Route C sections. No joint
+suppression. One opt-in exception (owner, 2026-11-19): **Pipes (experimental)**,
+`visibility = pipes`, a surface ray classifier in `src/M2DPlus.Rhino/Experimental/PipeVisibility`
+([README](src/M2DPlus.Rhino/Experimental/PipeVisibility/README.md)). It must stay opt-in,
+never change HLD output or cache identity, and fall back to HLD with a remark for any
+view it cannot admit or any failure. Known wrong-visible junction errors are disclosed in
+Info; don't extend it beyond that folder or add other custom classifiers without the owner. Legacy engine/joints values load with
 deduplicated grey remarks and do not key compute/run/timing identity. Hidden is
 a projection key; hidden-off disables min-visible. Exact engine archive:
 `archive/exact-engine` at `0cfc171` (beta.8). See [native engine](docs/design/native-engine.md).

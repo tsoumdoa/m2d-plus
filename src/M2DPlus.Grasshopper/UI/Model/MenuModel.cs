@@ -93,6 +93,7 @@ public static class ComponentMenu
         items.Add(new("Run now", MenuCommands.Run));
         if (context.Runtime.Phase == DrawingPhase.Running) items.Add(new("Cancel", MenuCommands.Cancel, Hint: "Esc"));
         items.Add(MenuNode.Separator);
+        items.Add(Choice(settings, "Visibility engine", "visibility"));
         items.Add(Toggle(settings, "Hidden lines", "hidden"));
         items.Add(Toggle(settings, "Tangent edges", "tangents"));
         items.Add(Toggle(settings, "Seams", "seams"));

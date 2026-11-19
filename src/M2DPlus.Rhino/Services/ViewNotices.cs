@@ -38,6 +38,8 @@ public static class ViewNotices
             foreach (var diagnostic in view.Diagnostics.Where(d => d.StartsWith(HldProjection.SkippedSource, StringComparison.Ordinal) ||
                 d.StartsWith(HldProjection.FailedClip, StringComparison.Ordinal)).Distinct(StringComparer.Ordinal))
                 notices.Add(new(NoticeLevel.Warning, view.Name + ": " + diagnostic));
+            foreach (var diagnostic in view.Diagnostics.Where(d => d.StartsWith("pipes engine:", StringComparison.Ordinal)))
+                notices.Add(new(NoticeLevel.Remark, view.Name + ": " + diagnostic));
             foreach (var notice in new[] { ZeroDepth, ThinDepth })
                 if (view.Diagnostics.Contains(notice)) notices.Add(new(NoticeLevel.Remark, view.Name + ": " + notice));
             if (view.Diagnostics.Contains(CutOnlyEmpty)) notices.Add(new(NoticeLevel.Remark, view.Name + ": " + CutOnlyEmpty));

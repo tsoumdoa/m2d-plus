@@ -12,6 +12,7 @@ public enum DiagnosticSeverity { Remark, Warning, Error }
 public enum FarClipMode { None, Line, NoLine }
 public enum CropMode { Auto, Off }
 public enum GlassMode { Opaque, Clear }
+public enum VisibilityMode { Hld, Pipes }
 public enum EngineMode { Exact, Native }
 public enum WeightMode { Auto, Layers }
 /// <summary>How outputs are split into branches (UX §1.3). Auto is by layer for document mode or an all-referenced
@@ -98,6 +99,7 @@ public sealed class EffectiveSettings
     public bool Hidden => Get<bool>("hidden");
     /// <summary>The authored hidden flag; HLD uses this requested value.</summary>
     public bool RequestedHidden => (bool)Values["hidden"].AuthoredValue;
+    public VisibilityMode Visibility => Get<VisibilityMode>("visibility");
     public bool Tangents => Get<bool>("tangents");
     public bool Seams => Get<bool>("seams");
     public GlassMode Glass => Get<GlassMode>("glass");
@@ -114,7 +116,7 @@ public sealed class EffectiveSettings
     /// <summary>The <c>min visible</c> threshold in document units; 0 = off (REQUIREMENTS, "small gaps").</summary>
     public double MinVisible => Get<double>("min_visible");
     public string VisibilityKey() => "hld-threaded-v4;" + string.Join(";", Settings.VisibilityKeys
-        .Where(k => !CutOnly || k is not ("hidden" or "tangents" or "seams"))
+        .Where(k => (k != "visibility" || Visibility != VisibilityMode.Hld) && (!CutOnly || k is not ("hidden" or "tangents" or "seams")))
         .Select(k => k + "=" + Settings.FormatEffective(k, Values[k].Value)));
     public string Describe() => string.Join(Environment.NewLine, Settings.ActiveKeys.Select(k =>
         $"{k} = {Settings.FormatEffective(k, Values[k].Value)} ({Values[k].SourceDescription})"));

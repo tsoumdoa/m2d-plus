@@ -37,7 +37,9 @@ public sealed class DrawingCache : IDisposable
             await _solve.WaitAsync(token).ConfigureAwait(false);
             try
             {
-                var key = WorkerCodec.Fingerprint() + "/" + HldProjection.Policy + "/" + scene.Value.VisibilityRevision + "/cull=" + settings.CullSources + "/" + string.Join("|", views.Select(v => (v with { Cut = v.Cut is { } cut ? cut with { SectionerStyle = null } : null }).Revision + "/" + v.Settings?.VisibilityKey()));
+                // Kind participates in trial admission: identical cut frames can
+                // route differently when authored as Box versus Rectangle/Plane.
+                var key = WorkerCodec.Fingerprint() + "/" + HldProjection.Policy + "/" + scene.Value.VisibilityRevision + "/cull=" + settings.CullSources + "/" + string.Join("|", views.Select(v => (v with { Cut = v.Cut is { } cut ? cut with { SectionerStyle = null } : null }).Revision + "/" + v.Kind + "/" + v.Settings?.VisibilityKey()));
                 LeaseEntry<DrawingBatch>.Lease? lease;
                 long generation;
                 lock (_sync) { generation = _generation; lease = key == _key ? _entry?.Acquire() : null; }
