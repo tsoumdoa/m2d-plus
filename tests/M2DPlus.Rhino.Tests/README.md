@@ -66,6 +66,14 @@ regions/wiring, HLD section workers, glass/depth/scope, lifecycle, codec and GH/
 suites run on .NET 8 and .NET 10. Up to three owned headless Rhino processes may
 coexist; never run curved-M or campus. No timing mutex is needed for correctness.
 
+`TrimmedSlabTests` generates an exact saddle with a through-hole: its removed
+surface tangency must not block the transverse material cut (analytic area 7.18).
+Interior and trim-boundary tangencies must still be refused. `OwnerPipeSectionTests`
+optionally reads `owner/pipes-node-gdas.3dm` under `M2D_MODELS` (default
+`~/.t3/m2d-plus-models`) and skips if absent. That model currently retains two
+certified bodies and three honest refusals: one inaccurate intersection loop and
+two sources with self-intersecting faces. Closed/valid Brep topology alone is insufficient.
+
 Fresh HLD solves are compared by ordered inputs/policy/fingerprints and declared
 fixture geometry properties. Lossless single-result codec round trips remain exact.
 Do not assert independent solve byte equality. Preserve discrepancy manifests rather

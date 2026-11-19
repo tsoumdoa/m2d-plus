@@ -112,17 +112,21 @@ internal static class StableSectionCertificate
         {
             var t = loop.SpanDomain(span).ParameterAt(fraction); var p = loop.PointAt(t); var tangent = loop.TangentAt(t);
             var witnessed = false;
+            var closest = double.PositiveInfinity;
             foreach (var face in source.Faces)
             {
-                if (!face.ClosestPoint(p, out var u, out var v) || face.PointAt(u, v).DistanceTo(p) > 2 * request.Tolerance ||
+                if (!face.ClosestPoint(p, out var u, out var v) ||
                     face.IsPointOnFace(u, v) == PointFaceRelation.Exterior) continue;
+                var distance = face.PointAt(u, v).DistanceTo(p);
+                closest = Math.Min(closest, distance);
+                if (distance > 2 * request.Tolerance) continue;
                 var normal = face.NormalAt(u, v); if (face.OrientationIsReversed) normal.Reverse();
                 var dot = tangent * Vector3d.CrossProduct(normal, request.Plane.Normal);
                 if (Math.Abs(dot) < .01) continue;
                 if (Math.Sign(dot) != expected) throw new SectionFailure($"D: outward winding disagrees with nesting (hole={hole}, orientation={orientation}, face={face.FaceIndex}, reversed={face.OrientationIsReversed}, dot={dot:G6}).");
                 witnessed = true;
             }
-            if (!witnessed) throw new SectionFailure("D: cannot associate loop direction with an oriented face.");
+            if (!witnessed) throw new SectionFailure($"D: cannot associate loop direction with an oriented face; nearest trimmed-face distance={closest:G8}, limit={2 * request.Tolerance:G8}.");
         }
     }
 
@@ -168,7 +172,9 @@ internal static class StableSectionCertificate
                         surface.KnotsV[v + surface.OrderV - 2] >= surface.KnotsV[v + surface.OrderV - 1]) continue;
                     using var patch = surface.ConvertSpanToBezier(u, v);
                     if (patch is null) throw new SectionFailure("D: Bezier span conversion failed.");
-                    try { Bound(patch, delta + request.Tolerance, 0, ref budget, ref slope); }
+                    var uDomain = new Interval(surface.KnotsU[u + surface.OrderU - 2], surface.KnotsU[u + surface.OrderU - 1]);
+                    var vDomain = new Interval(surface.KnotsV[v + surface.OrderV - 2], surface.KnotsV[v + surface.OrderV - 1]);
+                    try { Bound(patch, delta + request.Tolerance, 0, ref budget, ref slope, face, uDomain, vDomain); }
                     catch (SectionFailure ex) { throw new SectionFailure($"{ex.Message} face={face.FaceIndex}, span={u}/{v}."); }
                 }
             }
@@ -180,7 +186,8 @@ internal static class StableSectionCertificate
     // Rational Bezier derivatives: S_u=(A_u W-A W_u)/W^2. The common positive
     // denominators cancel from the normal angle. Convex hulls bound A, W and
     // their derivative control nets; outward-rounded intervals enclose products.
-    private static void Bound(BezierSurface patch, double slab, int depth, ref int budget, ref double slope)
+    private static void Bound(BezierSurface patch, double slab, int depth, ref int budget, ref double slope,
+        BrepFace face, Interval uDomain, Interval vDomain)
     {
         if (--budget < 0) throw new SectionFailure("D: Bezier slab subdivision budget exceeded.");
         using var s = patch.ToNurbsSurface();
@@ -219,9 +226,45 @@ internal static class StableSectionCertificate
         var upper = Math.Sqrt(nx.MaxAbs * nx.MaxAbs + ny.MaxAbs * ny.MaxAbs + nz.MaxAbs * nz.MaxAbs);
         if (double.IsFinite(upper) && lower > .02 * upper && upper > 0)
         { slope = Math.Max(slope, nz.MaxAbs / lower); return; }
+        // A trimmed-away tangency is not part of the material boundary. Only
+        // NURBS faces preserve the Bezier span's parameterization identically.
+        // Prove the entire parameter rectangle exterior, never just its samples.
+        if (face.UnderlyingSurface() is NurbsSurface && ExteriorRectangle(face, uDomain, vDomain)) return;
         if (depth >= 16) throw new SectionFailure("D: transversality cannot be bounded away from tangency.");
         if (!patch.Split(depth % 2, .5, out var first, out var second)) throw new SectionFailure("D: Bezier subdivision failed.");
-        using (first) using (second) { Bound(first, slab, depth + 1, ref budget, ref slope); Bound(second, slab, depth + 1, ref budget, ref slope); }
+        using (first) using (second)
+        {
+            Bound(first, slab, depth + 1, ref budget, ref slope, face,
+                depth % 2 == 0 ? new(uDomain.Min, uDomain.Mid) : uDomain,
+                depth % 2 == 1 ? new(vDomain.Min, vDomain.Mid) : vDomain);
+            Bound(second, slab, depth + 1, ref budget, ref slope, face,
+                depth % 2 == 0 ? new(uDomain.Mid, uDomain.Max) : uDomain,
+                depth % 2 == 1 ? new(vDomain.Mid, vDomain.Max) : vDomain);
+        }
+    }
+
+    private static bool ExteriorRectangle(BrepFace face, Interval u, Interval v)
+    {
+        if (face.IsPointOnFace(u.Mid, v.Mid) != PointFaceRelation.Exterior) return false;
+        var budget = 4096;
+        var fuzz = 256 * 2.2204460492503131e-16 * Math.Max(1,
+            Math.Max(Math.Max(Math.Abs(u.Min), Math.Abs(u.Max)), Math.Max(Math.Abs(v.Min), Math.Abs(v.Max))));
+        bool Disjoint(Curve trim, int depth)
+        {
+            if (--budget < 0) return false;
+            var b = trim.GetBoundingBox(true);
+            if (!b.IsValid) return false;
+            if (b.Max.X < u.Min - fuzz || b.Min.X > u.Max + fuzz ||
+                b.Max.Y < v.Min - fuzz || b.Min.Y > v.Max + fuzz) return true;
+            if (depth >= 16) return false;
+            using var left = trim.Trim(trim.Domain.Min, trim.Domain.Mid);
+            using var right = trim.Trim(trim.Domain.Mid, trim.Domain.Max);
+            return left is not null && right is not null && Disjoint(left, depth + 1) && Disjoint(right, depth + 1);
+        }
+        // A connected rectangle with no trim boundary and one exterior witness
+        // is wholly exterior. Failure to separate any boundary keeps the patch
+        // in the slab proof; budget exhaustion cannot authorize a cut.
+        return face.Loops.SelectMany(l => l.Trims).All(t => Disjoint(t, 0));
     }
 
     private readonly record struct I(double Lo, double Hi)

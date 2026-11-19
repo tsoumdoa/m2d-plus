@@ -123,7 +123,7 @@ internal static class SectionGeometry
                     {
                         if (intervals.Any(e => e.Origin == EdgeOrigin.None && e.Curve.GetLength() > tolerance &&
                             !CoveredBySharedTopology(e.Curve, shared, tolerance)))
-                            throw new SectionFailure("Self-intersecting Brep faces away from their shared topology.");
+                            throw new SectionFailure($"Self-intersecting Brep faces {i}/{j} away from their shared topology (tolerance={tolerance:G6}).");
                     }
                     finally { foreach (var interval in intervals) interval.Dispose(); }
                 }
