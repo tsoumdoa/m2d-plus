@@ -123,9 +123,9 @@ public sealed class PreparedScene : IDisposable
         }
         Revision = revision; _leaves = leaves; Unsupported = new ReadOnlyDictionary<string, int>(unsupported); Tolerance = tolerance;
         Conversions = Array.AsReadOnly(leaves.Where(l => l.Geometry.Value.Conversion is not null)
-            .Select(l => $"{l.Identity}: {l.Geometry.Value.Conversion}")
+            .Select(l => $"Captured source {l.Identity}: {l.Geometry.Value.Conversion}")
             .Concat(leaves.Where(l => Combined(l.Chain).SimilarityType == TransformSimilarityType.NotSimilarity)
-                .Select(l => $"{l.Identity}: nonuniform transform; deformable geometry (curves to NURBS where required)")).ToArray());
+                .Select(l => $"Captured source {l.Identity}: nonuniform transform; deformable geometry (curves to NURBS where required)")).ToArray());
         var bounds = BoundingBox.Empty;
         long bytes = 0, faces = 0, triangles = 0, curvedFaces = 0, curvedEdges = 0;
         foreach (var leaf in leaves)

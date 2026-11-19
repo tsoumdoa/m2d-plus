@@ -13,19 +13,28 @@ internal static class Program
         try
         {
             if(args[0]=="envelope"){EnvelopeBench.Run(args[1]);return 0;}
-            if(args[0] is "workers" or "identity" or "pool" or "load" or "memory-worker")
+            if(args[0] is "workers" or "identity" or "pool" or "load" or "memory-worker" or "scope-worker")
             {
                 // Managed value types/archives only in the coordinator; never initialize RhinoCore here.
                 System.Runtime.Loader.AssemblyLoadContext.Default.Resolving+=(_,name)=>
                 {
                     var path=Path.Combine("C:/Program Files/Rhino 8/System",name.Name+".dll");return File.Exists(path)?Assembly.LoadFrom(path):null;
                 };
+                if(args[0]=="scope-worker"){ScopeFirstBench.WorkerScene(args[1],args[2]).GetAwaiter().GetResult();return 0;}
                 if(args[0]=="memory-worker"){MemoryCapBench.Worker(args[1],args[2],args.Length>3?long.Parse(args[3]):0).GetAwaiter().GetResult();return 0;}
                 if(args[0]=="load"){LoadScene(args[1],args[2]).GetAwaiter().GetResult();return 0;}
                 if(args[0]=="pool")return MeasurePool(args[1],args[2],int.Parse(args[3]),args.Length>4?int.Parse(args[4]):0,args.Length>5?int.Parse(args[5]):0,args.Length>6?int.Parse(args[6]):0).GetAwaiter().GetResult()?0:2;
                 if(args[0]=="identity")Inspect(args[1],args.Length>2?args[2]:null).GetAwaiter().GetResult();else Measure(args[1],args[2],int.Parse(args[3]),args.Length>4?int.Parse(args[4]):0).GetAwaiter().GetResult();return 0;
             }
             var resolver=Assembly.LoadFrom(args[1]);resolver.GetType("RhinoInside.Resolver",true)!.GetMethod("Initialize",[typeof(string)])!.Invoke(null,["C:/Program Files/Rhino 8/System"]);
+            if(args[0]=="scope-radius-cost"){ScopeFirstBench.RadiusCost(args[2],args[3]);return 0;}
+            if(args[0]=="scope-storeys"){ScopeFirstBench.GenerateStoreys(args[2]);return 0;}
+            if(args[0]=="scope-corpus"){ScopeFirstBench.Corpus(args[2],args[3],args[4]);return 0;}
+            if(args[0]=="scope-compare"){ScopeLocus.Compare(args[2],args[3],args[4]);return 0;}
+            if(args[0]=="scope-conversions"){ScopeFirstBench.GenerateConversions(args[2]);return 0;}
+            if(args[0]=="scope-terrain"){ScopeFirstBench.GenerateTerrain(args[2]);return 0;}
+            if(args[0]=="scope-export"){ScopeFirstBench.ExportScene(args[2]);return 0;}
+            if(args[0]=="scope"){ScopeFirstBench.Run(args[2],args[3],args[4]);return 0;}
             if(args[0]=="memory-export"){MemoryCapBench.Export(args[2],args[3]);return 0;}
             if(args[0]=="hld"){NativeHldBench.Run(args[2],args[3],args[4]);return 0;}
             if(args[0]=="engine"){EngineFastBench.Run(args[2],args[3],args.Length>4?args[4]:"curved");return 0;}

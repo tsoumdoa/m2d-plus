@@ -98,6 +98,8 @@ native release. Hard kill/memory limits exist only on the worker route. Cut regi
 branches hold all loops with aligned hatch/null; crop edges have separate provenance.
 Layered cache keys use content fingerprints plus stable identity, never CRC alone.
 
+Pre-HLD exclusion (owner, 2026-11-19): before capture, objects and block instances whose cheap bounding box lies completely outside every requested view volume (outside the profile; for cut participants, wholly in front of the front face or beyond the back face where far clip applies) are excluded: their geometry is never copied, fingerprinted or normalised, though they stay watch dependencies. Applies only when every view has a fixed volume: an M2D+ view box, a GH Box, or a Rectangle with authored axes and explicit depth; other requests keep the whole scene. Scene bounds are the survivors' bounds, which changes only the HLD camera radius, so outputs are compared by locus, not bytes.
+
 Visibility is always threaded Rhino HLD, using physical Route C sections. No custom
 visibility classifiers or joint suppression. Legacy engine/joints values load with
 deduplicated grey remarks and do not key compute/run/timing identity. Hidden is

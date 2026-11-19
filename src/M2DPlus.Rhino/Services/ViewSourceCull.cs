@@ -11,6 +11,24 @@ internal static class ViewSourceCull
     internal static double Margin(double tolerance, double magnitude) =>
         ViewSourceBounds.Margin(tolerance, magnitude);
 
+    internal static ViewRequest ResolveView(ViewRequest view, BoundingBox scene, double tolerance)
+    {
+        if (view.Settings is { } effective)
+        {
+            if (view.Named is { } named) view = view with { Named = named with { Crop = effective.Crop } };
+            if (view.Cut is null && view.Error is null)
+            {
+                var frame = view.Resolve(scene, effective.Tolerance);
+                if (effective.FarClip != FarClipMode.None && scene.IsValid &&
+                    -scene.GetCorners().Min(frame.Plane.DistanceTo) >= effective.Depth - effective.Tolerance)
+                    view = view with { Cut = new CutFrame(frame.Plane, effective.Crop && view.Named is not null ? frame : null,
+                        effective.Depth, false, false, Array.Empty<Guid>(), Array.Empty<Guid>(), null) };
+            }
+            if (view.Cut is { } cut) view = view with { Cut = cut with { SourceDepth = effective.Depth, FarClip = effective.FarClip } };
+        }
+        return view;
+    }
+
     internal static IReadOnlyList<PreparedLeaf> Filter(IReadOnlyList<PreparedLeaf> sources, ViewRequest view,
         BoundingBox scene, double tolerance, CancellationToken token)
     {

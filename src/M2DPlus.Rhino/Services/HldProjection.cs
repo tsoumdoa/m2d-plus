@@ -7,17 +7,17 @@ namespace M2DPlus.Rhino.Services;
 /// <summary>The only visibility adapter. Failed records stay local; only a failed solve quarantines projection.</summary>
 internal static class HldProjection
 {
-    internal const string Policy = "Rhino HLD threaded/requested-hidden/local-failures/physical-sections/mesh-face-crop-v1/trimmed-slab-v2/schema4";
+    internal const string Policy = "Rhino HLD threaded/requested-hidden/local-failures/physical-sections/mesh-face-crop-v1/trimmed-slab-v2/scope-first-v2/schema4";
     internal const string SkippedSource = "HLD source skipped: ";
     internal const string FailedClip = "Section clip failed: ";
     internal static void Solve(IReadOnlyList<VisibilityInput> inputs, ViewDrawing output, ViewRequest view,
         NativeSettings settings, BoundingBox bounds, CancellationToken token)
     {
-        output.MultipleThreads = true; // Policy also applies when no registrations survive.
+        output.MultipleThreads = settings.MultipleThreads; // Policy also applies when no registrations survive.
         if (inputs.Count == 0) return;
         using var phase = output.Phases.Start("native setup");
         using var viewport = new ViewportInfo();
-        NativeViewport.Configure(viewport, output.Frame, view.Direction, bounds, output.Tolerance);
+        NativeViewport.Configure(viewport, output.Frame, view.Direction, settings.CameraBounds ?? bounds, output.Tolerance);
         var options = NativeHldOptions.For(view, settings);
         var parameters = new HiddenLineDrawingParameters { AbsoluteTolerance = output.Tolerance, Flatten = false,
             IncludeHiddenCurves = options.IncludeHiddenCurves, IncludeTangentEdges = view.Settings?.Tangents ?? false,
@@ -29,7 +29,7 @@ internal static class HldProjection
         if (accepted.Length == 0) return;
         phase.Next("native solve");
         NativeDrawing.CountHld(); output.NativeCalls++;
-        using var drawing = HiddenLineDrawing.Compute(parameters, true, NativeDrawing.HldProgress, token);
+        using var drawing = HiddenLineDrawing.Compute(parameters, settings.MultipleThreads, NativeDrawing.HldProgress, token);
         token.ThrowIfCancellationRequested();
         if (!TryFrame(drawing, output, out var inverse)) return;
         var project = Transform.PlanarProjection(output.Frame.Plane) * inverse;

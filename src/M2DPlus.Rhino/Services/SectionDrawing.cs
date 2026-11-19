@@ -27,7 +27,7 @@ internal static class SectionDrawing
         var timer = Stopwatch.StartNew(); var invalid = 0; var quarantine = false;
         var failedClipFootprints = new List<BoundingBox>();
         SectionResult? preparedSections = null;
-        var result = new ViewDrawing { Name = view.Name, Settings = view.Settings, Tolerance = view.Settings?.Tolerance ?? scene.Tolerance, MultipleThreads = true,
+        var result = new ViewDrawing { Name = view.Name, Settings = view.Settings, Tolerance = view.Settings?.Tolerance ?? scene.Tolerance, MultipleThreads = settings.MultipleThreads,
             Frame = resolvedFrame ?? DrawingFrames.Resolve(view, sources, scene.Bounds, view.Settings?.Tolerance ?? scene.Tolerance) };
         var cut = view.Cut!; var tol = view.Settings?.Tolerance ?? scene.Tolerance;
         var request = new SectionRequest(cut.Plane, tol, .001, cut.Crop, CutMode.Separate, HatchMode.Styles);

@@ -95,6 +95,35 @@ public sealed class RerunTests(RhinoHost host, ITestOutputHelper output)
         Assert.True(until(), $"{rig.Component.Message}; reruns={rig.Watch.Reruns}; last={rig.Watch.LastReason}");
     }
 
+    [RhinoFact] public void ExplicitZeroToAutoDepthRecapturesSourcesBehindACroppedCut() => host.Run(() =>
+    {
+        Assert.True(global::Rhino.PlugIns.PlugIn.LoadPlugIn(GrasshopperId));
+        using var rig = Build(documentMode: false);
+        // A rectangle has authored/auto depth; a view box would correctly ignore both.
+        var view = (Param_GenericObject)rig.Component.Params.Input[1];
+        view.PersistentData.Clear();
+        view.PersistentData.Append(new GH_Rectangle(new Rectangle3d(new Plane(new Point3d(0, 0, 5), Vector3d.ZAxis),
+            new Interval(-5, 10), new Interval(-5, 5))));
+        view.ExpireSolution(false);
+        void Depth(string value)
+        {
+            var settings = (Param_String)rig.Component.Params.Input[3];
+            settings.PersistentData.Clear();
+            settings.PersistentData.Append(new GH_String("farclip=noline"));
+            settings.PersistentData.Append(new GH_String("depth=" + value));
+            var solves = rig.Solves;
+            settings.ExpireSolution(false); rig.Component.ExpireSolution(false);
+            rig.Gh.NewSolution(false, GH_SolutionMode.Silent);
+            Pump(rig, () => rig.Solves >= solves + 2 && rig.Infos == 1);
+        }
+        Depth("0");
+        Assert.Equal(0, rig.Component.Params.Output[0].VolatileDataCount);
+        var captures = SceneCapture.Captures;
+        Depth("auto");
+        Assert.Equal(captures + 1, SceneCapture.Captures);
+        Assert.True(rig.Component.Params.Output[0].VolatileDataCount > 0);
+    });
+
     /// <summary>Makes one edit and checks whether the component re-ran, and whether the re-run solved visibility again.</summary>
     private void Expect(Rig rig, string what, Action edit, bool rerun, bool? solved = null)
     {
@@ -251,7 +280,7 @@ public sealed class RerunTests(RhinoHost host, ITestOutputHelper output)
     /// <summary>
     /// Owner feedback on beta.1: "changing settings should not trigger reloading objects". Every settings-like change
     /// (Settings input, Depth, Target, a menu default, a view object's m2d.* text) re-solves from the captured scene:
-    /// no capture, no normalisation, no preparation; only settings that affect visibility make HLD calls. A change to
+    /// no capture, no normalisation, no preparation when the retained volume is unchanged; only settings that affect visibility make HLD calls. A change to
     /// the Geometry input or to a drawn object reads the objects again.
     /// </summary>
     [RhinoFact] public void SettingsChangesReuseTheCapturedScene() => host.Run(() =>
@@ -329,7 +358,7 @@ public sealed class RerunTests(RhinoHost host, ITestOutputHelper output)
             Rerun("Menu: scale 1:50", () => ((dynamic)c).Ui.Execute("set:scale=1:50", false), capture: false, solved: false);
             Rerun("Menu: seams on (visibility)", () => ((dynamic)c).Ui.Execute("set:seams=on", false), capture: false, solved: true);
             Rerun("View box: m2d.fade = on", () => Attributes(doc, rig.ViewBox, a => a.SetUserString("m2d.fade", "on")), capture: false, solved: false);
-            Rerun("View box: moved (its view changes)", () => doc.Objects.Transform(rig.ViewBox, Transform.Translation(0, 0, .25), true), capture: false, solved: true);
+            Rerun("View box: moved (its capture volume changes)", () => doc.Objects.Transform(rig.ViewBox, Transform.Translation(0, 0, .25), true), capture: true, solved: true);
             Rerun("Drawn object moved", () => doc.Objects.Transform(rig.Drawn, Transform.Translation(0, .5, 0), true), capture: true, solved: true);
             if (!documentMode)
                 Rerun("Geometry input: another object", () =>
@@ -339,6 +368,19 @@ public sealed class RerunTests(RhinoHost host, ITestOutputHelper output)
                     geometry.PersistentData.Append(reference); geometry.ExpireSolution(true);
                 }, capture: true, solved: true);
         }
+    });
+
+    [RhinoFact] public void MovingAnOutsideObjectIntoACropRerunsTheActualComponent() => host.Run(() =>
+    {
+        Assert.True(global::Rhino.PlugIns.PlugIn.LoadPlugIn(GrasshopperId));
+        using var rig = Build(documentMode: true);
+        var id = Guid.Empty;
+        Expect(rig, "add outside the crop", () => id = AddSphere(rig.Rhino, new Point3d(40, 0, 1), new ObjectAttributes { LayerIndex = rig.Walls }), rerun: true);
+        var info = ((GH_String)rig.Component.Params.Output[8].VolatileData.AllData(true).Single()).Value;
+        Assert.Contains("excluded 1 object outside the view boxes before capture", info);
+        Expect(rig, "move into the crop", () => rig.Rhino.Objects.Transform(id, Transform.Translation(-38, 0, 0), true), rerun: true, solved: true);
+        info = ((GH_String)rig.Component.Params.Output[8].VolatileData.AllData(true).Single()).Value;
+        Assert.Contains("excluded 0 objects outside the view boxes before capture", info);
     });
 
     private static IReadOnlyDictionary<string, uint>? Colours(Rig rig)
