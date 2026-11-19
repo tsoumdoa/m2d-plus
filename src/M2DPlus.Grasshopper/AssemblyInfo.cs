@@ -9,7 +9,7 @@ public sealed class AssemblyInfo : GH_AssemblyInfo
     public override Guid Id => new("acfcd722-881a-453e-a2f1-36a297b54c8d");
     public override string Name => "M2D+";
     public override string Description => "Make2D-style drawings for Rhino 8 (pre-alpha skeleton)";
-    public override string AuthorName => "Tomo S";
+    public override string AuthorName => "aectooling by tomoS";
     public override string AuthorContact => "https://github.com/tsoumdoa/m2d-plus";
     public override GH_LibraryLicense License => GH_LibraryLicense.opensource;
     public override Bitmap Icon => M2DIcons.Logo(24);

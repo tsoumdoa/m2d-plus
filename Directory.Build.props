@@ -4,9 +4,10 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <Version>0.1.0-beta.12</Version>
+    <Version>0.1.0-beta.13</Version>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
-    <Authors>Tomo S</Authors>
+    <Authors>aectooling by tomoS</Authors>
+    <Company>AEC Tooling</Company>
     <Copyright>Copyright (c) 2026 Tomo S</Copyright>
     <RhinoApiVersion>8.20.25147.11001-rc</RhinoApiVersion>
     <Deterministic>true</Deterministic>

@@ -1,7 +1,7 @@
 name: m2d-plus
 version: "@VERSION@"
 authors:
-  - Tomo S
+  - aectooling by tomoS
 license: MIT
 description: >
   Make2D-style plans, sections, elevations and axonometric drawings for Rhino 8
