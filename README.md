@@ -11,6 +11,15 @@ view, plane, rectangle, view box or clipping plane into View. Empty Geometry dra
 the visible document. Sections retain closed regions/holes, hatches and crop/merge;
 Target, preview, Bake and headless workers are supported.
 
+Right-click **Tolerance** to use the document tolerance (default) or **0.001 / 0.01 /
+0.05 / 0.1 / 1 mm**, or type a positive distance under **Custom…**, for this component.
+The menu gives scale guidance and flags presets that are too coarse. Bare custom
+numbers use document units; entering `document` restores the default.
+Settings text (`tolerance = document` or a positive
+distance) overrides view-object `m2d.tolerance`, which overrides the menu. It never
+changes the document tolerance; coarser values can help sections cut inaccurate geometry
+but lose small detail. See [tolerance and settings](docs/design/ux.md#34-tolerance).
+
 HLD visibility is not certified. Engine/Joints are retired compatibility settings;
 hidden-off disables min-visible. Fresh solves may change duplicate ownership and
 Ignored results. See [the unreleased change notes](docs/release-notes-hld.md) and

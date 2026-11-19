@@ -19,6 +19,24 @@ internal static class MenuRenderer
     private static void Add(ToolStrip menu, MenuNode node, Action<string, bool> execute)
     {
         if (node.IsSeparator) { GH_DocumentObject.Menu_AppendSeparator(menu); return; }
+        if (node.TextEntry is { } entry && menu is ToolStripDropDown dropDown)
+        {
+            GH_DocumentObject.Menu_AppendSeparator(dropDown);
+            GH_DocumentObject.Menu_AppendItem(dropDown, node.Label + " (document units; Enter)", null, false, false);
+            var error = new ToolStripLabel { ForeColor = System.Drawing.Color.FromArgb(0xC4, 0x2B, 0x1C), Visible = false };
+            var box = GH_DocumentObject.Menu_AppendTextItem(dropDown, entry.Text, (sender, e) =>
+            {
+                if (e.KeyCode != Keys.Enter) return;
+                e.Handled = true; e.SuppressKeyPress = true;
+                if (!entry.TryAccept(sender.Text, out var command, out var problem))
+                { error.Text = problem; error.Visible = true; return; }
+                sender.CloseEntireMenuStructure();
+                execute(command!, false);
+            }, (_, _) => error.Visible = false, node.Enabled, 240, false);
+            box.ToolTipText = node.Hint;
+            dropDown.Items.Add(error);
+            return;
+        }
         ToolStripMenuItem item;
         if (node.IsSubmenu)
         {

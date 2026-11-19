@@ -1,10 +1,12 @@
 using System.Collections.Immutable;
+using System.Globalization;
+using M2DPlus.Core;
 
 namespace M2DPlus.Grasshopper.UI.Model;
 
 /// <summary>A toolkit-free menu item. Command is executed by the GH adapter; Hint is the right-aligned key text.</summary>
 public sealed record MenuNode(string Label, string? Command = null, bool Enabled = true, bool Checked = false,
-    string? Hint = null, ImmutableArray<MenuNode> Children = default, string? Tooltip = null)
+    string? Hint = null, ImmutableArray<MenuNode> Children = default, string? Tooltip = null, ToleranceTextEntry? TextEntry = null)
 {
     public static MenuNode Separator { get; } = new("-");
     public bool IsSeparator => Label == "-" && Command is null;
@@ -98,6 +100,7 @@ public static class ComponentMenu
         items.Add(Toggle(settings, "Tangent edges", "tangents"));
         items.Add(Toggle(settings, "Seams", "seams"));
         items.Add(Choice(settings, "Min visible", "min_visible") with { Tooltip = SettingsCatalog.Spec("min_visible").Tooltip });
+        items.Add(ToleranceMenu.Build(settings));
         items.Add(Choice(settings, "Beyond", "beyond"));
         items.Add(Choice(settings, "Far clip", "farclip"));
         items.Add(Toggle(settings, "Cut only", "cutonly"));
@@ -140,14 +143,36 @@ public static class ComponentMenu
     public static MenuNode Choice(SettingsPresentation settings, string label, string key)
     {
         var field = settings.Field(key);
-        var current = SettingsCatalog.Canonical(key, field.Text);
+        string Canonical(string text)
+        {
+            var canonical = SettingsCatalog.Canonical(key, text);
+            // Input text is resolved in document units; compare physical lengths so a preset stays checked.
+            if (key == "tolerance" && canonical != "document")
+                try { return Settings.ParseDistance(canonical, settings.Context.Units).ToString("R", CultureInfo.InvariantCulture); }
+                catch (FormatException) { /* e.g. a locked field that varies by view */ }
+            return canonical;
+        }
+        var current = Canonical(field.Text);
         var options = SettingsCatalog.Spec(key).Options;
-        var children = options.Select(o => new MenuNode(o.Label, MenuCommands.SetValue(key, o.Value), !field.Locked,
-            SettingsCatalog.Canonical(key, o.Value) == current)).ToList();
+        string OptionLabel(FieldOption option)
+        {
+            if (key != "tolerance" || option.Value != "document") return option.Label;
+            var tolerance = settings.Context.DocumentTolerance;
+            var unit = settings.Context.Units switch
+            {
+                DocumentUnits.Millimetres => "mm", DocumentUnits.Centimetres => "cm",
+                DocumentUnits.Metres => "m", DocumentUnits.Kilometres => "km",
+                DocumentUnits.Inches => "in", DocumentUnits.Feet => "ft",
+                _ => throw new ArgumentOutOfRangeException(nameof(settings))
+            };
+            return $"Document ({tolerance.ToString("G6", CultureInfo.InvariantCulture)} {unit})";
+        }
+        var children = options.Select(o => new MenuNode(OptionLabel(o), MenuCommands.SetValue(key, o.Value), !field.Locked,
+            Canonical(o.Value) == current)).ToList();
         // A typed value that is not one of the presets (e.g. beyond = 2 m from text) still shows as checked.
-        if (!options.Any(o => SettingsCatalog.Canonical(key, o.Value) == current))
+        if (!options.Any(o => Canonical(o.Value) == current))
             children.Insert(0, new MenuNode(SettingsCatalog.Display(key, field.Text), null, false, true));
-        return new(label + Suffix(field), Enabled: !field.Locked, Hint: $"{key} = {current}", Children: children.ToImmutableArray());
+        return new(label + Suffix(field), Enabled: !field.Locked, Hint: $"{key} = {SettingsCatalog.Canonical(key, field.Text)}", Children: children.ToImmutableArray());
     }
 }
 

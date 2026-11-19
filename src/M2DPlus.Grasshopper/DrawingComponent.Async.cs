@@ -199,7 +199,7 @@ public sealed partial class DrawingComponent
                 view.Kind is ViewSourceKind.Box or ViewSourceKind.ClippingPlane ? view.Cut?.SourceDepth : null));
             if (view.Note is { } note) _settingsWarnings.Add((GH_RuntimeMessageLevel.Remark, note));
         }
-        _context = new UiContext(contexts, branches, DrawingUi.Units(document)) { ViewRows = rows, Depth = depth.Select(d => d?.Value).ToArray() };
+        _context = new UiContext(contexts, branches, DrawingUi.Units(document)) { ViewRows = rows, Depth = depth.Select(d => d?.Value).ToArray(), DocumentTolerance = _tolerance };
         Ui.Context = () => _context;
         // Only retained volumes key capture reuse: style, placement and hidden changes still reuse the scene.
         _captureKey += "|scope=" + SceneCapture.ScopeKey(ScopeViews(BoundingBox.Empty), _tolerance);

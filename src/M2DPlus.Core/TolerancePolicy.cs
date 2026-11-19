@@ -3,8 +3,9 @@ namespace M2DPlus.Core;
 /// <summary>Drawing advice only. Never changes the selected document/override tolerance.</summary>
 public static class TolerancePolicy
 {
+    public const double DetailScaleMaximum = 5, CoarseScaleMinimum = 50;
     // Intermediate scales use the more demanding band until the next threshold.
-    public static double RecommendedMillimetres(double scale) => scale <= 5 ? .01 : scale < 50 ? .1 : 1;
+    public static double RecommendedMillimetres(double scale) => scale <= DetailScaleMaximum ? .01 : scale < CoarseScaleMinimum ? .1 : 1;
 
     public static string? ScaleWarning(double tolerance, double scale, DocumentUnits units)
     {

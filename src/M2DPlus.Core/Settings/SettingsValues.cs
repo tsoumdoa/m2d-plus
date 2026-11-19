@@ -80,6 +80,8 @@ public static partial class Settings
                 if (minimum < 0) throw new FormatException("Distance must be nonnegative.");
                 return minimum;
             case "tolerance":
+                if (value is "document" or "auto") return DistanceSetting.Auto;
+                if (value.Length > 0 && char.IsLetter(value[0])) throw new FormatException(Suggest(value, ["document", "auto"]));
                 var tolerance = ParseDistance(text, units);
                 if (tolerance <= 0) throw new FormatException("Tolerance must be positive.");
                 return tolerance;
@@ -153,7 +155,7 @@ public static partial class Settings
 
     internal static string FormatEffective(string key, object? value) => value is null ? "off" : value switch
     {
-        DistanceSetting d => d.Mode switch { DistanceMode.Auto => "auto", DistanceMode.Off => "off", _ => Numeric(d.Value) },
+        DistanceSetting d => d.Mode switch { DistanceMode.Auto => key == "tolerance" ? "document" : "auto", DistanceMode.Off => "off", _ => Numeric(d.Value) },
         bool b => b ? "on" : "off",
         double n => key == "min_visible" ? n == 0 ? "off" : Numeric(n) : key == "scale" ? $"1:{Numeric(n)}" : key.StartsWith("fade.", StringComparison.Ordinal) ? $"{Numeric(n)} %" : Numeric(n),
         string s => JsonSerializer.Serialize(s),
@@ -168,7 +170,7 @@ public static partial class Settings
         "farclip" => FarClipMode.NoLine, "fade" or "tangents" or "seams" or "cutonly" => false, "hidden" => DefaultHidden,
         "fade.start" => 0d, "fade.end" => 100d, "fade.limit" => 30d, "crop" => CropMode.Auto,
         "glass" => GlassMode.Opaque, "scale" => 100d, "weights" => WeightMode.Auto, "hatch" => HatchMode.Styles,
-        "cuts" => CutMode.Separate, "name" => "auto", "tree" => OutputTreeMode.Auto, "tolerance" => view.DocumentTolerance,
+        "cuts" => CutMode.Separate, "name" => "auto", "tree" => OutputTreeMode.Auto, "tolerance" => DistanceSetting.Auto,
         "visibility" => VisibilityMode.Hld, "min_visible" => 0d, "engine" => EngineMode.Exact, "joints" => true, "bake" => BakeLayout.ViewLayer,
         _ => throw new ArgumentException("Unknown key.", nameof(key))
     };

@@ -107,6 +107,52 @@ public sealed class SettingsTests
         Assert.Equal(3000, wide.Beyond);
     }
 
+    [Theory]
+    [InlineData("document", SettingSource.Input)]
+    [InlineData("AUTO", SettingSource.Input)]
+    [InlineData("document", SettingSource.EditorView)]
+    [InlineData("auto", SettingSource.EditorView)]
+    [InlineData("document", SettingSource.EditorAll)]
+    [InlineData("auto", SettingSource.EditorAll)]
+    public void DocumentToleranceIsLateBoundAtEverySourceAndKeysLikeUnset(string text, SettingSource source)
+    {
+        var views = new[] { View(), View("B", "b") with { DocumentTolerance = .0001 } };
+        var menu = Row(("tolerance", source == SettingSource.EditorAll ? text : "0.05 mm"));
+        var objects = source == SettingSource.EditorView
+            ? views.Select(v => KeyValuePair.Create(v.Identity, Row(("tolerance", text)))) : [];
+        var editor = new EditorSettings(menu, objects);
+        var result = Settings.Resolve(views, source == SettingSource.Input ? [["tolerance=" + text]] : [], DocumentUnits.Metres, editor);
+        var defaults = Settings.Resolve(views, [], DocumentUnits.Metres);
+        Assert.Empty(result.Diagnostics);
+        for (var i = 0; i < views.Length; i++)
+        {
+            var effective = result.Views[i];
+            Assert.Equal(views[i].DocumentTolerance, effective.Tolerance);
+            Assert.Equal(defaults.Views[i].VisibilityKey(), effective.VisibilityKey());
+            Assert.Equal("document", effective["tolerance"].Text);
+            Assert.Equal(SettingSource.Auto, effective["tolerance"].Source);
+            Assert.Equal(source, effective["tolerance"].AssignedBy);
+            Assert.Equal(source == SettingSource.Input, effective["tolerance"].IsSetByInput);
+        }
+        // Copying effective instructions keeps document inheritance, rather than freezing a numeric value.
+        var copied = Settings.CopyAsText(result.Views);
+        Assert.Contains("tolerance = document", copied);
+        var changedDocument = views.Select(v => v with { DocumentTolerance = .00001 }).ToArray();
+        Assert.All(Settings.Resolve(changedDocument, [[copied]], DocumentUnits.Metres).Views,
+            v => Assert.Equal(.00001, v.Tolerance));
+    }
+
+    [Fact]
+    public void ExplicitToleranceChangesVisibilityIdentity()
+    {
+        var before = Resolve("").Views[0];
+        var after = Settings.Resolve([View()], [], DocumentUnits.Metres,
+            new EditorSettings(Row(("tolerance", "0.05 mm")))).Views[0];
+        Assert.Equal(.00005, after.Tolerance, 12);
+        Assert.NotEqual(before.VisibilityKey(), after.VisibilityKey());
+        Assert.Contains("tolerance", Settings.VisibilityKeys);
+    }
+
     [Fact]
     public void PrecedenceIsPerKeyAndInputAutoRetainsInputLock()
     {
@@ -187,7 +233,7 @@ public sealed class SettingsTests
     [InlineData("beyond=-3 m")]
     [InlineData("gap=-1")]
     [InlineData("tolerance=0")]
-    [InlineData("tolerance=auto")]
+    [InlineData("tolerance=-0.01 mm")]
     [InlineData("fade.start=-1")]
     [InlineData("fade.end=101 %")]
     [InlineData("fade.limit=NaN")]
