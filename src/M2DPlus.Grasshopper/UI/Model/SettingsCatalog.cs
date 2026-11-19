@@ -34,6 +34,7 @@ public static class SettingsCatalog
         new("tangents", "Tangent edges", Lines, FieldKind.Toggle, OnOff, "tangents = on | off"),
         new("seams", "Seams", Lines, FieldKind.Toggle, OnOff, "seams = on | off"),
         new("min_visible", "Min visible", Lines, FieldKind.Distance, [O("off", "Off"), O("1 mm", "1 mm"), O("2 mm", "2 mm"), O("5 mm", "5 mm"), O("10 mm", "10 mm")], "min visible = off | <length>: objects seen only through small gaps. A partly hidden object whose longest continuous visible piece (2D, in the drawing) is shorter than this moves to the Ignored output. Fully visible objects are never ignored."),
+        new("tolerance", "Tolerance", Lines, FieldKind.Distance, [O("document", "Document"), O("0.001 mm", "0.001 mm"), O("0.01 mm", "0.01 mm"), O("0.05 mm", "0.05 mm"), O("0.1 mm", "0.1 mm"), O("1 mm", "1 mm")], "tolerance = document | <length>: drawing and section tolerance; never changes the document. Coarser values let slightly inaccurate geometry cut (for example 0.05 mm) but can lose small detail. Sections refuse geometry off by more than about 2 × tolerance."),
         new("glass", "Glass", Lines, FieldKind.Choice, [O("opaque", "Opaque"), O("clear", "Clear")], "glass = opaque | clear"),
         new("weights", "Weights", Lines, FieldKind.Choice, [O("auto", "From scale"), O("layers", "From source layers")], "weights = auto | layers"),
         new("hatch", "Hatch", Cuts, FieldKind.Choice, [O("styles", "From section styles"), O("colour", "Object colour"), O("black", "Black"), O("none", "None")], "hatch = styles | colour | black | none. Styles: the Rhino 8 section style, else a solid fill in the object's colour."),
@@ -63,7 +64,8 @@ public static class SettingsCatalog
             case FieldKind.Choice: return key == "tree" && lower == "branch" ? "auto" : lower;
             case FieldKind.Scale: return ScaleDenominator(value) is double n ? "1:" + Number(n) : lower;
             case FieldKind.Percent: return Percent(value) is double p ? Number(p) + " %" : lower;
-            case FieldKind.Distance: return lower is "auto" or "off" ? lower : value;
+            case FieldKind.Distance: return key == "tolerance" && lower is "auto" or "document" ? "document"
+                : lower is "auto" or "off" ? lower : value;
             default: return key == "name" ? UnquoteName(value) : value;
         }
     }

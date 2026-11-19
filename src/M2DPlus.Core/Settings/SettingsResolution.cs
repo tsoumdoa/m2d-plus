@@ -157,6 +157,7 @@ public static partial class Settings
         {
             var hint = key is "depth" or "beyond" or "gap" ? " Use auto or a nonnegative distance (for example 3 m)."
                 : key == "min_visible" ? " Use off or a nonnegative distance (for example 2 mm)."
+                : key == "tolerance" ? " Use document or a positive distance (for example 0.05 mm)."
                 : key.StartsWith("fade.", StringComparison.Ordinal) ? " Use 0–100 %." : "";
             diagnostics.Add(new(DiagnosticSeverity.Warning, $"Invalid {key} = {text}: {e.Message}{hint}", view, branch, line, key));
             value = null;
@@ -176,6 +177,7 @@ public static partial class Settings
             : authored is DistanceSetting { Mode: DistanceMode.Auto } && view.IsCut ? 3 / MetresPerUnit(units) : null;
         if (key == "crop") value = view.Source is ViewSourceKind.Rectangle or ViewSourceKind.Box || view.Source == ViewSourceKind.NamedView && authored is CropMode.Auto;
         if (key == "name" && automatic) value = view.AutomaticName ?? view.Name;
+        if (key == "tolerance" && automatic) value = view.DocumentTolerance;
         return new(value, authored, FormatEffective(key, authored), automatic ? SettingSource.Auto : candidate.Source, candidate.Source);
     }
 

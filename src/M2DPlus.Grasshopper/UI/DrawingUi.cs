@@ -51,7 +51,17 @@ public sealed class DrawingUi
     {
         get { try { return Runtime?.Invoke() ?? DrawingRuntime.Idle; } catch (Exception e) when (e is InvalidOperationException or NullReferenceException) { return DrawingRuntime.Idle; } }
     }
-    public UiContext CurrentContext => Context?.Invoke() ?? FallbackContext(_owner);
+    public UiContext CurrentContext
+    {
+        get
+        {
+            var context = Context?.Invoke() ?? FallbackContext(_owner);
+            // Keep the Document menu label current even while automatic drawing is paused.
+            return RhinoDoc.ActiveDoc is { } document
+                ? context with { DocumentTolerance = document.ModelAbsoluteTolerance, Units = Units(document),
+                    Views = context.Views.Select(v => v with { DocumentTolerance = document.ModelAbsoluteTolerance }).ToArray() } : context;
+        }
+    }
     public ViewParam? ViewInput => _owner.Params.Input.Count > 1 ? _owner.Params.Input[1] as ViewParam : null;
 
     /// <summary>Refusals from the last view command (Convert to view boxes, Flip, Create), shown as warnings until View changes.</summary>
@@ -264,7 +274,7 @@ public sealed class DrawingUi
                     branches.Add(data.get_Branch(path).Cast<object>().Select(o => o is GH_String s ? s.Value : o?.ToString() ?? "").ToArray());
         }
         var depth = owner.Params.Input.Count > 4 ? Items(owner.Params.Input[4]).Select(g => g is GH_String s ? s.Value : g?.ToString()).ToArray() : [];
-        return new(views, branches, Units(document)) { ViewRows = rows, Depth = depth };
+        return new(views, branches, Units(document)) { ViewRows = rows, Depth = depth, DocumentTolerance = tolerance };
     }
 
     /// <summary>The stable settings identity of a referenced view object.</summary>

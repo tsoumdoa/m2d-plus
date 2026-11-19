@@ -9,6 +9,8 @@ namespace M2DPlus.Grasshopper.UI.Model;
 public sealed record UiContext(IReadOnlyList<ViewSettingsContext> Views, IReadOnlyList<IReadOnlyList<string>> InputBranches, DocumentUnits Units)
 {
     public static UiContext Empty { get; } = new([], [], DocumentUnits.Metres);
+    /// <summary>Document tolerance for the menu even before any view is selected.</summary>
+    public double DocumentTolerance { get; init; } = Views.FirstOrDefault()?.DocumentTolerance ?? .001;
     public IReadOnlyDictionary<string, SettingsRow> ViewRows { get; init; } = ImmutableDictionary<string, SettingsRow>.Empty;
     public IReadOnlyList<string?> Depth { get; init; } = [];
 }

@@ -553,16 +553,32 @@ make Beyond a fuzzy band. Keeping both costs one extra key and maps one-to-one t
 
 ### 3.4 Tolerance
 
-- The drawing tolerance is the document's absolute tolerance. Curves are approximated within it. Native HLD may
+- The drawing tolerance defaults to the document's absolute tolerance. Right-click **Tolerance ▸ Document
+  (<value>)** uses that live value, labelled in document units (for example **Document (0.001 mm)**). The other
+  choices are **0.001 mm · 0.01 mm · 0.05 mm · 0.1 mm · 1 mm**, physical millimetres in every document unit system.
+  **Custom…** at the bottom is an inline text entry prefilled with the effective tolerance in document units.
+  Enter accepts a positive distance (`0.02 mm`, `0.00002 m`, or a bare number in document units), stores the menu
+  value and closes the menu. Invalid, zero and negative values show a one-line red error below the entry and leave
+  it open; `document` (or `auto`) restores the document default. A custom non-preset value appears as a checked item.
+  The entry is disabled when any view object or Settings input overrides tolerance; presets retain the normal §6 behaviour.
+  It follows Settings input > view-object `m2d.tolerance` > menu > document default (§6). Reset menu defaults clears
+  the override; Copy settings as text includes it, and it is saved on the component like the other menu settings.
+  Curves are approximated within the effective tolerance. Native HLD may
   lose detail near 2 × tolerance; remaining short pieces are preserved. The former claim that the adapter drops
   every piece shorter than 2 × tolerance was not implemented and is withdrawn after the small-features measurement.
 - Tangent and seam edges are classified with the document's angle tolerance.
-- When the document's tolerance is unreasonably coarse or fine for the scene size (more than 1/1,000 or less than 1e-7 of the extents), Info adds a
+- When the effective tolerance is unreasonably coarse or fine for the scene size (more than 1/1,000 or less than 1e-7 of the extents), Info adds a
   remark. The tolerance is never changed silently.
 - Warn when the effective tolerance is coarser than the drawing scale needs: **1:1–1:5 → ≤ 0.01 mm;
   above 1:5 and below 1:50 (including 1:10–1:20) → ≤ 0.1 mm; 1:50 and above → ≤ 1 mm**.
   Compare in physical millimetres regardless of document units. These are advisory bands; scale still never changes geometry.
-- `tolerance = 0.1 mm` explicitly overrides drawing tolerance; it never edits the document tolerance.
+  The Tolerance tooltip gives all bands and the current effective scale's recommendation (for example
+  **Scale 1:100 → use ≤ 1 mm**; multiple scales are listed if they vary by view). Each preset's tooltip says which
+  scales it suits and warns when it is too coarse for a current scale; those presets remain selectable.
+- `tolerance = 0.05 mm` explicitly overrides drawing and section tolerance; it never edits the document tolerance.
+  Coarser values let slightly inaccurate geometry cut, but can lose small detail. Sections refuse geometry off by
+  more than about 2 × tolerance. Positive distances are required. `tolerance = document` (alias `auto`) restores
+  document tolerance in Settings, `m2d.tolerance` or the menu, overriding any lower source's explicit value.
 - A GH runtime **remark** reports detail at risk (§5.2: it is a census, not a measured loss; a tolerance too coarse for
   the scale, above, stays a warning). Info separates **adapter tolerance drops** (currently zero), **source edges
   at or below 2 × tolerance** (risk, not a measured loss), and **uncertain section components** at the selected tolerance.
@@ -1106,6 +1122,7 @@ fade.limit = 25 %
 | `seams` | `on` · `off` | `off` | — | — (Make2D option) | view object, menu |
 | `glass` | `opaque` · `clear` | `opaque` | — | — | view object |
 | `min visible` (`min_visible`) | `off` · length | `off` | 2D length in the drawing | — | view object (`m2d.min_visible`), menu |
+| `tolerance` | `document` (`auto`) · positive distance | document absolute tolerance | distance | — | view object (`m2d.tolerance`), menu |
 | `scale` | `1:n` · `n` | `1:100` | — (picks the nearest preset band, §3.6) | View Scale (line weights only; the drawing stays 1:1) | view object, menu |
 | `weights` | `auto` · `layers` | `auto` (the `scale` preset, §3.6) | — | Object Styles | view object, menu |
 | **Cuts** | | | | | |
@@ -1117,7 +1134,6 @@ fade.limit = 25 %
 | **Output and diagnosis** | | | | | |
 | `tree` | `auto` · `layer` · `object` | `auto` (by layer for the document or referenced objects, else by object, §1.3) | — | — | view object (`m2d.tree`), menu |
 | `bake` | `view-layer` · `layer-view` · `layer` · `view-type` | **`view-layer`** (§8.1). Bake time only: changing it never redraws | — | — | view object (`m2d.bake`), menu *Bake layers ▸* |
-| `tolerance` | distance | document absolute tolerance | distance | — | text only |
 
 ---
 
@@ -1146,6 +1162,9 @@ Hidden lines                 ✓        hidden   = on | off
 Tangent edges                         tangents = off | on
 Seams                                 seams    = off | on
 Min visible ▸ Off ✓ · 1 mm · 2 mm · 5 mm · 10 mm      min_visible = off | <length>   (§3.9)
+Tolerance ▸ Document (0.001 mm) ✓ · 0.001 mm · 0.01 mm · 0.05 mm · 0.1 mm · 1 mm   tolerance = document | <length>   (§3.4)
+            Custom… (document units; Enter)
+            [0.001             ]       positive length with optional units; document restores default
 Beyond ▸     Auto ✓ · Off · 1 m · 3 m · 10 m          beyond  = auto | off | <distance>
 Far clip ▸   No clip · Clip with line · Clip without line ✓   farclip = none | line | noline
 Cut only                              cutonly  = off | on
@@ -1163,6 +1182,10 @@ Copy info
 Copy settings as text
 Clear drawing cache (412 MB)
 ```
+
+Tolerance's tooltip reports the scale bands and current recommendation (§3.4). Numerical presets have suitability
+tooltips, including a warning if too coarse for the current scale. Custom… is disabled under any tolerance override;
+invalid entries stay open with a one-line red error. The menu value persists on the component with the other defaults.
 
 ---
 
@@ -1414,7 +1437,7 @@ M2D+
 | A live **Active viewport** source | Orbiting would re-run the job. Capture to a named view instead. |
 | A Capture pulse and a Run toggle as inputs | Pulse inputs are fragile and keep hidden state in the GH file. Named views plus Auto-run, Run now and Cancel replace them. |
 | Anchor U/V, Offset, Rotation, Dock | The own-plane anchor plus one Target plane (or a row) covers sheet layout with no extra inputs. |
-| Mode (Native / Custom / Auto), Tolerance and Async inputs | Engine routing is internal and reported in Info. Tolerance comes from the document. The job is always async. |
+| Mode (Native / Custom / Auto), Tolerance and Async inputs | Engine routing is internal and reported in Info. Tolerance defaults to the document, with menu, view-object and Settings overrides (§3.4). The job is always async. |
 | "Zoomable" optional extra inputs (variable parameters) | They bring input sprawl back with a hidden "+" button. View objects and the menu give the same power visibly. |
 | Per-view settings in an object's geometry user data, or in a hidden GH store | Invisible and lost on export or copy. Attribute User Text shows in Rhino's Properties, copies with the object and survives `ReplaceObject`. |
 | Recovering a view box that Rhino turned into a polysurface by guessing its front face | A box has three face pairs and no stored orientation survives a rotation. M2D+ reports it and asks for an undo or a re-validate instead of guessing (principle 2). |
@@ -1495,4 +1518,6 @@ new in revision 3** and follow from the two decisions.
     styling only and must not invalidate the drawing cache. Neither does `min visible` (§3.9).
     Visibility keys: `depth`, `farclip`, `crop`, `hidden`, `tangents`, `seams`, `glass`, `tolerance`,
     `cutonly`, `visibility` (only when `pipes`, so HLD keys are unchanged), scene/view/scope and policy/fingerprints. Cut-only omits hidden, tangents and seams; glass remains keyed for excluded foreground region admission.
+    Tolerance keys the effective distance in document units: `document` / `auto` and unset share a visibility key;
+    choosing a different physical preset (from any source, including the menu) re-solves visibility.
     Legacy engine/joints never key compute/run/timing; beyond/cuts/Target remain presentation.

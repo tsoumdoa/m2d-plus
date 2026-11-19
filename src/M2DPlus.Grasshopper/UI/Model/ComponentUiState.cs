@@ -51,11 +51,13 @@ public sealed class ComponentUiState
     private static SettingsRow Known(SettingsRow row) =>
         row.Values.Keys.All(Settings.Keys.Contains) ? row : new(row.Values.Where(p => Settings.Keys.Contains(p.Key)));
 
-    /// <summary>Sets (text) or clears (null) one menu default; unknown keys are untouched.</summary>
+    /// <summary>Sets (text) or clears (null) one menu default; unknown keys are untouched.
+    /// Tolerance = document/auto clears the override, so choosing the default also preserves the unset run key.</summary>
     public ComponentUiState With(string key, string? text)
     {
         ArgumentException.ThrowIfNullOrEmpty(key);
         key = key.ToLowerInvariant();
+        if (key == "tolerance" && text?.Trim().ToLowerInvariant() is "document" or "auto") text = null;
         var values = text is null ? Menu.Values.Remove(key) : Menu.Values.SetItem(key, text.Trim());
         return new(new SettingsRow(values), AutoRun, Preview, Extras);
     }
