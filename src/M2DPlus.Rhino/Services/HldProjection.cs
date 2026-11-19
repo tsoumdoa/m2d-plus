@@ -7,7 +7,7 @@ namespace M2DPlus.Rhino.Services;
 /// <summary>The only visibility adapter. Failed records stay local; only a failed solve quarantines projection.</summary>
 internal static class HldProjection
 {
-    internal const string Policy = "Rhino HLD threaded/requested-hidden/local-failures/physical-sections/schema4";
+    internal const string Policy = "Rhino HLD threaded/requested-hidden/local-failures/physical-sections/mesh-face-crop-v1/schema4";
     internal const string SkippedSource = "HLD source skipped: ";
     internal const string FailedClip = "Section clip failed: ";
     internal static void Solve(IReadOnlyList<VisibilityInput> inputs, ViewDrawing output, ViewRequest view,

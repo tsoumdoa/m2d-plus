@@ -45,13 +45,13 @@ internal static class HldFixtureComparison
             foreach(var item in from.Items)
             {
                 using var geometry=item.CopyGeometry();
-                var targets=to.Items.Where(p=>p.Class==item.Class).Select(p=>p.CopyGeometry()).ToArray();
+                var targets=to.Items.Where(p=>p.Class==item.Class&&p.Profile==item.Profile&&p.SolvedClass==item.SolvedClass).Select(p=>p.CopyGeometry()).ToArray();
                 try
                 {
                     var points=geometry is Curve curve?Enumerable.Range(0,33).Select(i=>curve.PointAtNormalizedLength(i/32d)):
                         geometry is Point nativePoint?new[]{nativePoint.Location}:Array.Empty<Point3d>();
                     foreach(var point in points) Assert.True(targets.Any(g=>g is Curve c&&c.ClosestPoint(point,out var at)&&c.PointAt(at).DistanceTo(point)<=tolerance ||
-                        g is Point p&&p.Location.DistanceTo(point)<=tolerance),$"Missing {item.Class} locus at {point}; tolerance={tolerance:R}");
+                        g is Point p&&p.Location.DistanceTo(point)<=tolerance),$"Missing {item.Class}/Profile={item.Profile}/SolvedClass={item.SolvedClass} locus at {point}; tolerance={tolerance:R}");
                 }
                 finally{foreach(var target in targets)target.Dispose();}
             }
