@@ -99,14 +99,17 @@ public sealed class PreparedScene : IDisposable
     public string Revision { get; }
     public BoundingBox Bounds { get; }
     public double Tolerance { get; }
+    internal bool Millimetres { get; }
+    internal double AngleTolerance { get; }
     public long EstimatedBytes { get; }
     public SceneCost Cost { get; }
     public int SourceCount => _leaves.Count;
     public int PreparationCount { get; private set; }
     public string VisibilityRevision { get; }
     internal IReadOnlyDictionary<string, SourceSection> SourceMetadata { get; }
-    internal PreparedScene(string revision, List<SceneLeaf> leaves, Dictionary<string, int> unsupported, double tolerance)
+    internal PreparedScene(string revision, List<SceneLeaf> leaves, Dictionary<string, int> unsupported, double tolerance, bool millimetres = true, double angleTolerance = Math.PI / 180)
     {
+        Millimetres = millimetres; AngleTolerance = angleTolerance;
         SourceMetadata = new ReadOnlyDictionary<string, SourceSection>(leaves.ToDictionary(l => l.Identity, l => l.Section, StringComparer.Ordinal));
         // Streamed, not one giant JSON string: the same fields, hashed in order.
         using (var hash = new SceneHash())
@@ -118,7 +121,7 @@ public sealed class PreparedScene : IDisposable
                 hash.Add(l.Section.Transparent); hash.Add(l.Section.ObjectIds); hash.Add(l.Section.LayerIds);
             }
             foreach (var pair in unsupported.OrderBy(p => p.Key, StringComparer.Ordinal)) { hash.Add(pair.Key); hash.Add(pair.Value); }
-            hash.Add(tolerance);
+            hash.Add(tolerance); hash.Add(millimetres); hash.Add(angleTolerance);
             VisibilityRevision = hash.Finish();
         }
         Revision = revision; _leaves = leaves; Unsupported = new ReadOnlyDictionary<string, int>(unsupported); Tolerance = tolerance;
@@ -267,7 +270,7 @@ public sealed class SceneCache : IDisposable
             return lease;
         }
     }
-    internal LeaseEntry<PreparedScene>.Lease Scene(string key, List<SceneLeaf> leaves, Dictionary<string, int> unsupported, double tolerance)
+    internal LeaseEntry<PreparedScene>.Lease Scene(string key, List<SceneLeaf> leaves, Dictionary<string, int> unsupported, double tolerance, bool millimetres = true, double angleTolerance = Math.PI / 180)
     {
         lock (_sync)
         {
@@ -275,7 +278,7 @@ public sealed class SceneCache : IDisposable
             {
                 SceneHits++; _retention.Touch("s/" + key); foreach (var leaf in leaves) leaf.Geometry.Dispose(); return found.Acquire();
             }
-            var scene = new PreparedScene(key, leaves, unsupported, tolerance);
+            var scene = new PreparedScene(key, leaves, unsupported, tolerance, millimetres, angleTolerance);
             var added = new LeaseEntry<PreparedScene>(scene); var lease = added.Acquire();
             _scenes.Add(key, added);
             _retention.Add("s/" + key, scene.EstimatedBytes, () => { _scenes.Remove(key); added.Dispose(); });

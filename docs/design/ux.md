@@ -1100,6 +1100,7 @@ fade.limit = 25 %
 | `fade.limit` | 0–100 | `30 %` | % intensity | Depth Cueing *Fade Limit* | view object |
 | `crop` | `auto` · `off` | `auto` | — | Crop View | text only (boxes always crop) |
 | **Lines** | | | | | |
+| `visibility` | `hld` · `pipes` | `hld` | — | — (Pipes (experimental), opt-in) | view object, menu |
 | `hidden` | `on` · `off` | `on` | — | Show Hidden Lines | view object, menu |
 | `tangents` | `on` · `off` | `off` | — | — (Make2D option) | view object, menu |
 | `seams` | `on` · `off` | `off` | — | — (Make2D option) | view object, menu |
@@ -1140,6 +1141,7 @@ Run automatically            ✓
 Run now
 Cancel                            (only while running)
 ────────────────
+Visibility engine ▸ Rhino HLD ✓ · Pipes (experimental)   visibility = hld | pipes
 Hidden lines                 ✓        hidden   = on | off
 Tangent edges                         tangents = off | on
 Seams                                 seams    = off | on
@@ -1492,5 +1494,5 @@ new in revision 3** and follow from the two decisions.
 14. **Settings-independent caching:** depth cueing, line weights (`scale`, `weights`), fill colours and the `hatch` override are
     styling only and must not invalidate the drawing cache. Neither does `min visible` (§3.9).
     Visibility keys: `depth`, `farclip`, `crop`, `hidden`, `tangents`, `seams`, `glass`, `tolerance`,
-    `cutonly`, scene/view/scope and policy/fingerprints. Cut-only omits hidden, tangents and seams; glass remains keyed for excluded foreground region admission.
+    `cutonly`, `visibility` (only when `pipes`, so HLD keys are unchanged), scene/view/scope and policy/fingerprints. Cut-only omits hidden, tangents and seams; glass remains keyed for excluded foreground region admission.
     Legacy engine/joints never key compute/run/timing; beyond/cuts/Target remain presentation.

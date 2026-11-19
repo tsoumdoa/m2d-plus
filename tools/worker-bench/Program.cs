@@ -36,6 +36,8 @@ internal static class Program
             if(args[0]=="scope-export"){ScopeFirstBench.ExportScene(args[2]);return 0;}
             if(args[0]=="scope"){ScopeFirstBench.Run(args[2],args[3],args[4]);return 0;}
             if(args[0]=="memory-export"){MemoryCapBench.Export(args[2],args[3]);return 0;}
+            if(args[0]=="pipe-trial-baseline"){PipeTrialBaseline.Run(args[2],args[3],args[4]);return 0;}
+            if(args[0]=="pipe-poc"){PipeDrawing.Run(args[2],args[3],args[4]);return 0;}
             if(args[0]=="hld"){NativeHldBench.Run(args[2],args[3],args[4]);return 0;}
             if(args[0]=="engine"){EngineFastBench.Run(args[2],args[3],args.Length>4?args[4]:"curved");return 0;}
             if(args[0]=="cutonly"){CutOnlyBench.Run(args[2],args[3],args.Length>4?args[4]:"building");return 0;}

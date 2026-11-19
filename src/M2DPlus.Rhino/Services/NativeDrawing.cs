@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using M2DPlus.Rhino.Experimental.PipeVisibility;
 using M2DPlus.Core;
 using M2DPlus.Rhino.Sections;
 using Rhino.DocObjects;
@@ -89,7 +90,7 @@ public sealed class ViewDrawing : IDisposable
     public PhaseTimings Phases { get; } = new();
     // Number of distinct sources registered with HLD.
     public int FastNativeSources { get; internal set; }
-    public string EngineSummary => NativeCalls == 0 ? Settings?.CutOnly == true
+    public string EngineSummary => Report.Route == "pipes (experimental)" ? "Engine: pipes (experimental); surface visibility; known junction errors" : NativeCalls == 0 ? Settings?.CutOnly == true
         ? "Engine: sections only; HLD not run" : "Engine: HLD not run"
         : $"Engine: Rhino HLD; {(MultipleThreads ? "multithreaded" : "single-threaded")}; visibility not certified";
     private string JointsDisclosure => Settings is { } settings && settings["joints"].AssignedBy != SettingSource.Default
@@ -245,7 +246,25 @@ public static class NativeDrawing
         using var meshCrop = new MeshViewCrop(sources, view, scene.Bounds, tolerance, token, settings.CullSources);
         var meshSeconds = meshTimer.Elapsed.TotalSeconds;
         sources = meshCrop.Sources;
-        var drawing = SolveFilteredView(scene, sources, original, view, settings, token, tolerance);
+        var admissionTimer = Stopwatch.StartNew();
+        var pipeAdmission = view.Settings?.Visibility == VisibilityMode.Pipes
+            ? PipeProjection.Admit(scene, sources, view, token) : null;
+        var admissionSeconds = admissionTimer.Elapsed.TotalSeconds;
+        var pipeReason = pipeAdmission?.Reason;
+        var drawing = view.Settings?.Visibility == VisibilityMode.Pipes && pipeReason is null && view.Error is null && view.Settings.CutOnly == false
+            ? PipeProjection.Solve(scene, pipeAdmission!.Sources, view, token, tolerance)
+            : SolveFilteredView(scene, sources, original, view, settings, token, tolerance);
+        if (drawing.Report.Route == "pipes (experimental)" && drawing.Error is { } pipeError)
+        {
+            // The experimental pipes engine failed on an admitted view: draw it with HLD and say so, never a blank view.
+            drawing.Dispose();
+            drawing = SolveFilteredView(scene, sources, original, view, settings, token, tolerance);
+            drawing._diagnostics.Add(pipeError + "; used Rhino HLD");
+        }
+        if (view.Settings?.Visibility == VisibilityMode.Pipes && pipeReason is not null && view.Settings.CutOnly == false)
+            drawing._diagnostics.Add("pipes engine: " + pipeReason + "; used Rhino HLD");
+        if (pipeAdmission is not null)
+        { drawing.Phases.Add("pipe admission", admissionSeconds); drawing.Seconds += admissionSeconds; }
         if (settings.CullSources)
         {
             drawing.Phases.Add("source culling", cullSeconds);

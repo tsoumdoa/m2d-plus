@@ -29,6 +29,7 @@ public static class SettingsCatalog
         new("fade.start", "Start", ViewRange, FieldKind.Percent, [], "fade.start = 0–100 %: nearer lines keep full intensity."),
         new("fade.end", "End", ViewRange, FieldKind.Percent, [], "fade.end = 0–100 %: lines at or beyond this reach the limit."),
         new("fade.limit", "Limit", ViewRange, FieldKind.Percent, [], "fade.limit = 0–100 %: the minimum intensity."),
+        new("visibility", "Visibility engine", Lines, FieldKind.Choice, [O("hld", "Rhino HLD"), O("pipes", "Pipes (experimental)")], "visibility = hld | pipes: opt-in experimental surface engine. Pipes requires millimetres, valid closed Breps, curves or points, and parallel views or boxes that cut nothing. Other views use HLD with a remark. Known junction visibility errors."),
         new("hidden", "Hidden lines", Lines, FieldKind.Toggle, OnOff, "hidden = on | off"),
         new("tangents", "Tangent edges", Lines, FieldKind.Toggle, OnOff, "tangents = on | off"),
         new("seams", "Seams", Lines, FieldKind.Toggle, OnOff, "seams = on | off"),

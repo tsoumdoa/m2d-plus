@@ -22,6 +22,10 @@ native call may finish. Missing or incompatible workers leave heavy jobs refused
 Expert overrides: M2DPLUS_WORKERS (1-4 CPU ceiling), M2DPLUS_WORKER_MEMORY_MIB
 (initial cap, still memory-budgeted), and M2DPLUS_WORKER_IDLE_SECONDS. No environment
 variable is needed for ordinary use.
+Pipes (experimental): right-click → Visibility engine → Pipes (experimental), or
+`visibility = pipes`. A faster opt-in engine for closed solids in mm, on parallel
+views and boxes that cut nothing; other views use Rhino HLD with a remark. It has
+known wrong-visible errors at pipe junctions that are not shown as Unresolved.
 Check Info for unsupported sources, uncertainty, worker failures and admission.
 No general geometry certification is claimed.
 No macOS, Rhino 7 or .NET Framework support. Install only with Yak; don't also

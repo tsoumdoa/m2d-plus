@@ -11,7 +11,7 @@ public static partial class Settings
     public static bool IsLegacyKey(string key) => key is "engine" or "joints";
     public static IEnumerable<string> ActiveKeys => Keys.Where(k => !IsLegacyKey(k));
     public static ImmutableArray<string> Keys { get; } = ["depth", "farclip", "beyond", "fade", "fade.start", "fade.end",
-        "fade.limit", "crop", "hidden", "tangents", "seams", "joints", "glass", "scale", "weights", "hatch", "cuts", "gap", "name", "tree", "tolerance", "min_visible", "engine", "cutonly", "bake"];
+        "fade.limit", "crop", "hidden", "tangents", "seams", "joints", "glass", "scale", "weights", "hatch", "cuts", "gap", "name", "tree", "tolerance", "min_visible", "engine", "cutonly", "bake", "visibility"];
 
     /// <summary>Keys read only when baking (UX §8.1). A change to them alone republishes the current drawing: no
     /// visibility solve and no presentation (<see cref="RunText"/>).</summary>
@@ -37,7 +37,7 @@ public static partial class Settings
     /// <summary>The keys that change what the visibility solve computes, and so key the drawing cache (UX §12.14).
     /// Hidden is keyed by <see cref="EffectiveSettings.VisibilityKey"/>.
     /// Min-visible and styling remain presentation over the cached solve.</summary>
-    public static ImmutableArray<string> VisibilityKeys { get; } = ["depth", "farclip", "crop", "hidden", "tangents", "seams", "glass", "tolerance", "cutonly"];
+    public static ImmutableArray<string> VisibilityKeys { get; } = ["depth", "farclip", "crop", "hidden", "tangents", "seams", "glass", "tolerance", "cutonly", "visibility"];
 
     /// <summary>Canonical key spelling: lower case, runs of spaces as one underscore, so <c>min visible</c>,
     /// <c>Min_Visible</c> and the user-text key <c>m2d.min_visible</c> all name <c>min_visible</c>.</summary>
@@ -104,6 +104,7 @@ public static partial class Settings
             case "farclip": return Choice(value, ("none", FarClipMode.None), ("line", FarClipMode.Line), ("noline", FarClipMode.NoLine));
             case "crop": return Choice(value, ("auto", CropMode.Auto), ("off", CropMode.Off));
             case "glass": return Choice(value, ("opaque", GlassMode.Opaque), ("clear", GlassMode.Clear));
+            case "visibility": return Choice(value, ("hld", VisibilityMode.Hld), ("pipes", VisibilityMode.Pipes));
             case "engine": return value == "fast" ? EngineMode.Native : Choice(value, ("exact", EngineMode.Exact), ("native", EngineMode.Native));
             case "bake": return Choice(value, Bake.BakeNames.Layouts.Select(l => (Bake.BakeNames.LayoutText(l), l)).ToArray());
             case "weights": return Choice(value, ("auto", WeightMode.Auto), ("layers", WeightMode.Layers));
@@ -168,7 +169,7 @@ public static partial class Settings
         "fade.start" => 0d, "fade.end" => 100d, "fade.limit" => 30d, "crop" => CropMode.Auto,
         "glass" => GlassMode.Opaque, "scale" => 100d, "weights" => WeightMode.Auto, "hatch" => HatchMode.Styles,
         "cuts" => CutMode.Separate, "name" => "auto", "tree" => OutputTreeMode.Auto, "tolerance" => view.DocumentTolerance,
-        "min_visible" => 0d, "engine" => EngineMode.Exact, "joints" => true, "bake" => BakeLayout.ViewLayer,
+        "visibility" => VisibilityMode.Hld, "min_visible" => 0d, "engine" => EngineMode.Exact, "joints" => true, "bake" => BakeLayout.ViewLayer,
         _ => throw new ArgumentException("Unknown key.", nameof(key))
     };
 }

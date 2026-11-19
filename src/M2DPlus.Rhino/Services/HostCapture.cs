@@ -53,6 +53,8 @@ public sealed class SceneCapture : IDisposable
     /// <summary>Block definitions expanded once per capture: their sorted members and which are drawable.</summary>
     private readonly Dictionary<Guid, (RhinoObject Leaf, bool Drawable)[]> _definitions = new();
     private readonly double _tolerance;
+    private readonly bool _millimetres;
+    private readonly double _angleTolerance;
     private bool _accepted;
     private readonly CaptureVolumes? _volumes;
     public int ScopedOutCount { get; private set; }
@@ -100,6 +102,8 @@ public sealed class SceneCapture : IDisposable
         _sections = new SectionMemo(document);
         _viewObjects = excluded;
         _tolerance = document.ModelAbsoluteTolerance;
+        _millimetres = document.ModelUnitSystem == UnitSystem.Millimeters;
+        _angleTolerance = document.ModelAngleToleranceRadians;
         if (items is null)
         {
             var settings = new ObjectEnumeratorSettings { NormalObjects = true, LockedObjects = true, HiddenObjects = false,
@@ -126,6 +130,7 @@ public sealed class SceneCapture : IDisposable
     {
         using var key = new SceneHash();
         key.Add("capture-v1"); key.Add((int)document.RuntimeSerialNumber); key.Add(document.ModelAbsoluteTolerance);
+        key.Add((int)document.ModelUnitSystem); key.Add(document.ModelAngleToleranceRadians);
         key.Add(inputs is null);
         foreach (var input in inputs ?? [])
         {
@@ -600,12 +605,12 @@ public sealed class SceneCapture : IDisposable
                 signature.Add(l.Path); signature.Add(l.Chain);
             }
             foreach (var pair in unsupported.OrderBy(p => p.Key, StringComparer.Ordinal)) { signature.Add(pair.Key); signature.Add(pair.Value); }
-            signature.Add(tolerance);
+            signature.Add(tolerance); signature.Add(_millimetres); signature.Add(_angleTolerance);
             hash = signature.Finish();
         }
         Add(CapturePhase.Signature, signatureSince);
         var sceneSince = Mark();
-        var lease = cache.Scene(hash, leaves, unsupported, tolerance);
+        var lease = cache.Scene(hash, leaves, unsupported, tolerance, _millimetres, _angleTolerance);
         Add(CapturePhase.Scene, sceneSince);
         return lease;
     }
