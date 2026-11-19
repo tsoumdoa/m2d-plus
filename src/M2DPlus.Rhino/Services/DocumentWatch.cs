@@ -43,6 +43,8 @@ public sealed class WatchScope
     /// <summary>Rhino objects read as drawn sources (top-level and block parts), for tests and diagnostics.</summary>
     public int ObjectCount => Objects.Count;
 
+    // Scope-first capture retains bbox-test dependencies here. A scoped-out reference,
+    // definition member or instance must retain its role so a later move/edit into a volume expires it.
     internal void Read(RhinoDoc document, RhinoObject obj, bool gated)
     {
         Objects.Add(obj.Id);

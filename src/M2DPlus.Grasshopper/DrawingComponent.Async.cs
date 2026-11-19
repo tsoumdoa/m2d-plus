@@ -201,6 +201,8 @@ public sealed partial class DrawingComponent
         }
         _context = new UiContext(contexts, branches, DrawingUi.Units(document)) { ViewRows = rows, Depth = depth.Select(d => d?.Value).ToArray() };
         Ui.Context = () => _context;
+        // Only retained volumes key capture reuse: style, placement and hidden changes still reuse the scene.
+        _captureKey += "|scope=" + SceneCapture.ScopeKey(ScopeViews(BoundingBox.Empty), _tolerance);
         Previews(BoundingBox.Empty);
         // The progress weights of the next run come from this one when the inputs, views and settings are the same.
         _historyKey = _captureKey + "|" + string.Join("|", _views.Select(v => v.Revision)) + "|" + string.Join("\n", branches.Select(Settings.RunText)) +
@@ -285,21 +287,22 @@ public sealed partial class DrawingComponent
                 // What the drawing reads, so the watch re-runs only for changes to it (UX §5.1).
                 var scope = new WatchScope(_inputs is null ? M2DPlus.Core.Watch.WatchMode.Document : M2DPlus.Core.Watch.WatchMode.Referenced,
                     _inputs?.Select(i => i.Value).OfType<string>(), _views.Select(v => v.ObjectId), _textViews);
-                _capture = new(document, _watch, _inputs, excluded: _excluded, scope: scope);
+                _capture = new(document, _watch, _inputs, excluded: _excluded, scope: scope, scopeViews: ScopeViews);
                 _captureGeneration = _watch.Generation; _captureCount++;
                 _stageSeen[0] = _jobClock.Elapsed.TotalSeconds;
                 // About 16 ms of work per tick (the UI stays responsive); the timer's own granularity sets the gaps.
                 _timer!.Interval = 1;
             }
             var done = _capture.Step(TimeSpan.FromMilliseconds(16));
-            Status(new(JobPhase.Reading, _capture.CapturedCount, _capture.CapturedCount + _capture.PendingCount));
+            Status(new(JobPhase.Reading, _capture.CapturedCount, _capture.CapturedCount + _capture.PendingCount) { Step = _capture.CaptureStep });
             if (!done) return;
             _acceptingSources = new TreeSources(_inputKind, new Dictionary<string, SourceGroupInfo>(_capture.Groups, StringComparer.Ordinal),
                 new Dictionary<string, uint>(_capture.Colours, StringComparer.Ordinal));
             _sceneDropped = _capture.DroppedSummary; _readCount = _capture.CapturedCount;
             var profile = string.Join(", ", _capture.Profile.Where(p => p.Milliseconds >= .5)
                 .Select(p => $"{p.Phase} {p.Milliseconds:F0} ms{(SceneCapture.OnHostThread(p.Phase) ? "" : " (background)")}"));
-            _sceneInfo = $"Objects read: {_capture.CapturedCount:N0} in {_capture.Slices} slices, longest {_capture.MaximumSliceMilliseconds:F0} ms; {profile}.";
+            var scoped = _capture.Scoped ? $"excluded {_capture.ScopedOutCount:N0} object{(_capture.ScopedOutCount == 1 ? "" : "s")} outside the view boxes before capture. " : "";
+            _sceneInfo = $"{scoped}Objects read: {_capture.CapturedCount:N0} in {_capture.Slices} slices, longest {_capture.MaximumSliceMilliseconds:F0} ms; {profile}.";
             _accepting = _capture.AcceptAsync();
             _capture.Dispose(); _capture = null; _inputs = null;
             _timer!.Interval = 15;
@@ -367,6 +370,13 @@ public sealed partial class DrawingComponent
             (wait >= .01 ? $"waiting {wait:F2} s · " : "") +
             $"preparing {times.Preparing:F2} s · drawing {times.Drawing:F2} s · output {times.Output:F2} s · total {total:F2} s; " +
             $"UI thread busy {_uiSeconds:F2} s.";
+    }
+
+    private IReadOnlyList<ViewRequest> ScopeViews(BoundingBox bounds)
+    {
+        var contexts = _context.Views.Select((c, i) => c with { SceneDepth = SceneDepth(_views[i], bounds) }).ToArray();
+        var resolution = Settings.Resolve(contexts, _context.InputBranches, _context.Units, Ui.State.ToEditorSettings(_context.ViewRows), _context.Depth);
+        return _views.Select((v, i) => v with { Settings = resolution.Views[i] }).ToArray();
     }
 
     /// <summary>Resolve every key on the host; the engine receives immutable values only.</summary>

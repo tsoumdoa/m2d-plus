@@ -68,7 +68,7 @@ public static class StatusText
         switch (progress.Phase)
         {
             case JobPhase.Reading:
-                return new(Pair("Loading objects"), Eta: eta);
+                return new(Pair("Loading objects"), Detail: Step(progress), Eta: eta);
             case JobPhase.Queued:
                 return new(progress.Ahead is int ahead and > 0 ? $"Waiting for another drawing ({Count(ahead)} ahead)" : "Waiting for another drawing", Eta: eta);
             case JobPhase.Preparing:

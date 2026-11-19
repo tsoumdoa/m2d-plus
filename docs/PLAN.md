@@ -26,6 +26,8 @@ Status: v2, 2026-11-14. It folds in [Astra's review](design/plan-review-astra.md
 5. **Cut/Hatch output shape.** A region branch holds all of its loops (outer + holes) in Cut, and one hatch or null in Hatch. Open outlines get their own outline branches with null hatches. Crop-created edges keep a separate provenance from physical cut edges.
 6. **Cache identity** is layered: definition-local prep → source × local cut plane regions → view visibility → style/placement → serialized result. Keys use document/definition-leaf/instance-path identity plus content fingerprints, never 32-bit CRCs alone. Disk records carry policy/assembly/Rhino/schema fingerprints and a checksum; old records miss. Cache retains one completed realization.
 
+Pre-HLD exclusion (owner, 2026-11-19): before capture, objects and block instances whose cheap bounding box lies completely outside every requested view volume (outside the profile; for cut participants, wholly in front of the front face or beyond the back face where far clip applies) are excluded: their geometry is never copied, fingerprinted or normalised, though they stay watch dependencies. Applies only when every view has a fixed volume: an M2D+ view box, a GH Box, or a Rectangle with authored axes and explicit depth; other requests keep the whole scene. Scene bounds are the survivors' bounds, which changes only the HLD camera radius, so outputs are compared by locus, not bytes.
+
 ## Architecture
 
 ```

@@ -921,10 +921,20 @@ layer names, Grasshopper geometry) is drawn whatever its visibility.
 | Settings/menu/view-object `hidden` | 0 | 0 | 0 | re-solve with requested HLD hidden flag |
 | Legacy `engine` / `joints` edits | 0 | 0 | 0 | remarks only; reuse drawing |
 | View object `m2d.*` text (e.g. `m2d.fade`) | 0 | 0 | 0 | 0 |
+| On a view-box request: `farclip` or `tolerance` (any source), or a Rectangle's explicit depth (the capture volume changes) | 1 | only newly retained objects | reused if retained in cache | re-solve |
 | Settings/menu/view-object `bake` only (`BakeLayoutTests`) | 0 | 0 | 0 | 0, and no presentation: the same drawing is republished |
-| View box moved (its view changes) | 0 | 0 | 0 | re-solve |
+| View box moved (its capture volume changes) | 1 | only newly retained objects | reused if retained in cache | re-solve |
 | A drawn object moved | 1 | only that object | 1 | re-solve |
 | Geometry input changed | 1 | only new objects | 1 | re-solve |
+
+Capture excludes objects outside every requested view box before reading geometry. It applies only
+when every view has a volume defined by its source: a view box, GH Box, or Rectangle with explicit
+depth and authored axes. Named views and scene/input-derived frames keep the whole scene. Profile
+separation excludes all sources; front/back separation excludes only cut participants (back only
+with far clipping). Touching boxes survive. Scene bounds come from survivors. Excluded references
+and definitions remain watch dependencies, so moving an object into a box triggers a re-run.
+On those requests only, Info says "excluded N objects outside the view boxes before capture" (a rejected
+instance counts once), followed by additional per-view culling. Normalisation notes describe captured sources.
 
 ### 5.2 Phases and the message line
 

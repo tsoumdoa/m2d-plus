@@ -10,6 +10,9 @@ public sealed record NativeSettings
 {
     internal NativeScheduler Scheduler { get; init; } = NativeScheduler.Global;
     internal bool IsWorker { get; init; }
+    // Internal research controls only; production always uses threaded HLD and scene bounds.
+    internal bool MultipleThreads { get; init; } = true;
+    internal BoundingBox? CameraBounds { get; init; }
     internal bool CullSources { get; init; } = true;
     internal Action<IReadOnlyList<VisibilityInput>>? ObserveNativeInputs { get; init; }
     internal Action<NativeHldOptions>? ObserveHldOptions { get; init; }
@@ -88,7 +91,7 @@ public sealed class ViewDrawing : IDisposable
     public int FastNativeSources { get; internal set; }
     public string EngineSummary => NativeCalls == 0 ? Settings?.CutOnly == true
         ? "Engine: sections only; HLD not run" : "Engine: HLD not run"
-        : "Engine: Rhino HLD; multithreaded; visibility not certified";
+        : $"Engine: Rhino HLD; {(MultipleThreads ? "multithreaded" : "single-threaded")}; visibility not certified";
     private string JointsDisclosure => Settings is { } settings && settings["joints"].AssignedBy != SettingSource.Default
         ? "Joints suppression removed; joints is ignored; Rhino HLD controls contact edges.\n" : "";
     public string Info => $"{Name}: {(Error ?? "finished")} · {Seconds:F3} s\n" +
@@ -229,19 +232,7 @@ public static class NativeDrawing
     {
         Interlocked.Increment(ref _visibilitySolves);
         var tolerance = view.Settings?.Tolerance ?? scene.Tolerance;
-        if (view.Settings is { } effective)
-        {
-            if (view.Named is { } named) view = view with { Named = named with { Crop = effective.Crop } };
-            if (view.Cut is null && view.Error is null)
-            {
-                var frame = view.Resolve(scene.Bounds, effective.Tolerance);
-                if (effective.FarClip != FarClipMode.None && scene.Bounds.IsValid &&
-                    -scene.Bounds.GetCorners().Min(frame.Plane.DistanceTo) >= effective.Depth - effective.Tolerance)
-                    view = view with { Cut = new CutFrame(frame.Plane, effective.Crop && view.Named is not null ? frame : null,
-                        effective.Depth, false, false, Array.Empty<Guid>(), Array.Empty<Guid>(), null) };
-            }
-            if (view.Cut is { } cut) view = view with { Cut = cut with { SourceDepth = effective.Depth, FarClip = effective.FarClip } };
-        }
+        view = ViewSourceCull.ResolveView(view, scene.Bounds, scene.Tolerance);
         var original = sources;
         var cullTimer = Stopwatch.StartNew();
         if (settings.CullSources)
@@ -273,7 +264,7 @@ public static class NativeDrawing
     {
         if (view.Cut is not null && view.Error is null) return SectionDrawing.Solve(scene, sources, view, settings, token,
             DrawingFrames.Resolve(view, original, scene.Bounds, tolerance));
-        var result = new ViewDrawing { Name = view.Name, Settings = view.Settings, MultipleThreads = true, Tolerance = tolerance };
+        var result = new ViewDrawing { Name = view.Name, Settings = view.Settings, MultipleThreads = settings.MultipleThreads, Tolerance = tolerance };
         var timer = Stopwatch.StartNew();
         using var glass = new GlassGeometry(sources, view);
         var quarantine = false;

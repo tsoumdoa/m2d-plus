@@ -17,6 +17,8 @@ public sealed record ViewRequest(string Name, Vector3d Direction, string? Error 
     public ViewSourceKind Kind { get; init; } = ViewSourceKind.Direction;
     /// <summary>The referenced Rhino object (view box, frame surface/curve, clipping plane), else empty.</summary>
     public Guid ObjectId { get; init; }
+    /// <summary>The source rectangle was faced toward scene inputs rather than authored axes.</summary>
+    public bool SceneDerivedFrame { get; init; }
     /// <summary>A remark about how the source was read, e.g. a frame surface that is not converted yet.</summary>
     public string? Note { get; init; }
     public string Revision => $"{Name}/{Error}/{Direction.X:R},{Direction.Y:R},{Direction.Z:R}/{Named?.Revision}/{Cut?.Revision}";
@@ -40,7 +42,7 @@ public sealed record ViewRequest(string Name, Vector3d Direction, string? Error 
             if (value is Extrusion) return FromBox(check.Frame!.Value, check.Depth!.Value, label);
             var faced = check.UsesSurfaceAxes ? check.Frame!.Value : Faced(check.Frame!.Value, document, scene, []);
             return FromPlane(faced.Plane, label, faced) with { Kind = ViewSourceKind.Rectangle,
-                Note = check.UsesSurfaceAxes ? null : SurfaceDirectionRemark };
+                SceneDerivedFrame = !check.UsesSurfaceAxes, Note = check.UsesSurfaceAxes ? null : SurfaceDirectionRemark };
         }
         if (value is Plane plane) return FromPlane(plane, "Plane") with { Kind = ViewSourceKind.Plane };
         if (value is Rectangle3d rectangle) return rectangle.IsValid ? FromPlane(rectangle.Plane, "Rectangle", rectangle) with { Kind = ViewSourceKind.Rectangle } : new("Rectangle", default, "Invalid view rectangle.");
@@ -95,7 +97,7 @@ public sealed record ViewRequest(string Name, Vector3d Direction, string? Error 
         if (!check.IsValid) return new(name, default, $"View '{name}' can't frame a view: {check.Reason}") { ObjectId = obj.Id };
         var frame = check.UsesSurfaceAxes ? check.Frame!.Value : Faced(check.Frame!.Value, document, scene, [obj.Id]);
         return FromPlane(frame.Plane, name, frame) with { Kind = ViewSourceKind.Rectangle, ObjectId = obj.Id,
-            Note = (check.UsesSurfaceAxes ? "" : SurfaceDirectionRemark + " ") +
+            SceneDerivedFrame = !check.UsesSurfaceAxes, Note = (check.UsesSurfaceAxes ? "" : SurfaceDirectionRemark + " ") +
                 $"'{name}' is drawn as a rectangle view. Right-click View > Convert to view boxes to make it an editable view box (depth, look direction, settings)." };
     }
     private const string SurfaceDirectionRemark = "Use an untrimmed rectangular surface to control the view direction with its normal.";

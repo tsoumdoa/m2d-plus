@@ -17,6 +17,7 @@ public sealed class SceneCapture : IDisposable
     private sealed record Pending(object Value, int[] Path, string Identity, Transform[] Chain, Guid[] Definitions, SourceSection? Section = null)
     {
         public int SourceItem { get; init; }
+        public bool ScopeInside { get; set; }
         /// <summary>The top-level Rhino object (a block instance counts as one); null for Grasshopper geometry.</summary>
         public TopObject? Top { get; init; }
         /// <summary>The input text when the top-level item was a layer name.</summary>
@@ -53,6 +54,13 @@ public sealed class SceneCapture : IDisposable
     private readonly Dictionary<Guid, (RhinoObject Leaf, bool Drawable)[]> _definitions = new();
     private readonly double _tolerance;
     private bool _accepted;
+    private readonly CaptureVolumes? _volumes;
+    public int ScopedOutCount { get; private set; }
+    /// <summary>True when every requested view has a fixed volume, so capture skips objects wholly outside them.</summary>
+    public bool Scoped => _volumes is { Enabled: true };
+    public string CaptureStep => Scoped ? "scope and capture" : "capture";
+    public static string ScopeKey(IReadOnlyList<ViewRequest> views, double tolerance) =>
+        new CaptureVolumes(views, BoundingBox.Empty, tolerance).Revision;
     /// <summary>Leaves whose owned copy is fingerprinted and normalised in the background; joined by <see cref="AcceptAsync"/>.</summary>
     private readonly List<Task<SceneLeaf>> _inflight = new();
     public int CapturedCount => _leaves.Count + _inflight.Count;
@@ -61,7 +69,7 @@ public sealed class SceneCapture : IDisposable
     /// <summary>Where capture time goes, on the host thread (Info's timing section and the profile tests).</summary>
     /// <remarks>Enumerate…Record run on the host (UI) thread; Fingerprint, Normalise, Sort, Signature and Scene run on
     /// background threads on owned copies (summed over threads).</remarks>
-    public enum CapturePhase { Enumerate, Verify, Objects, Sections, Blocks, Copy, Record, Fingerprint, Normalise, Sort, Signature, Scene }
+    public enum CapturePhase { Scoping, Enumerate, Verify, Objects, Sections, Blocks, Copy, Record, Fingerprint, Normalise, Sort, Signature, Scene }
     public static bool OnHostThread(CapturePhase phase) => phase <= CapturePhase.Record;
     private readonly long[] _ticks = new long[Enum.GetValues<CapturePhase>().Length];
     private long Mark() => Stopwatch.GetTimestamp();
@@ -79,7 +87,8 @@ public sealed class SceneCapture : IDisposable
     /// <param name="scope">What the drawing will read; the capture fills it and sets it on the watch. Default: document
     /// mode without input, else referenced mode with the input's layer names.</param>
     public SceneCapture(RhinoDoc document, DocumentWatch watch, IEnumerable<CaptureInput>? input = null, SceneCache? cache = null,
-        IReadOnlySet<Guid>? excluded = null, WatchScope? scope = null)
+        IReadOnlySet<Guid>? excluded = null, WatchScope? scope = null,
+        Func<BoundingBox, IReadOnlyList<ViewRequest>>? scopeViews = null)
     {
         var timer = Stopwatch.StartNew();
         Interlocked.Increment(ref _captures);
@@ -100,6 +109,8 @@ public sealed class SceneCapture : IDisposable
                 if (IsDrawable(document, obj) && excluded?.Contains(obj.Id) != true) _pending.Enqueue(new(obj.Id, new[] { 0 }, obj.Id.ToString(), Array.Empty<Transform>(), Array.Empty<Guid>()) { SourceItem = ordinal++ });
         }
         else foreach (var item in items) _pending.Enqueue(new(item.Value, (int[])item.Path.Clone(), item.Identity, Array.Empty<Transform>(), Array.Empty<Guid>()) { SourceItem = item.SourceItem });
+        // Unbounded requests keep the original single-pass capture, including its full-scene bounds.
+        if (scopeViews is not null) _volumes = new(scopeViews(BoundingBox.Empty), BoundingBox.Empty, _tolerance);
         InitialEnumerationMilliseconds = timer.Elapsed.TotalMilliseconds;
         _ticks[(int)CapturePhase.Enumerate] += (long)(timer.Elapsed.TotalSeconds * Stopwatch.Frequency);
         ActiveSeconds = timer.Elapsed.TotalSeconds;
@@ -246,14 +257,87 @@ public sealed class SceneCapture : IDisposable
         if (budget <= TimeSpan.Zero) throw new ArgumentOutOfRangeException(nameof(budget));
         do
         {
-            if (!_pending.TryDequeue(out var item)) break;
-            token.ThrowIfCancellationRequested(); Capture(item);
+            token.ThrowIfCancellationRequested();
+            if (_pending.TryDequeue(out var item)) Capture(item);
+            else break;
         } while (timer.Elapsed < budget);
         Verify(); MaximumSliceMilliseconds = Math.Max(MaximumSliceMilliseconds, timer.Elapsed.TotalMilliseconds);
         ActiveSeconds += timer.Elapsed.TotalSeconds;
         return _pending.Count == 0;
     }
-    private void Unsupported(string name) => _unsupported[name] = _unsupported.GetValueOrDefault(name) + 1;
+    private void Unsupported(string name)
+    {
+        _unsupported[name] = _unsupported.GetValueOrDefault(name) + 1;
+    }
+    private bool ScopedOut(Pending item, GeometryBase geometry, Guid? id = null, Guid? layer = null)
+    {
+        if (item.ScopeInside || _volumes is not { Enabled: true }) return false;
+        var since = Mark();
+        try
+        {
+            var instance = geometry is InstanceReferenceGeometry;
+            var transform = PreparedScene.Combined(item.Chain);
+            var box = instance ? InstanceBounds((InstanceReferenceGeometry)geometry, new()) : geometry.GetBoundingBox(false);
+            box.Transform(transform);
+            if (!box.IsValid) return false; // Invalid cheap bounds never exclude a source.
+            if (!_volumes.Outside(box, item.Section, id, layer, instance))
+            {
+                if (instance && _volumes.Contains(box)) item.ScopeInside = true;
+                return false;
+            }
+            ScopedOutCount++; return true;
+        }
+        finally { Add(CapturePhase.Scoping, since); }
+    }
+
+    // Definition-local conservative boxes are rebuilt per capture. Rhino's stored nested
+    // instance boxes can be stale after editing an inner definition. No geometry is copied
+    // or normalised here, and repeated instances share this cheap definition lookup.
+    private readonly Dictionary<Guid, BoundingBox> _definitionBounds = new();
+    private BoundingBox InstanceBounds(InstanceReferenceGeometry instance, HashSet<Guid> path)
+    {
+        var id = instance.ParentIdefId;
+        if (!path.Add(id) || path.Count > 256) return BoundingBox.Unset;
+        try
+        {
+            if (!_definitionBounds.TryGetValue(id, out var box))
+            {
+                var definition = _document.InstanceDefinitions.FindId(id);
+                if (definition is null) return BoundingBox.Unset;
+                _scope.Definitions.Add(id);
+                box = BoundingBox.Empty;
+                foreach (var (part, drawable) in Members(definition))
+                {
+                    _scope.Read(_document, part, gated: true);
+                    if (!drawable) continue;
+                    var child = part.Geometry is InstanceReferenceGeometry nested
+                        ? InstanceBounds(nested, path) : part.Geometry.GetBoundingBox(false);
+                    if (!child.IsValid) return BoundingBox.Unset;
+                    box.Union(child);
+                }
+                _definitionBounds[id] = box;
+            }
+            box.Transform(instance.Xform);
+            return box;
+        }
+        finally { path.Remove(id); }
+    }
+
+    private static string LocalIdentity(Pending item) => item.Definitions.Length == 0 ? item.Identity : item.Definitions[^1] + "/" + item.Identity.Split('/')[^1];
+    private static string GeometryKey(uint document, string localId, string fingerprint, string type) =>
+        $"{document}/{localId}/{fingerprint}/normalise-v2/{type}";
+
+    private (RhinoObject Leaf, bool Drawable)[] Members(InstanceDefinition definition)
+    {
+        if (_definitions.TryGetValue(definition.Id, out var members)) return members;
+        members = definition.GetObjects().OrderBy(o => o.Id).Select(o => (o, IsDrawable(_document, o))).ToArray();
+        _definitions.Add(definition.Id, members);
+        foreach (var (part, _) in members) { _scope.Gated.Add(part.Id); _scope.GateLayers.Add(part.Attributes.LayerIndex); }
+        return members;
+    }
+
+    private static bool Supported(GeometryBase? geometry) =>
+        geometry is Brep or Mesh or Curve or Surface or Extrusion or SubD or Point && geometry is not ClippingPlaneSurface;
     private void Capture(Pending item)
     {
         var value = item.Value;
@@ -287,10 +371,12 @@ public sealed class SceneCapture : IDisposable
                 Add(CapturePhase.Objects, objectsSince);
                 return;
             }
-            sourceSerial = source.RuntimeSerialNumber;
-            // Only block parts are drawn as Rhino shows them; a top-level object (an id, a reference or a layer-name
-            // match) is drawn whatever its visibility.
+            Add(CapturePhase.Objects, objectsSince);
+            // Even excluded references and definition members remain watch dependencies.
             _scope.Read(_document, source, gated: item.Definitions.Length > 0);
+            if (ScopedOut(item, source.Geometry, source.Id, _document.Layers[source.Attributes.LayerIndex].Id)) return;
+            objectsSince = Mark();
+            sourceSerial = source.RuntimeSerialNumber;
             // A nested object keeps its own layer (Rhino has no layer By Parent).
             var layer = _document.Layers[source.Attributes.LayerIndex];
             Add(CapturePhase.Objects, objectsSince);
@@ -304,6 +390,7 @@ public sealed class SceneCapture : IDisposable
             value = source.Geometry;
         }
         Add(CapturePhase.Objects, objectsSince);
+        if (sourceSerial is null && value is GeometryBase candidate && ScopedOut(item, candidate)) return;
         if (value is InstanceReferenceGeometry instance)
         {
             var blocksSince = Mark();
@@ -318,25 +405,33 @@ public sealed class SceneCapture : IDisposable
             if (definition is null || item.Definitions.Contains(instance.ParentIdefId) || item.Definitions.Length >= 256)
             { Unsupported("Invalid/cyclic block"); return; }
             _scope.Definitions.Add(definition.Id);
-            if (!_definitions.TryGetValue(definition.Id, out var members))
-            {
-                members = definition.GetObjects().OrderBy(o => o.Id).Select(o => (o, IsDrawable(_document, o))).ToArray();
-                _definitions[definition.Id] = members;
-                // Parts are drawn as Rhino shows them: their own and their layers' visibility decide, so both are watched.
-                foreach (var (part, _) in members) { _scope.Gated.Add(part.Id); _scope.GateLayers.Add(part.Attributes.LayerIndex); }
-            }
+            var members = Members(definition);
             if (members.Length == 0) { Unsupported("Empty/unavailable block definition " + definition.Name); return; }
             foreach (var (leaf, drawable) in members)
             {
                 if (!drawable) continue;
                 _pending.Enqueue(new(leaf.Id, item.Path, item.Identity + "/" + definition.Id + "/" + leaf.Id,
                     item.Chain.Append(instance.Xform).ToArray(), item.Definitions.Append(definition.Id).ToArray(), item.Section)
-                    { SourceItem = item.SourceItem, Top = item.Top, LayerPattern = item.LayerPattern, LayerIndex = item.LayerIndex, LayerPath = item.LayerPath });
+                    { SourceItem = item.SourceItem, Top = item.Top, LayerPattern = item.LayerPattern, LayerIndex = item.LayerIndex, LayerPath = item.LayerPath, ScopeInside = item.ScopeInside });
             }
     }
-    private void Leaf(Pending item, object value, uint? sourceSerial)
+    internal static BoundingBox PrimitiveBounds(object value)
     {
-        GeometryBase? geometry = value switch
+        static BoundingBox Union(BoundingBox a, BoundingBox b) { a.Union(b); return a; }
+        return value switch
+        {
+            Point3d p => new(p, p), Line l => l.BoundingBox, Polyline p => p.BoundingBox,
+            Arc a => a.BoundingBox(), Circle c => c.BoundingBox, Rectangle3d r => r.BoundingBox,
+            Box b => b.BoundingBox, BoundingBox b => b, Sphere s => s.BoundingBox,
+            Cylinder c => Union(c.CircleAt(c.Height1).BoundingBox, c.CircleAt(c.Height2).BoundingBox),
+            Cone c => Union(new Circle(new Plane(c.BasePoint, c.Plane.XAxis, c.Plane.YAxis), Math.Abs(c.Radius)).BoundingBox,
+                new BoundingBox(c.ApexPoint, c.ApexPoint)),
+            Torus t => new Sphere(t.Plane.Origin, Math.Abs(t.MajorRadius) + Math.Abs(t.MinorRadius)).BoundingBox,
+            _ => BoundingBox.Unset
+        };
+    }
+
+    private static GeometryBase? AsGeometry(object value) => value switch
         {
             GeometryBase g => g,
             Point3d p => new Point(p), Line l => new LineCurve(l), Polyline p => new PolylineCurve(p),
@@ -344,19 +439,28 @@ public sealed class SceneCapture : IDisposable
             Box b => b.ToBrep(), BoundingBox b => b.ToBrep(), Sphere s => s.ToBrep(),
             Cylinder c => c.ToBrep(true, true), Cone c => c.ToBrep(true), Torus t => t.ToBrep(), _ => null
         };
+
+    private void Leaf(Pending item, object value, uint? sourceSerial)
+    {
+        if (value is not GeometryBase && _volumes is { Enabled: true } && !item.ScopeInside)
+        {
+            var box = PrimitiveBounds(value); box.Transform(PreparedScene.Combined(item.Chain));
+            if (_volumes.Outside(box, item.Section, null, null, false)) { ScopedOutCount++; return; }
+        }
+        GeometryBase? geometry = AsGeometry(value);
         var temporary = value is not GeometryBase && geometry is not null;
         try
         {
             // Flat annotation-like objects and point clouds can't hide anything: report them, don't quarantine the view.
             if (geometry is AnnotationBase or TextDot or Hatch or PointCloud)
             { Unsupported(PreparedScene.NonOccludingPrefix + geometry.GetType().Name); return; }
-            if (geometry is not (Brep or Mesh or Curve or Surface or Extrusion or SubD or Point) || geometry is ClippingPlaneSurface)
+            if (!Supported(geometry))
             { Unsupported(geometry?.GetType().Name ?? value.GetType().Name); return; }
-            var localId = item.Definitions.Length == 0 ? item.Identity : item.Definitions[^1] + "/" + item.Identity.Split('/')[^1];
             var primitive = temporary ? value.GetType().Name : null;
-            var normalisationType = primitive ?? geometry.GetType().Name;
+            var normalisationType = primitive ?? geometry!.GetType().Name;
             var documentSerial = _watch.DocumentSerial;
-            string Key(string fingerprint) => $"{documentSerial}/{localId}/{fingerprint}/normalise-v2/{normalisationType}";
+            var localId = LocalIdentity(item);
+            string Key(string fingerprint) => GeometryKey(documentSerial, localId, fingerprint, normalisationType);
             var section = item.Section ?? SourceSection.Plain;
             // Document objects are fingerprinted once per object instance (serial), across captures; a known object with
             // cached normalised geometry costs nothing more here.
@@ -368,7 +472,7 @@ public sealed class SceneCapture : IDisposable
                 // An owned copy now (the live object never leaves this thread); content fingerprint and normalisation on
                 // a background thread, joined when the scene is accepted.
                 var copySince = Mark();
-                var copy = temporary ? geometry : geometry.Duplicate();
+                var copy = temporary ? geometry! : geometry!.Duplicate();
                 if (temporary) temporary = false; // ownership moves to the background work
                 copy.EnsurePrivateCopy();
                 Add(CapturePhase.Copy, copySince);
@@ -486,7 +590,8 @@ public sealed class SceneCapture : IDisposable
         string hash;
         using (var signature = new SceneHash())
         {
-            signature.Add("scene-v3");
+            signature.Add("scene-v4");
+            signature.Add(_volumes?.Revision ?? "unbounded");
             var revisions = new Dictionary<SourceSection, string>(ReferenceEqualityComparer.Instance);
             foreach (var l in leaves)
             {
