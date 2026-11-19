@@ -7,6 +7,12 @@ and share one in-process RhinoCore on one STA host thread; they never attach
 to or terminate an interactive Rhino session. A compatible Windows x64 runtime,
 installed licensed Rhino 8 and McNeel Rhino.Inside resolver are required.
 
+`--filter FullyQualifiedName~DrawingComparisonTests` runs the shared Pipes/HLD
+comparator controls (self-match, 10 mm class swaps in both directions, self-overlap,
+deletion, coincident classes, Unresolved, points and zero-length projections) and baseline boundary checks.
+The geometry controls require the licensed host; the baseline check is managed.
+Set `DOTNET_ROLL_FORWARD=LatestMajor` to exercise the installed .NET 10 host.
+
 ```powershell
 $env:M2D_RHINO_TESTS = '1'
 $env:M2D_RHINO_SYSTEM = 'C:/Program Files/Rhino 8/System'

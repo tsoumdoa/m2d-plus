@@ -84,53 +84,10 @@ public sealed class PipeTrialTests(RhinoHost host, ITestOutputHelper output)
         new Plane(new Point3d(65986, 40014, front - 3000), Vector3d.ZAxis),
         new Interval(-halfWidth, halfWidth), new Interval(-halfWidth, halfWidth), new Interval(-3000, 3000));
 
-    private sealed record Agreement(string Direction, LineClass Class, double Length, int Samples,
-        double Same, double OppositeOnly, double UnresolvedOnly, double Absent)
-    { public double Percent => Length == 0 ? 100 : Same / Length * 100; }
-
-    // Bidirectional classed locus sampling, matching the independent P2 probe:
-    // 0.05 mm distance, 0.25 mm stations, at least 33 stations per source curve.
-    private static Agreement Compare(ViewDrawing a, ViewDrawing b, string direction, LineClass kind, Rectangle3d? mask = null)
-    {
-        var targets = b.Items.Select(p => (p.Class, Geometry: p.CopyGeometry())).ToArray();
-        var length = 0d; var same = 0d; var opposite = 0d; var unresolved = 0d; var absent = 0d; var samples = 0;
-        try
-        {
-            var curves = targets.Where(t => t.Geometry is Curve).Select(t =>
-            {
-                var curve = (Curve)t.Geometry; var bounds = curve.GetBoundingBox(true); bounds.Inflate(.05);
-                return (t.Class, Curve: curve, Bounds: bounds);
-            }).ToArray();
-            foreach (var piece in a.Items.Where(p => p.Class == kind))
-            {
-                using var geometry = piece.CopyGeometry(); if (geometry is not Curve c) continue;
-                var len = c.GetLength(); var count = Math.Max(33, (int)Math.Ceiling(len / .25));
-                for (var station = 0; station < count; station++)
-                {
-                    var point = c.PointAtNormalizedLength((station + .5) / count);
-                    if (mask is { } frame)
-                    {
-                        frame.Plane.ClosestParameter(point, out var x, out var y);
-                        if (x < frame.X.Min || x > frame.X.Max || y < frame.Y.Min || y > frame.Y.Max) continue;
-                    }
-                    var hitSame = false; var hitOpposite = false; var hitUnresolved = false;
-                    foreach (var target in curves)
-                    {
-                        if (!target.Bounds.Contains(point) || !target.Curve.ClosestPoint(point, out var parameter, .050001) ||
-                            target.Curve.PointAt(parameter).DistanceTo(point) > .05) continue;
-                        if (target.Class == kind) { hitSame = true; break; }
-                        if (target.Class == LineClass.Unresolved) hitUnresolved = true;
-                        else if (target.Class is LineClass.Visible or LineClass.Hidden) hitOpposite = true;
-                    }
-                    var weight = len / count; length += weight; samples++;
-                    if (hitSame) same += weight; else if (hitOpposite) opposite += weight;
-                    else if (hitUnresolved) unresolved += weight; else absent += weight;
-                }
-            }
-            return new(direction, kind, length, samples, same, opposite, unresolved, absent);
-        }
-        finally { foreach (var target in targets) target.Geometry.Dispose(); }
-    }
+    // Shared test/tool comparator; keep the older per-class evidence shape.
+    private static M2DPlus.Measurements.DrawingComparison.Agreement Compare(ViewDrawing a, ViewDrawing b,
+        string direction, LineClass kind, Rectangle3d? mask = null) =>
+        M2DPlus.Measurements.DrawingComparison.Sample(a, b, direction, mask)[kind];
 
     [RhinoFact] public void OwnerBoxesUsePipesForCropAndHldForDepthCuts() => host.Run(() =>
     {
@@ -504,4 +461,3 @@ public sealed class PipeTrialTests(RhinoHost host, ITestOutputHelper output)
         finally { component.RemovedFromDocument(document); SceneCache.Shared.Clear(); }
     });
 }
-
