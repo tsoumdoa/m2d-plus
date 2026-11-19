@@ -50,3 +50,18 @@ The standalone `pipe-poc` worker-bench command calls these moved classes.
 Opt-in and experimental: HLD stays the default and its output and cache identity
 are unchanged when `visibility = hld`. The engine never emits Unresolved, so its
 wrong-visible errors are not flagged in the drawing.
+
+## Regression gate
+
+`worker-bench pipe-gate` measures Pipes against repeated HLD solves on the owner
+node and stacked/laterally separated 5/20/80/320-pipe fixtures in Top, SW and a
+fixed non-cutting box. The shared test/tool comparator samples projected strokes
+at ≤0.25 mm and checks exact distance ≤0.05 mm. Receipts separate wrong-visible
+and wrong-hidden mm/% from missing loci, Unresolved length and point classes.
+Wrong-hidden samples HLD Visible supported only by Pipes Hidden, avoiding duplicate
+Pipes hidden length. Schema 2 gates both errors against their own observed repeatability
+ranges plus a small margin; self-overlap is reported separately without gating.
+Owner Top/SW receipts include source/feature attribution and red-span PNGs.
+`--update-baseline` explicitly replaces the baseline after a full run. Models and
+JSON/Markdown evidence stay under `M2D_MODELS` (default
+`~/.t3/m2d-plus-models`), outside git. See [commands and measurement limits](../../../../tools/worker-bench/PipePoc/README.md#regression-gate).

@@ -1,10 +1,18 @@
-# One visibility engine: Rhino HLD
+# Visibility: Rhino HLD by default
 
 Design note · owner option B, 2026-11-17. Approved implementation specification, updated with review findings. Supersedes the exact/native choice and engine-composition roadmap.
 
+## Default and opt-in exception
+
+Rhino HLD remains the default visibility engine. Since beta.12 (PR #69),
+**Pipes (experimental)** (`visibility = pipes`) is the only opt-in exception.
+It has known wrong-visible junction errors and falls back to HLD for views it
+cannot admit. See the [Pipes engine README](../../src/M2DPlus.Rhino/Experimental/PipeVisibility/README.md)
+for its supported domain and regression gate. The routing below describes HLD.
+
 ## Routing and sections
 
-All projection uses threaded `HiddenLineDrawing.Compute`. Keep one budgeted HLD
+Default projection uses threaded `HiddenLineDrawing.Compute`. Keep one budgeted HLD
 call per process and bounded parallel worker views. HLD owns line/point visibility,
 contacts and duplicates; no custom classifier, ray verifier or dense audit runs.
 

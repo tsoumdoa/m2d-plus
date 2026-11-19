@@ -6,6 +6,10 @@ stay outside git under `~/.t3/m2d-plus-models`; never overwrite existing evidenc
 
 Current commands (see Program.cs for the complete replay/transport arguments):
 
+- `pipe-gate <resolver> [--repeats 3] [--baseline path] [--update-baseline]`
+  measures Pipes wrong-visible and wrong-hidden against repeated HLD on the
+  owner/copy matrix.
+  See [fixture definitions, receipts and baseline limits](PipePoc/README.md#regression-gate).
 - `engine <resolver> <model> <new-output-folder>` profiles threaded HLD, hidden on/off.
 - `hld <resolver> <model> <new-output-folder> <variant>` retains raw native controls;
   native audit is removed and native compute remains threaded.

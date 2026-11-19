@@ -1,0 +1,533 @@
+{
+  "Schema": 2,
+  "Settings": "hidden=on\ntangents=off\nseams=off\nfarclip=noline\nbeyond=off\nmin visible=0",
+  "SpacingMm": 0.25,
+  "DistanceMm": 0.05,
+  "RhinoBuild": "8.36.26296.17001",
+  "RuntimeMajor": 10,
+  "Fixtures": [
+    {
+      "Fixture": "owner",
+      "View": "Top",
+      "ModelSha256": "15ECB531E8DC242159C4D5B2E3227BB8CF7640023AA145037AFB19EB9F6AFFDA",
+      "WrongVisibleMm": 22.75557488294544,
+      "WrongVisiblePercent": 0.07228523167130822,
+      "WrongHiddenMm": 372.40114045250454,
+      "WrongHiddenPercent": 1.3377707965422583,
+      "ToleranceMm": 22.11541740750492,
+      "TolerancePercent": 0.07025171102169289,
+      "HiddenToleranceMm": 1.7664432198021132,
+      "HiddenTolerancePercent": 0.00597952580587008,
+      "Observations": 9,
+      "ObservationArchives": [
+        "evidence/pipe-gate-20261119-135750/owner/Top",
+        "evidence/pipe-gate-20261119-144034/owner/Top",
+        "evidence/pipe-gate-20261119-151205/owner/Top"
+      ]
+    },
+    {
+      "Fixture": "owner",
+      "View": "SW",
+      "ModelSha256": "15ECB531E8DC242159C4D5B2E3227BB8CF7640023AA145037AFB19EB9F6AFFDA",
+      "WrongVisibleMm": 0.6603120722708913,
+      "WrongVisiblePercent": 0.0025441529288401012,
+      "WrongHiddenMm": 171.24086660270243,
+      "WrongHiddenPercent": 0.7545077197312753,
+      "ToleranceMm": 0.5,
+      "TolerancePercent": 0.0019264776729664042,
+      "HiddenToleranceMm": 54.31421630683245,
+      "HiddenTolerancePercent": 0.23811017695898165,
+      "Observations": 9,
+      "ObservationArchives": [
+        "evidence/pipe-gate-20261119-135750/owner/SW",
+        "evidence/pipe-gate-20261119-144034/owner/SW",
+        "evidence/pipe-gate-20261119-151205/owner/SW"
+      ]
+    },
+    {
+      "Fixture": "owner",
+      "View": "Box",
+      "ModelSha256": "15ECB531E8DC242159C4D5B2E3227BB8CF7640023AA145037AFB19EB9F6AFFDA",
+      "WrongVisibleMm": 0,
+      "WrongVisiblePercent": 0,
+      "WrongHiddenMm": 287.9270458055256,
+      "WrongHiddenPercent": 1.8256967906784443,
+      "ToleranceMm": 0.5,
+      "TolerancePercent": 0.0029860820447114365,
+      "HiddenToleranceMm": 10.739270141992733,
+      "HiddenTolerancePercent": 0.06839895366985883,
+      "Observations": 9,
+      "ObservationArchives": [
+        "evidence/pipe-gate-20261119-135750/owner/Box",
+        "evidence/pipe-gate-20261119-144034/owner/Box",
+        "evidence/pipe-gate-20261119-151205/owner/Box"
+      ]
+    },
+    {
+      "Fixture": "5-stacked",
+      "View": "Top",
+      "ModelSha256": "FFBF2C9573B5A888C5E8C282A0D82FB69C8E5BA0B86B5C6C560F55927B2429D3",
+      "WrongVisibleMm": 0,
+      "WrongVisiblePercent": 0,
+      "WrongHiddenMm": 385.768307396139,
+      "WrongHiddenPercent": 1.3863386243861187,
+      "ToleranceMm": 0.5,
+      "TolerancePercent": 0.0015892619947685106,
+      "HiddenToleranceMm": 10.898264176438943,
+      "HiddenTolerancePercent": 0.039296624205086096,
+      "Observations": 9,
+      "ObservationArchives": [
+        "evidence/pipe-gate-20261119-135750/5-stacked/Top",
+        "evidence/pipe-gate-20261119-144034/5-stacked/Top",
+        "evidence/pipe-gate-20261119-151205/5-stacked/Top"
+      ]
+    },
+    {
+      "Fixture": "5-stacked",
+      "View": "SW",
+      "ModelSha256": "FFBF2C9573B5A888C5E8C282A0D82FB69C8E5BA0B86B5C6C560F55927B2429D3",
+      "WrongVisibleMm": 0,
+      "WrongVisiblePercent": 0,
+      "WrongHiddenMm": 215.10801328832412,
+      "WrongHiddenPercent": 0.9466629960497722,
+      "ToleranceMm": 0.5,
+      "TolerancePercent": 0.0019277980190510401,
+      "HiddenToleranceMm": 47.883576698502736,
+      "HiddenTolerancePercent": 0.20924784241035924,
+      "Observations": 9,
+      "ObservationArchives": [
+        "evidence/pipe-gate-20261119-135750/5-stacked/SW",
+        "evidence/pipe-gate-20261119-144034/5-stacked/SW",
+        "evidence/pipe-gate-20261119-151205/5-stacked/SW"
+      ]
+    },
+    {
+      "Fixture": "5-stacked",
+      "View": "Box",
+      "ModelSha256": "FFBF2C9573B5A888C5E8C282A0D82FB69C8E5BA0B86B5C6C560F55927B2429D3",
+      "WrongVisibleMm": 0,
+      "WrongVisiblePercent": 0,
+      "WrongHiddenMm": 299.19356376655713,
+      "WrongHiddenPercent": 1.8957978860434965,
+      "ToleranceMm": 0.5,
+      "TolerancePercent": 0.0029860820447114803,
+      "HiddenToleranceMm": 9.93273062543716,
+      "HiddenTolerancePercent": 0.06333298310484238,
+      "Observations": 9,
+      "ObservationArchives": [
+        "evidence/pipe-gate-20261119-135750/5-stacked/Box",
+        "evidence/pipe-gate-20261119-144034/5-stacked/Box",
+        "evidence/pipe-gate-20261119-151205/5-stacked/Box"
+      ]
+    },
+    {
+      "Fixture": "5-lateral",
+      "View": "Top",
+      "ModelSha256": "1ACA4C7FEEC3CB94A3E2B68CBB55C3448A8904C277D43AE5E0257A8F4AAC13EA",
+      "WrongVisibleMm": 0,
+      "WrongVisiblePercent": 0,
+      "WrongHiddenMm": 385.7047551737631,
+      "WrongHiddenPercent": 1.386113401980869,
+      "ToleranceMm": 0.5,
+      "TolerancePercent": 0.001589261994769892,
+      "HiddenToleranceMm": 10.028172437505248,
+      "HiddenTolerancePercent": 0.036209290104286314,
+      "Observations": 9,
+      "ObservationArchives": [
+        "evidence/pipe-gate-20261119-135750/5-lateral/Top",
+        "evidence/pipe-gate-20261119-144034/5-lateral/Top",
+        "evidence/pipe-gate-20261119-151205/5-lateral/Top"
+      ]
+    },
+    {
+      "Fixture": "5-lateral",
+      "View": "SW",
+      "ModelSha256": "1ACA4C7FEEC3CB94A3E2B68CBB55C3448A8904C277D43AE5E0257A8F4AAC13EA",
+      "WrongVisibleMm": 0,
+      "WrongVisiblePercent": 0,
+      "WrongHiddenMm": 215.1080132883279,
+      "WrongHiddenPercent": 0.9466629960501133,
+      "ToleranceMm": 0.5,
+      "TolerancePercent": 0.0019277980190523865,
+      "HiddenToleranceMm": 16.543968865079762,
+      "HiddenTolerancePercent": 0.07225700967073959,
+      "Observations": 9,
+      "ObservationArchives": [
+        "evidence/pipe-gate-20261119-135750/5-lateral/SW",
+        "evidence/pipe-gate-20261119-144034/5-lateral/SW",
+        "evidence/pipe-gate-20261119-151205/5-lateral/SW"
+      ]
+    },
+    {
+      "Fixture": "5-lateral",
+      "View": "Box",
+      "ModelSha256": "1ACA4C7FEEC3CB94A3E2B68CBB55C3448A8904C277D43AE5E0257A8F4AAC13EA",
+      "WrongVisibleMm": 0,
+      "WrongVisiblePercent": 0,
+      "WrongHiddenMm": 300.0803487488266,
+      "WrongHiddenPercent": 1.899632287746559,
+      "ToleranceMm": 0.5,
+      "TolerancePercent": 0.002986082044710904,
+      "HiddenToleranceMm": 11.626055124269783,
+      "HiddenTolerancePercent": 0.07219704049345417,
+      "Observations": 9,
+      "ObservationArchives": [
+        "evidence/pipe-gate-20261119-135750/5-lateral/Box",
+        "evidence/pipe-gate-20261119-144034/5-lateral/Box",
+        "evidence/pipe-gate-20261119-151205/5-lateral/Box"
+      ]
+    },
+    {
+      "Fixture": "20-stacked",
+      "View": "Top",
+      "ModelSha256": "B1D0F8567AC15059316B72E46AC26985303A021F9DC7408453600EF4571F4C00",
+      "WrongVisibleMm": 222.6522628646542,
+      "WrongVisiblePercent": 0.3142990289048092,
+      "WrongHiddenMm": 1746.7654441196576,
+      "WrongHiddenPercent": 3.8397387612309024,
+      "ToleranceMm": 47.492610657971,
+      "TolerancePercent": 0.06704122930485652,
+      "HiddenToleranceMm": 33.110567527088506,
+      "HiddenTolerancePercent": 0.07233117993154323,
+      "Observations": 12,
+      "ObservationArchives": [
+        "evidence/pipe-gate-20261119-135750/20-stacked/Top",
+        "evidence/pipe-gate-20261119-144034/20-stacked/Top",
+        "evidence/pipe-gate-20261119-151205/20-stacked/Top",
+        "evidence/pipe-gate-20261119-154503/20-stacked/Top"
+      ]
+    },
+    {
+      "Fixture": "20-stacked",
+      "View": "SW",
+      "ModelSha256": "B1D0F8567AC15059316B72E46AC26985303A021F9DC7408453600EF4571F4C00",
+      "WrongVisibleMm": 329.37117227259586,
+      "WrongVisiblePercent": 0.577717782219279,
+      "WrongHiddenMm": 2906.1880353033525,
+      "WrongHiddenPercent": 5.752506512291514,
+      "ToleranceMm": 93.94638312260676,
+      "TolerancePercent": 0.16478216879343696,
+      "HiddenToleranceMm": 98.5782748555107,
+      "HiddenTolerancePercent": 0.17737160164948595,
+      "Observations": 9,
+      "ObservationArchives": [
+        "evidence/pipe-gate-20261119-135750/20-stacked/SW",
+        "evidence/pipe-gate-20261119-144034/20-stacked/SW",
+        "evidence/pipe-gate-20261119-151205/20-stacked/SW"
+      ]
+    },
+    {
+      "Fixture": "20-stacked",
+      "View": "Box",
+      "ModelSha256": "B1D0F8567AC15059316B72E46AC26985303A021F9DC7408453600EF4571F4C00",
+      "WrongVisibleMm": 178.65227385164584,
+      "WrongVisiblePercent": 0.4925478869244156,
+      "WrongHiddenMm": 1406.5167256567204,
+      "WrongHiddenPercent": 5.5519902786670645,
+      "ToleranceMm": 6.49785350580737,
+      "TolerancePercent": 0.01791471188599335,
+      "HiddenToleranceMm": 42.407644277763666,
+      "HiddenTolerancePercent": 0.1605944444649833,
+      "Observations": 12,
+      "ObservationArchives": [
+        "evidence/pipe-gate-20261119-135750/20-stacked/Box",
+        "evidence/pipe-gate-20261119-144034/20-stacked/Box",
+        "evidence/pipe-gate-20261119-151205/20-stacked/Box",
+        "evidence/pipe-gate-20261119-154503/20-stacked/Box"
+      ]
+    },
+    {
+      "Fixture": "20-lateral",
+      "View": "Top",
+      "ModelSha256": "D3E3E2F5C2060A77A49F90AC23209944288293E47F28710FDC5A4D3DD7906221",
+      "WrongVisibleMm": 0,
+      "WrongVisiblePercent": 0,
+      "WrongHiddenMm": 1888.861190992481,
+      "WrongHiddenPercent": 1.691024974631702,
+      "ToleranceMm": 0.5,
+      "TolerancePercent": 0.0003973155211414903,
+      "HiddenToleranceMm": 70.50772437471869,
+      "HiddenTolerancePercent": 0.06316618719845497,
+      "Observations": 9,
+      "ObservationArchives": [
+        "evidence/pipe-gate-20261119-135750/20-lateral/Top",
+        "evidence/pipe-gate-20261119-144034/20-lateral/Top",
+        "evidence/pipe-gate-20261119-151205/20-lateral/Top"
+      ]
+    },
+    {
+      "Fixture": "20-lateral",
+      "View": "SW",
+      "ModelSha256": "D3E3E2F5C2060A77A49F90AC23209944288293E47F28710FDC5A4D3DD7906221",
+      "WrongVisibleMm": 0,
+      "WrongVisiblePercent": 0,
+      "WrongHiddenMm": 1088.874536683971,
+      "WrongHiddenPercent": 1.194773627690679,
+      "ToleranceMm": 0.5,
+      "TolerancePercent": 0.00048194942442751865,
+      "HiddenToleranceMm": 62.408276973472766,
+      "HiddenTolerancePercent": 0.06767730268306058,
+      "Observations": 9,
+      "ObservationArchives": [
+        "evidence/pipe-gate-20261119-135750/20-lateral/SW",
+        "evidence/pipe-gate-20261119-144034/20-lateral/SW",
+        "evidence/pipe-gate-20261119-151205/20-lateral/SW"
+      ]
+    },
+    {
+      "Fixture": "20-lateral",
+      "View": "Box",
+      "ModelSha256": "D3E3E2F5C2060A77A49F90AC23209944288293E47F28710FDC5A4D3DD7906221",
+      "WrongVisibleMm": 0,
+      "WrongVisiblePercent": 0,
+      "WrongHiddenMm": 296.93486177640114,
+      "WrongHiddenPercent": 1.880118585424371,
+      "ToleranceMm": 0.5,
+      "TolerancePercent": 0.0029860820447116273,
+      "HiddenToleranceMm": 8.638621159437434,
+      "HiddenTolerancePercent": 0.05368468032994144,
+      "Observations": 9,
+      "ObservationArchives": [
+        "evidence/pipe-gate-20261119-135750/20-lateral/Box",
+        "evidence/pipe-gate-20261119-144034/20-lateral/Box",
+        "evidence/pipe-gate-20261119-151205/20-lateral/Box"
+      ]
+    },
+    {
+      "Fixture": "80-stacked",
+      "View": "Top",
+      "ModelSha256": "AAEFCAFC2C1AF88CD960443CF6643FD02CDEE20B8F5A4B6C93210D6113FE47F1",
+      "WrongVisibleMm": 1240.210730951939,
+      "WrongVisiblePercent": 0.745201730057255,
+      "WrongHiddenMm": 5767.075816134777,
+      "WrongHiddenPercent": 5.671988818251907,
+      "ToleranceMm": 227.26475419020858,
+      "TolerancePercent": 0.1365558963302852,
+      "HiddenToleranceMm": 334.29500573122823,
+      "HiddenTolerancePercent": 0.30152184665777865,
+      "Observations": 9,
+      "ObservationArchives": [
+        "evidence/pipe-gate-20261119-135750/80-stacked/Top",
+        "evidence/pipe-gate-20261119-144034/80-stacked/Top",
+        "evidence/pipe-gate-20261119-151205/80-stacked/Top"
+      ]
+    },
+    {
+      "Fixture": "80-stacked",
+      "View": "SW",
+      "ModelSha256": "AAEFCAFC2C1AF88CD960443CF6643FD02CDEE20B8F5A4B6C93210D6113FE47F1",
+      "WrongVisibleMm": 2484.8456225885393,
+      "WrongVisiblePercent": 1.8618076685258043,
+      "WrongHiddenMm": 7134.447848744065,
+      "WrongHiddenPercent": 6.300386567479582,
+      "ToleranceMm": 983.1573207586648,
+      "TolerancePercent": 0.7366452959958658,
+      "HiddenToleranceMm": 1408.7198431586312,
+      "HiddenTolerancePercent": 1.176612714363413,
+      "Observations": 9,
+      "ObservationArchives": [
+        "evidence/pipe-gate-20261119-135750/80-stacked/SW",
+        "evidence/pipe-gate-20261119-144034/80-stacked/SW",
+        "evidence/pipe-gate-20261119-151205/80-stacked/SW"
+      ]
+    },
+    {
+      "Fixture": "80-stacked",
+      "View": "Box",
+      "ModelSha256": "AAEFCAFC2C1AF88CD960443CF6643FD02CDEE20B8F5A4B6C93210D6113FE47F1",
+      "WrongVisibleMm": 903.1868887013921,
+      "WrongVisiblePercent": 1.8726752243153402,
+      "WrongHiddenMm": 3965.827023843107,
+      "WrongHiddenPercent": 11.968630273183258,
+      "ToleranceMm": 237.6105547013657,
+      "TolerancePercent": 0.4926637049225211,
+      "HiddenToleranceMm": 156.24844739446507,
+      "HiddenTolerancePercent": 0.4000804438838571,
+      "Observations": 9,
+      "ObservationArchives": [
+        "evidence/pipe-gate-20261119-135750/80-stacked/Box",
+        "evidence/pipe-gate-20261119-144034/80-stacked/Box",
+        "evidence/pipe-gate-20261119-151205/80-stacked/Box"
+      ]
+    },
+    {
+      "Fixture": "80-lateral",
+      "View": "Top",
+      "ModelSha256": "FA664242A6FB28D9459FCDB17E2D55A1C45762355C5E1317FA5875C403DF54F3",
+      "WrongVisibleMm": 122.98427145660524,
+      "WrongVisiblePercent": 0.024431780299403974,
+      "WrongHiddenMm": 7850.210875308371,
+      "WrongHiddenPercent": 1.7554871581560065,
+      "ToleranceMm": 123.48427145660524,
+      "TolerancePercent": 0.024531109181097698,
+      "HiddenToleranceMm": 257.5429412071062,
+      "HiddenTolerancePercent": 0.0561408881049388,
+      "Observations": 12,
+      "ObservationArchives": [
+        "evidence/pipe-gate-20261119-135750/80-lateral/Top",
+        "evidence/pipe-gate-20261119-144034/80-lateral/Top",
+        "evidence/pipe-gate-20261119-151205/80-lateral/Top",
+        "evidence/pipe-gate-20261119-154503/80-lateral/Top"
+      ]
+    },
+    {
+      "Fixture": "80-lateral",
+      "View": "SW",
+      "ModelSha256": "FA664242A6FB28D9459FCDB17E2D55A1C45762355C5E1317FA5875C403DF54F3",
+      "WrongVisibleMm": 0,
+      "WrongVisiblePercent": 0,
+      "WrongHiddenMm": 4671.154156748845,
+      "WrongHiddenPercent": 1.280162455072762,
+      "ToleranceMm": 0.5,
+      "TolerancePercent": 0.00012048736769697691,
+      "HiddenToleranceMm": 270.54517174327884,
+      "HiddenTolerancePercent": 0.07311311387900517,
+      "Observations": 9,
+      "ObservationArchives": [
+        "evidence/pipe-gate-20261119-135750/80-lateral/SW",
+        "evidence/pipe-gate-20261119-144034/80-lateral/SW",
+        "evidence/pipe-gate-20261119-151205/80-lateral/SW"
+      ]
+    },
+    {
+      "Fixture": "80-lateral",
+      "View": "Box",
+      "ModelSha256": "FA664242A6FB28D9459FCDB17E2D55A1C45762355C5E1317FA5875C403DF54F3",
+      "WrongVisibleMm": 0,
+      "WrongVisiblePercent": 0,
+      "WrongHiddenMm": 297.09291478400144,
+      "WrongHiddenPercent": 1.8811193724890618,
+      "ToleranceMm": 0.5,
+      "TolerancePercent": 0.0029860820447106425,
+      "HiddenToleranceMm": 8.796674167034269,
+      "HiddenTolerancePercent": 0.05468685749926868,
+      "Observations": 9,
+      "ObservationArchives": [
+        "evidence/pipe-gate-20261119-135750/80-lateral/Box",
+        "evidence/pipe-gate-20261119-144034/80-lateral/Box",
+        "evidence/pipe-gate-20261119-151205/80-lateral/Box"
+      ]
+    },
+    {
+      "Fixture": "320-stacked",
+      "View": "Top",
+      "ModelSha256": "0DB5684A3C9B5DE280463C2D6E7A5889F71F5CA918A4337000230FA8C7D243BF",
+      "WrongVisibleMm": 2399.613915521208,
+      "WrongVisiblePercent": 0.7055494219804476,
+      "WrongHiddenMm": 10009.646487365502,
+      "WrongHiddenPercent": 7.111922648418914,
+      "ToleranceMm": 336.156335462666,
+      "TolerancePercent": 0.09883877845792284,
+      "HiddenToleranceMm": 732.0732017052087,
+      "HiddenTolerancePercent": 0.4805708525165138,
+      "Observations": 9,
+      "ObservationArchives": [
+        "evidence/pipe-gate-20261119-140723/320-stacked/Top",
+        "evidence/pipe-gate-20261119-144034/320-stacked/Top",
+        "evidence/pipe-gate-20261119-151205/320-stacked/Top"
+      ]
+    },
+    {
+      "Fixture": "320-stacked",
+      "View": "SW",
+      "ModelSha256": "0DB5684A3C9B5DE280463C2D6E7A5889F71F5CA918A4337000230FA8C7D243BF",
+      "WrongVisibleMm": 5548.962967248208,
+      "WrongVisiblePercent": 2.200247019753353,
+      "WrongHiddenMm": 18955.51363545492,
+      "WrongHiddenPercent": 9.042863858644827,
+      "ToleranceMm": 2304.067006598606,
+      "TolerancePercent": 0.9135971161643273,
+      "HiddenToleranceMm": 2088.079105183613,
+      "HiddenTolerancePercent": 0.9324421509629296,
+      "Observations": 12,
+      "ObservationArchives": [
+        "evidence/pipe-gate-20261119-140723/320-stacked/SW",
+        "evidence/pipe-gate-20261119-144034/320-stacked/SW",
+        "evidence/pipe-gate-20261119-151205/320-stacked/SW",
+        "evidence/pipe-gate-20261119-154503/320-stacked/SW"
+      ]
+    },
+    {
+      "Fixture": "320-stacked",
+      "View": "Box",
+      "ModelSha256": "0DB5684A3C9B5DE280463C2D6E7A5889F71F5CA918A4337000230FA8C7D243BF",
+      "WrongVisibleMm": 821.8702841816869,
+      "WrongVisiblePercent": 1.373844881818773,
+      "WrongHiddenMm": 5689.328642029442,
+      "WrongHiddenPercent": 18.07284221921446,
+      "ToleranceMm": 252.4719427475478,
+      "TolerancePercent": 0.4220341007850366,
+      "HiddenToleranceMm": 467.1804343941885,
+      "HiddenTolerancePercent": 1.2103102863351467,
+      "Observations": 9,
+      "ObservationArchives": [
+        "evidence/pipe-gate-20261119-140723/320-stacked/Box",
+        "evidence/pipe-gate-20261119-144034/320-stacked/Box",
+        "evidence/pipe-gate-20261119-151205/320-stacked/Box"
+      ]
+    },
+    {
+      "Fixture": "320-lateral",
+      "View": "Top",
+      "ModelSha256": "B9C4AD4C4742490F537BEDCA946FE5C9D5E04DF0DA040E961305419A18FDB37C",
+      "WrongVisibleMm": 163.97902860888135,
+      "WrongVisiblePercent": 0.008143926898797987,
+      "WrongHiddenMm": 32003.01196892139,
+      "WrongHiddenPercent": 1.7884423925179143,
+      "ToleranceMm": 164.47902860888135,
+      "TolerancePercent": 0.008168759119624903,
+      "HiddenToleranceMm": 159.2238341074335,
+      "HiddenTolerancePercent": 0.008359532674803256,
+      "Observations": 9,
+      "ObservationArchives": [
+        "evidence/pipe-gate-20261119-140723/320-lateral/Top",
+        "evidence/pipe-gate-20261119-144034/320-lateral/Top",
+        "evidence/pipe-gate-20261119-151205/320-lateral/Top"
+      ]
+    },
+    {
+      "Fixture": "320-lateral",
+      "View": "SW",
+      "ModelSha256": "B9C4AD4C4742490F537BEDCA946FE5C9D5E04DF0DA040E961305419A18FDB37C",
+      "WrongVisibleMm": 0,
+      "WrongVisiblePercent": 0,
+      "WrongHiddenMm": 18276.104401425106,
+      "WrongHiddenPercent": 1.2525719776837643,
+      "ToleranceMm": 0.5,
+      "TolerancePercent": 3.012177318812727E-05,
+      "HiddenToleranceMm": 258.4352727260193,
+      "HiddenTolerancePercent": 0.017599192381804032,
+      "Observations": 9,
+      "ObservationArchives": [
+        "evidence/pipe-gate-20261119-140723/320-lateral/SW",
+        "evidence/pipe-gate-20261119-144034/320-lateral/SW",
+        "evidence/pipe-gate-20261119-151205/320-lateral/SW"
+      ]
+    },
+    {
+      "Fixture": "320-lateral",
+      "View": "Box",
+      "ModelSha256": "B9C4AD4C4742490F537BEDCA946FE5C9D5E04DF0DA040E961305419A18FDB37C",
+      "WrongVisibleMm": 0,
+      "WrongVisiblePercent": 0,
+      "WrongHiddenMm": 300.08034874882685,
+      "WrongHiddenPercent": 1.8996322877463423,
+      "ToleranceMm": 0.5,
+      "TolerancePercent": 0.00298608204471226,
+      "HiddenToleranceMm": 10.977568615307348,
+      "HiddenTolerancePercent": 0.06658075372180774,
+      "Observations": 9,
+      "ObservationArchives": [
+        "evidence/pipe-gate-20261119-140723/320-lateral/Box",
+        "evidence/pipe-gate-20261119-144034/320-lateral/Box",
+        "evidence/pipe-gate-20261119-151205/320-lateral/Box"
+      ]
+    }
+  ],
+  "CalibrationReceipts": [
+    "evidence/pipe-gate-20261119-155444",
+    "evidence/pipe-gate-20261119-142917",
+    "evidence/pipe-gate-20261119-151205",
+    "evidence/pipe-gate-20261119-154503"
+  ]
+}

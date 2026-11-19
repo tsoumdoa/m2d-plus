@@ -7,6 +7,7 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="../../tools/measurement/*.cs" Link="Measurement/%(Filename)%(Extension)" />
     <ProjectReference Include="../../src/M2DPlus.Rhino/M2DPlus.Rhino.csproj" />
     <ProjectReference Include="../../src/M2DPlus.Grasshopper/M2DPlus.Grasshopper.csproj" ReferenceOutputAssembly="false" />
     <PackageReference Include="Grasshopper" Version="$(RhinoApiVersion)" ExcludeAssets="runtime" />

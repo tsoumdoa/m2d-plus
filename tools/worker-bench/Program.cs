@@ -27,6 +27,9 @@ internal static class Program
                 if(args[0]=="identity")Inspect(args[1],args.Length>2?args[2]:null).GetAwaiter().GetResult();else Measure(args[1],args[2],int.Parse(args[3]),args.Length>4?int.Parse(args[4]):0).GetAwaiter().GetResult();return 0;
             }
             var resolver=Assembly.LoadFrom(args[1]);resolver.GetType("RhinoInside.Resolver",true)!.GetMethod("Initialize",[typeof(string)])!.Invoke(null,["C:/Program Files/Rhino 8/System"]);
+            if(args[0]=="pipe-gate")return PipeGate.Run(args);
+            if(args[0]=="pipe-compare"){PipeGate.CompareArchives(args[2],args[3],args[4]);return 0;}
+            if(args[0]=="pipe-diagnose"){PipeGate.DiagnoseArchives(args[2],args[3],args[4]);return 0;}
             if(args[0]=="scope-radius-cost"){ScopeFirstBench.RadiusCost(args[2],args[3]);return 0;}
             if(args[0]=="scope-storeys"){ScopeFirstBench.GenerateStoreys(args[2]);return 0;}
             if(args[0]=="scope-corpus"){ScopeFirstBench.Corpus(args[2],args[3],args[4]);return 0;}
