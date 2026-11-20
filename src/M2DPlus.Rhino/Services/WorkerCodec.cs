@@ -84,7 +84,8 @@ internal static class WorkerCodec
     }
     internal static string TimingKey(ViewRequest view, NativeSettings settings, WorkerFingerprint fingerprint) =>
         Hash(Encode(new { fingerprint, Policy = HldProjection.Policy, settings.CullSources,
-            View = view with { Settings = null }, Settings = view.Settings?.VisibilityKey() }));
+            View = view with { Settings = null }, Settings = view.Settings?.VisibilityKey() })
+            .Concat(view.Cut is null ? [] : Encoding.UTF8.GetBytes(SectionValidation.Policy)).ToArray());
     internal sealed record Reply(RequestIdentity Identity, int ViewIndex, byte[] Drawing);
     internal sealed record Piece(string Geometry, string? Depth, string SourceIdentity, int[] SourcePath, int SourceItem, SourceSection Source,
         LineClass Class, LineClass SolvedClass, bool Profile, bool FarCandidate, DepthInterval Depths, double Intensity);

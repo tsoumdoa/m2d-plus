@@ -10,11 +10,21 @@ namespace M2DPlus.Rhino.Sections;
 /// <see cref="CopyLocal"/> returns an owned copy of the untransformed definition geometry and is safe to call
 /// from any thread. Sources under a non-similar transform have no canonical shape and are never shared.
 /// </summary>
-internal sealed record SectionCanonical(string Key, double Scale, Func<GeometryBase> CopyLocal);
+internal sealed record SectionCanonical(string Key, double Scale, Func<GeometryBase> CopyLocal)
+{
+    internal Transform Placement { get; init; } = Transform.Identity;
+
+    internal SectionValidation? LocalValidation(SectionValidation? validation)
+    {
+        if (validation is null) return null;
+        if (!Placement.TryGetInverse(out var inverse)) throw new SectionFailure("Cannot invert section definition placement.");
+        return validation.Transform(Transform.Scale(Point3d.Origin, Scale) * inverse);
+    }
+}
 
 /// <summary>
-/// Self-intersection verdicts per (definition content, scale, tolerance), owned by one prepared scene and cleared
-/// with it. A verdict is computed once, on the canonical definition-local geometry, so it never depends on which
+/// Self-intersection verdicts per (definition content, scale, tolerance, local cut slabs), owned by one prepared scene and cleared
+/// with it. A verdict is computed once, on the canonical definition-local geometry and local cut, so it never depends on which
 /// instance asked first. The section engine asks from one thread, before any parallel work starts.
 /// "" means valid; anything else is the failure message.
 /// </summary>
@@ -30,23 +40,26 @@ internal sealed class SectionVerdictCache : IDisposable
     internal int LocalComputations => Volatile.Read(ref _localComputations);
     internal bool IsDisposed => _disposed;
 
-    internal string Verdict(SectionCanonical canonical, double tolerance)
+    internal string Verdict(SectionCanonical canonical, double tolerance, SectionValidation? validation = null)
     {
         if (_disposed) throw new ObjectDisposedException(nameof(SectionVerdictCache));
-        var key = canonical.Key + "|tolerance=" + tolerance.ToString("R", System.Globalization.CultureInfo.InvariantCulture);
+        var local = canonical.LocalValidation(validation);
+        var key = canonical.Key + "|scale=" + canonical.Scale.ToString("R", System.Globalization.CultureInfo.InvariantCulture) +
+            "|tolerance=" + tolerance.ToString("R", System.Globalization.CultureInfo.InvariantCulture) + "|" + (local?.Key ?? "whole");
         return _verdicts.GetOrAdd(key, _ => new Lazy<string>(() =>
         {
             Interlocked.Increment(ref _computations);
-            return SectionGeometry.CanonicalVerdict(canonical, tolerance, this);
+            return SectionGeometry.CanonicalVerdict(canonical, tolerance, this, local);
         }, LazyThreadSafetyMode.ExecutionAndPublication)).Value;
     }
 
     // Exact complete archives only: translated copies of an exploded building element
     // can share validation without treating near-equal shapes as congruent.
-    internal string LocalVerdict(Brep local, double tolerance, Func<string> compute)
+    internal string LocalVerdict(Brep local, double tolerance, Func<string> compute, SectionValidation? validation = null)
     {
         if (_disposed) throw new ObjectDisposedException(nameof(SectionVerdictCache));
-        var key = Services.GeometryFingerprint.Compute(local) + "|tolerance=" + tolerance.ToString("R", System.Globalization.CultureInfo.InvariantCulture);
+        var key = Services.GeometryFingerprint.Compute(local) + "|tolerance=" + tolerance.ToString("R", System.Globalization.CultureInfo.InvariantCulture) +
+            "|" + (validation?.Key ?? "whole");
         return _localVerdicts.GetOrAdd(key, _ => new Lazy<string>(() =>
         {
             Interlocked.Increment(ref _localComputations);
@@ -66,11 +79,12 @@ internal sealed class SharedSource : IDisposable
     internal SectionSource Source { get; }
     private readonly SectionRequest _request;
     private readonly string? _verdict;
+    private readonly Plane? _farPlane;
     private Brep? _copy; private List<Brep>? _components; private Exception? _failure; private bool _built;
     private readonly Dictionary<int, (ComponentClassification Classification, StableSectionCertificate.Evidence? Evidence)> _near = new();
     /// <param name="verdict">The source's settled validation verdict ("" is valid); null validates its own geometry here.</param>
-    internal SharedSource(SectionSource source, SectionRequest request, string? verdict)
-    { Source = source; _request = request; _verdict = verdict; }
+    internal SharedSource(SectionSource source, SectionRequest request, string? verdict, Plane? farPlane = null)
+    { Source = source; _request = request; _verdict = verdict; _farPlane = farPlane; }
 
     /// <summary>Borrowed components. A conversion or validation failure is remembered and rethrown to every caller.</summary>
     internal IReadOnlyList<Brep> Components()
@@ -91,7 +105,7 @@ internal sealed class SharedSource : IDisposable
         var copy = SectionGeometry.Convert(Source.Geometry, tolerance, validate: false);
         try
         {
-            if (_verdict is null) SectionGeometry.ValidateFaceIntersections(copy, tolerance);
+            if (_verdict is null) SectionGeometry.ValidateFaceIntersections(copy, tolerance, validation: SectionValidation.For(_request, _farPlane));
             else if (_verdict.Length != 0) throw new SectionFailure(_verdict);
             _components = SectionGeometry.MaterialComponents(copy, tolerance);
             _copy = copy;

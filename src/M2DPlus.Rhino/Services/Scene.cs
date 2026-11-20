@@ -196,8 +196,8 @@ public sealed class PreparedScene : IDisposable
         var scale = double.Parse(Math.Cbrt(Math.Abs(transform.Determinant)).ToString("G12", invariant), invariant);
         if (!double.IsFinite(scale) || scale <= 0) return null;
         var definition = leaf.Geometry.Value;
-        return scale == 1 ? new(leaf.Key, 1, definition.Copy)
-            : new(leaf.Key + "|scale=" + scale.ToString("R", invariant), scale, definition.Copy);
+        return scale == 1 ? new(leaf.Key, 1, definition.Copy) { Placement = transform }
+            : new(leaf.Key + "|scale=" + scale.ToString("R", invariant), scale, definition.Copy) { Placement = transform };
     }
     public void Dispose()
     {

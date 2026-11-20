@@ -64,10 +64,52 @@ ids; filled/no-fill material records use `/region/`. No GH paths are constructed
 Validity/manifold checks precede material inference. Mesh self-intersection checking
 must succeed with no detected perforations/overlaps. Mesh conversion uses planar
 face Breps rather than duplicate mesh-plane contours. Brep face-pair intersections
-away from shared topology are rejected. Native isolated intersection points must
+away from shared topology are rejected within the material-plane validation domain
+described below. Native isolated intersection points must
 also lie on both trimmed faces; triangular-face underlying-surface corner points
 can otherwise be false positives. These checks are conservative native predicates,
 not a general proof for arbitrary freeform self-intersections.
+
+### Material-plane validation (owner-approved, 2026-11-20)
+
+Section validation is serial and cut-dependent (`near-cut-face-pairs-v1`). Before
+native face-pair intersection, cache each face's enclosing axis-aligned box and
+test its signed-distance interval against the near-plane slab. Include the far
+plane when preparing Route C geometry: it also constructs material caps and can
+use the stability certificate. The slab half-width is **5 × tolerance**: the
+certificate's ±4-tolerance perturbations plus the native intersection tolerance.
+Add a coordinate-scaled floating-point margin to the box test. Invalid bounds
+cannot exclude a face. Crop does not create another 3D material plane.
+
+Both faces must touch the **same** slab to be checked. Every point of an
+intersection in that slab belongs to both faces and hence both enclosing boxes;
+if either box is separated, that pair cannot affect those material intersections.
+Requiring just one face would be conservative but needlessly checks remote defects
+against long faces. A tested pair is still checked in full, so spanning boxes can
+conservatively reject remote intersections. Failure strings and shared-topology
+checks are unchanged. Mesh self-intersection and disconnected-shell material
+nesting checks remain whole-source checks.
+
+This verdict protects section loops and the near/far cap boundaries, not a global
+solid-membership oracle. Route C retains its independent classification,
+trim/split/join, validity, solidity, orientation, nonzero-volume, retained-side and
+edge-provenance checks. A failed clip still withholds its whole source and demotes
+overlapping projected footprints. HLD consumes the resulting surfaces; ordinary
+projection already accepts open Breps and whole sources without this face-pair
+test. Global face-pair validity is not a prerequisite or certificate for native
+HLD visibility. Admitting a previously refused source can nevertheless change
+background linework, which must be measured rather than assumed identical.
+The owner explicitly retained slab validation for both regions and Route C after
+observing this admission change (2026-11-20). Compare admitted bodies' own lines,
+other sources' occlusion/quarantine changes and unexplained residuals separately;
+baseline linework identity is not the acceptance rule for newly admitted sources.
+
+Verdict keys include the plane equations and slab margin as well as geometry,
+scale and tolerance. Transform planes into the scaled definition-local frame for
+canonical instances, and translate them with geometry during validation centering.
+Instances at different local cut heights cannot share a verdict. Non-similar
+instances use their own geometry fingerprint. Section drawing/timing identities
+include the validation policy; the HLD policy and uncut timing key are unchanged.
 
 Disconnected shells are checked for intersection and nested by containment using
 outward copies. Nested shell orientation must alternate; equal-orientation nested

@@ -63,6 +63,7 @@ internal static class SectionDrawing
                 request, scene.SectionVerdicts, token, far, result.Phases);
             result.Phases.Add("sections", -result.Phases.Seconds.GetValueOrDefault("route C trim"));
             result._diagnostics.Add($"Section refusals={sections.Refusals.Count}; independently certified regions={sections.Regions.Count}.");
+            result._diagnostics.Add($"Section validation: {SectionValidation.Policy}; near/far material slabs, margin={SectionValidation.For(request).Margin:G6}.");
             result.UncertainSectionComponents = sections.Components.Count(c => c.Status == SectionStatus.Uncertain);
             if (view.Settings?.CutOnly != true && range.Regime == DepthRegime.Volume)
                 failedClipFootprints.AddRange(SectionPreparation.FailedClipFootprints(bodies, sections, cut.Plane, result));
@@ -133,7 +134,9 @@ internal static class SectionDrawing
                     foreach (var feature in clip.ContactFeatures) registered.Add((feature.Geometry, new(source)));
                     if (range.GenerateFarClipLines && far is { } farPlane && sourceFar.ContainsKey(source.Identity))
                     {
-                        using var original = SectionGeometry.Convert(source.Geometry, tol);
+                        // SharedSource already checked both material slabs. Far-line
+                        // extraction must not reintroduce a whole-solid verdict here.
+                        using var original = SectionGeometry.Convert(source.Geometry, tol, validate: false);
                         foreach (var curve in SectionGeometry.Intersections(original, farPlane, tol))
                         { owned.Add(curve); registered.Add((curve, new(source, true))); }
                     }

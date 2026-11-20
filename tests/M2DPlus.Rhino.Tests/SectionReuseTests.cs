@@ -10,7 +10,7 @@ using Xunit.Abstractions;
 
 namespace M2DPlus.Rhino.Tests;
 
-/// <summary>Shared section validation: one deterministic verdict per definition shape, owned by the scene; parallel per-source work.</summary>
+/// <summary>Shared section validation: deterministic verdicts per definition shape and local cut, owned by the scene.</summary>
 [Collection("Rhino")]
 [Trait("Category", "RhinoIntegration")]
 public sealed class SectionReuseTests(RhinoHost host, ITestOutputHelper output)
@@ -45,7 +45,7 @@ public sealed class SectionReuseTests(RhinoHost host, ITestOutputHelper output)
             string.Join(";", r.Region.Loops.Select(l => $"{l.IsHole}/{l.Curve.GetLength():R}/{string.Join(",", l.Edges.Select(e => (int)e.Origin))}"))))
         .Concat(view.Diagnostics).Append(view.Info.Split('\n')[2]));
 
-    [RhinoFact] public void SelfIntersectingDefinitionIsRejectedForEveryInstanceFromOneLocalVerdictPerScale() => host.Run(() =>
+    [RhinoFact] public void SelfIntersectingDefinitionIsRejectedForEveryInstanceAtEachLocalCut() => host.Run(() =>
     {
         using var document = Document(); using var cache = new SceneCache();
         using (var shape = BowTie())
@@ -76,19 +76,21 @@ public sealed class SectionReuseTests(RhinoHost host, ITestOutputHelper output)
             Assert.Empty(view.Regions);
             Assert.DoesNotContain(view.Items, p => p.Class is LineClass.Visible or LineClass.Hidden);
         }
-        // One verdict for the four rigid placements, one for the two at scale 2.5; the stretched copy validates itself.
-        Assert.Equal(2, scene.SectionVerdicts.Computations);
-        Assert.Equal(2, scene.SectionVerdicts.Count);
+        // The exact local near/far equations differ for these five canonical
+        // placements at both cuts (mirrors reverse a local plane normal).
+        // The stretched copy validates its own geometry.
+        Assert.Equal(10, scene.SectionVerdicts.Computations);
+        Assert.Equal(10, scene.SectionVerdicts.Count);
     });
 
-    [RhinoFact] public void ValidDefinitionValidatesOnceForAllInstancesAndAllViews() => host.Run(() =>
+    [RhinoFact] public void ValidDefinitionSharesOnlyMatchingLocalCutsAcrossInstancesAndViews() => host.Run(() =>
     {
         using var document = Document(); using var cache = new SceneCache();
         using (var box = Box())
         {
             var definition = Define(document, "box", box);
             for (var i = 0; i < 40; i++)
-                document.Objects.AddInstanceObject(definition, Transform.Translation(3 * (i % 8), 3 * (i / 8), .1 * (i % 3)) * Transform.Rotation(.2 * i, Vector3d.ZAxis, Point3d.Origin));
+                document.Objects.AddInstanceObject(definition, Transform.Translation(3 * (i % 8), 3 * (i / 8), .1 * (i % 3)));
         }
         using var lease = BaselineTests.Capture(document, cache); var scene = lease.Value;
         using (var first = Solve(scene, 1, Cut()))
@@ -98,11 +100,15 @@ public sealed class SectionReuseTests(RhinoHost host, ITestOutputHelper output)
             Assert.Equal(40, view.Regions.Count);
             Assert.All(view.Regions, r => Assert.InRange(Math.Abs(r.Region.Area - 4), 0, 1e-6));
         }
-        Assert.Equal(1, scene.SectionVerdicts.Computations);
-        // Another plane, another view of the same scene: the verdict does not depend on the plane.
+        Assert.Equal(3, scene.SectionVerdicts.Computations);
+        // The three placement heights share cuts; another plane must not reuse
+        // their verdicts. An identical repeated request still does reuse them.
         using var second = Solve(scene, 2, Cut(.5), ViewRequest.Parse(new Plane(new Point3d(0, 4, 0), Vector3d.XAxis, Vector3d.ZAxis)));
         Assert.All(second.Views, v => Assert.Null(v.Error));
-        Assert.Equal(1, scene.SectionVerdicts.Computations);
+        var computations = scene.SectionVerdicts.Computations;
+        Assert.True(computations > 3);
+        using var repeat = Solve(scene, 3, Cut(.5), ViewRequest.Parse(new Plane(new Point3d(0, 4, 0), Vector3d.XAxis, Vector3d.ZAxis)));
+        Assert.Equal(computations, scene.SectionVerdicts.Computations);
     });
 
     [RhinoFact] public void CongruentInstancesShareAKeyAndNonSimilarOnesShareNothing() => host.Run(() =>
@@ -302,7 +308,7 @@ public sealed class SectionReuseTests(RhinoHost host, ITestOutputHelper output)
         cache.Dispose();
         Assert.False(verdicts.IsDisposed); Assert.Equal(2, verdicts.Count);
         using (Solve(scene, 2, Cut(.5))) { }
-        Assert.Equal(2, verdicts.Computations);
+        Assert.Equal(4, verdicts.Computations);
         lease.Dispose();
         Assert.True(verdicts.IsDisposed); Assert.Equal(0, verdicts.Count);
         using var shape = Box();

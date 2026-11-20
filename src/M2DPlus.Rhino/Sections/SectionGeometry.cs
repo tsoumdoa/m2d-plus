@@ -54,19 +54,26 @@ internal static class SectionGeometry
     }
 
     /// <summary>
-    /// A source's self-intersection verdict: "" means valid, anything else is the failure message. A source with a
+    /// A source's self-intersection verdict in the requested slabs (or whole source when null): "" means admitted,
+    /// anything else is the failure message. A source with a
     /// canonical shape takes the scene's verdict for that shape; any other source is checked on its own geometry.
     /// Call from one thread at a time: Rhino's curve overlap search is not repeatable under concurrent calls.
     /// </summary>
-    internal static string Verdict(SectionSource source, double tolerance, SectionVerdictCache verdicts)
+    internal static string Verdict(SectionSource source, double tolerance, SectionVerdictCache verdicts, SectionValidation? validation = null)
     {
-        if (source.Canonical is { } canonical) return verdicts.Verdict(canonical, tolerance);
-        try { using var copy = Convert(source.Geometry, tolerance); return ""; }
+        if (source.Canonical is { } canonical) return verdicts.Verdict(canonical, tolerance, validation);
+        try
+        {
+            using var copy = Convert(source.Geometry, tolerance, validate: false);
+            ValidateFaceIntersections(copy, tolerance, verdicts, validation);
+            return "";
+        }
         catch (SectionFailure ex) { return ex.Message; }
     }
 
-    /// <summary>The self-intersection verdict of a definition-local shape, at its instance scale. "" means valid.</summary>
-    internal static string CanonicalVerdict(SectionCanonical canonical, double tolerance, SectionVerdictCache? verdicts = null)
+    /// <summary>The verdict of a definition-local shape, at instance scale; validation planes use that scaled local frame.</summary>
+    internal static string CanonicalVerdict(SectionCanonical canonical, double tolerance, SectionVerdictCache? verdicts = null,
+        SectionValidation? validation = null)
     {
         try
         {
@@ -74,38 +81,47 @@ internal static class SectionGeometry
             if (canonical.Scale != 1 && !local.Transform(Transform.Scale(Point3d.Origin, canonical.Scale)))
                 throw new SectionFailure("Definition geometry could not be scaled for validation.");
             using var brep = Convert(local, tolerance, validate: false);
-            ValidateFaceIntersections(brep, tolerance, verdicts);
+            ValidateFaceIntersections(brep, tolerance, verdicts, validation);
             return "";
         }
         catch (SectionFailure ex) { return ex.Message; }
     }
 
-    internal static void ValidateFaceIntersections(Brep brep, double tolerance, SectionVerdictCache? verdicts = null)
+    internal static void ValidateFaceIntersections(Brep brep, double tolerance, SectionVerdictCache? verdicts = null,
+        SectionValidation? validation = null)
     {
         // Native face/edge intersections lose shared-edge overlaps at survey coordinates.
         // Their continuous topology fallback then subdivides a long edge down to tolerance.
         // Validate an owned rigid translation instead; never move published/trim geometry.
         using var local = SectionCoordinates.ValidationCopy(brep, tolerance);
-        if (verdicts is null) ValidateLocalFaceIntersections(local, tolerance);
+        var centre = brep.GetBoundingBox(true).Center;
+        validation = validation?.Transform(Transform.Translation(-centre.X, -centre.Y, -centre.Z));
+        if (verdicts is null) ValidateLocalFaceIntersections(local, tolerance, validation);
         else
         {
             var verdict = verdicts.LocalVerdict(local, tolerance, () =>
             {
-                try { ValidateLocalFaceIntersections(local, tolerance); return ""; }
+                try { ValidateLocalFaceIntersections(local, tolerance, validation); return ""; }
                 catch (SectionFailure ex) { return ex.Message; }
-            });
+            }, validation);
             if (verdict.Length != 0) throw new SectionFailure(verdict);
         }
     }
 
-    private static void ValidateLocalFaceIntersections(Brep brep, double tolerance)
+    private static void ValidateLocalFaceIntersections(Brep brep, double tolerance, SectionValidation? validation)
     {
+        var boxes = brep.Faces.Select(f => f.GetBoundingBox(true)).ToArray();
+        var touches = boxes.Select(b => validation?.Touches(b) ?? 3).ToArray();
         for (var i = 0; i < brep.Faces.Count; i++)
         for (var j = i + 1; j < brep.Faces.Count; j++)
         {
+            // An intersection in a material slab belongs to BOTH faces. Require
+            // both enclosing boxes to touch the SAME slab (near or far). This
+            // proves exclusion, unlike sampling faces or intersection curves.
+            if ((touches[i] & touches[j]) == 0) continue;
             var a = brep.Faces[i]; var b = brep.Faces[j];
-            var box = a.GetBoundingBox(true); box.Inflate(tolerance);
-            if (!BoundingBox.Intersection(box, b.GetBoundingBox(true)).IsValid) continue;
+            var box = boxes[i]; box.Inflate(tolerance);
+            if (!BoundingBox.Intersection(box, boxes[j]).IsValid) continue;
             var shared = a.AdjacentEdges().Intersect(b.AdjacentEdges()).Select(k => brep.Edges[k]).ToArray();
             // Include singular-trim vertices of triangular mesh faces, which need not have a BrepEdge.
             var aVertices = a.Loops.SelectMany(l => l.Trims).SelectMany(t => new[] { t.StartVertex.Location, t.EndVertex.Location }).ToArray();

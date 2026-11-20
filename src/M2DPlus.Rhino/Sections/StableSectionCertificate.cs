@@ -9,6 +9,7 @@ internal static class StableSectionCertificate
 {
     public const string Route = "D: perturbation stability + outward winding + Bezier slab transversality";
     internal const string PoleRecovery = "geometric sphere pole recovery";
+    internal const int PerturbationTolerances = 4;
     private sealed record Loop(double Area, double Perimeter, Point3d Centre, int? Parent, bool Hole);
     internal sealed record Evidence(Curve[] Loops) : IDisposable
     {
@@ -20,7 +21,7 @@ internal static class StableSectionCertificate
         evidence = null;
         reason = "D: requires an outward closed solid.";
         if (!source.IsSolid || source.SolidOrientation != BrepSolidOrientation.Outward) return false;
-        var delta = 4 * request.Tolerance;
+        var delta = PerturbationTolerances * request.Tolerance;
         try
         {
             // Make face and surface orientation identical on another owned copy.

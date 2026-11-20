@@ -40,6 +40,7 @@ public sealed class DrawingCache : IDisposable
                 // Kind participates in trial admission: identical cut frames can
                 // route differently when authored as Box versus Rectangle/Plane.
                 var key = WorkerCodec.Fingerprint() + "/" + HldProjection.Policy + "/" + scene.Value.VisibilityRevision + "/cull=" + settings.CullSources + "/" + string.Join("|", views.Select(v => (v with { Cut = v.Cut is { } cut ? cut with { SectionerStyle = null } : null }).Revision + "/" + v.Kind + "/" + v.Settings?.VisibilityKey()));
+                if (views.Any(v => v.Cut is not null)) key += "/" + SectionValidation.Policy;
                 LeaseEntry<DrawingBatch>.Lease? lease;
                 long generation;
                 lock (_sync) { generation = _generation; lease = key == _key ? _entry?.Acquire() : null; }
