@@ -19,6 +19,7 @@ public sealed class M2DPlusPriority : GH_AssemblyPriority
 {
     public override GH_LoadingInstruction PriorityLoad()
     {
+        UI.MachineSettings.Initialize();
         // No category icon or symbol: the component lives in Params ▸ Util (owner decision 2026-11-15), so no M2D+ tab exists.
         // View box front-face fills (owner decision 2026-11-15). Never let the display stop the plug-in loading.
         try { M2DPlus.Rhino.Views.ViewBoxFaceConduit.Install(); }

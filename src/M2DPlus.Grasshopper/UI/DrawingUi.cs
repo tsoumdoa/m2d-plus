@@ -92,6 +92,8 @@ public sealed class DrawingUi
 
     public void Execute(string command, bool shift)
     {
+        if (command.StartsWith(ParallelViewsMenu.CommandPrefix, StringComparison.Ordinal))
+        { MachineSettings.Execute(command[ParallelViewsMenu.CommandPrefix.Length..]); return; }
         if (MenuCommands.TryParseSet(command, out var key, out var value))
         { Commit(State.With(key, value), $"M2D+ {key} = {value}"); return; }
         if (command is MenuCommands.PreviewObjectColours or MenuCommands.PreviewInk)
@@ -211,7 +213,7 @@ public sealed class DrawingUi
         var presentation = new SettingsPresentation(State, CurrentContext);
         var hasInfo = _owner.Params.Output.Count > 8 && _owner.Params.Output[8].VolatileDataCount > 0;
         var views = ViewInput is { } param ? ViewObjects.State(param, RhinoDoc.ActiveDoc) : null;
-        return new(presentation, CurrentRuntime, hasInfo, Views: views);
+        return new(presentation, CurrentRuntime, hasInfo, Views: views, ParallelViews: MachineSettings.Current);
     }
 
     public bool Write(GH_IWriter writer)

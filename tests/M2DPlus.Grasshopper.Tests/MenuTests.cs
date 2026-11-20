@@ -18,7 +18,7 @@ public sealed class MenuTests
         var labels = Menu(ComponentUiState.Default, DrawingPhase.Running).Where(n => !n.IsSeparator).Select(n => n.Label).ToArray();
         Assert.Equal(["Convert to view boxes", "Flip view direction", "Create view from current viewport", "Select view objects",
             "Bake drawing", "Bake one", "Bake layers", "Run automatically", "Run now", "Cancel",
-            "Visibility engine", "Hidden lines", "Tangent edges", "Seams", "Min visible", "Tolerance", "Beyond", "Far clip", "Cut only", "Depth cueing", "Cuts", "Hatch", "Scale", "Line weights",
+            "Visibility engine", "Hidden lines", "Tangent edges", "Seams", "Min visible", "Tolerance", "Parallel views", "Beyond", "Far clip", "Cut only", "Depth cueing", "Cuts", "Hatch", "Scale", "Line weights",
             "Reset menu defaults", "Preview", "Output tree", "Copy info", "Copy settings as text", "Clear drawing cache"], labels);
         Assert.DoesNotContain(Menu(ComponentUiState.Default, DrawingPhase.Done), n => n.Label == "Cancel");
         var all = Flatten(Menu(ComponentUiState.Default)).ToArray();

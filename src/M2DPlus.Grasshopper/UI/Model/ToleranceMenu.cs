@@ -5,8 +5,9 @@ using M2DPlus.Core;
 namespace M2DPlus.Grasshopper.UI.Model;
 
 /// <summary>Custom tolerance entry, using the same resolver/validation as Settings and view-object user text.</summary>
-public sealed record ToleranceTextEntry(string Text, DocumentUnits Units)
+public sealed record ToleranceTextEntry(string Text, DocumentUnits Units) : IMenuTextEntry
 {
+    public string PromptSuffix => " (document units; Enter)";
     public bool TryAccept(string text, out string? command, out string? error)
     {
         // Use a stored row, not Settings text: embedded newlines/assignments must never become other settings.
@@ -56,7 +57,7 @@ public static class ToleranceMenu
             : values.Length == 0 ? settings.Context.DocumentTolerance.ToString("R", CultureInfo.InvariantCulture) : "varies";
         // Presets remain editable under view-object overrides, like other Choice fields. Custom entry is stricter.
         children.Add(new("Custom…", Enabled: field.InputViews == 0 && field.ObjectViews == 0 && !field.Locked,
-            Hint: EntryHint, TextEntry: new(text, units)));
+            Hint: EntryHint, TextEntry: new ToleranceTextEntry(text, units)));
         return menu with { Children = children.ToImmutableArray(), Tooltip = SettingsCatalog.Spec("tolerance").Tooltip + " " + bands + " " + guidance };
     }
 }

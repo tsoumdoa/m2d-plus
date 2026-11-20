@@ -1134,12 +1134,15 @@ fade.limit = 25 %
 | **Output and diagnosis** | | | | | |
 | `tree` | `auto` · `layer` · `object` | `auto` (by layer for the document or referenced objects, else by object, §1.3) | — | — | view object (`m2d.tree`), menu |
 | `bake` | `view-layer` · `layer-view` · `layer` · `view-type` | **`view-layer`** (§8.1). Bake time only: changing it never redraws | — | — | view object (`m2d.bake`), menu *Bake layers ▸* |
+| **Machine setting (not a Settings key)** | | | | | |
+| Parallel views | Auto · integer 1..`max(1, logical cores - 2)` | Auto: 1 below 16 cores, 2 on 16–31, 4 on 32+ | concurrent views, subject to memory | — | machine menu only; shared by all components, persistent outside `.gh` |
 
 ---
 
 ## 7. Right-click menu (component)
 
-These items come after GH's standard items (Preview, Enabled, Bake…, Help). Every toggle edits the component's
+These items come after GH's standard items (Preview, Enabled, Bake…, Help). Parallel views is a **machine setting**;
+the other drawing options edit the component's
 **menu defaults** (every view, below view objects and input, §6); an item whose key the input sets for every view is
 greyed and shows "(set by input)", and one some view objects override says "(set on 1 of 3 view objects)".
 
@@ -1165,6 +1168,9 @@ Min visible ▸ Off ✓ · 1 mm · 2 mm · 5 mm · 10 mm      min_visible = off 
 Tolerance ▸ Document (0.001 mm) ✓ · 0.001 mm · 0.01 mm · 0.05 mm · 0.1 mm · 1 mm   tolerance = document | <length>   (§3.4)
             Custom… (document units; Enter)
             [0.001             ]       positive length with optional units; document restores default
+Parallel views ▸ Auto (4) ✓ · 1 · 2 · 4 · 6 · 8        machine setting (example: 32 logical cores)
+                 Custom… (whole number; Enter)
+                 [4                 ]       integer from 1 to max(1, logical cores - 2)
 Beyond ▸     Auto ✓ · Off · 1 m · 3 m · 10 m          beyond  = auto | off | <distance>
 Far clip ▸   No clip · Clip with line · Clip without line ✓   farclip = none | line | noline
 Cut only                              cutonly  = off | on
@@ -1186,6 +1192,24 @@ Clear drawing cache (412 MB)
 Tolerance's tooltip reports the scale bands and current recommendation (§3.4). Numerical presets have suitability
 tooltips, including a warning if too coarse for the current scale. Custom… is disabled under any tolerance override;
 invalid entries stay open with a one-line red error. The menu value persists on the component with the other defaults.
+
+**Parallel views** controls how many views solve at once, shared by every M2D+ component on this machine.
+Only presets up to the CPU ceiling are shown; Custom… accepts an integer from 1 to that ceiling, shows the current
+value, and keeps invalid entries open with a one-line red error. Auto shows its resolved 1/2/4 count. The chosen
+preset, Auto, or Custom… is checked. The value lives in the plug-in's `GH_SettingsServer("M2DPlus")` database,
+key `ParallelViews`, in `%APPDATA%\Grasshopper`; zero/missing means Auto. It survives restarts, is never saved
+in `.gh`, copied as Settings text, or reset by Reset menu defaults. Invalid persisted values fall back to Auto.
+`M2DPLUS_HLD_WORKERS`, when present, wins: the submenu says **Parallel views (locked by env)**, disables its
+choices and explains the lock in its tooltip. Invalid env text selects Auto while retaining the lock; numeric
+env values are clamped to the CPU ceiling. Otherwise the persisted menu choice wins over Auto. This execution
+preference is outside the per-view precedence chain (§6) and drawing-cache identity. A change takes effect on the
+next worker batch without restarting Rhino or expiring a solution; an active batch finishes at its original limit.
+
+The tooltip explains: more views run at once **if memory allows**, and the memory check may start fewer. Each view
+uses its own background Rhino with a full copy of the scene. Each view gets somewhat slower, but the whole set
+finishes sooner. It helps only drawing sets of **2+ views**. Measured on 32 threads, four plans took **217 s with
+2 workers** and **131 s with 4** (one measured run; see [worker design](drawing-workers.md)). CPU and memory
+ceilings, per-worker caps and Job Objects still apply.
 
 ---
 

@@ -60,7 +60,7 @@ public sealed class DrawingWorkerPool : IDisposable
             }
             memory=memory with{AvailableBytes=Math.Min(memory.PhysicalBytes,checked(memory.AvailableBytes+resident))};
             long extra=0;
-            var admittedWorkers=Math.Min(_options.Count,_options.HldWorkerLimit);
+            var admittedWorkers=Math.Min(_options.Count,_options.CurrentHldWorkerLimit);
             var plan=WorkerMemoryPolicy.Size(cost,views.Count,admittedWorkers,memory,_options.MemoryBytes,extra);
             if(plan.Count==0 && retained)
             {

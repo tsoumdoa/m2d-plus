@@ -22,7 +22,7 @@ internal static class MenuRenderer
         if (node.TextEntry is { } entry && menu is ToolStripDropDown dropDown)
         {
             GH_DocumentObject.Menu_AppendSeparator(dropDown);
-            GH_DocumentObject.Menu_AppendItem(dropDown, node.Label + " (document units; Enter)", null, false, false);
+            GH_DocumentObject.Menu_AppendItem(dropDown, node.Label + entry.PromptSuffix, null, false, node.Checked);
             var error = new ToolStripLabel { ForeColor = System.Drawing.Color.FromArgb(0xC4, 0x2B, 0x1C), Visible = false };
             var box = GH_DocumentObject.Menu_AppendTextItem(dropDown, entry.Text, (sender, e) =>
             {

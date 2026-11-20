@@ -6,7 +6,7 @@ namespace M2DPlus.Grasshopper.UI.Model;
 
 /// <summary>A toolkit-free menu item. Command is executed by the GH adapter; Hint is the right-aligned key text.</summary>
 public sealed record MenuNode(string Label, string? Command = null, bool Enabled = true, bool Checked = false,
-    string? Hint = null, ImmutableArray<MenuNode> Children = default, string? Tooltip = null, ToleranceTextEntry? TextEntry = null)
+    string? Hint = null, ImmutableArray<MenuNode> Children = default, string? Tooltip = null, IMenuTextEntry? TextEntry = null)
 {
     public static MenuNode Separator { get; } = new("-");
     public bool IsSeparator => Label == "-" && Command is null;
@@ -69,7 +69,7 @@ public static class ViewCommands
 }
 
 public sealed record MenuContext(SettingsPresentation Settings, DrawingRuntime Runtime, bool HasInfo, string? CacheSize = null,
-    ViewCommands.State? Views = null);
+    ViewCommands.State? Views = null, ParallelViewsChoice? ParallelViews = null);
 
 /// <summary>The component's right-click items (UX rev. 4 §7). Setting items edit the menu defaults. An item whose key
 /// the Settings input sets for every view is greyed "(set by input)"; view-object overrides are only reported.</summary>
@@ -101,6 +101,7 @@ public static class ComponentMenu
         items.Add(Toggle(settings, "Seams", "seams"));
         items.Add(Choice(settings, "Min visible", "min_visible") with { Tooltip = SettingsCatalog.Spec("min_visible").Tooltip });
         items.Add(ToleranceMenu.Build(settings));
+        items.Add(ParallelViewsMenu.Build(context.ParallelViews ?? ParallelViewsPolicy.Resolve(Environment.ProcessorCount, null, null)));
         items.Add(Choice(settings, "Beyond", "beyond"));
         items.Add(Choice(settings, "Far clip", "farclip"));
         items.Add(Toggle(settings, "Cut only", "cutonly"));
@@ -111,7 +112,7 @@ public static class ComponentMenu
         { Tooltip = "Line weights only; the drawing stays 1:1. " + SettingsCatalog.WeightStrip(settings.Field("scale").Text, settings.Field("weights").Text) });
         items.Add(Choice(settings, "Line weights", "weights"));
         items.Add(new("Reset menu defaults", MenuCommands.Reset, state.HasMenuValues,
-            Tooltip: "Every item above back to its built-in default. View objects and the Settings input are not changed."));
+            Tooltip: "Component menu defaults back to their built-in values. The Parallel views machine setting, view objects and Settings input are not changed."));
         items.Add(MenuNode.Separator);
         var ink = state.Preview.Contains(PreviewLayers.Ink);
         items.Add(new("Preview", Children: PreviewLayers.All

@@ -29,6 +29,29 @@ public sealed class WorkerTests(RhinoHost host)
         doc.Objects.AddInstanceObject(definition,Transform.Translation(10,0,0)*Transform.Mirror(Plane.WorldYZ));
     }
     private static RequestIdentity Identity(PreparedScene scene,long generation=1)=>new(scene.Revision,"views","settings",generation);
+    [RhinoFact] public void SamePoolReplansParallelViewsAtEachBatchWithoutChangingDrawingIdentity()=>host.Run(()=>
+    {
+        using var doc=RhinoDoc.CreateHeadless(null);Populate(doc);using var cache=new SceneCache();using var lease=Capture(doc,cache);
+        var limit=1;var reads=0;
+        var ceiling=Math.Min(2,WorkerMemoryPolicy.CpuLimit(Environment.ProcessorCount));
+        using var pool=new DrawingWorkerPool(Options(ceiling) with
+        {
+            ReadHldWorkerLimit=()=>{reads++;return limit;},
+            ReadMemory=()=>new(64*WorkerMemoryPolicy.GiB,48*WorkerMemoryPolicy.GiB)
+        });
+        var identity=Identity(lease.Value);
+        var views=Views.Take(2).ToArray();
+        foreach(var count in new[]{1,ceiling,1})
+        {
+            limit=count;
+            using var batch=pool.SolveAsync(lease.Value,identity,views,new(),default).GetAwaiter().GetResult();
+            Assert.Equal(count,pool.LastSizing!.Count);
+            Assert.All(batch.Views,v=>Assert.Null(v.Error));
+            Assert.InRange(pool.ProcessIds.Length,1,count);
+            Assert.True(pool.LastSizing.Count*pool.LastSizing.CapBytes+pool.LastSizing.HostReplyBytes<=pool.LastSizing.BudgetBytes);
+        }
+        Assert.Equal(3,reads);
+    });
     private static ViewRequest[] Views
     {
         get
