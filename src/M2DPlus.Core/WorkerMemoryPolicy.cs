@@ -19,8 +19,12 @@ public static class WorkerMemoryPolicy
     public static long ReplyExpandedLimit(long reservation) => Math.Max(0,
         Math.Min(Array.MaxLength, (reservation - ReplyStreamAllowance) / 2));
     public static int CpuLimit(int logicalCores) => Math.Max(1, logicalCores - 2);
-    /// <summary>Each HLD solve can use all host cores: one worker on smaller hosts, at most two on 16+ cores.</summary>
-    public static int ThreadedHldLimit(int logicalCores) => logicalCores >= 16 ? 2 : 1;
+    /// <summary>Each HLD solve is threaded: one worker below 16 cores, two on 16-31, four on 32+. Section work is
+    /// largely serial, so four views on 32 threads finished a four-plan set 1.66x faster than two (2026-11-20).</summary>
+    /// <param name="overrideValue">Optional M2DPLUS_HLD_WORKERS value; clamped to the CPU ceiling, with invalid values retaining the default.</param>
+    public static int ThreadedHldLimit(int logicalCores, string? overrideValue = null) =>
+        int.TryParse(overrideValue, out var count) ? Math.Clamp(count, 1, CpuLimit(logicalCores)) :
+        logicalCores >= 32 ? 4 : logicalCores >= 16 ? 2 : 1;
     public static long Budget(MachineMemory memory)
     {
         if (memory.PhysicalBytes <= 0 || memory.AvailableBytes <= 0) return 0;

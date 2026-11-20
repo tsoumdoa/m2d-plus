@@ -182,10 +182,11 @@ Owner/orchestrator review decision: this local-orange policy overrides the earli
 
 Zero depth and positive sub-tolerance depth have distinct grey notices when cut-only is off,
 including views with no crossing bodies. They never claim that Cut only was enabled.
-Worker admission allows one full native pool below 16 logical cores, at most two on larger
-hosts, also limited by the configured count, views and memory. DOTNET_PROCESSOR_COUNT
+Worker admission allows one full native pool below 16 logical cores, two on 16-31 and four
+on 32+ (see [drawing workers](drawing-workers.md#pool-and-admission)), also limited by the
+configured count, views and memory. DOTNET_PROCESSOR_COUNT
 controls only managed code; no native thread cap/CPU affinity is promised. On larger hosts
-two native solves can oversubscribe the machine by roughly two full pools; other Rhino
+concurrent native solves can oversubscribe the machine by several full pools; other Rhino
 processes remain outside this policy. Keep this explicit limitation instead of pretending
 managed processor advertisement controls Rhino's native pool.
 

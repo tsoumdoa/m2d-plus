@@ -44,11 +44,11 @@ Every solve request and reply carries the complete RequestIdentity (scene/view/s
 
 ## Pool and admission
 
-There is one shared pool across components, with one batch reservation at a time. The CPU ceiling is `max(1, logical cores - 2)`. Expert count overrides cannot exceed it. Threaded HLD adds a conservative admission ceiling: **one worker below 16 host logical cores, at most two on 16+ cores**, regardless of larger expert count overrides. Actual concurrency is the minimum of both CPU ceilings, the configured count, the view count and `floor((memory budget - host reply reservation) / per-view cap)`. One whole view runs per process with threaded HLD, without tiling. Host and worker use the same required threading/requested-hidden policy.
+There is one shared pool across components, with one batch reservation at a time. The CPU ceiling is `max(1, logical cores - 2)`. Expert count overrides cannot exceed it. Threaded HLD adds an admission ceiling: **one worker below 16 host logical cores, two on 16-31, four on 32+**, regardless of larger `M2DPLUS_WORKERS` values. Section work is largely single-threaded, so on 32 threads a cold four-plan set of a private 1,500-solid pipe model took 217 s with two workers, 192 s with three and 131 s with four (n=1, 2026-11-20; about 6.5 GiB peak worker memory). Individual views get somewhat slower from shared cores. The machine menu **Parallel views** replaces that Auto ceiling; a present `M2DPLUS_HLD_WORKERS` takes precedence and locks the menu. Numeric env values clamp to the CPU ceiling; invalid env text uses Auto. Without the env override, a valid persisted menu choice applies, else Auto. Actual concurrency is the minimum of both CPU ceilings, the configured count, the view count and `floor((memory budget - host reply reservation) / per-view cap)`. One whole view runs per process with threaded HLD, without tiling. Host and worker use the same required threading/requested-hidden policy.
 
 A shared work queue lets each free worker take another view. For another batch on the same scene, previously measured longest views start first; unmeasured views retain input order. Results remain in input order. History retains only the current batch and clears on scene-revision changes. Scene transport was already retained per process; changing only views still avoids scene encoding and transfer.
 
-Each process advertises `max(1, floor((host logical cores - 2) / admitted workers))` processors through `DOTNET_PROCESSOR_COUNT`. Children also run at BelowNormal process priority. This advertises a managed processor allowance only: DOTNET_PROCESSOR_COUNT does not limit Rhino's native HLD pool. Each solve can use all host cores. The one/two-worker admission ceiling limits concurrent full pools; on large hosts two pools can still oversubscribe CPU. It is not OS affinity or a native thread cap. The host's separate in-process HLD slot and other Rhino applications are outside this worker-admission limit. The same conservative worker ceiling also applies to all-cut-only batches, avoiding per-job scheduling exceptions. A changed processor allowance retires idle workers, as does a changed cap. An isolated memory retry gets the full managed allowance. Busy workers never expire; idle workers now expire after ten minutes.
+Each process advertises `max(1, floor((host logical cores - 2) / admitted workers))` processors through `DOTNET_PROCESSOR_COUNT`. Children also run at BelowNormal process priority. This advertises a managed processor allowance only: DOTNET_PROCESSOR_COUNT does not limit Rhino's native HLD pool. Each solve can use all host cores. The resolved Parallel views ceiling limits concurrent full pools; multiple pools can still oversubscribe CPU. It is not OS affinity or a native thread cap. The host's separate in-process HLD slot and other Rhino applications are outside this worker-admission limit. The same conservative worker ceiling also applies to all-cut-only batches, avoiding per-job scheduling exceptions. A changed processor allowance retires idle workers, as does a changed cap. An isolated memory retry gets the full managed allowance. Busy workers never expire; idle workers now expire after ten minutes.
 
 Windows supplies physical RAM and the lesser of available physical RAM and available commit. Below the 32 GiB machine class the aggregate budget remains `min(60% physical, 80% available)`. At 32 GiB class and above (at least 30 GiB reported usable physical RAM, allowing hardware reservations) it is `min(75% physical, 85% available)`. Thus 32/64/128 GiB hosts leave at least 8/16/32 GiB outside worker caps **and the host transport reservation** for Rhino, retained results and the OS, with a further current-availability constraint. Owned idle resident memory is reclaimable for admission; other applications' memory is never counted as reclaimable. If working-set credit still gives a refusal, reap the pool's idle workers before taking a fresh RAM/commit snapshot and sizing again: paged-out private commit is not covered by working-set credit.
 
@@ -73,7 +73,7 @@ Fake-machine unit-tested policy outputs at **75% of physical RAM available** and
 
 | Limit | Current policy and reason |
 |---|---|
-| Active worker count | Threaded HLD admits 1 below 16 host cores, at most 2 on larger hosts; config/view/memory limits may reduce this |
+| Active worker count | Auto admits 1 below 16 host cores, 2 on 16–31, 4 on 32+; machine menu or env can raise/lower this up to the CPU ceiling; config/view/memory limits may reduce it |
 | Host scheduler: 512 MiB estimate | Retained as interactive dispatch threshold, never a worker refusal |
 | 600,000 Brep faces times views; 4,000,000 triangles times views | Retained only for in-process dispatch. Division avoids product overflow. Workers use their separate estimate and Job Object cap |
 | 50,000 sources | New explicit heavy dispatch, even for an otherwise cheap single view; no worker source-count rejection |
@@ -93,11 +93,23 @@ Fake-machine unit-tested policy outputs at **75% of physical RAM available** and
 | Native scheduling | One budgeted native call per process; one shared host batch reservation; HLD always multithreaded |
 | Memory retry | Exactly once, alone, after original workers exit; larger cap only within fresh budget |
 
-Environment configuration is read when the shared pool is created:
+The **Parallel views** machine preference is read at each batch, after acquiring the shared reservation.
+Precedence is `M2DPLUS_HLD_WORKERS` > persisted menu choice > Auto (1/2/4 by cores).
+The plug-in stores the choice in `GH_SettingsServer("M2DPlus")`, key `ParallelViews`, under
+`%APPDATA%\Grasshopper`, outside `.gh` files. Zero/missing selects Auto; invalid persisted values (including
+values beyond the current CPU ceiling) fall back to Auto. A present env override locks the menu, even when
+malformed (then Auto applies); numeric overrides clamp to 1..CPU ceiling. The UI publishes a plain integer for
+background reads; workers never access GH settings. Changing the preference affects the next batch without
+restarting Rhino, expiring component solutions, cancelling active batches or changing drawing-cache/timing identity.
+Pool slots still reach the configured count (normally the CPU ceiling); memory sizing, Job Object caps and
+managed processor allowances are replanned for the admitted count as before.
+
+Other environment configuration is read when the shared pool is created:
 
 | Variable | Default | Bounds / meaning |
 |---|---|---|
-| M2DPLUS_WORKERS | CPU ceiling | Parser: 1 to `max(1, cores - 2)`; active count further capped at 1/2 by threaded-HLD admission, views and memory |
+| M2DPLUS_WORKERS | CPU ceiling | Parser: 1 to `max(1, cores - 2)`; active count further capped by Parallel views, views and memory |
+| M2DPLUS_HLD_WORKERS | persisted Parallel views choice, else Auto: 1/2/4 by cores (<16/16-31/32+) | Read at each batch; when present, overrides and locks the machine menu. Numeric values clamp to 1..CPU ceiling; invalid text uses Auto. When unset, persisted menu choice applies. Configured count, views, memory sizing and Job Object caps still apply. Native HLD may oversubscribe cores. |
 | M2DPLUS_WORKER_MEMORY_MIB | automatic | 512 to 2147483647 MiB parser range; aggregate budget is the effective maximum; recovery may grow it |
 | M2DPLUS_WORKER_IDLE_SECONDS | 600 | 1 to 86400 seconds |
 | M2DPLUS_WORKER_STARTUP_SECONDS | 120 | 15 to 3600 seconds |

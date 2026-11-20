@@ -33,6 +33,14 @@ Drawing sets and heavy jobs use persistent headless workers matched exactly to t
 runtime and Rhino/engine build; the Yak includes .NET 8 and .NET 10 apphosts.
 See [worker design and measurements](docs/design/drawing-workers.md).
 
+Right-click **Parallel views** to choose **Auto** (1/2/4 by logical core count), **1 / 2 / 4 / 6 / 8**, or a
+**Custom…** integer up to `max(1, logical cores - 2)`; presets above that ceiling are hidden. This machine setting
+is shared by all components and persists outside `.gh` files. `M2DPLUS_HLD_WORKERS` takes precedence and locks
+the menu. Changes apply to the next worker batch without restarting Rhino. It helps sets of **2+ views**:
+more views run at once if memory allows, and the memory check may start fewer. Each view uses its own background
+Rhino with a full copy of the scene; each view gets somewhat slower, but the set finishes sooner. On 32 threads,
+four plans measured **217 s with 2 workers** and **131 s with 4** (one measured run).
+
 ```powershell
 dotnet build M2DPlus.sln -c Debug
 dotnet build M2DPlus.sln -c Release

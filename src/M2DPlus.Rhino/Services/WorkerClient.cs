@@ -7,6 +7,12 @@ namespace M2DPlus.Rhino.Services;
 public sealed record WorkerOptions
 {
     public int Count { get; init; } = WorkerMemoryPolicy.CpuLimit(Environment.ProcessorCount);
+    /// <summary>Concurrent threaded-HLD workers (M2DPLUS_HLD_WORKERS overrides); configured count and memory admission still apply.</summary>
+    public int HldWorkerLimit { get; init; } = WorkerMemoryPolicy.ThreadedHldLimit(Environment.ProcessorCount);
+    // Shared production pool reads the machine preference once per batch; explicit/test options stay fixed.
+    internal Func<int>? ReadHldWorkerLimit { get; init; }
+    internal int CurrentHldWorkerLimit => Math.Clamp(ReadHldWorkerLimit?.Invoke() ?? HldWorkerLimit,
+        1, WorkerMemoryPolicy.CpuLimit(Environment.ProcessorCount));
     /// <summary>Zero selects the scene/machine policy; positive values override its initial per-worker cap.</summary>
     public long MemoryBytes { get; init; }
     public TimeSpan IdleTimeout { get; init; } = TimeSpan.FromMinutes(10);
@@ -22,6 +28,8 @@ public sealed record WorkerOptions
     public static WorkerOptions FromEnvironment() => new()
     {
         Count = Number("M2DPLUS_WORKERS",WorkerMemoryPolicy.CpuLimit(Environment.ProcessorCount),1,WorkerMemoryPolicy.CpuLimit(Environment.ProcessorCount)),
+        HldWorkerLimit = WorkerMemoryPolicy.ThreadedHldLimit(Environment.ProcessorCount,Environment.GetEnvironmentVariable("M2DPLUS_HLD_WORKERS")),
+        ReadHldWorkerLimit = () => ParallelViewsPreference.Current.Limit,
         MemoryBytes = Environment.GetEnvironmentVariable("M2DPLUS_WORKER_MEMORY_MIB") is null ? 0 : (long)Number("M2DPLUS_WORKER_MEMORY_MIB",0,512,int.MaxValue)*1024*1024,
         Directory = Environment.GetEnvironmentVariable("M2DPLUS_WORKER_DIRECTORY") ?? new WorkerOptions().Directory,
         IdleTimeout = TimeSpan.FromSeconds(Number("M2DPLUS_WORKER_IDLE_SECONDS",600,1,86400)),
