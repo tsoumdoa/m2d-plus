@@ -9,7 +9,7 @@ public static class PhysicalSectionClipper
     internal const string RecoveredEdges = "Continuous original trim-edge recovery";
     public static PhysicalClipResult Clip(SectionSource source, SectionRequest request, Plane? farPlane = null)
     {
-        using var shared = new SharedSource(source, request, null);
+        using var shared = new SharedSource(source, request, null, farPlane);
         return Clip(shared, request, farPlane);
     }
 

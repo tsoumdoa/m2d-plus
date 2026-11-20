@@ -128,7 +128,8 @@ public static class SectionRegionEngine
             for (var i = 0; i < ordered.Length; i++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                verdict[i] = SectionGeometry.Verdict(ordered[i], request.Tolerance, verdicts ?? transient!);
+                verdict[i] = SectionGeometry.Verdict(ordered[i], request.Tolerance, verdicts ?? transient!,
+                    SectionValidation.For(request, prepareVisibility ? farPlane : null));
             }
             phases?.Add("section validation", validationTimer.Elapsed.TotalSeconds); // Nested in sections.
             // Pure geometry on separately owned copies: no document, live object, scheduler or native visibility call.

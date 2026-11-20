@@ -79,7 +79,8 @@ internal static class SectionCoordinates
                 var geometry = source.Geometry.Duplicate(); owned.Add(geometry);
                 geometry.EnsurePrivateCopy();
                 if (!geometry.Transform(toLocal)) throw new SectionFailure("Cannot translate section source to local coordinates.");
-                return source with { Geometry = geometry };
+                return source with { Geometry = geometry, Canonical = source.Canonical is { } canonical
+                    ? canonical with { Placement = toLocal * canonical.Placement } : null };
             }).ToArray();
             if (farPlane is { } far) { far.Origin = far.ClosestPoint(origin); far.Transform(toLocal); farPlane = far; }
             var result = SectionRegionEngine.ComputeLocal(localSources, LocalRequest(request, origin), verdicts, token, prepareVisibility, farPlane, phases);
