@@ -18,7 +18,7 @@ public sealed class DrawingWorkerPool : IDisposable
     public static DrawingWorkerPool Shared { get; } = new(WorkerOptions.FromEnvironment());
     public DrawingWorkerPool(WorkerOptions options)
     {
-        if(options.Count<1 || options.Count>WorkerMemoryPolicy.CpuLimit(Environment.ProcessorCount) || options.MemoryBytes<0 || options.IdleTimeout<=TimeSpan.Zero || options.StartupTimeout<=TimeSpan.Zero || options.SolveTimeout<=TimeSpan.Zero)throw new ArgumentOutOfRangeException(nameof(options));
+        if(options.Count<1 || options.Count>WorkerMemoryPolicy.CpuLimit(Environment.ProcessorCount) || options.HldWorkerLimit<1 || options.HldWorkerLimit>WorkerMemoryPolicy.CpuLimit(Environment.ProcessorCount) || options.MemoryBytes<0 || options.IdleTimeout<=TimeSpan.Zero || options.StartupTimeout<=TimeSpan.Zero || options.SolveTimeout<=TimeSpan.Zero)throw new ArgumentOutOfRangeException(nameof(options));
         _options=options;_slots=Enumerable.Range(0,options.Count).Select(_=>new Slot()).ToArray();
         _idle=new Timer(_=>ExpireIdle(),null,options.IdleTimeout,options.IdleTimeout);
         AppDomain.CurrentDomain.ProcessExit+=OnExit;
@@ -60,7 +60,7 @@ public sealed class DrawingWorkerPool : IDisposable
             }
             memory=memory with{AvailableBytes=Math.Min(memory.PhysicalBytes,checked(memory.AvailableBytes+resident))};
             long extra=0;
-            var admittedWorkers=Math.Min(_options.Count,WorkerMemoryPolicy.ThreadedHldLimit(Environment.ProcessorCount));
+            var admittedWorkers=Math.Min(_options.Count,_options.HldWorkerLimit);
             var plan=WorkerMemoryPolicy.Size(cost,views.Count,admittedWorkers,memory,_options.MemoryBytes,extra);
             if(plan.Count==0 && retained)
             {

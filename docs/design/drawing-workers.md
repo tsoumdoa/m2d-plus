@@ -44,7 +44,7 @@ Every solve request and reply carries the complete RequestIdentity (scene/view/s
 
 ## Pool and admission
 
-There is one shared pool across components, with one batch reservation at a time. The CPU ceiling is `max(1, logical cores - 2)`. Expert count overrides cannot exceed it. Threaded HLD adds a conservative admission ceiling: **one worker below 16 host logical cores, at most two on 16+ cores**, regardless of larger expert count overrides. Actual concurrency is the minimum of both CPU ceilings, the configured count, the view count and `floor((memory budget - host reply reservation) / per-view cap)`. One whole view runs per process with threaded HLD, without tiling. Host and worker use the same required threading/requested-hidden policy.
+There is one shared pool across components, with one batch reservation at a time. The CPU ceiling is `max(1, logical cores - 2)`. Expert count overrides cannot exceed it. Threaded HLD adds an admission ceiling: **one worker below 16 host logical cores, two on 16-31, four on 32+**, regardless of larger `M2DPLUS_WORKERS` values. Section work is largely single-threaded, so on 32 threads a cold four-plan set of a private 1,500-solid pipe model took 217 s with two workers, 192 s with three and 131 s with four (n=1, 2026-11-20; about 6.5 GiB peak worker memory). Individual views get somewhat slower from shared cores. `M2DPLUS_HLD_WORKERS` replaces only that HLD ceiling, clamped to the CPU ceiling; invalid/unset values retain the default. Actual concurrency is the minimum of both CPU ceilings, the configured count, the view count and `floor((memory budget - host reply reservation) / per-view cap)`. One whole view runs per process with threaded HLD, without tiling. Host and worker use the same required threading/requested-hidden policy.
 
 A shared work queue lets each free worker take another view. For another batch on the same scene, previously measured longest views start first; unmeasured views retain input order. Results remain in input order. History retains only the current batch and clears on scene-revision changes. Scene transport was already retained per process; changing only views still avoids scene encoding and transfer.
 
@@ -97,7 +97,8 @@ Environment configuration is read when the shared pool is created:
 
 | Variable | Default | Bounds / meaning |
 |---|---|---|
-| M2DPLUS_WORKERS | CPU ceiling | Parser: 1 to `max(1, cores - 2)`; active count further capped at 1/2 by threaded-HLD admission, views and memory |
+| M2DPLUS_WORKERS | CPU ceiling | Parser: 1 to `max(1, cores - 2)`; active count further capped at 1/2/4 by threaded-HLD admission, views and memory |
+| M2DPLUS_HLD_WORKERS | 1/2/4 by cores (<16/16-31/32+) | Override of the threaded-HLD ceiling, clamped to 1..CPU ceiling; invalid/unset keeps the default. Configured count, views, memory sizing and Job Object caps still apply. Native HLD may oversubscribe cores. |
 | M2DPLUS_WORKER_MEMORY_MIB | automatic | 512 to 2147483647 MiB parser range; aggregate budget is the effective maximum; recovery may grow it |
 | M2DPLUS_WORKER_IDLE_SECONDS | 600 | 1 to 86400 seconds |
 | M2DPLUS_WORKER_STARTUP_SECONDS | 120 | 15 to 3600 seconds |
