@@ -6,8 +6,6 @@ This experiment shipped as **Pipes (experimental)** in beta.12 (PR #69).
 The classifier now lives in [PipeVisibility](../../../src/M2DPlus.Rhino/Experimental/PipeVisibility/README.md);
 `pipe-poc` calls those same classes. Rhino HLD remains the default.
 
-![Southwest pipe-node drawing. Solid lines are visible, dashed lines are hidden.](pipe-node-sw.png)
-
 ## Try it
 
 Use .NET 8 x64, a licensed Rhino 8 installation, and a compatible Rhino.Inside resolver. From the repository root, point the command at the resolver and your own millimetre model. A simple input is two intersecting closed cylinders saved as Breps in Rhino. The research fixture contains five closed pipes, five setting-out curves and one point.
