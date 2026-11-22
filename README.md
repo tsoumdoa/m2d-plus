@@ -29,7 +29,7 @@ archived at `archive/exact-engine` (`0cfc171`, beta.8).
 Install only through Yak: drop a locally built `.yak` onto Rhino, accept installation,
 then restart Rhino. There is no public package yet.
 
-**macOS (preview, not yet verified on a Mac):** `./tools/Pack-Yak.ps1 -Platform mac -AllowDirty` builds a
+**macOS (beta, untested on a Mac; expect problems and please report them):** `./tools/Pack-Yak.ps1 -Platform mac -AllowDirty` builds a
 separate `rh8_20-mac` package for Rhino 8 for Mac. Drawings there run inside Rhino's process (Rhino.Inside, which
 the workers need, is Windows-only): no Parallel views, cooperative cancel, no hard memory cap, and a memory-based
 admission budget. Right-click → **Platform self-test…** checks a Mac. See [macOS design](docs/design/macos.md) and

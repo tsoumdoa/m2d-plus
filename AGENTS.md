@@ -43,8 +43,9 @@ the owner unless asked; they can drop a `.yak` onto Rhino and restart it.
 ```
 
 `-Platform mac` packs the separate `rh8_20-mac` distribution from the `net8.0` build (no workers); it is
-unverified until [the on-Mac checklist](docs/macos-test-checklist.md) passes, and `Publish-Yak.ps1` publishes only
-the Windows package. Packaging never publishes. `Publish-Yak.ps1` requires explicit release authorization;
+unverified until [the on-Mac checklist](docs/macos-test-checklist.md) passes and ships as an untested beta;
+`Publish-Yak.ps1` publishes the Windows and mac candidates of one version together (`-SkipMac` for Windows only).
+Packaging never publishes. `Publish-Yak.ps1` requires explicit release authorization;
 public versions are immutable. Dirty trial candidates cannot be published. The Yak
 ships the drawing worker for both runtimes (`workers/net8`, `workers/net10`) next to
 the GHA and its two libraries.

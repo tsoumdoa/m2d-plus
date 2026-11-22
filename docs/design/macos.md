@@ -20,8 +20,9 @@ benchmarks keep using `net8.0-windows`. The `net8.0` GHA references `System.Wind
 `System.Drawing.Common` 8.0 through the Grasshopper package, as McNeel's own cross-platform GH plug-ins do;
 Rhino for Mac supplies its own implementations, and nothing desktop is bundled. `Test-YakPackage.ps1 -Platform mac`
 checks the inventory (7 files), that no assembly is Windows-targeted (assembly metadata, not a byte search), the
-manifest platform and the macOS README. `Publish-Yak.ps1` still publishes only the Windows package; publishing the
-mac distribution needs its own owner decision after the checklist passes.
+manifest platform and the macOS README. `Publish-Yak.ps1` publishes the Windows and mac candidates of one
+version together (pack both from the same commit; `-SkipMac` publishes Windows only). The owner approved shipping
+the mac distribution as an untested beta before the checklist has run on a Mac (2026-11-22).
 
 ## Why there are no workers on macOS
 

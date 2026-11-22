@@ -1,8 +1,14 @@
 # M2D+ for Rhino 8 for Mac (preview)
 
 Make2D-style plans, sections, elevations and axonometric drawings for Rhino 8 for Mac
-(8.20 or later) and Grasshopper. **Preview: not yet verified on a Mac.** The same component,
-settings, outputs and saved definitions as the Windows package.
+(8.20 or later) and Grasshopper. The same component, settings, outputs and saved definitions as the
+Windows package.
+
+**Beta, untested on a Mac.** This package is built and unit-tested on Windows but has not yet been run
+in Rhino for Mac. Expect problems, from wrong drawings to the plug-in not loading, and save your work
+before large drawings: on a Mac a drawing runs inside Rhino, so a very large job can make Rhino slow
+or unresponsive. Please report problems at https://github.com/tsoumdoa/m2d-plus/issues, with the
+**Platform self-test…** report if you can.
 
 Drop this `.yak` onto Rhino, accept installation, and restart Rhino. Open Grasshopper →
 Params → Util → M2D+ Drawing (there is no M2D+ tab). Wire a view (for example `Top`).
