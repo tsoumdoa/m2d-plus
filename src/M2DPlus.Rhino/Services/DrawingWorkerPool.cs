@@ -23,7 +23,8 @@ public sealed class DrawingWorkerPool : IDisposable
         _idle=new Timer(_=>ExpireIdle(),null,options.IdleTimeout,options.IdleTimeout);
         AppDomain.CurrentDomain.ProcessExit+=OnExit;
     }
-    public bool Installed => File.Exists(Path.Combine(_options.Directory,"M2DPlus.Worker.exe"));
+    // Workers need Rhino.Inside, which runs only on Windows: elsewhere the route is in-process only, whatever is on disk.
+    public bool Installed => HostPlatform.IsolatedWorkers && File.Exists(Path.Combine(_options.Directory,"M2DPlus.Worker.exe"));
     internal Action<int,int>? SolvingView { get; set; }
     internal Action<int,long,bool>? AttemptingView { get; set; }
     internal Func<WorkerCodec.Reply,WorkerCodec.Reply>? ObserveReply { get; set; }
@@ -280,6 +281,7 @@ public static class DrawingExecution
     internal static async Task<DrawingBatch> SolveBorrowedAsync(PreparedScene scene,RequestIdentity identity,IReadOnlyList<ViewRequest> views,
         NativeSettings settings,CancellationToken token,IProgress<JobProgress>? progress,DrawingWorkerPool? workers=null)
     {
+        if(!HostPlatform.IsolatedWorkers)return await SolveInProcessOnlyAsync(scene,identity,views,settings,token,progress).ConfigureAwait(false);
         var pool=workers??DrawingWorkerPool.Shared;
         if((views.Count>1 || !scene.Cost.Admitted(views.Count,settings.Scheduler.BudgetBytes)) && pool.Installed)
         {
@@ -292,5 +294,22 @@ public static class DrawingExecution
             }
         }
         return await NativeDrawing.SolveBorrowedAsync(scene,identity,views,settings,token,progress).ConfigureAwait(false);
+    }
+    /// <summary>macOS (no worker route): every view draws in Rhino's process, one after another, when the scene fits
+    /// the memory read now. Cancellation stays cooperative: the caller rejects stale work at once while a native call
+    /// may finish. Each view's Info states the route and the guarantees it lacks (docs/design/macos.md).</summary>
+    internal static async Task<DrawingBatch> SolveInProcessOnlyAsync(PreparedScene scene,RequestIdentity identity,IReadOnlyList<ViewRequest> views,
+        NativeSettings settings,CancellationToken token,IProgress<JobProgress>? progress,Func<MachineMemory>? readMemory=null)
+    {
+        views=views.ToArray();var count=views.Count;
+        var read=readMemory??HostPlatform.SafeMemory;
+        var memory=read();
+        // Refuse at once without queueing, then again with live memory once the native slot is held.
+        if(InProcessPolicy.Refusal(scene.Cost,count,memory) is {} refusal)throw new InvalidOperationException(refusal);
+        settings=settings with{AdmitInSlot=()=>{memory=read();return InProcessPolicy.Refusal(scene.Cost,count,memory);}};
+        var batch=await NativeDrawing.SolveBorrowedAsync(scene,identity,views,settings,token,progress).ConfigureAwait(false);
+        var disclosure=InProcessPolicy.Disclosure(scene.Cost,views.Count,memory);
+        foreach(var view in batch.Views)view._diagnostics.Add(disclosure);
+        return batch;
     }
 }

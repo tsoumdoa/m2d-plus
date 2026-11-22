@@ -9,8 +9,12 @@ namespace M2DPlus.Rhino.Services;
 
 public sealed record NativeSettings
 {
-    internal NativeScheduler Scheduler { get; init; } = NativeScheduler.Global;
+    // NativeScheduler.Global on Windows; sized from RAM on hosts without workers (HostPlatform).
+    internal NativeScheduler Scheduler { get; init; } = HostPlatform.Scheduler;
     internal bool IsWorker { get; init; }
+    /// <summary>In-process-only hosts (macOS): re-admits with live memory once the native slot is held, before any
+    /// preparation, because a queued job may start long after its first check. Null on Windows.</summary>
+    internal Func<string?>? AdmitInSlot { get; init; }
     // Internal research controls only; production always uses threaded HLD and scene bounds.
     internal bool MultipleThreads { get; init; } = true;
     internal BoundingBox? CameraBounds { get; init; }
@@ -193,13 +197,14 @@ public static class NativeDrawing
         IReadOnlyList<ViewRequest> views, NativeSettings settings, CancellationToken token, IProgress<JobProgress>? progress)
     {
             views = views.ToArray();
-            if (settings.IsWorker ? scene.Cost.Estimate(views.Count) > settings.Scheduler.BudgetBytes : !scene.Cost.Admitted(views.Count, settings.Scheduler.BudgetBytes))
+            if (settings.IsWorker ? scene.Cost.Estimate(views.Count) > settings.Scheduler.BudgetBytes : !HostPlatform.Admitted(scene.Cost, views.Count, settings.Scheduler.BudgetBytes))
                 throw new InvalidOperationException($"{SceneCost.Refusal} (estimate {scene.Cost.Estimate(views.Count):N0} bytes; {scene.Cost.BrepFaces} Brep faces; {scene.Cost.MeshTriangles} triangles; {views.Count} views).");
             return await settings.Scheduler.RunAsync(scene.Cost.Estimate(views.Count), ct =>
             {
                 var results = new List<ViewDrawing>();
                 try
                 {
+                    if (settings.AdmitInSlot?.Invoke() is { } refusal) throw new InvalidOperationException(refusal);
                     progress?.Report(new(JobPhase.Preparing, 0, scene.SourceCount));
                     var prepareTimer = Stopwatch.StartNew();
                     var prepared = scene.Prepare(ct, (done, total) => progress?.Report(new(JobPhase.Preparing, done, total)));

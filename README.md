@@ -27,7 +27,13 @@ Ignored results. See [the unreleased change notes](docs/release-notes-hld.md) an
 archived at `archive/exact-engine` (`0cfc171`, beta.8).
 
 Install only through Yak: drop a locally built `.yak` onto Rhino, accept installation,
-then restart Rhino. There is no public package yet. Don't copy DLLs into Grasshopper
+then restart Rhino. There is no public package yet.
+
+**macOS (preview, not yet verified on a Mac):** `./tools/Pack-Yak.ps1 -Platform mac -AllowDirty` builds a
+separate `rh8_20-mac` package for Rhino 8 for Mac. Drawings there run inside Rhino's process (Rhino.Inside, which
+the workers need, is Windows-only): no Parallel views, cooperative cancel, no hard memory cap, and a memory-based
+admission budget. Right-click → **Platform self-test…** checks a Mac. See [macOS design](docs/design/macos.md) and
+the [on-Mac checklist](docs/macos-test-checklist.md). Don't copy DLLs into Grasshopper
 Libraries. Targets .NET 8; intended to load in Rhino's .NET 8 and .NET 10 runtimes.
 Drawing sets and heavy jobs use persistent headless workers matched exactly to the host
 runtime and Rhino/engine build; the Yak includes .NET 8 and .NET 10 apphosts.

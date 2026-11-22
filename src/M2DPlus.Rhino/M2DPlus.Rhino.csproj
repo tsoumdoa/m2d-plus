@@ -1,8 +1,16 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup><TargetFramework>net8.0-windows</TargetFramework></PropertyGroup>
+  <PropertyGroup>
+    <!-- net8.0-windows is the unchanged Windows build (win Yak); net8.0 is the cross-platform build for the mac Yak. -->
+    <TargetFrameworks>net8.0-windows;net8.0</TargetFrameworks>
+  </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../M2DPlus.Core/M2DPlus.Core.csproj" />
     <PackageReference Include="RhinoCommon" Version="$(RhinoApiVersion)" ExcludeAssets="runtime" />
     <Reference Update="RhinoCommon"><Private>false</Private></Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Windows-drawn signatures of the self-test fixture; the Mac self-test compares against them (docs/design/macos.md). -->
+    <EmbeddedResource Include="../../tests/fixtures/platform/selftest-baseline.json" LogicalName="M2DPlus.Rhino.SelfTest.Baseline.json"
+      Condition="Exists('../../tests/fixtures/platform/selftest-baseline.json')" />
   </ItemGroup>
 </Project>

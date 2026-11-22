@@ -42,7 +42,9 @@ the owner unless asked; they can drop a `.yak` onto Rhino and restart it.
 ./tools/Pack-Yak.ps1 -Version 0.1.0-alpha.2
 ```
 
-Packaging never publishes. `Publish-Yak.ps1` requires explicit release authorization;
+`-Platform mac` packs the separate `rh8_20-mac` distribution from the `net8.0` build (no workers); it is
+unverified until [the on-Mac checklist](docs/macos-test-checklist.md) passes, and `Publish-Yak.ps1` publishes only
+the Windows package. Packaging never publishes. `Publish-Yak.ps1` requires explicit release authorization;
 public versions are immutable. Dirty trial candidates cannot be published. The Yak
 ships the drawing worker for both runtimes (`workers/net8`, `workers/net10`) next to
 the GHA and its two libraries.
@@ -64,6 +66,13 @@ the GHA and its two libraries.
   Key/K (index 10, one label per `tree` group, UX §1.3).
 
 ## Runtime and ownership contracts
+
+macOS ([design](docs/design/macos.md)): Rhino and GH projects multi-target `net8.0-windows` (Windows package,
+unchanged) and `net8.0` (mac package). `HostPlatform`/`HostRouteCapabilities` select the route: off Windows there
+are no workers, every drawing runs in-process under `InProcessPolicy` admission, Parallel views is hidden and
+**Platform self-test…** is shown. Keep Windows behaviour identical; gate any new platform difference on
+`HostPlatform`. `tests/fixtures/platform/selftest-baseline.json` is the Windows baseline the Mac self-test
+compares with; regenerate it only for an intended engine change (`PlatformSelfTestTests`).
 
 Projects target .NET 8; Rhino/GH packages are pinned via `RhinoApiVersion` using
 the conduit-plus 8.20 reference baseline and excluded from output. The GHA is a

@@ -19,5 +19,10 @@ public readonly record struct SceneCost(long GeometryBytes, long BrepFaces, long
     // host responsive and put very large scenes on the contained route even if cheap.
     public bool Admitted(int views, long budget) => views > 0 && Sources < 50_000 && Estimate(views) <= budget &&
         BrepFaces <= 600_000L / views && MeshTriangles <= 4_000_000L / views;
+    /// <summary>In-process admission where no worker route exists (macOS): the same source/topology ceilings for the
+    /// whole scene, but views draw one after another, so the topology limits are not divided across views; the memory
+    /// estimate still counts every view.</summary>
+    public bool AdmittedSerial(int views, long budget) => views > 0 && Sources < 50_000 && Estimate(views) <= budget &&
+        BrepFaces <= 600_000L && MeshTriangles <= 4_000_000L;
     public const string Refusal = "Worker unavailable: too large for in-process in this build";
 }
