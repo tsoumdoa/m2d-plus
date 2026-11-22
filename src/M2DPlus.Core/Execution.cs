@@ -78,6 +78,8 @@ public sealed class NativeScheduler
         BudgetBytes = budgetBytes;
     }
     private int _waiting;
+    /// <summary>A native job holds the slot or waits for it (a hint for UI that must not block behind it).</summary>
+    public bool Busy => _slot.CurrentCount == 0 || Volatile.Read(ref _waiting) > 0;
     /// <param name="waiting">Called once, before waiting, when another job holds the slot: the number ahead.</param>
     public async Task<T> RunAsync<T>(long estimatedBytes, Func<CancellationToken, T> native, CancellationToken token, Action<int>? waiting = null)
     {

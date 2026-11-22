@@ -1,0 +1,105 @@
+{
+  "Schema": 1,
+  "Fixture": "selftest-v1",
+  "Producer": "Rhino 8.36.26296.17001, Microsoft Windows 10.0.26300, .NET 8.0.34",
+  "Views": [
+    {
+      "View": "plan",
+      "Error": null,
+      "FrameWidth": 11276.2897,
+      "FrameHeight": 8076.2897,
+      "Classes": {
+        "Visible": {
+          "Pieces": 8,
+          "Points": 0,
+          "Length": 37168.1409,
+          "MinX": -5500,
+          "MinY": -3900,
+          "MaxX": 5500,
+          "MaxY": 3900
+        }
+      },
+      "Regions": 0,
+      "Hatches": 0,
+      "RegionArea": 0
+    },
+    {
+      "View": "elevation",
+      "Error": null,
+      "FrameWidth": 11276.2897,
+      "FrameHeight": 3276.2897,
+      "Classes": {
+        "Visible": {
+          "Pieces": 9,
+          "Points": 0,
+          "Length": 30000,
+          "MinX": -5500,
+          "MinY": -1500,
+          "MaxX": 5500,
+          "MaxY": 1500
+        },
+        "Hidden": {
+          "Pieces": 2,
+          "Points": 0,
+          "Length": 5026.5482,
+          "MinX": -3300,
+          "MinY": -1500,
+          "MaxX": -1700,
+          "MaxY": 100
+        }
+      },
+      "Regions": 0,
+      "Hatches": 0,
+      "RegionArea": 0
+    },
+    {
+      "View": "axonometric",
+      "Error": null,
+      "FrameWidth": 13569.8972,
+      "FrameHeight": 10400.8473,
+      "Classes": {
+        "Visible": {
+          "Pieces": 22,
+          "Points": 0,
+          "Length": 52349.1504,
+          "MinX": -4759.798,
+          "MinY": -5062.2788,
+          "MaxX": 6646.8037,
+          "MaxY": 1554.2448
+        },
+        "Hidden": {
+          "Pieces": 9,
+          "Points": 0,
+          "Length": 12427.4128,
+          "MinX": -3252.6912,
+          "MinY": -3021.0373,
+          "MaxX": 5232.5902,
+          "MaxY": 653.1973
+        }
+      },
+      "Regions": 0,
+      "Hatches": 0,
+      "RegionArea": 0
+    },
+    {
+      "View": "section",
+      "Error": null,
+      "FrameWidth": 12000,
+      "FrameHeight": 9500,
+      "Classes": {
+        "Visible": {
+          "Pieces": 3,
+          "Points": 0,
+          "Length": 20026.5482,
+          "MinX": -1000,
+          "MinY": -1000,
+          "MaxX": 10000,
+          "MaxY": 6800
+        }
+      },
+      "Regions": 3,
+      "Hatches": 3,
+      "RegionArea": 14293362.67
+    }
+  ]
+}
