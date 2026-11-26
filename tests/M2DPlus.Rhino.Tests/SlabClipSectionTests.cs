@@ -182,14 +182,14 @@ public sealed class SlabClipSectionTests(RhinoHost host, ITestOutputHelper outpu
     });
 
     [RhinoFact]
-    public void BorderlineRemoteFoldWithUnresolvedBoundarySectionFallsBack() => host.Run(() =>
+    public void BorderlineRemoteFoldRefusesOnBoundaryOverlap() => host.Run(() =>
     {
         using var shape = FoldedPrism(); using var cache = new SectionVerdictCache();
         var source = new SectionSource("borderline-fold", shape, SectionStyleSnapshot.Default());
         var verdict = SectionGeometry.Verdict(source, Tol, cache, Slab(2.6606666666666667));
         output.WriteLine(verdict);
-        Assert.StartsWith("Self-intersecting Brep faces", verdict);
-        Assert.Contains("guard unresolved; whole-pair fallback", verdict);
+        Assert.StartsWith("Coincident Brep faces", verdict);
+        Assert.Contains("curve overlap", verdict);
     });
 
     [RhinoTheory]

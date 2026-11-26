@@ -139,17 +139,10 @@ internal static class SectionGeometry
         {
             if (!success) throw new SectionFailure("Cannot validate face self-intersection relationships.");
             var excluded = false;
-            void Check(SectionValidation? slabs, bool wholePair = false)
+            void Check(SectionValidation? slabs)
             {
                 foreach (var curve in curves)
                 {
-                    if (!curve.IsValid) throw new SectionFailure("Invalid face self-intersection curve.");
-                    if (wholePair)
-                    {
-                        if (!CoveredBySharedTopology(curve, shared, tolerance))
-                            throw new SectionFailure($"Self-intersecting Brep faces {a.FaceIndex}/{b.FaceIndex} away from their shared topology (tolerance={tolerance:G6}).");
-                        continue;
-                    }
                     if (slabs?.Excludes(curve) == true) { excluded = true; continue; }
                     var intervals = EdgeProvenance.Split(curve, shared.Select(c => (c, EdgeOrigin.Original)), tolerance);
                     try
@@ -167,7 +160,6 @@ internal static class SectionGeometry
                 }
                 foreach (var p in points)
                 {
-                    if (!p.IsValid) throw new SectionFailure("Invalid face self-intersection point.");
                     if (slabs?.Excludes(new BoundingBox(p, p)) == true) { excluded = true; continue; }
                     if (OnTrimmedFace(a, p, tolerance) && OnTrimmedFace(b, p, tolerance) &&
                         !sharedPoints.Any(q => q.DistanceTo(p) <= tolerance) &&
@@ -179,8 +171,14 @@ internal static class SectionGeometry
             Check(validation);
             if (excluded && !sections.Check(a, b, shared, sharedPoints))
             {
-                try { Check(null, wholePair: true); }
-                catch (SectionFailure ex) { throw new SectionFailure(ex.Message + " Slab boundary guard unresolved; whole-pair fallback."); }
+                // Exactly #73's pair rule: preserve native split attribution and
+                // the <= tolerance interval skip, with no slab exclusions.
+                try { Check(null); SectionWork.GuardFallback(true); }
+                catch (SectionFailure ex)
+                {
+                    SectionWork.GuardFallback(false);
+                    throw new SectionFailure(ex.Message + " Slab boundary guard unresolved; #73 pair check fallback.");
+                }
             }
         }
         finally { foreach (var curve in curves) curve.Dispose(); }

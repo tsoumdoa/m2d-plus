@@ -171,11 +171,20 @@ an isolated point) also receives an overlap guard. It sections both trimmed face
 at both outer boundary planes of each slab, caching those native results per face
 and plane for the validation call. Section-curve overlaps are positive rejection
 evidence unless **both** extracted overlap portions are continuously covered by
-shared topology, without slab exclusion or a short-length exemption. Coincident
+shared topology, without slab exclusion or a short-length exemption. Open-curve
+intervals are normalized independently on both curves. Closed-curve extraction
+considers both arcs between the event parameters (a singleton can denote the full
+curve); exactly one candidate must match the event's 3D endpoints within tolerance
+and have its midpoint within tolerance of the other section curve. Zero or two
+qualifying candidates are unresolved. A CurveCurve point event away from shared
+points/edges also refuses; ordinary shared-edge crossings remain exempt. Coincident
 isolated section points against the other face's curves or points also refuse
 away from shared topology. Failed native sections, invalid extraction/events and
 proof-budget exhaustion never establish admission: unresolved guards repeat the
-whole-pair shared-topology check without slab exclusions, or refuse. Validation
+exact #73 pair check without slab exclusions: EdgeProvenance.Split attribution,
+the <= tolerance unattributed-interval skip, then continuous shared-topology
+coverage and the original trimmed-face point rule. Invalid bounds cannot exclude
+native witnesses and fall through to that same check. Validation
 and all curve intersection calls remain serial.
 
 **Limit and owner decision (2026-11-26):** retain curved-pair portion exclusion and

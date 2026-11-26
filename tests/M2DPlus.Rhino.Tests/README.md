@@ -94,8 +94,9 @@ directions (including the recursive-exclusion flag), rational multi-span interio
 dips/boundary contact, translated oblique near/far signed boundaries and mirrored
 normals, a native oblique analytic cut, and nonuniform block fallback. The block
 frame test includes a cut near the scaled local fold at scaled tolerance, plus a
-cut inside the fixed physical-tolerance slab. A borderline remote fold now refuses
-through the required whole-pair fallback when a native boundary section fails.
+cut inside the fixed physical-tolerance slab. A borderline remote fold refuses
+on a guard curve overlap: opposite-direction boundary sections coincide within
+tolerance. Native section failure is not its mechanism.
 A 300 mm curve parallel to an oblique slab with a 0.002 mm gap compares proof-node
 counts against the former world-box proof; boundary/roundoff-band, translation,
 reflection, in-plane frame changes and a nonparallel far plane remain covered.
@@ -103,12 +104,22 @@ reflection, in-plane frame changes and a nonparallel far plane remain covered.
 `SlabOverlapGuardTests` promotes the overlap characterization controls: duplicate
 cylinders and a connected folded revolution with aligned/rotated seams and
 reversed orientation refuse on native seam curves; a bounded coplanar overlap also
-refuses. A quadratic duplicated dome has remote trims and no seam through the
-slab: it admits with the guard bypassed through an internal pair-fixture seam and
+refuses. A quadratic duplicated dome (same and opposite face normals) has remote
+trims and no seam through the slab: it admits with the guard bypassed through an internal pair-fixture seam and
 refuses on a boundary overlap with the guard. Section and overlap-extraction
-failure injection must fall back/refuse. Cached sections are reused, and a real
-shared circular rim between axial cylinder bands remains admitted at near/far,
-lower/upper outer boundaries. The guard has no overlap-length exemption.
+failure injection uses exactly #73's pair fallback, which refuses the dome. A 200 mm
+shared edge plus a remote shared intersection admits even with an unresolved
+guard; split attribution must survive the fallback. Cached sections are reused,
+and a real shared circular rim between axial cylinder bands remains admitted at near/far,
+lower/upper outer boundaries. An opposite-direction shared outer section with a
+remote shared intersection also admits, explicitly exercising decreasing OverlapB.
+Full-closed singleton and seam-wrapping overlap extraction resolves both on shared
+topology (admit) and off it (refuse); ambiguous or mismatched arc candidates remain
+unresolved; a full singleton away from the original seam is re-seamed before
+endpoint validation. Notched G1 cylinder halves have a shared edge crossing the
+guard planes and remote shared pieces that demonstrably trigger the guard; they
+pass both explicit guard.Check and the pair check. CurveCurve point events off
+topology refuse, while shared point/edge crossings admit. The guard has no overlap-length exemption.
 
 A nearly coincident shallow dome and a small closed coincident component record
 native outcomes without claiming completeness. An exact outer-plane tangency
