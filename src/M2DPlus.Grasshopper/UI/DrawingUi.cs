@@ -121,6 +121,7 @@ public sealed class DrawingUi
             case MenuCommands.Reset: Commit(State.ResetMenu(), "M2D+ reset menu defaults"); break;
             case MenuCommands.ClearCache: Raise(ClearCacheRequested, EventArgs.Empty, "There is no drawing cache to clear in this build yet."); break;
             case MenuCommands.CopyInfo: CopyText(InfoText(), "There is no Info to copy yet."); break;
+            case MenuCommands.SelfTest: PlatformSelfTestUi.Start(_owner, this); break;
             case MenuCommands.CopySettings:
                 var context = CurrentContext;
                 CopyText(Settings.CopyEditorAsText(State.ToEditorSettings(context.ViewRows), context.Views), null);
@@ -197,7 +198,7 @@ public sealed class DrawingUi
     private void CopyText(string? text, string? empty)
     {
         if (string.IsNullOrEmpty(text)) { if (empty is not null) Remark(empty); return; }
-        try { Clipboard.SetText(text); }
+        try { PlatformClipboard.SetText(text); }
         catch (System.Runtime.InteropServices.ExternalException) { Remark("The clipboard is busy; try again."); }
     }
 
@@ -213,7 +214,8 @@ public sealed class DrawingUi
         var presentation = new SettingsPresentation(State, CurrentContext);
         var hasInfo = _owner.Params.Output.Count > 8 && _owner.Params.Output[8].VolatileDataCount > 0;
         var views = ViewInput is { } param ? ViewObjects.State(param, RhinoDoc.ActiveDoc) : null;
-        return new(presentation, CurrentRuntime, hasInfo, Views: views, ParallelViews: MachineSettings.Current);
+        var workers = M2DPlus.Rhino.Services.HostPlatform.IsolatedWorkers;
+        return new(presentation, CurrentRuntime, hasInfo, Views: views, ParallelViews: workers ? MachineSettings.Current : null, IsolatedWorkers: workers);
     }
 
     public bool Write(GH_IWriter writer)

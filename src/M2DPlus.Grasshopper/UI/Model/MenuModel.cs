@@ -16,7 +16,8 @@ public sealed record MenuNode(string Label, string? Command = null, bool Enabled
 public static class MenuCommands
 {
     public const string Bake = "bake", BakeOne = "bake-one:", AutoRun = "autorun", Run = "run", Cancel = "cancel",
-        Set = "set:", Reset = "reset-menu", Preview = "preview:", PreviewObjectColours = "preview-colours:object", PreviewInk = "preview-colours:ink", CopyInfo = "copy-info", CopySettings = "copy-settings", ClearCache = "clear-cache";
+        Set = "set:", Reset = "reset-menu", Preview = "preview:", PreviewObjectColours = "preview-colours:object", PreviewInk = "preview-colours:ink", CopyInfo = "copy-info", CopySettings = "copy-settings", ClearCache = "clear-cache",
+        SelfTest = "platform-self-test";
     public static string SetValue(string key, string value) => $"{Set}{key}={value}";
     public static bool TryParseSet(string command, out string key, out string value)
     {
@@ -68,8 +69,10 @@ public static class ViewCommands
     }
 }
 
+/// <param name="IsolatedWorkers">False on macOS: there are no drawing workers, so Parallel views is not offered and the
+/// platform self-test is (docs/design/macos.md).</param>
 public sealed record MenuContext(SettingsPresentation Settings, DrawingRuntime Runtime, bool HasInfo, string? CacheSize = null,
-    ViewCommands.State? Views = null, ParallelViewsChoice? ParallelViews = null);
+    ViewCommands.State? Views = null, ParallelViewsChoice? ParallelViews = null, bool IsolatedWorkers = true);
 
 /// <summary>The component's right-click items (UX rev. 4 §7). Setting items edit the menu defaults. An item whose key
 /// the Settings input sets for every view is greyed "(set by input)"; view-object overrides are only reported.</summary>
@@ -101,7 +104,8 @@ public static class ComponentMenu
         items.Add(Toggle(settings, "Seams", "seams"));
         items.Add(Choice(settings, "Min visible", "min_visible") with { Tooltip = SettingsCatalog.Spec("min_visible").Tooltip });
         items.Add(ToleranceMenu.Build(settings));
-        items.Add(ParallelViewsMenu.Build(context.ParallelViews ?? ParallelViewsPolicy.Resolve(Environment.ProcessorCount, null, null)));
+        if (context.IsolatedWorkers)
+            items.Add(ParallelViewsMenu.Build(context.ParallelViews ?? ParallelViewsPolicy.Resolve(Environment.ProcessorCount, null, null)));
         items.Add(Choice(settings, "Beyond", "beyond"));
         items.Add(Choice(settings, "Far clip", "farclip"));
         items.Add(Toggle(settings, "Cut only", "cutonly"));
@@ -128,6 +132,10 @@ public static class ComponentMenu
         items.Add(new("Copy settings as text", MenuCommands.CopySettings,
             Tooltip: "Menu defaults and view-object values as Settings text with [view] headers, ready for a Panel."));
         items.Add(new(context.CacheSize is null ? "Clear drawing cache" : $"Clear drawing cache ({context.CacheSize})", MenuCommands.ClearCache));
+        if (!context.IsolatedWorkers)
+            items.Add(new("Platform self-test…", MenuCommands.SelfTest, context.Runtime.Phase != DrawingPhase.Running,
+                Tooltip: "Checks this Mac: memory probe, in-process route, cancellation, menus, timers and icons, and draws " +
+                    "built-in fixtures to compare with the Windows baseline. Writes a report to Documents; doesn't change the document."));
         return items.ToImmutable();
     }
 

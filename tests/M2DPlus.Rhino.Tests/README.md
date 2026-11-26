@@ -36,6 +36,11 @@ areas, circle integrals, loop/hole/region counts, containment and independent vo
 checks. They cover crop, merge, contact, cap/provenance and embedded-pattern hatch
 save/reopen. See [the API and supported-domain notes](../../docs/design/m2-sections.md).
 
+`--filter FullyQualifiedName~PlatformSelfTestTests` runs the platform self-test fixture against the committed
+Windows baseline (`tests/fixtures/platform/selftest-baseline.json`) and draws it again through the macOS
+in-process-only route (forced internally) to show the signatures match. Set `M2DPLUS_WRITE_SELFTEST_BASELINE`
+to a file path to regenerate the baseline after an intended engine change. See [macOS](../../docs/design/macos.md).
+
 Run both native hosting runtimes **serially** with:
 
 ```powershell
