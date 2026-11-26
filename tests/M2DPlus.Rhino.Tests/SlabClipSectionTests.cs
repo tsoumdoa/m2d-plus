@@ -172,7 +172,6 @@ public sealed class SlabClipSectionTests(RhinoHost host, ITestOutputHelper outpu
 
     [RhinoTheory]
     [InlineData(1)]
-    [InlineData(2.6606666666666667)]
     public void RemoteFoldPublishesAnalyticSectionAndClosedClip(double z) => host.Run(() =>
     {
         using var shape = FoldedPrism(); using var cache = new SectionVerdictCache();
@@ -180,6 +179,17 @@ public sealed class SlabClipSectionTests(RhinoHost host, ITestOutputHelper outpu
         var slab = Slab(z);
         Assert.Equal("", SectionGeometry.Verdict(source, Tol, cache, slab));
         CheckPublished(source, z, 1, Transform.Identity);
+    });
+
+    [RhinoFact]
+    public void BorderlineRemoteFoldWithUnresolvedBoundarySectionFallsBack() => host.Run(() =>
+    {
+        using var shape = FoldedPrism(); using var cache = new SectionVerdictCache();
+        var source = new SectionSource("borderline-fold", shape, SectionStyleSnapshot.Default());
+        var verdict = SectionGeometry.Verdict(source, Tol, cache, Slab(2.6606666666666667));
+        output.WriteLine(verdict);
+        Assert.StartsWith("Self-intersecting Brep faces", verdict);
+        Assert.Contains("guard unresolved; whole-pair fallback", verdict);
     });
 
     [RhinoTheory]
@@ -190,7 +200,8 @@ public sealed class SlabClipSectionTests(RhinoHost host, ITestOutputHelper outpu
         using var curve = new LineCurve(new Point3d(0,0,-.02), new Point3d(0,0,.02));
         if (reverse) curve.Reverse();
         using var shared = new LineCurve(new Point3d(0,0,-.008), new Point3d(0,0,.008));
-        Assert.True(SectionGeometry.CoveredBySharedTopology(curve, [shared], Tol, Slab(0)));
+        Assert.True(SectionGeometry.CoveredBySharedTopology(curve, [shared], Tol, Slab(0), out var excluded));
+        Assert.True(excluded); // Recursive successes must trigger the pair guard.
         using var first = new LineCurve(new Point3d(0,0,-.008), new Point3d(0,0,-.002));
         using var last = new LineCurve(new Point3d(0,0,.002), new Point3d(0,0,.008));
         Assert.False(SectionGeometry.CoveredBySharedTopology(curve, [first,last], Tol, Slab(0)));
@@ -318,6 +329,12 @@ public sealed class SlabClipSectionTests(RhinoHost host, ITestOutputHelper outpu
         Assert.NotNull(source.Canonical);
         using var verdicts = new SectionVerdictCache();
         Assert.Equal("", SectionGeometry.Verdict(source, Tol, verdicts, Slab(scale)));
+        // A world slab near twice the local fold distinguishes the instance frame
+        // from an accidentally untransformed canonical plane.
+        var fold = Slab(scale * 2.6626666666666665) with { Margin = .005 * scale };
+        Assert.StartsWith("Self-intersecting Brep faces", SectionGeometry.Verdict(source, Tol * scale, verdicts, fold));
+        // At fixed physical tolerance the margin does not scale with the block.
+        Assert.StartsWith("Self-intersecting Brep faces", SectionGeometry.Verdict(source, Tol, verdicts, Slab(scale * (8d/3) - .004)));
         CheckPublished(source, 1, scale, placement);
     });
 
@@ -371,6 +388,61 @@ public sealed class SlabClipSectionTests(RhinoHost host, ITestOutputHelper outpu
         }
         finally { foreach (var c in expected) c.Dispose(); }
     }
+
+    [RhinoFact]
+    public void ObliqueParallelCurveExcludesInOneNodeAndEquivalentFramesAgree() => host.Run(() =>
+    {
+        // Retain the previous world-box proof in this test as a node-count
+        // baseline; this is a bounded correctness check, never a timing gate.
+        (bool Verdict, int Nodes) WorldProof(Curve curve, SectionValidation slab)
+        {
+            var budget = 262144; var nodes = 0;
+            bool Cover(Curve piece, int depth)
+            {
+                nodes++; if (--budget < 0) return false;
+                var box = piece.GetBoundingBox(true);
+                if (slab.Excludes(box)) return true;
+                if (slab.Contains(box) || depth == 32) return false;
+                using var a = piece.Trim(piece.Domain.Min, piece.Domain.Mid);
+                using var b = piece.Trim(piece.Domain.Mid, piece.Domain.Max);
+                return a is not null && b is not null && Cover(a, depth+1) && Cover(b, depth+1);
+            }
+            return (Cover(curve, 0), nodes);
+        }
+        var normal = new Vector3d(1,1,1); normal.Unitize();
+        var initial = new Plane(Point3d.Origin, normal);
+        using var baseline = new LineCurve(initial.PointAt(-150,0) + .007*normal, initial.PointAt(150,0) + .007*normal);
+        var old = WorldProof(baseline, Slab(0) with { Near = initial });
+        output.WriteLine($"world-box baseline: verdict={old.Verdict}; nodes={old.Nodes}");
+        Assert.True(old.Nodes > 100000);
+        foreach (var move in new[] { Transform.Identity, Transform.Translation(10000,-20000,30000), Transform.Mirror(Plane.WorldYZ) })
+        foreach (var inPlane in new[] { false, true })
+        foreach (var distance in new[] { .007, .005, .005 + 1e-12 })
+        {
+            var plane = initial; Assert.True(plane.Transform(move));
+            using var curve = new LineCurve(initial.PointAt(-150,0) + distance*normal, initial.PointAt(150,0) + distance*normal);
+            curve.Transform(move);
+            var same = plane;
+            if (inPlane) { same.Origin += 16*plane.XAxis - 8*plane.YAxis; same = new Plane(same.Origin, plane.YAxis, -plane.XAxis); }
+            // Floating-point re-expression can perturb the equation by a few
+            // ULPs. Domain padding covers it; exact equal keys use identical axes.
+            var bounds = curve.GetBoundingBox(true);
+            var slab = new SectionValidation(same, null, .005).WithBounds(bounds);
+            using var work = new SectionWork();
+            var verdict = SectionGeometry.CoveredBySharedTopology(curve, [], Tol, slab);
+            output.WriteLine($"frame={inPlane}; distance={distance:R}; verdict={verdict}; nodes={work.CoverageNodes}");
+            Assert.Equal(distance == .007, verdict);
+            if (verdict) Assert.Equal(1, work.CoverageNodes);
+        }
+        // A nonparallel far plane gets its own canonical frame.
+        var far = new Plane(new Point3d(0,0,.007), Vector3d.ZAxis);
+        var both = new SectionValidation(initial, far, .005).WithBounds(baseline.GetBoundingBox(true));
+        Assert.False(SectionGeometry.CoveredBySharedTopology(baseline, [], Tol, both));
+        var canonical = new SectionValidation(Plane.WorldXY, null, .005);
+        var authored = canonical with { Near = new Plane(new Point3d(16,8,0), Vector3d.ZAxis) };
+        Assert.Equal(canonical.Key, authored.Key);
+        Assert.Equal(canonical.Domains(baseline.GetBoundingBox(true))[0].Frame, authored.Domains(baseline.GetBoundingBox(true))[0].Frame);
+    });
 
     [RhinoFact]
     public void PolicyIdentityIsCapturedInValidationAndTimingKeys() => host.Run(() =>

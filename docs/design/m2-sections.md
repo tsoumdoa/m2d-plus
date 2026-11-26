@@ -154,24 +154,52 @@ expectations, rejected trials, measured coverage and numerical/topology limits.
 After the face-box filter and native shared-edge overlap attribution, a remaining
 intersection-curve portion is discharged only when its enclosing box lies strictly
 outside **both** expanded material slabs, or the continuous shared-topology proof
-succeeds. Parameter-midpoint subdivision checks both owned trims; samples and
-native curve/plane events cannot establish exclusion. Invalid bounds, boundary
-contact including roundoff, failed trims, depth limits and budget exhaustion
-retain/refuse ambiguous portions. Isolated points use the same slab test. The
-existing post-attribution interval-length threshold remains unchanged.
+succeeds. Each slab uses one closed domain `|n·x − d| ≤ 5tol + ρ`; the roundoff
+padding covers coordinate and transform arithmetic over the entire centered
+validation copy. Face boxes, portion exclusion and guard planes use that same
+domain. Curve bounds use a deterministic plane frame derived from the keyed plane
+equation, independent of authored in-plane axes/origin; the shared-topology witness
+proof retains its world box. Near and far slabs each have their own frame.
+Parameter-midpoint subdivision checks both owned trims; samples and native
+curve/plane events cannot establish exclusion. Invalid bounds, boundary contact
+including roundoff, failed trims, depth limits and budget exhaustion retain/refuse
+ambiguous portions. Isolated points use the same slab test. The existing
+post-attribution interval-length threshold remains unchanged.
 
-This certifies the native intersections relevant to the material planes, subject
-to the existing native predicates and budgets. A remote defect can survive in the
-retained solid. Slab validation does not certify whole-object operations: `Convert`
-and its `SolidOrientation` flip, near-zero-volume rejection, `MaterialComponents`
-containment/orientation through `IsPointInside`, `StableSectionCertificate`'s
-orientation prerequisite, or Route C. Such a defect can therefore matter more to
-the cutting pipeline than to plain projection. This category already existed under
-#73's face-box filter; the portion rule widens admission within it and adds no new
-dependency. Region loop/nesting/area certification and Route C's
-independent trim, cap, validity, solidity, orientation, volume, retained-side and
-provenance checks remain required. Unscoped validation, mesh self-intersection and
-disconnected-shell checks remain whole-source; validation remains serial.
+Every tested face pair that uses any exclusion (including a recursive portion or
+an isolated point) also receives an overlap guard. It sections both trimmed faces
+at both outer boundary planes of each slab, caching those native results per face
+and plane for the validation call. Section-curve overlaps are positive rejection
+evidence unless **both** extracted overlap portions are continuously covered by
+shared topology, without slab exclusion or a short-length exemption. Coincident
+isolated section points against the other face's curves or points also refuse
+away from shared topology. Failed native sections, invalid extraction/events and
+proof-budget exhaustion never establish admission: unresolved guards repeat the
+whole-pair shared-topology check without slab exclusions, or refuse. Validation
+and all curve intersection calls remain serial.
+
+**Limit and owner decision (2026-11-26):** retain curved-pair portion exclusion and
+add this guard as positive evidence, not a surface-overlap certificate. An area
+overlap may meet a slab while its reported boundary avoids that slab. The guard
+does not certify near-coincident surfaces at shallow slicing angles, native
+completeness (including omitted overlap components), or closed coincident
+components wholly inside the slab. Coincident-cylinder fixtures on Rhino 8.36
+refuse on native seam curves; the duplicated dome fixture instead requires the
+new guard. These observations do not prove the unrestricted curved case. The
+measured planar-only alternative retained **0 of the 51/73 newly successful
+sources** in the two sampled owner views, so it was rejected. The policy id remains
+`near-cut-intersection-portions-v1`: this policy has never shipped.
+
+A remote defect can survive in the retained solid. Slab validation does not
+certify whole-object operations: `Convert` and its `SolidOrientation` flip,
+near-zero-volume rejection, `MaterialComponents` containment/orientation through
+`IsPointInside`, `StableSectionCertificate`'s orientation prerequisite, or Route C.
+Such a defect can therefore matter more to the cutting pipeline than to plain
+projection. This category already existed under #73's face-box filter; the portion
+rule widens admission within it. Region loop/nesting/area certification and Route
+C's independent trim, cap, validity, solidity, orientation, volume, retained-side
+and provenance checks remain required. Unscoped validation, mesh self-intersection
+and disconnected-shell checks remain whole-source.
 
 Canonical and centered verdict keys include the policy, transformed planes, margin,
 scale, tolerance and geometry identity. Drawing and per-view timing keys include

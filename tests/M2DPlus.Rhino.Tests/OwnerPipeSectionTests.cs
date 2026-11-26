@@ -58,7 +58,7 @@ public sealed class OwnerPipeSectionTests(RhinoHost host)
             Assert.False(loop.IsHole); Assert.True(loop.Curve.IsValid && loop.Curve.IsClosed);
             using var intersections = global::Rhino.Geometry.Intersect.Intersection.CurveSelf(loop.Curve, .001);
             Assert.Empty(intersections);
-            Assert.InRange(Math.Abs(region.Area - expectedArea), 0, .000001);
+            Assert.InRange(Math.Abs(region.Area - expectedArea), 0, Math.Max(16 * .001 * .001, expectedArea * 1e-6));
         }
     });
 }

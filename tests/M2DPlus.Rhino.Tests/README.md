@@ -90,12 +90,33 @@ cavity shell preserves one region with one hole and the analytic material/void
 classification, with visible curve/point probes inside the opened void. These
 fixtures do not certify general retained defective solids.
 Additional gates cover mixed remote/shared-topology proofs in both parameter
-directions, rational multi-span interior dips/boundary contact, translated oblique
-near/far signed boundaries and mirrored normals, a native oblique analytic cut,
-and nonuniform block fallback. Isolated-point slab boundaries are tested at the
-predicate level: a tangent-sphere Brep/Brep probe on this native build returned
-success with no curves or isolated points, so it did not supply a native point
-fixture. No native isolated-point extraction claim follows from these tests.
+directions (including the recursive-exclusion flag), rational multi-span interior
+dips/boundary contact, translated oblique near/far signed boundaries and mirrored
+normals, a native oblique analytic cut, and nonuniform block fallback. The block
+frame test includes a cut near the scaled local fold at scaled tolerance, plus a
+cut inside the fixed physical-tolerance slab. A borderline remote fold now refuses
+through the required whole-pair fallback when a native boundary section fails.
+A 300 mm curve parallel to an oblique slab with a 0.002 mm gap compares proof-node
+counts against the former world-box proof; boundary/roundoff-band, translation,
+reflection, in-plane frame changes and a nonparallel far plane remain covered.
+
+`SlabOverlapGuardTests` promotes the overlap characterization controls: duplicate
+cylinders and a connected folded revolution with aligned/rotated seams and
+reversed orientation refuse on native seam curves; a bounded coplanar overlap also
+refuses. A quadratic duplicated dome has remote trims and no seam through the
+slab: it admits with the guard bypassed through an internal pair-fixture seam and
+refuses on a boundary overlap with the guard. Section and overlap-extraction
+failure injection must fall back/refuse. Cached sections are reused, and a real
+shared circular rim between axial cylinder bands remains admitted at near/far,
+lower/upper outer boundaries. The guard has no overlap-length exemption.
+
+A nearly coincident shallow dome and a small closed coincident component record
+native outcomes without claiming completeness. An exact outer-plane tangency
+uses injected isolated native section points to test the point rule independently
+of Rhino 8.36's point omissions; its native section outcome is also recorded.
+These are positive-evidence controls, not a proof for shallow near coincidence,
+omitted native overlap components or closed components inside the slab. The
+optional pipe area assertion uses `max(16tol², area·1e-6)` across Rhino builds.
 
 Fresh HLD solves are compared by ordered inputs/policy/fingerprints and declared
 fixture geometry properties. Lossless single-result codec round trips remain exact.
