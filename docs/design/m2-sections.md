@@ -72,7 +72,7 @@ not a general proof for arbitrary freeform self-intersections.
 
 ### Material-plane validation (owner-approved, 2026-11-20)
 
-Section validation is serial and cut-dependent (`near-cut-face-pairs-v1`). Before
+Section validation is serial and cut-dependent (`near-cut-intersection-portions-v1`). Before
 native face-pair intersection, cache each face's enclosing axis-aligned box and
 test its signed-distance interval against the near-plane slab. Include the far
 plane when preparing Route C geometry: it also constructs material caps and can
@@ -85,10 +85,10 @@ Both faces must touch the **same** slab to be checked. Every point of an
 intersection in that slab belongs to both faces and hence both enclosing boxes;
 if either box is separated, that pair cannot affect those material intersections.
 Requiring just one face would be conservative but needlessly checks remote defects
-against long faces. A tested pair is still checked in full, so spanning boxes can
-conservatively reject remote intersections. Failure strings and shared-topology
-checks are unchanged. Mesh self-intersection and disconnected-shell material
-nesting checks remain whole-source checks.
+against long faces. For a tested pair, the continuous intersection-portion rule
+below excludes only proven remote portions; retained portions must satisfy the
+existing shared-topology checks. Mesh self-intersection and disconnected-shell
+material nesting checks remain whole-source checks.
 
 This verdict protects section loops and the near/far cap boundaries, not a global
 solid-membership oracle. Route C retains its independent classification,
@@ -148,6 +148,29 @@ does not get a region or cap.
 
 See [HILLCLIMB.md](../../HILLCLIMB.md) for the frozen benchmark, independent
 expectations, rejected trials, measured coverage and numerical/topology limits.
+
+#### Continuous intersection-portion validation (owner-approved, 2026-11-26)
+
+After the face-box filter and native shared-edge overlap attribution, a remaining
+intersection-curve portion is discharged only when its enclosing box lies strictly
+outside **both** expanded material slabs, or the continuous shared-topology proof
+succeeds. Parameter-midpoint subdivision checks both owned trims; samples and
+native curve/plane events cannot establish exclusion. Invalid bounds, boundary
+contact including roundoff, failed trims, depth limits and budget exhaustion
+retain/refuse ambiguous portions. Isolated points use the same slab test. The
+existing post-attribution interval-length threshold remains unchanged.
+
+This certifies the native intersections relevant to the material planes, subject
+to the existing native predicates and budgets. Remote defects may remain in retained
+visibility surfaces and affect native global algorithms; this is no global solid
+membership certificate. Region loop/nesting/area certification and Route C's
+independent trim, cap, validity, solidity, orientation, volume, retained-side and
+provenance checks remain required. Unscoped validation, mesh self-intersection and
+disconnected-shell checks remain whole-source; validation remains serial.
+
+Canonical and centered verdict keys include the policy, transformed planes, margin,
+scale, tolerance and geometry identity. Drawing and per-view timing keys include
+the policy; worker/host fingerprints hash the engine assembly.
 
 ## Regions, crop, merge and edge provenance
 

@@ -23,15 +23,15 @@ public sealed class OwnerPipeTheoryAttribute : TheoryAttribute
 [Trait("Category", "RhinoIntegration")]
 public sealed class OwnerPipeSectionTests(RhinoHost host)
 {
-    // Closed/valid topology alone does not make the three approximate pipe
-    // junctions trustworthy at .001 mm. Keep their geometric refusals honest.
+    // Closed/valid topology alone does not make the approximate pipe
+    // junctions trustworthy at .001 mm. Keep local geometric certification strict.
     [OwnerPipeTheory]
-    [InlineData("3368e2f7-d2b7-41c8-ad54-3c6d62d5c04a", null)]
-    [InlineData("5dfd542b-34fd-45bf-8ac1-bb45346dad19", null)]
-    [InlineData("417ea64b-b422-423c-b001-88e33fb04f1b", "cannot associate loop direction")]
-    [InlineData("6aaf0a84-4883-44f7-b37f-7df6f7120a9b", "Self-intersecting Brep faces 0/3")]
-    [InlineData("7072d67a-02b9-4c39-aa8e-1181aaa9cee8", "Self-intersecting Brep faces 2/10")]
-    public void JunctionCutRetainsOnlyGeometricallyCertifiedBodies(string id, string? refusal) => host.Run(() =>
+    [InlineData("3368e2f7-d2b7-41c8-ad54-3c6d62d5c04a", null, 0)]
+    [InlineData("5dfd542b-34fd-45bf-8ac1-bb45346dad19", null, 0)]
+    [InlineData("417ea64b-b422-423c-b001-88e33fb04f1b", "cannot associate loop direction", 0)]
+    [InlineData("6aaf0a84-4883-44f7-b37f-7df6f7120a9b", null, 42080.415346)]
+    [InlineData("7072d67a-02b9-4c39-aa8e-1181aaa9cee8", "cannot associate loop direction", 0)]
+    public void JunctionCutRetainsOnlyGeometricallyCertifiedBodies(string id, string? refusal, double expectedArea) => host.Run(() =>
     {
         using var file = global::Rhino.FileIO.File3dm.Read(OwnerPipeTheoryAttribute.Model);
         var shape = Assert.IsType<Brep>(file.Objects.Single(o => o.Attributes.ObjectId == Guid.Parse(id)).Geometry);
@@ -50,5 +50,15 @@ public sealed class OwnerPipeSectionTests(RhinoHost host)
         Assert.True(clip.Succeeded, string.Join("; ", clip.Diagnostics.Select(d => d.Message)));
         Assert.NotEmpty(clip.Pieces); Assert.NotEmpty(sections.Regions);
         Assert.All(clip.Pieces, p => Assert.True(p.Geometry.IsValid && p.Geometry.IsSolid));
+        if (expectedArea > 0)
+        {
+            Assert.Empty(sections.Refusals);
+            var region = Assert.Single(sections.Regions);
+            var loop = Assert.Single(region.Loops);
+            Assert.False(loop.IsHole); Assert.True(loop.Curve.IsValid && loop.Curve.IsClosed);
+            using var intersections = global::Rhino.Geometry.Intersect.Intersection.CurveSelf(loop.Curve, .001);
+            Assert.Empty(intersections);
+            Assert.InRange(Math.Abs(region.Area - expectedArea), 0, .000001);
+        }
     });
 }

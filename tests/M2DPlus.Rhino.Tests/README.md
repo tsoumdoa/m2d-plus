@@ -76,9 +76,9 @@ coexist; never run curved-M or campus. No timing mutex is needed for correctness
 surface tangency must not block the transverse material cut (analytic area 7.18).
 Interior and trim-boundary tangencies must still be refused. `OwnerPipeSectionTests`
 optionally reads `owner/pipes-node-gdas.3dm` under `M2D_MODELS` (default
-`~/.t3/m2d-plus-models`) and skips if absent. That model currently retains two
-certified bodies and three honest refusals: one inaccurate intersection loop and
-two sources with self-intersecting faces. Closed/valid Brep topology alone is insufficient.
+`~/.t3/m2d-plus-models`) and skips if absent. That model currently retains three
+certified bodies and two honest refusals for loop direction/face association.
+Closed/valid Brep topology alone is insufficient.
 
 Fresh HLD solves are compared by ordered inputs/policy/fingerprints and declared
 fixture geometry properties. Lossless single-result codec round trips remain exact.

@@ -134,17 +134,19 @@ internal static class SectionGeometry
             {
                 foreach (var curve in curves)
                 {
+                    if (validation?.Excludes(curve.GetBoundingBox(true)) == true) continue;
                     var intervals = EdgeProvenance.Split(curve, shared.Select(c => ((Curve)c, EdgeOrigin.Original)), tolerance);
                     try
                     {
                         if (intervals.Any(e => e.Origin == EdgeOrigin.None && e.Curve.GetLength() > tolerance &&
-                            !CoveredBySharedTopology(e.Curve, shared, tolerance)))
+                            !CoveredBySharedTopology(e.Curve, shared, tolerance, validation)))
                             throw new SectionFailure($"Self-intersecting Brep faces {i}/{j} away from their shared topology (tolerance={tolerance:G6}).");
                     }
                     finally { foreach (var interval in intervals) interval.Dispose(); }
                 }
                 foreach (var p in points)
-                    if (OnTrimmedFace(a, p, tolerance) && OnTrimmedFace(b, p, tolerance) &&
+                    if (validation?.Excludes(new BoundingBox(p, p)) != true &&
+                        OnTrimmedFace(a, p, tolerance) && OnTrimmedFace(b, p, tolerance) &&
                         !sharedPoints.Any(q => q.DistanceTo(p) <= tolerance) &&
                         !shared.Any(e => e.ClosestPoint(p, out var t) && e.PointAt(t).DistanceTo(p) <= tolerance))
                         throw new SectionFailure($"Self-intersecting Brep faces {i}/{j} at {p} away from shared topology.");
@@ -161,15 +163,18 @@ internal static class SectionGeometry
     // a subcurve inside a tolerance ball about a point ON a shared edge proves the whole
     // subcurve is on shared topology. Samples alone cannot prove this. Adjacent edges may
     // supply different witnesses. Budget exhaustion always rejects, never accepts.
-    internal static bool CoveredBySharedTopology(Curve curve, Curve[] shared, double tolerance)
+    internal static bool CoveredBySharedTopology(Curve curve, Curve[] shared, double tolerance, SectionValidation? validation = null)
     {
-        if (shared.Length == 0) return false;
+        if (shared.Length == 0 && validation is null) return false;
         var budget = 262144;
         bool Cover(Curve piece, int depth)
         {
             if (--budget < 0) return false;
             var box = piece.GetBoundingBox(true);
             if (!box.IsValid) return false;
+            // Continuous proof: discard only a complete enclosing box outside
+            // both slabs. No curve/plane split or sample is trusted for exclusion.
+            if (validation?.Excludes(box) == true) return true;
             var p = piece.PointAtStart;
             var roundoff = 256 * 2.2204460492503131e-16 * Math.Max(1,
                 Math.Max(box.Min.DistanceTo(Point3d.Origin), box.Max.DistanceTo(Point3d.Origin)));
@@ -182,7 +187,10 @@ internal static class SectionGeometry
                 near = true;
                 if (box.GetCorners().All(c => c.DistanceTo(witness) + roundoff <= tolerance)) return true;
             }
-            if (!near || depth >= 32) return false;
+            // A remote start point cannot reject a curve spanning a slab: split
+            // its entire parameter domain, retaining ambiguous/boundary portions.
+            // The shared-topology proof tree is unchanged wherever it could succeed.
+            if ((!near && (validation is null || validation.Contains(box))) || depth >= 32) return false;
             var middle = piece.Domain.Mid;
             using var left = piece.Trim(piece.Domain.Min, middle);
             using var right = piece.Trim(middle, piece.Domain.Max);
