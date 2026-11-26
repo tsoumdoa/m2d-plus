@@ -161,9 +161,14 @@ retain/refuse ambiguous portions. Isolated points use the same slab test. The
 existing post-attribution interval-length threshold remains unchanged.
 
 This certifies the native intersections relevant to the material planes, subject
-to the existing native predicates and budgets. Remote defects may remain in retained
-visibility surfaces and affect native global algorithms; this is no global solid
-membership certificate. Region loop/nesting/area certification and Route C's
+to the existing native predicates and budgets. A remote defect can survive in the
+retained solid. Slab validation does not certify whole-object operations: `Convert`
+and its `SolidOrientation` flip, near-zero-volume rejection, `MaterialComponents`
+containment/orientation through `IsPointInside`, `StableSectionCertificate`'s
+orientation prerequisite, or Route C. Such a defect can therefore matter more to
+the cutting pipeline than to plain projection. This category already existed under
+#73's face-box filter; the portion rule widens admission within it and adds no new
+dependency. Region loop/nesting/area certification and Route C's
 independent trim, cap, validity, solidity, orientation, volume, retained-side and
 provenance checks remain required. Unscoped validation, mesh self-intersection and
 disconnected-shell checks remain whole-source; validation remains serial.

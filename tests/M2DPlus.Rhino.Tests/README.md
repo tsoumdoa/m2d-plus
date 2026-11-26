@@ -80,6 +80,23 @@ optionally reads `owner/pipes-node-gdas.3dm` under `M2D_MODELS` (default
 certified bodies and two honest refusals for loop direction/face association.
 Closed/valid Brep topology alone is insufficient.
 
+`SlabClipSectionTests` also retains the folded upper part of a synthetic prism
+above a sound reversed cut. On Rhino 8.36, Route C succeeds both without a far
+plane and with one beyond the fold: the analytic section/cap and separate rear
+curve/point occlusion checks pass. A far plane through the fold refuses the whole
+source, demotes affected background curves to Unresolved and suppresses uncertain
+points under the existing point failure policy. The separate inward
+cavity shell preserves one region with one hole and the analytic material/void
+classification, with visible curve/point probes inside the opened void. These
+fixtures do not certify general retained defective solids.
+Additional gates cover mixed remote/shared-topology proofs in both parameter
+directions, rational multi-span interior dips/boundary contact, translated oblique
+near/far signed boundaries and mirrored normals, a native oblique analytic cut,
+and nonuniform block fallback. Isolated-point slab boundaries are tested at the
+predicate level: a tangent-sphere Brep/Brep probe on this native build returned
+success with no curves or isolated points, so it did not supply a native point
+fixture. No native isolated-point extraction claim follows from these tests.
+
 Fresh HLD solves are compared by ordered inputs/policy/fingerprints and declared
 fixture geometry properties. Lossless single-result codec round trips remain exact.
 Do not assert independent solve byte equality. Preserve discrepancy manifests rather
