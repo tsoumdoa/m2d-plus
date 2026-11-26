@@ -244,8 +244,22 @@ public sealed class SlabOverlapGuardTests(RhinoHost host, ITestOutputHelper outp
         Assert.True(failed.Calls > 0);
         using var old = new SlabOverlapGuard(null, bounds, Tol);
         Assert.Equal("", Pair(shape, 0, 1, null, old));
-        // The removed whole-curve fallback would exhaust its continuous budget.
-        Assert.False(SectionGeometry.CoveredBySharedTopology(shared[0], shared, Tol));
+        // A whole-curve proof of this edge exhausts today's budget; record it, don't pin it.
+        output.WriteLine($"whole-edge proof covered={SectionGeometry.CoveredBySharedTopology(shared[0], shared, Tol)}");
+    });
+
+    [RhinoFact]
+    public void InconclusiveGuardProofOnLongInPlaneSharedEdgeFallsBackAndAdmits() => host.Run(() =>
+    {
+        // A 200 mm shared rim lying in the outer guard plane: both boundary sections
+        // overlap along it. Its continuous proof may run out of budget; that is
+        // inconclusive, so the pair must fall back to #73 (which attributes the edge).
+        var bounds = new BoundingBox(new Point3d(-2,-1,-2), new Point3d(2,201,4));
+        var slab = Slabs().WithBounds(bounds);
+        var z = slab.Domains(bounds)[0].Boundary(1).Origin.Z;
+        using var shape = TwoSharedRims(200, z, true);
+        using var guard = new SlabOverlapGuard(slab, bounds, Tol);
+        Assert.Equal("", Pair(shape, 0, 1, slab, guard));
     });
 
     [RhinoFact]

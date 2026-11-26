@@ -114,7 +114,8 @@ and a real shared circular rim between axial cylinder bands remains admitted at 
 lower/upper outer boundaries. An opposite-direction shared outer section with a
 remote shared intersection also admits, explicitly exercising decreasing OverlapB.
 Full-closed singleton and seam-wrapping overlap extraction resolves both on shared
-topology (admit) and off it (refuse); ambiguous or mismatched arc candidates remain
+topology (admit) and off it (refuse); a 200 mm shared rim in the guard plane admits
+through the #73 fallback when its proof is inconclusive; ambiguous or mismatched arc candidates remain
 unresolved; a full singleton away from the original seam is re-seamed before
 endpoint validation. Notched G1 cylinder halves have a shared edge crossing the
 guard planes and remote shared pieces that demonstrably trigger the guard; they

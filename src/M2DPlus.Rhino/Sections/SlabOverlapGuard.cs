@@ -58,16 +58,21 @@ internal class SlabOverlapGuard : IDisposable
                     else if ((tail ?? head)?.DuplicateCurve() is { } arc) candidates.Add(arc);
                 }
             }
+            // A candidate matches within tol and is rejected only beyond 2 tol; anything
+            // between (or an invalid candidate) is ambiguous, so the guard is unresolved.
             var matches = 0;
             Curve? match = null;
             foreach (var candidate in candidates)
             {
-                if (!candidate.IsValid) continue;
+                if (!candidate.IsValid) return null;
                 var p = candidate.PointAtStart; var q = candidate.PointAtEnd;
-                var endpoints = (p.DistanceTo(start) <= _tolerance && q.DistanceTo(end) <= _tolerance) ||
-                    (p.DistanceTo(end) <= _tolerance && q.DistanceTo(start) <= _tolerance);
+                var endpoints = Math.Min(Math.Max(p.DistanceTo(start), q.DistanceTo(end)),
+                    Math.Max(p.DistanceTo(end), q.DistanceTo(start)));
                 var middle = candidate.PointAt(candidate.Domain.Mid);
-                if (!endpoints || !other.ClosestPoint(middle, out var t) || other.PointAt(t).DistanceTo(middle) > _tolerance) continue;
+                if (!other.ClosestPoint(middle, out var t)) return null;
+                var error = Math.Max(endpoints, other.PointAt(t).DistanceTo(middle));
+                if (error > 2 * _tolerance) continue;
+                if (error > _tolerance) return null;
                 matches++; match = candidate;
             }
             if (matches == 1) selected = match;
@@ -100,6 +105,12 @@ internal class SlabOverlapGuard : IDisposable
             {
                 outcome = "refused";
                 throw new SectionFailure($"Coincident Brep faces {a.FaceIndex}/{b.FaceIndex} at a material slab boundary away from shared topology ({a.UnderlyingSurface().GetType().Name}/{b.UnderlyingSurface().GetType().Name}; {witness}).");
+            }
+            bool Covered(Curve portion)
+            {
+                if (SectionGeometry.CoveredBySharedTopology(portion, shared, _tolerance, null, out _, out var remote)) return true;
+                if (remote) Refuse("curve overlap");
+                return false;
             }
             bool Points(FaceSection first, FaceSection second)
             {
@@ -146,9 +157,9 @@ internal class SlabOverlapGuard : IDisposable
                             using var pa = Extract(ca, e.OverlapA, e.PointA, e.PointA2, cb);
                             using var pb = Extract(cb, e.OverlapB, e.PointB, e.PointB2, ca);
                             if (pa is null || pb is null || !pa.IsValid || !pb.IsValid) return false;
-                            // Even a sub-tolerance overlap is positive evidence.
-                            if (!SectionGeometry.CoveredBySharedTopology(pa, shared, _tolerance) ||
-                                !SectionGeometry.CoveredBySharedTopology(pb, shared, _tolerance)) Refuse("curve overlap");
+                            // Even a sub-tolerance overlap is positive evidence, but only an
+                            // off-topology proof leaf refuses; an inconclusive proof falls back.
+                            if (!Covered(pa) || !Covered(pb)) return false;
                         }
                     }
                 }

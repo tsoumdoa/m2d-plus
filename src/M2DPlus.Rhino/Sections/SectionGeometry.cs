@@ -143,7 +143,8 @@ internal static class SectionGeometry
             {
                 foreach (var curve in curves)
                 {
-                    if (slabs?.Excludes(curve) == true) { excluded = true; continue; }
+                    // An invalid native curve's bounds are untrusted: #73's handling only.
+                    if (curve.IsValid && slabs?.Excludes(curve) == true) { excluded = true; continue; }
                     var intervals = EdgeProvenance.Split(curve, shared.Select(c => (c, EdgeOrigin.Original)), tolerance);
                     try
                     {
@@ -196,10 +197,18 @@ internal static class SectionGeometry
         => CoveredBySharedTopology(curve, shared, tolerance, validation, out _);
 
     internal static bool CoveredBySharedTopology(Curve curve, Curve[] shared, double tolerance, SectionValidation? validation, out bool excluded)
+        => CoveredBySharedTopology(curve, shared, tolerance, validation, out excluded, out _);
+
+    // `remote` distinguishes positive evidence (a piece whose start lies off every
+    // shared edge) from an inconclusive proof (budget, depth, invalid box, failed trim).
+    internal static bool CoveredBySharedTopology(Curve curve, Curve[] shared, double tolerance, SectionValidation? validation,
+        out bool excluded, out bool remote)
     {
         var omitted = false;
+        var offTopology = false;
         excluded = false;
-        if (shared.Length == 0 && validation is null) return false;
+        remote = false;
+        if (shared.Length == 0 && validation is null) { remote = true; return false; }
         var budget = 262144;
         bool Cover(Curve piece, int depth)
         {
@@ -224,14 +233,15 @@ internal static class SectionGeometry
             // A remote start point cannot reject a curve spanning a slab: split
             // its entire parameter domain, retaining ambiguous/boundary portions.
             // The shared-topology proof tree is unchanged wherever it could succeed.
-            if ((!near && (validation is null || validation.Contains(piece))) || depth >= 32) return false;
+            if (!near && (validation is null || validation.Contains(piece))) { offTopology = true; return false; }
+            if (depth >= 32) return false;
             var middle = piece.Domain.Mid;
             using var left = piece.Trim(piece.Domain.Min, middle);
             using var right = piece.Trim(middle, piece.Domain.Max);
             return left is not null && right is not null && Cover(left, depth + 1) && Cover(right, depth + 1);
         }
         try { return Cover(curve, 0); }
-        finally { excluded = omitted; SectionWork.Coverage(262144 - budget, budget < 0); }
+        finally { excluded = omitted; remote = offTopology; SectionWork.Coverage(262144 - budget, budget < 0); }
     }
 
     // Keep enclosing void shells together. Disjoint material shells are classified separately.

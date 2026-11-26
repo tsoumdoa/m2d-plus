@@ -176,7 +176,10 @@ intervals are normalized independently on both curves. Closed-curve extraction
 considers both arcs between the event parameters (a singleton can denote the full
 curve); exactly one candidate must match the event's 3D endpoints within tolerance
 and have its midpoint within tolerance of the other section curve. Zero or two
-qualifying candidates are unresolved. A CurveCurve point event away from shared
+qualifying candidates are unresolved, as is any invalid candidate or one whose
+error lies between tolerance and twice tolerance. An overlap portion refuses only
+when its coverage proof reaches an off-topology leaf; budget, depth or trim
+failures are inconclusive and fall back. A CurveCurve point event away from shared
 points/edges also refuses; ordinary shared-edge crossings remain exempt. Coincident
 isolated section points against the other face's curves or points also refuse
 away from shared topology. Failed native sections, invalid extraction/events and
