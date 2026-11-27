@@ -40,7 +40,8 @@ internal sealed class SectionVerdictCache : IDisposable
     internal int LocalComputations => Volatile.Read(ref _localComputations);
     internal bool IsDisposed => _disposed;
 
-    internal string Verdict(SectionCanonical canonical, double tolerance, SectionValidation? validation = null)
+    internal string Verdict(SectionCanonical canonical, double tolerance, SectionValidation? validation = null,
+        SectionIntersectionCache? intersections = null)
     {
         if (_disposed) throw new ObjectDisposedException(nameof(SectionVerdictCache));
         var local = canonical.LocalValidation(validation);
@@ -49,7 +50,7 @@ internal sealed class SectionVerdictCache : IDisposable
         return _verdicts.GetOrAdd(key, _ => new Lazy<string>(() =>
         {
             Interlocked.Increment(ref _computations);
-            return SectionGeometry.CanonicalVerdict(canonical, tolerance, this, local);
+            return SectionGeometry.CanonicalVerdict(canonical, tolerance, this, local, intersections);
         }, LazyThreadSafetyMode.ExecutionAndPublication)).Value;
     }
 

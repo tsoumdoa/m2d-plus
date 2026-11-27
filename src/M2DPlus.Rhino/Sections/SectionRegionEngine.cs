@@ -119,18 +119,28 @@ public static class SectionRegionEngine
         var result = new SectionResult();
         var candidates = new List<Candidate>();
         using var transient = verdicts is null ? new SectionVerdictCache() : null;
+        // A unique canonical source cannot reuse a pair across local cuts in this pass. Avoid hashing all of its
+        // duplicated faces just to populate a single-use cache. Exact face content still keys every admitted reuse.
+        var repeated = ordered.Where(s => s.Canonical is not null).GroupBy(s => (s.Canonical!.Key, s.Canonical.Scale))
+            .Where(g => g.Skip(1).Any()).Select(g => g.Key).ToHashSet();
         try
         {
             // Validation verdicts are settled first, one at a time on this thread, so no verdict can depend on
             // which worker asked first or on what other workers were doing at the time.
             var verdict = new string[ordered.Length];
             var validationTimer = System.Diagnostics.Stopwatch.StartNew();
-            for (var i = 0; i < ordered.Length; i++)
+            var intersections = repeated.Count == 0 ? null : new SectionIntersectionCache();
+            try
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                verdict[i] = SectionGeometry.Verdict(ordered[i], request.Tolerance, verdicts ?? transient!,
-                    SectionValidation.For(request, prepareVisibility ? farPlane : null));
+                for (var i = 0; i < ordered.Length; i++)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    verdict[i] = SectionGeometry.Verdict(ordered[i], request.Tolerance, verdicts ?? transient!,
+                        SectionValidation.For(request, prepareVisibility ? farPlane : null),
+                        ordered[i].Canonical is { } canonical && repeated.Contains((canonical.Key, canonical.Scale)) ? intersections : null);
+                }
             }
+            finally { intersections?.Dispose(); }
             phases?.Add("section validation", validationTimer.Elapsed.TotalSeconds); // Nested in sections.
             // Pure geometry on separately owned copies: no document, live object, scheduler or native visibility call.
             SourceOutcome Process(int index)
