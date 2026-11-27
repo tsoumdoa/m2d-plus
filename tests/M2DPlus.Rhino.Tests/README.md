@@ -81,9 +81,59 @@ coexist; never run curved-M or campus. No timing mutex is needed for correctness
 surface tangency must not block the transverse material cut (analytic area 7.18).
 Interior and trim-boundary tangencies must still be refused. `OwnerPipeSectionTests`
 optionally reads `owner/pipes-node-gdas.3dm` under `M2D_MODELS` (default
-`~/.t3/m2d-plus-models`) and skips if absent. That model currently retains two
-certified bodies and three honest refusals: one inaccurate intersection loop and
-two sources with self-intersecting faces. Closed/valid Brep topology alone is insufficient.
+`~/.t3/m2d-plus-models`) and skips if absent. That model currently retains three
+certified bodies and two honest refusals for loop direction/face association.
+Closed/valid Brep topology alone is insufficient.
+
+`SlabClipSectionTests` also retains the folded upper part of a synthetic prism
+above a sound reversed cut. On Rhino 8.36, Route C succeeds both without a far
+plane and with one beyond the fold: the analytic section/cap and separate rear
+curve/point occlusion checks pass. A far plane through the fold refuses the whole
+source, demotes affected background curves to Unresolved and suppresses uncertain
+points under the existing point failure policy. The separate inward
+cavity shell preserves one region with one hole and the analytic material/void
+classification, with visible curve/point probes inside the opened void. These
+fixtures do not certify general retained defective solids.
+Additional gates cover mixed remote/shared-topology proofs in both parameter
+directions (including the recursive-exclusion flag), rational multi-span interior
+dips/boundary contact, translated oblique near/far signed boundaries and mirrored
+normals, a native oblique analytic cut, and nonuniform block fallback. The block
+frame test includes a cut near the scaled local fold at scaled tolerance, plus a
+cut inside the fixed physical-tolerance slab. A borderline remote fold refuses
+on a guard curve overlap: opposite-direction boundary sections coincide within
+tolerance. Native section failure is not its mechanism.
+A 300 mm curve parallel to an oblique slab with a 0.002 mm gap compares proof-node
+counts against the former world-box proof; boundary/roundoff-band, translation,
+reflection, in-plane frame changes and a nonparallel far plane remain covered.
+
+`SlabOverlapGuardTests` promotes the overlap characterization controls: duplicate
+cylinders and a connected folded revolution with aligned/rotated seams and
+reversed orientation refuse on native seam curves; a bounded coplanar overlap also
+refuses. A quadratic duplicated dome (same and opposite face normals) has remote
+trims and no seam through the slab: it admits with the guard bypassed through an internal pair-fixture seam and
+refuses on a boundary overlap with the guard. Section and overlap-extraction
+failure injection uses exactly #73's pair fallback, which refuses the dome. A 200 mm
+shared edge plus a remote shared intersection admits even with an unresolved
+guard; split attribution must survive the fallback. Cached sections are reused,
+and a real shared circular rim between axial cylinder bands remains admitted at near/far,
+lower/upper outer boundaries. An opposite-direction shared outer section with a
+remote shared intersection also admits, explicitly exercising decreasing OverlapB.
+Full-closed singleton and seam-wrapping overlap extraction resolves both on shared
+topology (admit) and off it (refuse); a 200 mm shared rim in the guard plane admits
+through the #73 fallback when its proof is inconclusive; ambiguous or mismatched arc candidates remain
+unresolved; a full singleton away from the original seam is re-seamed before
+endpoint validation. Notched G1 cylinder halves have a shared edge crossing the
+guard planes and remote shared pieces that demonstrably trigger the guard; they
+pass both explicit guard.Check and the pair check. CurveCurve point events off
+topology refuse, while shared point/edge crossings admit. The guard has no overlap-length exemption.
+
+A nearly coincident shallow dome and a small closed coincident component record
+native outcomes without claiming completeness. An exact outer-plane tangency
+uses injected isolated native section points to test the point rule independently
+of Rhino 8.36's point omissions; its native section outcome is also recorded.
+These are positive-evidence controls, not a proof for shallow near coincidence,
+omitted native overlap components or closed components inside the slab. The
+optional pipe area assertion uses `max(16tol², area·1e-6)` across Rhino builds.
 
 Fresh HLD solves are compared by ordered inputs/policy/fingerprints and declared
 fixture geometry properties. Lossless single-result codec round trips remain exact.

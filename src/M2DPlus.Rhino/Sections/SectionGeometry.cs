@@ -110,47 +110,79 @@ internal static class SectionGeometry
 
     private static void ValidateLocalFaceIntersections(Brep brep, double tolerance, SectionValidation? validation)
     {
+        validation = validation?.WithBounds(brep.GetBoundingBox(true));
+        using var sections = new SlabOverlapGuard(validation, brep.GetBoundingBox(true), tolerance);
         var boxes = brep.Faces.Select(f => f.GetBoundingBox(true)).ToArray();
         var touches = boxes.Select(b => validation?.Touches(b) ?? 3).ToArray();
         for (var i = 0; i < brep.Faces.Count; i++)
         for (var j = i + 1; j < brep.Faces.Count; j++)
         {
-            // An intersection in a material slab belongs to BOTH faces. Require
-            // both enclosing boxes to touch the SAME slab (near or far). This
-            // proves exclusion, unlike sampling faces or intersection curves.
             if ((touches[i] & touches[j]) == 0) continue;
-            var a = brep.Faces[i]; var b = brep.Faces[j];
             var box = boxes[i]; box.Inflate(tolerance);
             if (!BoundingBox.Intersection(box, boxes[j]).IsValid) continue;
-            var shared = a.AdjacentEdges().Intersect(b.AdjacentEdges()).Select(k => brep.Edges[k]).ToArray();
-            // Include singular-trim vertices of triangular mesh faces, which need not have a BrepEdge.
-            var aVertices = a.Loops.SelectMany(l => l.Trims).SelectMany(t => new[] { t.StartVertex.Location, t.EndVertex.Location }).ToArray();
-            var bVertices = b.Loops.SelectMany(l => l.Trims).SelectMany(t => new[] { t.StartVertex.Location, t.EndVertex.Location }).ToArray();
-            var sharedPoints = aVertices.Where(p => bVertices.Any(q => q.DistanceTo(p) <= tolerance)).ToArray();
-            using var first = a.DuplicateFace(false); using var second = b.DuplicateFace(false);
-            if (!Intersection.BrepBrep(first, second, tolerance, out var curves, out var points))
-                throw new SectionFailure("Cannot validate face self-intersection relationships.");
-            try
+            ValidateFacePair(brep.Faces[i], brep.Faces[j], tolerance, validation, sections);
+        }
+    }
+
+    // Pair-level seam permits synthetic open patches and failure injection without
+    // a runtime setting, cache-key variation or mutable process-wide test hook.
+    internal static void ValidateFacePair(BrepFace a, BrepFace b, double tolerance, SectionValidation? validation,
+        SlabOverlapGuard sections)
+    {
+        var shared = a.Brep == b.Brep ? a.AdjacentEdges().Intersect(b.AdjacentEdges()).Select(k => (Curve)a.Brep.Edges[k]).ToArray() : [];
+        var aVertices = a.Loops.SelectMany(l => l.Trims).SelectMany(t => new[] { t.StartVertex.Location, t.EndVertex.Location }).ToArray();
+        var bVertices = b.Loops.SelectMany(l => l.Trims).SelectMany(t => new[] { t.StartVertex.Location, t.EndVertex.Location }).ToArray();
+        var sharedPoints = aVertices.Where(p => bVertices.Any(q => q.DistanceTo(p) <= tolerance)).ToArray();
+        using var first = a.DuplicateFace(false); using var second = b.DuplicateFace(false);
+        var success = Intersection.BrepBrep(first, second, tolerance, out var curves, out var points);
+        try
+        {
+            if (!success) throw new SectionFailure("Cannot validate face self-intersection relationships.");
+            var excluded = false;
+            void Check(SectionValidation? slabs)
             {
                 foreach (var curve in curves)
                 {
-                    var intervals = EdgeProvenance.Split(curve, shared.Select(c => ((Curve)c, EdgeOrigin.Original)), tolerance);
+                    // An invalid native curve's bounds are untrusted: #73's handling only.
+                    if (curve.IsValid && slabs?.Excludes(curve) == true) { excluded = true; continue; }
+                    var intervals = EdgeProvenance.Split(curve, shared.Select(c => (c, EdgeOrigin.Original)), tolerance);
                     try
                     {
-                        if (intervals.Any(e => e.Origin == EdgeOrigin.None && e.Curve.GetLength() > tolerance &&
-                            !CoveredBySharedTopology(e.Curve, shared, tolerance)))
-                            throw new SectionFailure($"Self-intersecting Brep faces {i}/{j} away from their shared topology (tolerance={tolerance:G6}).");
+                        foreach (var e in intervals)
+                        {
+                            if (e.Origin != EdgeOrigin.None || e.Curve.GetLength() <= tolerance) continue;
+                            var covered = CoveredBySharedTopology(e.Curve, shared, tolerance, slabs, out var portionExcluded);
+                            excluded |= portionExcluded;
+                            if (!covered)
+                                throw new SectionFailure($"Self-intersecting Brep faces {a.FaceIndex}/{b.FaceIndex} away from their shared topology (tolerance={tolerance:G6}).");
+                        }
                     }
                     finally { foreach (var interval in intervals) interval.Dispose(); }
                 }
                 foreach (var p in points)
+                {
+                    if (slabs?.Excludes(new BoundingBox(p, p)) == true) { excluded = true; continue; }
                     if (OnTrimmedFace(a, p, tolerance) && OnTrimmedFace(b, p, tolerance) &&
                         !sharedPoints.Any(q => q.DistanceTo(p) <= tolerance) &&
                         !shared.Any(e => e.ClosestPoint(p, out var t) && e.PointAt(t).DistanceTo(p) <= tolerance))
-                        throw new SectionFailure($"Self-intersecting Brep faces {i}/{j} at {p} away from shared topology.");
+                        throw new SectionFailure($"Self-intersecting Brep faces {a.FaceIndex}/{b.FaceIndex} at an isolated point away from shared topology.");
+                }
             }
-            finally { foreach (var curve in curves) curve.Dispose(); }
+            // A refusal from the native witnesses needs no guard: it cannot admit.
+            Check(validation);
+            if (excluded && !sections.Check(a, b, shared, sharedPoints))
+            {
+                // Exactly #73's pair rule: preserve native split attribution and
+                // the <= tolerance interval skip, with no slab exclusions.
+                try { Check(null); SectionWork.GuardFallback(true); }
+                catch (SectionFailure ex)
+                {
+                    SectionWork.GuardFallback(false);
+                    throw new SectionFailure(ex.Message + " Slab boundary guard unresolved; #73 pair check fallback.");
+                }
+            }
         }
+        finally { foreach (var curve in curves) curve.Dispose(); }
     }
 
     private static bool OnTrimmedFace(BrepFace face, Point3d point, double tolerance) =>
@@ -161,15 +193,31 @@ internal static class SectionGeometry
     // a subcurve inside a tolerance ball about a point ON a shared edge proves the whole
     // subcurve is on shared topology. Samples alone cannot prove this. Adjacent edges may
     // supply different witnesses. Budget exhaustion always rejects, never accepts.
-    internal static bool CoveredBySharedTopology(Curve curve, Curve[] shared, double tolerance)
+    internal static bool CoveredBySharedTopology(Curve curve, Curve[] shared, double tolerance, SectionValidation? validation = null)
+        => CoveredBySharedTopology(curve, shared, tolerance, validation, out _);
+
+    internal static bool CoveredBySharedTopology(Curve curve, Curve[] shared, double tolerance, SectionValidation? validation, out bool excluded)
+        => CoveredBySharedTopology(curve, shared, tolerance, validation, out excluded, out _);
+
+    // `remote` distinguishes positive evidence (a piece whose start lies off every
+    // shared edge) from an inconclusive proof (budget, depth, invalid box, failed trim).
+    internal static bool CoveredBySharedTopology(Curve curve, Curve[] shared, double tolerance, SectionValidation? validation,
+        out bool excluded, out bool remote)
     {
-        if (shared.Length == 0) return false;
+        var omitted = false;
+        var offTopology = false;
+        excluded = false;
+        remote = false;
+        if (shared.Length == 0 && validation is null) { remote = true; return false; }
         var budget = 262144;
         bool Cover(Curve piece, int depth)
         {
             if (--budget < 0) return false;
             var box = piece.GetBoundingBox(true);
             if (!box.IsValid) return false;
+            // Continuous proof: discard only a complete enclosing box outside
+            // both slabs. No curve/plane split or sample is trusted for exclusion.
+            if (validation?.Excludes(piece) == true) { omitted = true; return true; }
             var p = piece.PointAtStart;
             var roundoff = 256 * 2.2204460492503131e-16 * Math.Max(1,
                 Math.Max(box.Min.DistanceTo(Point3d.Origin), box.Max.DistanceTo(Point3d.Origin)));
@@ -182,14 +230,18 @@ internal static class SectionGeometry
                 near = true;
                 if (box.GetCorners().All(c => c.DistanceTo(witness) + roundoff <= tolerance)) return true;
             }
-            if (!near || depth >= 32) return false;
+            // A remote start point cannot reject a curve spanning a slab: split
+            // its entire parameter domain, retaining ambiguous/boundary portions.
+            // The shared-topology proof tree is unchanged wherever it could succeed.
+            if (!near && (validation is null || validation.Contains(piece))) { offTopology = true; return false; }
+            if (depth >= 32) return false;
             var middle = piece.Domain.Mid;
             using var left = piece.Trim(piece.Domain.Min, middle);
             using var right = piece.Trim(middle, piece.Domain.Max);
             return left is not null && right is not null && Cover(left, depth + 1) && Cover(right, depth + 1);
         }
         try { return Cover(curve, 0); }
-        finally { SectionWork.Coverage(262144 - budget, budget < 0); }
+        finally { excluded = omitted; remote = offTopology; SectionWork.Coverage(262144 - budget, budget < 0); }
     }
 
     // Keep enclosing void shells together. Disjoint material shells are classified separately.
