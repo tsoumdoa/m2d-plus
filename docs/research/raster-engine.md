@@ -654,3 +654,61 @@ clip-footprint demotion remain independent and unchanged. Memory estimates are n
 hard native allocation bounds. macOS is compiled and exercised through the forced
 route on Windows, with no native Mac or installed-Yak interactive validation.
 No version bump, commit, push, installation or publication is part of this work.
+
+
+### Review corrections (2026-11-28)
+
+The interactive host runs validity checks, meshing, topology and silhouettes
+serially; only owned headless workers parallelize those native stages. Managed
+raster/classification parallelism remains available on both routes. Critical
+failures, including aggregated allocation failures, propagate through projection
+and section callers instead of triggering experimental HLD fallback. Ordinary
+geometry failures still discard the entire experimental projection and use HLD.
+
+The shared scheduler reserves `Estimate(view count)` plus Raster's excess over
+HLD's native working set, already included in that estimate. Raster receives only
+that bounded projection allowance; it cannot allocate against the full host
+budget. HLD and Raster are alternatives, so adding both complete working sets
+would double count memory. Worker sizing also reuses unused rounded-cap headroom.
+A genuinely necessary larger Raster cap may be retained across HLD/Raster switches
+when the full aggregate reservation at that cap still fits the live machine budget.
+
+The old reservation charged 512 triangles per Brep face. Calibration now charges
+two per planar face plus a continuous monotone envelope for curved faces (see
+`RasterPolicy`), the full 512 MiB image ceiling, 128 MiB headroom and per-source
+allowance. It covers these stage 1 observations, but does not bound arbitrary
+native tessellation: actual triangle, bin, candidate and output guards remain.
+The image clamps if the scheduler reserves less than the full image ceiling.
+
+All memory values below are GiB. Old/new extra is the reservation added to
+`SceneCost.Estimate(1)`; full projection estimate includes the HLD working-set
+credit. Stage 1 actual estimate is `RasterEstimatedBytes`. Sampled private peak
+also includes the headless host and retained HLD reference; it is not an
+incremental Raster peak. Caps are fresh default one-worker caps before retention.
+
+| Case | Old extra | New extra | New full projection | Stage 1 actual estimate | Stage 1 private peak | Old/new worker cap |
+|---|---:|---:|---:|---:|---:|---:|
+| brep_box / SW | 0.126 | 0.625 | 0.625 | 0.565 | 0.775 | 3 / 2 |
+| brep_curved_sphere / SW | 0.125 | 0.635 | 0.635 | 0.587 | 0.785 | 3 / 2 |
+| chs_hollow / SW | 0.126 | 0.644 | 0.645 | 0.575 | 0.786 | 3 / 2 |
+| owner-1 / Top | 0.131 | 0.872 | 0.889 | 0.819 | 0.969 | 3 / 2 |
+| owner-2 / Plan A | 1.133 | 1.711 | 3.972 | 2.371 | 3.000 | 6 / 6 |
+| owner-2 / Top | 2.188 | 0.477 | 4.850 | 4.237 | 5.159 | 10 / 7 |
+| curved-S / Top | 0.330 | 2.943 | 3.356 | 2.769 | 2.492 | 3 / 5 |
+| perf-M / Plan level 1 | 4.675 | 1.997 | 2.168 | 1.999 | 2.448 | 8 / 5 |
+
+One serial-native projection per model, under
+`Local\M2DPlusLocalModelSuiteRhino`, with normal managed parallelism:
+
+| Model | Archived parallel total s | Serial-native total s | Serial mesh / edges / silhouette s |
+|---|---:|---:|---:|
+| brep_curved_sphere / SW | 0.555 | 0.774 | 0.042 / 0.003 / 0.008 |
+| perf-M / Plan level 1 | 3.917 | 11.942 | 3.862 / 0.297 / 5.448 |
+
+These are single runs against archived stage 1 timings, not paired repeated
+benchmarks. Measurements use the in-process native execution policy inside
+an owned headless host and do not touch an interactive Rhino. Native meshing,
+validity, topology and silhouette time is included; preparation/section capture
+and subsequent presentation are outside the projection timer. Receipts remain
+under the external evidence root in `review-fixes/`; private model identifiers
+and authored view geometry are never copied into this report.

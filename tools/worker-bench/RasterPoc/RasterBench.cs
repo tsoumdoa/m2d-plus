@@ -40,7 +40,7 @@ internal static class RasterBench
         var reuseReference = args.FirstOrDefault(a => a.StartsWith("--reference=", StringComparison.Ordinal))?[12..];
         var excludeLayerFile = args.FirstOrDefault(a => a.StartsWith("--exclude-layer-file=", StringComparison.Ordinal))?[21..];
         var viewRequest = args.FirstOrDefault(a => a.StartsWith("--view-request=", StringComparison.Ordinal))?[15..];
-        try { Measure(model, label, viewName, folder, resolutions, args.Contains("mesh"), admissionSeconds, timingReference, reuseReference, viewRequest, args.Contains("--also-threaded"), excludeLayerFile, args.Contains("--product-only")); }
+        try { Measure(model, label, viewName, folder, resolutions, args.Contains("mesh"), admissionSeconds, timingReference, reuseReference, viewRequest, args.Contains("--also-threaded"), excludeLayerFile, args.Contains("--product-only"), args.Contains("--native-timing"), args.Contains("--reservation-only")); }
         catch (Exception ex) { Write(Path.Combine(folder, "failure.json"), new { Label = label, View = viewName, Error = ex.ToString() }); throw; }
         finally { mutex.ReleaseMutex(); }
     }
@@ -74,7 +74,7 @@ internal static class RasterBench
         var objects = doc.Objects.GetObjectList(ObjectType.AnyObject).Where(o => string.Equals(o.Attributes.Name, name, StringComparison.OrdinalIgnoreCase)).ToArray();
         return objects.Length == 1 ? ViewRequest.Parse(objects[0], doc) with { Name = name } : view;
     }
-    private static void Measure(string model, string label, string viewName, string folder, int[] resolutions, bool mesh, double admissionSeconds, string? timingReference, string? reuseReference, string? viewDescriptor, bool alsoThreaded, string? excludeLayerFile, bool productOnly)
+    private static void Measure(string model, string label, string viewName, string folder, int[] resolutions, bool mesh, double admissionSeconds, string? timingReference, string? reuseReference, string? viewDescriptor, bool alsoThreaded, string? excludeLayerFile, bool productOnly, bool nativeTiming, bool reservationOnly)
     {
         using var core = new Rhino.Runtime.InProcess.RhinoCore(["/nosplash", "/notemplate"], Rhino.Runtime.InProcess.WindowStyle.NoWindow);
         using var doc = RhinoDoc.OpenHeadless(model) ?? throw new IOException("Cannot open model label " + label);
@@ -102,6 +102,14 @@ internal static class RasterBench
             view.ObjectId == Guid.Empty ? null : new HashSet<Guid> { view.ObjectId }, null, _ => [view]);
         while (!capture.Step(TimeSpan.FromSeconds(30))) { }
         using var sceneLease = capture.Accept(); var scene = sceneLease.Value;
+        if (reservationOnly)
+        {
+            Write(Path.Combine(folder, "reservation.json"), new { Label = label, View = viewName, scene.Cost,
+                OldReservation = checked(128 * RasterPolicy.MiB + (scene.Cost.MeshTriangles + scene.Cost.BrepFaces * 512) * 320 + scene.Cost.Sources * 4096L),
+                NewReservation = RasterPolicy.Reservation(scene.Cost), ProjectionEstimate = RasterPolicy.ProjectionEstimate(scene.Cost), WorkerExtra = RasterPolicy.WorkerExtra(scene.Cost),
+                HldWorkerCap = WorkerMemoryPolicy.Required(scene.Cost) });
+            return;
+        }
         var registered = new List<VisibilityInput>(); var before = NativeDrawing.HldCalls;
         var scheduler = new NativeScheduler(WorkerMemoryPolicy.Budget(WorkerMachineMemory.Read()));
         var clock = Stopwatch.StartNew();
@@ -137,6 +145,18 @@ internal static class RasterBench
                 throw new InvalidDataException("Prepared/captured/registered source census mismatch");
             if (resolvedView.Cut is null && view.Named is not { Crop: true } && sourceCount != preparedCount)
                 throw new InvalidDataException("Unbounded uncut view lost a prepared source");
+            if (nativeTiming)
+            {
+                using var memory = new MemorySample();
+                using var result = RasterProjection.Solve(registered, resolvedView, frame, tolerance, doc.ModelAngleToleranceRadians,
+                    resolutions.Single(), Math.Min(16, Environment.ProcessorCount), parallelNative: false);
+                memory.Stop();
+                Write(Path.Combine(folder, "native-timing.json"), new { Label = label, View = viewName, scene.Cost,
+                    result.Timings, result.Drawing.RasterEstimatedBytes, PeakPrivateBytes = memory.PeakPrivate,
+                    NativeParallel = false, ManagedThreads = Math.Min(16, Environment.ProcessorCount), HldCallDelta = NativeDrawing.HldCalls - before });
+                Console.WriteLine($"Serial native Raster: {result.Timings.Total:F3}s; mesh={result.Timings.Tessellate:F3}s; edges={result.Timings.Edges:F3}s; silhouettes={result.Timings.Silhouette:F3}s");
+                return;
+            }
             using var reference = timingReference is not null || reuseReference is not null
                 ? JsonDocument.Parse(File.ReadAllBytes(timingReference ?? reuseReference!)) : null;
             if (reference is not null)
@@ -155,7 +175,7 @@ internal static class RasterBench
                 var rasterSettings = Settings.Resolve([new(viewName, viewName, view.Kind, view.Cut is not null, cheap.Diagonal.Length,
                     doc.ModelAbsoluteTolerance, authoredDepth)], [[settingsText + "\nvisibility=raster"]], units).Views[0];
                 var productView = view with { Settings = rasterSettings };
-                var plan = WorkerMemoryPolicy.Size(scene.Cost, 1, 1, WorkerMachineMemory.Read(), extra: RasterPolicy.Reservation(scene.Cost));
+                var plan = WorkerMemoryPolicy.Size(scene.Cost, 1, 1, WorkerMachineMemory.Read(), extra: RasterPolicy.WorkerExtra(scene.Cost));
                 if (plan.Refusal is not null) throw new InvalidOperationException(plan.Refusal);
                 var calls = NativeDrawing.HldCalls;
                 using var product = NativeDrawing.SolveBorrowedAsync(scene, new(scene.Revision, "raster-product-smoke", viewName, 1), [productView],
@@ -239,7 +259,7 @@ internal static class RasterBench
                 using var memory = new MemorySample();
                 var calls = NativeDrawing.HldCalls;
                 using var result = RasterProjection.Solve(registered, resolvedView, frame, tolerance, doc.ModelAngleToleranceRadians,
-                    resolution, Math.Min(16, Environment.ProcessorCount), mesh);
+                    resolution, Math.Min(16, Environment.ProcessorCount), mesh, parallelNative: true);
                 memory.Stop();
                 if (calls != NativeDrawing.HldCalls) throw new InvalidDataException("Raster called HLD");
                 var sub = Path.Combine(folder, resolution.ToString()); Directory.CreateDirectory(sub);

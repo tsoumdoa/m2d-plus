@@ -178,7 +178,12 @@ public sealed class RasterVisibilityTests(RhinoHost host)
         using var restoredScene=WorkerCodec.RestoreScene(WorkerCodec.Capture(scene.Value,default)); Assert.Equal(1000,restoredScene.MillimetresPerUnit);
         var directory=Path.GetFullPath(Path.Combine(AppContext.BaseDirectory,"../../../../../src/M2DPlus.Worker/bin/Debug/net"+Environment.Version.Major+".0-windows"));
         using var pool=new DrawingWorkerPool(new(){Count=1,Directory=directory});
-        using var worker=pool.SolveAsync(scene.Value,new(scene.Value.Revision,"raster","raster",1),[view],new(),default).GetAwaiter().GetResult();
+        using var firstHld=pool.SolveAsync(scene.Value,new(scene.Value.Revision,"hld","hld",0),[View(scene.Value,"SW","hld")],new(),default).GetAwaiter().GetResult();
+        Assert.Null(firstHld.Views[0].Error);
+        var hldProcesses=pool.ProcessIds;
+        var sceneTransfers=new SceneTransfers();
+        using var worker=pool.SolveAsync(scene.Value,new(scene.Value.Revision,"raster","raster",1),[view],new(),default,sceneTransfers).GetAwaiter().GetResult();
+        Assert.Equal(hldProcesses,pool.ProcessIds); Assert.Equal(0,sceneTransfers.Count);
         Assert.Null(worker.Views[0].Error); Assert.True(worker.Views[0].RasterRan,worker.Views[0].Info); Assert.Equal(0,worker.Views[0].NativeCalls);
         Assert.Equal(local.Views[0].RasterPixel,worker.Views[0].RasterPixel); Assert.Equal(local.Views[0].RasterTriangles,worker.Views[0].RasterTriangles);
         // Units changed without scaling geometry or tolerance: keep HLD identities stable,
@@ -205,4 +210,73 @@ public sealed class RasterVisibilityTests(RhinoHost host)
         }
         finally {HostPlatform.OverrideForTests=original;}
     });
+    [RhinoFact] public void CriticalRasterFailuresEscapeTheWholePipelineWithoutHldFallback() => host.Run(()=>
+    {
+        using var doc=RhinoDoc.CreateHeadless(null);
+        using var body=Brep.CreateFromBox(new BoundingBox(Point3d.Origin,new Point3d(10,10,10)));
+        using var cache=new SceneCache(); using var scene=BaselineTests.Capture(doc,cache,[new(body,[],"body")]);
+        foreach (var source in new object[] { "SW", new Plane(new Point3d(0,0,5), Vector3d.ZAxis) })
+        foreach (var error in new Exception[] { new OutOfMemoryException("injected Raster allocation failure"),
+            new AggregateException(new OutOfMemoryException("injected parallel allocation failure")), new AccessViolationException("injected critical failure") })
+        {
+            var calls=NativeDrawing.HldCalls;
+            var settings=new NativeSettings { IsWorker=true, Scheduler=new(6*WorkerMemoryPolicy.GiB), RasterStarting=()=>throw error };
+            Assert.Same(error, Assert.ThrowsAny<Exception>(()=>Solve(scene.Value,View(scene.Value,source),settings)));
+            Assert.Equal(calls,NativeDrawing.HldCalls);
+        }
+        using var ordinary=Solve(scene.Value,View(scene.Value,"SW"),new() { IsWorker=true, Scheduler=new(6*WorkerMemoryPolicy.GiB),
+            RasterStarting=()=>throw new InvalidOperationException("injected ordinary geometry failure") });
+        Assert.Equal(1,ordinary.Views[0].NativeCalls); Assert.False(ordinary.Views[0].RasterRan);
+        Assert.Contains(ordinary.Views[0].Diagnostics,d=>d.Contains("injected ordinary geometry failure") && d.Contains("whole view"));
+        Assert.True(RasterProjectionRoute.CanFallback(new InvalidOperationException("ordinary geometry failure")));
+        Assert.False(RasterProjectionRoute.CanFallback(new AggregateException(new OperationCanceledException())));
+    });
+    [RhinoFact] public void EmptyRasterAndThreadingCountersDescribeTheActualProjection() => host.Run(()=>
+    {
+        using var doc=RhinoDoc.CreateHeadless(null);
+        using var body=Brep.CreateFromBox(new BoundingBox(Point3d.Origin,new Point3d(10,10,10)));
+        using var cache=new SceneCache(); using var scene=BaselineTests.Capture(doc,cache,[new(body,[],"body")]);
+        var view=View(scene.Value,"SW");
+        using var empty=new ViewDrawing { Settings=view.Settings };
+        RasterProjectionRoute.Solve([],empty,view,new(),scene.Value,default);
+        Assert.True(empty.RasterRan); Assert.False(empty.MultipleThreads); Assert.Equal(0,empty.NativeCalls);
+        foreach (var worker in new[] { false, true })
+        {
+            using var batch=Solve(scene.Value,view,new() { IsWorker=worker, MultipleThreads=false, Scheduler=new(6*WorkerMemoryPolicy.GiB) });
+            Assert.True(batch.Views[0].RasterRan,batch.Views[0].Info); Assert.False(batch.Views[0].MultipleThreads);
+        }
+    });
+
+    [RhinoFact] public void SwitchingBackToHldRetainsASufficientRasterWorkerCap() => host.Run(()=>
+    {
+        using var doc=RhinoDoc.CreateHeadless(null); doc.ModelAbsoluteTolerance=.1;
+        var bodies=Enumerable.Range(0,100).Select(i=>new Sphere(new Point3d(i%10*4,i/10*4,0),1).ToBrep()).ToArray();
+        try
+        {
+            using var cache=new SceneCache();
+            using var scene=BaselineTests.Capture(doc,cache,bodies.Select((b,i)=>new CaptureInput(b,[],"sphere-"+i)).ToArray());
+            var directory=Path.GetFullPath(Path.Combine(AppContext.BaseDirectory,"../../../../../src/M2DPlus.Worker/bin/Debug/net"+Environment.Version.Major+".0-windows"));
+            using var pool=new DrawingWorkerPool(new(){Count=1,Directory=directory});
+            Assert.True(RasterPolicy.WorkerExtra(scene.Value.Cost)>0);
+            using var first=pool.SolveAsync(scene.Value,new(scene.Value.Revision,"v","hld",1),[View(scene.Value,"SW","hld")],new(),default).GetAwaiter().GetResult();
+            Assert.Null(first.Views[0].Error); var hldCap=pool.LastSizing!.CapBytes;
+            using var raster=pool.SolveAsync(scene.Value,new(scene.Value.Revision,"v","raster",2),[View(scene.Value,"SW")],new(),default).GetAwaiter().GetResult();
+            Assert.True(raster.Views[0].RasterRan,raster.Views[0].Info);
+            var processes=pool.ProcessIds; var rasterCap=pool.LastSizing!.CapBytes; Assert.True(rasterCap>hldCap);
+            foreach(var engine in new[]{"hld","raster"})
+            {
+                using var again=pool.SolveAsync(scene.Value,new(scene.Value.Revision,"v",engine,3),[View(scene.Value,"SW",engine)],new(),default).GetAwaiter().GetResult();
+                Assert.Null(again.Views[0].Error); Assert.Equal(engine=="raster",again.Views[0].RasterRan);
+                Assert.Equal(processes,pool.ProcessIds); Assert.Equal(rasterCap,pool.LastSizing!.CapBytes);
+                Assert.True(pool.LastSizing.Count*pool.LastSizing.CapBytes+pool.LastSizing.HostReplyBytes<=pool.LastSizing.BudgetBytes);
+            }
+        }
+        finally { foreach(var body in bodies)body.Dispose(); }
+    });
+    private sealed class SceneTransfers : IProgress<JobProgress>
+    {
+        internal int Count;
+        public void Report(JobProgress progress) { if (progress.Step == "sending scene") Interlocked.Increment(ref Count); }
+    }
+
 }

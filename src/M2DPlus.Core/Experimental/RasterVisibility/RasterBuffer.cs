@@ -7,6 +7,15 @@ public sealed class RasterBuffer
     public readonly record struct Triangle(Vertex A, Vertex B, Vertex C, int Face)
     {
         public double Area => (B.X - A.X) * (C.Y - A.Y) - (B.Y - A.Y) * (C.X - A.X);
+        public bool Degenerate
+        {
+            get
+            {
+                static double EdgeSquared(Vertex a, Vertex b) => (b.X - a.X) * (b.X - a.X) + (b.Y - a.Y) * (b.Y - a.Y);
+                var scale = Math.Max(EdgeSquared(A, B), Math.Max(EdgeSquared(A, C), EdgeSquared(B, C)));
+                return Math.Abs(Area) <= 1e-12 * scale;
+            }
+        }
         public double Dx => ((B.Z - A.Z) * (C.Y - A.Y) - (C.Z - A.Z) * (B.Y - A.Y)) / Area;
         public double Dy => ((B.X - A.X) * (C.Z - A.Z) - (C.X - A.X) * (B.Z - A.Z)) / Area;
         public double Depth(double x, double y) => A.Z + Dx * (x - A.X) + Dy * (y - A.Y);
@@ -45,7 +54,7 @@ public sealed class RasterBuffer
         for (var i = 0; i < triangles.Length; i++)
         {
             if ((i & 4095) == 0) token.ThrowIfCancellationRequested();
-            var t = triangles[i]; if (Math.Abs(t.Area) < 1e-20) continue;
+            var t = triangles[i]; if (t.Degenerate) continue;
             var left = Math.Max(0, (int)Math.Floor((Math.Min(t.A.X, Math.Min(t.B.X, t.C.X)) - minX) / Pixel));
             var right = Math.Min(Width - 1, (int)Math.Floor((Math.Max(t.A.X, Math.Max(t.B.X, t.C.X)) - minX) / Pixel));
             var bottom = Math.Max(0, (int)Math.Floor((Math.Min(t.A.Y, Math.Min(t.B.Y, t.C.Y)) - minY) / Pixel));

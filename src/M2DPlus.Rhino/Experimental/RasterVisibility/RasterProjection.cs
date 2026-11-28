@@ -22,7 +22,7 @@ internal static class RasterProjection
         public void Dispose() { Drawing.Dispose(); foreach (var candidate in Candidates) candidate.Curve.Dispose(); }
     }
     internal static Result Solve(IReadOnlyList<VisibilityInput> inputs, ViewRequest view, Rectangle3d frame,
-        double tolerance, double angle, int resolution, int threads, bool meshSilhouettes = false, CancellationToken token = default, long budgetBytes = long.MaxValue)
+        double tolerance, double angle, int resolution, int threads, bool meshSilhouettes = false, CancellationToken token = default, long budgetBytes = long.MaxValue, bool parallelNative = false)
     {
         if (meshSilhouettes) throw new NotSupportedException("Mesh silhouettes are a retired stage 0 measurement alternative");
         token.ThrowIfCancellationRequested();
@@ -32,7 +32,6 @@ internal static class RasterProjection
         foreach (var input in inputs)
         {
             token.ThrowIfCancellationRequested();
-            if (!input.Geometry.IsValid) invalidInputs++;
             var box = input.Geometry.GetBoundingBox(worldToLocal);
             if (!box.IsValid) throw new NotSupportedException("prepared geometry has no finite bounds");
             bounds.Union(box);
@@ -44,6 +43,13 @@ internal static class RasterProjection
         var nominalPixel = Math.Max(spanX, spanY) / resolution;
         var meshTolerance = RasterPolicy.MeshTolerance(tolerance, nominalPixel);
         var options = new ParallelOptions { MaxDegreeOfParallelism = threads, CancellationToken = token };
+        // Native topology, meshing and silhouettes are serial in the interactive host.
+        // Only owned headless workers may run these calls concurrently.
+        void NativeFor(Action<int> body)
+        {
+            if (parallelNative) Parallel.For(0, inputs.Count, options, body);
+            else for (var i = 0; i < inputs.Count; i++) { token.ThrowIfCancellationRequested(); body(i); }
+        }
         var meshes = new List<(Mesh Mesh, int Face)>[inputs.Count];
         var candidates = new List<Candidate>();
         var ownedCandidates = new System.Collections.Concurrent.ConcurrentBag<Curve>();
@@ -56,7 +62,7 @@ internal static class RasterProjection
             if (gridEstimate + used > budgetBytes) throw new NotSupportedException("raster memory admission: candidate curves exceed budget");
             return new(curve, input, adjacent, feature, profile);
         }
-        var drawing = new ViewDrawing { Name = view.Name, Frame = frame, Settings = view.Settings, Tolerance = tolerance };
+        var drawing = new ViewDrawing { Name = view.Name, Frame = frame, Settings = view.Settings, Tolerance = tolerance, MultipleThreads = threads > 1 };
         var faceOffsets = new int[inputs.Count]; var nextFace = 0;
         for (var i = 0; i < inputs.Count; i++)
         { faceOffsets[i] = nextFace; nextFace += inputs[i].Geometry is Brep brep ? brep.Faces.Count : inputs[i].Geometry is Mesh m ? m.Faces.Count : 1; }
@@ -65,9 +71,10 @@ internal static class RasterProjection
         var clock = Stopwatch.StartNew();
         try
         {
-            Parallel.For(0, inputs.Count, options, i =>
+            NativeFor(i =>
             {
                 token.ThrowIfCancellationRequested();
+                if (!inputs[i].Geometry.IsValid) Interlocked.Increment(ref invalidInputs);
                 var batch = meshes[i] = [];
                 using var parameters = new MeshingParameters
                 {
@@ -134,7 +141,7 @@ internal static class RasterProjection
             gridEstimate = grid.EstimatedBytes;
             var raster = clock.Elapsed.TotalSeconds; clock.Restart();
             var batches = new List<Candidate>[inputs.Count];
-            Parallel.For(0, inputs.Count, options, i =>
+            NativeFor(i =>
             {
                 var input = inputs[i]; var batch = batches[i] = [];
                 if (input.Geometry is Brep b)
@@ -168,7 +175,7 @@ internal static class RasterProjection
             foreach (var batch in batches) candidates.AddRange(batch);
             var edges = clock.Elapsed.TotalSeconds; clock.Restart();
             // Native tangency curves preserve exact loci. Time this independently from meshing and classification.
-            Parallel.For(0, inputs.Count, options, i =>
+            NativeFor(i =>
             {
                 var batch = batches[i] = [];
                 if (inputs[i].Geometry is not Brep b) return;

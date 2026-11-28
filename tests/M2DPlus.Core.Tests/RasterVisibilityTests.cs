@@ -61,4 +61,54 @@ public sealed class RasterVisibilityTests
         using var cancel = new CancellationTokenSource(); cancel.Cancel();
         Assert.ThrowsAny<OperationCanceledException>(()=>new RasterBuffer(0,0,1,1,64,triangles,1,token:cancel.Token));
     }
+    [Fact] public void LastEffectiveVisibilityControlsRunPolicyIncludingPerViewRows()
+    {
+        Assert.DoesNotContain(RasterPolicy.Identity, Settings.RunText(["visibility=raster", "visibility=hld"]));
+        Assert.Contains(RasterPolicy.Identity, Settings.RunText(["visibility=hld", "visibility=raster"]));
+        Assert.Contains(RasterPolicy.Identity, Settings.RunText(["[Top]", "visibility=raster", "[Front]", "visibility=hld"]));
+        Assert.DoesNotContain(RasterPolicy.Identity, Settings.RunText(["visibility=raster", "visibility=pipes # last valid"]));
+    }
+    [Fact] public void ReservationWeightsCurvedFacesAndReusesExistingWorkerHeadroom()
+    {
+        var planar = new SceneCost(1000, 1000, 0, 100);
+        var curved = planar with { CurvedBrepFaces = 500, CurvedBrepEdges = 1500 };
+        Assert.Equal(2000, RasterPolicy.EstimatedTriangles(planar));
+        Assert.True(RasterPolicy.ProjectionEstimate(curved) > RasterPolicy.ProjectionEstimate(planar));
+        Assert.Equal(0, RasterPolicy.WorkerExtra(planar));
+        var covered = new SceneCost(1000, 10_000, 0, 100) { CurvedBrepFaces = 5000, CurvedBrepEdges = 50_000 };
+        Assert.Equal(0, RasterPolicy.Reservation(covered));
+        Assert.Equal(0, RasterPolicy.WorkerExtra(covered));
+        var coveredProjection = RasterPolicy.ProjectionReservation(covered, 1, covered.Estimate(1));
+        Assert.Equal(RasterPolicy.ProjectionEstimate(covered), coveredProjection);
+        Assert.Equal(0, RasterPolicy.AdditionalReservation(covered, coveredProjection));
+        var budget = planar.Estimate(2) + RasterPolicy.MinimumReservation(planar) - 1;
+        Assert.Equal(0, RasterPolicy.ProjectionReservation(planar, 2, budget));
+        budget += 64 * RasterPolicy.MiB;
+        var reservation = RasterPolicy.ProjectionReservation(planar, 2, budget);
+        Assert.Equal(budget, planar.Estimate(2) + reservation);
+        var grid = new RasterBuffer(0, 0, 1, 1, 8192, [], 1, reservation);
+        Assert.True(grid.EstimatedBytes <= reservation);
+    }
+    [Theory] [InlineData(0)] [InlineData(1_000_000)]
+    public void EdgeOnSurveySliversUseRelativeAreaWhileOrdinaryTrianglesStillOcclude(double offset)
+    {
+        Triangle sliver = new(new(offset,offset,10), new(offset+100_000,offset,10), new(offset+50_000,offset+1e-8,10), 1);
+        Assert.True(sliver.Degenerate);
+        var grid = new RasterBuffer(offset,offset,100_000,1,64,[sliver],1);
+        Assert.True(grid.Visible(new(offset+50_000,offset+2e-9,0), .001));
+        Triangle ordinary = new(new(offset,offset,10), new(offset+100_000,offset,10), new(offset,offset+1,10), 2);
+        Assert.False(ordinary.Degenerate);
+        Assert.False(new RasterBuffer(offset,offset,100_000,1,64,[ordinary],1).Visible(new(offset+100,offset+.1,0), .001));
+    }
+
+    [Fact] public void CurvedEstimateHasNoDownwardDensityThresholds()
+    {
+        long previous = 0;
+        for (var faces = 0; faces <= 10_000; faces++)
+        {
+            var triangles = RasterPolicy.EstimatedTriangles(new(1000, faces, 0, 1) { CurvedBrepFaces = faces });
+            Assert.True(triangles >= previous); previous = triangles;
+        }
+    }
+
 }

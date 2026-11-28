@@ -37,12 +37,12 @@ public sealed class DrawingWorkerPool : IDisposable
     public Task<DrawingBatch> SolveAsync(PreparedScene scene,RequestIdentity identity,IReadOnlyList<ViewRequest> views,
         NativeSettings settings,CancellationToken token,IProgress<JobProgress>? progress=null) =>
         SolveCoreAsync(scene.Cost,identity,views,settings,WorkerCodec.Fingerprint(),new(()=>WorkerCodec.Capture(scene,token),LazyThreadSafetyMode.ExecutionAndPublication),token,progress,
-            views.Any(v=>v.Settings?.Visibility==VisibilityMode.Raster) ? scene.MillimetresPerUnit.ToString("R",System.Globalization.CultureInfo.InvariantCulture) : null);
+            scene.MillimetresPerUnit.ToString("R",System.Globalization.CultureInfo.InvariantCulture));
     // Exercises the exact production reservation/transport/retry path without a RhinoCore in the coordinator.
     // Used by the benchmark so four children never imply a fifth licensed Rhino process in their parent.
     internal Task<DrawingBatch> SolveEncodedAsync(SceneCost cost,RequestIdentity identity,IReadOnlyList<ViewRequest> views,
         WorkerFingerprint fingerprint,byte[] scene,CancellationToken token) =>
-        SolveCoreAsync(cost,identity,views,new(),fingerprint,new(()=>scene),token,null,views.Any(v=>v.Settings?.Visibility==VisibilityMode.Raster) ? WorkerCodec.Hash(scene) : null);
+        SolveCoreAsync(cost,identity,views,new(),fingerprint,new(()=>scene),token,null,WorkerCodec.Hash(scene));
     private async Task<DrawingBatch> SolveCoreAsync(SceneCost cost,RequestIdentity identity,IReadOnlyList<ViewRequest> views,
         NativeSettings settings,WorkerFingerprint fingerprint,Lazy<byte[]> payload,CancellationToken token,IProgress<JobProgress>? progress,string? sceneMetadataKey=null)
     {
@@ -62,7 +62,7 @@ public sealed class DrawingWorkerPool : IDisposable
                 try{resident+=slot.Client?.ResidentBytes??0;retained|=slot.Client is not null;}finally{slot.Gate.Release();}
             }
             memory=memory with{AvailableBytes=Math.Min(memory.PhysicalBytes,checked(memory.AvailableBytes+resident))};
-            long extra=views.Any(v=>v.Settings?.Visibility==VisibilityMode.Raster && v.Settings.CutOnly==false) ? RasterPolicy.Reservation(cost) : 0;
+            long extra=views.Any(v=>v.Settings?.Visibility==VisibilityMode.Raster && v.Settings.CutOnly==false) ? RasterPolicy.WorkerExtra(cost) : 0;
             var admittedWorkers=Math.Min(_options.Count,_options.CurrentHldWorkerLimit);
             var plan=WorkerMemoryPolicy.Size(cost,views.Count,admittedWorkers,memory,_options.MemoryBytes,extra);
             if(plan.Count==0 && retained)
@@ -73,6 +73,19 @@ public sealed class DrawingWorkerPool : IDisposable
                 token.ThrowIfCancellationRequested();
                 memory=_options.ReadMemory();
                 plan=WorkerMemoryPolicy.Size(cost,views.Count,admittedWorkers,memory,_options.MemoryBytes,extra);
+            }
+            // A Raster solve may genuinely need a larger cap. Keep that owned cap
+            // for a following HLD batch when the same worker count still fits;
+            // otherwise toggling engines pointlessly shrinks/restarts the pool twice.
+            // Re-size the aggregate reservation at the retained cap before reusing it.
+            if(plan.Count>0)
+            {
+                var caps=_slots.Take(plan.Count).Select(s=>s.Client?.MemoryCapBytes).Distinct().ToArray();
+                if(caps is [long retainedCap] && retainedCap>plan.CapBytes)
+                {
+                    var reuse=WorkerMemoryPolicy.Size(cost,views.Count,admittedWorkers,memory,retainedCap,extra);
+                    if(reuse.Count==plan.Count)plan=reuse;
+                }
             }
             LastSizing=plan;
             if(plan.Count==0)throw new WorkerUnavailableException(plan.Refusal!);
@@ -201,7 +214,7 @@ public sealed class DrawingWorkerPool : IDisposable
             async Task<ViewDrawing> SolveView(Slot slot,int index,long cap,bool isolatedRetry,long replyLimit)
             {
                 slot.Client??=await WorkerClient.StartAsync(_options with{MemoryBytes=cap,ProcessorLimit=isolatedRetry?WorkerMemoryPolicy.CpuLimit(Environment.ProcessorCount):processors},fingerprint,token).ConfigureAwait(false);
-                if(slot.Client.SceneRevision!=identity.SceneRevision || sceneMetadataKey is not null && slot.Client.SceneMetadataKey!=sceneMetadataKey)
+                if(slot.Client.SceneRevision!=identity.SceneRevision || views[index].Settings?.Visibility==VisibilityMode.Raster && sceneMetadataKey is not null && slot.Client.SceneMetadataKey!=sceneMetadataKey)
                 {
                     progress?.Report(new(JobPhase.Drawing,Volatile.Read(ref done),views.Count){Workers=plan.Count,Step="sending scene"});
                     await slot.Client.CallAsync("scene",payload.Value,_options.SolveTimeout,token,bytes=>bytes,_replies,replyLimit).ConfigureAwait(false);
@@ -285,7 +298,7 @@ public static class DrawingExecution
     {
         if(!HostPlatform.IsolatedWorkers)return await SolveInProcessOnlyAsync(scene,identity,views,settings,token,progress).ConfigureAwait(false);
         var pool=workers??DrawingWorkerPool.Shared;
-        var rasterExtra=views.Any(v=>v.Settings?.Visibility==VisibilityMode.Raster && v.Settings.CutOnly==false) ? RasterPolicy.Reservation(scene.Cost) : 0;
+        var rasterExtra=views.Any(v=>v.Settings?.Visibility==VisibilityMode.Raster && v.Settings.CutOnly==false) ? RasterPolicy.MinimumReservation(scene.Cost) : 0;
         var hldAdmitted=scene.Cost.Admitted(views.Count,settings.Scheduler.BudgetBytes);
         var admitted=hldAdmitted && scene.Cost.Estimate(views.Count)+rasterExtra<=settings.Scheduler.BudgetBytes;
         if((views.Count>1 || !admitted) && pool.Installed)

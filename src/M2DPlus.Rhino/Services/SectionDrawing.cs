@@ -219,7 +219,9 @@ internal static class SectionDrawing
 
         }
         catch (OperationCanceledException) { result.Dispose(); throw; }
-        catch (Exception ex) { result.Dispose(); result.Error = ex.Message; }
+        catch (Exception ex) when (view.Settings?.Visibility != VisibilityMode.Raster || RasterProjectionRoute.CanFallback(ex))
+        { result.Dispose(); result.Error = ex.Message; }
+        catch { result.Dispose(); throw; }
         finally
         {
             result._diagnostics.Add(work.Diagnostic);

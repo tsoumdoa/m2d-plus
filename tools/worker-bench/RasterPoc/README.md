@@ -86,3 +86,10 @@ python tools/worker-bench/RasterPoc/report.py <evidence-root> --matrix stage1/ma
 The optional final `raster-rays` argument is an external layer descriptor; it filters
 control selection only, so non-setting-out junction errors can be inspected while
 all prepared occluders remain in the native ray query.
+
+`--reservation-only` captures a label and writes its old/new reservation, curved-face
+census and HLD worker cap without drawing. `--native-timing` captures the same prepared
+batch as stage 1, then runs one Raster projection with serial native preparation
+and normal managed threads, without HLD or comparison. Both take the shared timing
+mutex and preserve receipts outside git. The latter measures the host's native
+execution policy in an owned headless process; it never attaches to interactive Rhino.

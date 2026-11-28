@@ -33,11 +33,21 @@ public static partial class Settings
         var text = string.Join("\n", lines.SelectMany(l => l.Replace("\r\n", "\n").Split('\n')).Where(l => !IsBakeTimeLine(l)));
         return RasterRunPolicy(text);
     }
-    private static string RasterRunPolicy(string text) => text.Split('\n').Any(line =>
+    private static string RasterRunPolicy(string text)
     {
-        var clean = line.Split('#')[0]; var equals = clean.IndexOf('=');
-        return equals > 0 && NormalizeKey(clean[..equals]) == "visibility" && clean[(equals + 1)..].Trim().Equals("raster", StringComparison.OrdinalIgnoreCase);
-    }) ? text + "\n# " + Experimental.RasterVisibility.RasterPolicy.Identity : text;
+        // Each header starts a per-view row; only its last valid assignment applies.
+        var raster = false; var effective = "hld";
+        foreach (var line in text.Split('\n'))
+        {
+            var clean = line.Split('#')[0].Trim();
+            if (clean.StartsWith('[')) { raster |= effective == "raster"; effective = "hld"; }
+            var equals = clean.IndexOf('=');
+            if (equals <= 0 || NormalizeKey(clean[..equals]) != "visibility") continue;
+            var value = clean[(equals + 1)..].Trim().ToLowerInvariant();
+            if (value is "hld" or "pipes" or "raster") effective = value;
+        }
+        return raster || effective == "raster" ? text + "\n# " + Experimental.RasterVisibility.RasterPolicy.Identity : text;
+    }
 
     /// <summary>A stored row (menu or view object) without bake-time and ignored legacy keys, as canonical text for run keys.</summary>
     public static string RunText(SettingsRow row) => RasterRunPolicy(string.Join("\n", row.Values

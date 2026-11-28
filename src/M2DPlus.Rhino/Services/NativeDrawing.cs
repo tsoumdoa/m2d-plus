@@ -13,6 +13,9 @@ public sealed record NativeSettings
     // NativeScheduler.Global on Windows; sized from RAM on hosts without workers (HostPlatform).
     internal NativeScheduler Scheduler { get; init; } = HostPlatform.Scheduler;
     internal bool IsWorker { get; init; }
+    // Set only while holding the scheduler reservation for this batch. Zero refuses Raster before allocation.
+    internal long RasterBudgetBytes { get; init; }
+    internal Action? RasterStarting { get; init; }
     /// <summary>In-process-only hosts (macOS): re-admits with live memory once the native slot is held, before any
     /// preparation, because a queued job may start long after its first check. Null on Windows.</summary>
     internal Func<string?>? AdmitInSlot { get; init; }
@@ -206,7 +209,10 @@ public static class NativeDrawing
             views = views.ToArray();
             if (settings.IsWorker ? scene.Cost.Estimate(views.Count) > settings.Scheduler.BudgetBytes : !HostPlatform.Admitted(scene.Cost, views.Count, settings.Scheduler.BudgetBytes))
                 throw new InvalidOperationException($"{SceneCost.Refusal} (estimate {scene.Cost.Estimate(views.Count):N0} bytes; {scene.Cost.BrepFaces} Brep faces; {scene.Cost.MeshTriangles} triangles; {views.Count} views).");
-            return await settings.Scheduler.RunAsync(scene.Cost.Estimate(views.Count), ct =>
+            var rasterBytes = views.Any(v => v.Settings is { Visibility: VisibilityMode.Raster, CutOnly: false })
+                ? M2DPlus.Core.Experimental.RasterVisibility.RasterPolicy.ProjectionReservation(scene.Cost, views.Count, settings.Scheduler.BudgetBytes) : 0;
+            settings = settings with { RasterBudgetBytes = rasterBytes };
+            return await settings.Scheduler.RunAsync(checked(scene.Cost.Estimate(views.Count) + M2DPlus.Core.Experimental.RasterVisibility.RasterPolicy.AdditionalReservation(scene.Cost, rasterBytes)), ct =>
             {
                 var results = new List<ViewDrawing>();
                 try
@@ -327,7 +333,9 @@ public static class NativeDrawing
             HldProjection.ApplyFailure(result, quarantine, [], tolerance, token);
         }
         catch (OperationCanceledException) { result.Dispose(); throw; }
-        catch (Exception ex) { result.Dispose(); result.Error = ex.Message; }
+        catch (Exception ex) when (view.Settings?.Visibility != VisibilityMode.Raster || RasterProjectionRoute.CanFallback(ex))
+        { result.Dispose(); result.Error = ex.Message; }
+        catch { result.Dispose(); throw; }
         finally
         {
             result._diagnostics.Add($"Compute: {HldProjection.Policy}; fingerprint={WorkerCodec.Fingerprint()}; processors={System.Environment.ProcessorCount}.");

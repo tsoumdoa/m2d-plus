@@ -64,7 +64,9 @@ new enum, and the mandatory exact Core/Rhino assembly fingerprint rejects every
 older peer/cache before scene transfer. `WorkerCodecStateTests` covers all new
 stored result fields; the scene carries captured unit scale as well as angle/units.
 Raster visibility-cache and retained-worker-scene keys include that scale, even
-when changing units leaves geometry and tolerance unchanged. HLD keys are unchanged.
+when changing units leaves geometry and tolerance unchanged. HLD projection/run keys
+are unchanged. SceneCache's existing scene-unit discriminator adds `/units=` for
+non-mm HLD scenes; HLD outputs are unchanged.
 
 Info and a grey remark disclose **Engine: Raster (experimental); approximate,
 pixel N mm; visibility not certified**, plus fallback reasons. Small gaps, shallow
@@ -73,3 +75,24 @@ differ from HLD. The engine does not emit a certificate or enumerate every wrong
 line in Unresolved. Stage 1 reduces wrong-visible length but increases wrong-hidden
 length in some controls; see the [measured report](../../../../docs/research/raster-engine.md).
 No installed-Yak interactive or on-Mac validation is claimed.
+
+Native meshing, validity checks, topology and silhouettes run serially on the
+in-process route. Owned headless workers may parallelize them. Managed raster
+and candidate classification retain their configured parallelism. Critical
+failures (including aggregated OOM) and cancellation propagate without HLD fallback.
+The scheduler holds the scene estimate plus Raster's excess over its already
+reserved HLD working set;
+the image clamps to that reservation. Worker sizing reuses existing HLD working-set
+and rounded-cap headroom before requesting a larger cap.
+
+Reservation calibration uses two triangles per planar face and a continuous,
+monotone envelope for curved triangles: the minimum of `32,768 * curved faces`,
+`1,048,576 + 12,288 * curved faces`, and `8,388,608 + 1,024 * curved faces`.
+This covers the sparse broad-face controls and densely trimmed owner scenes in
+stage 1 without a sudden reservation drop at a face-count threshold. The full
+projection estimate includes the 512 MiB image ceiling plus 128 MiB headroom and
+per-source/candidate allowance. Runtime triangle/bin/output guards remain essential;
+the envelope cannot bound every surface. Under a smaller reservation the image
+clamps, or the whole view refuses before/after tessellation and uses HLD. A larger
+Raster worker cap is retained for subsequent HLD/Raster jobs only if the aggregate
+reservation at that cap still fits the current machine budget.

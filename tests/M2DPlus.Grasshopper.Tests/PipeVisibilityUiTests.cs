@@ -30,4 +30,16 @@ public sealed class PipeVisibilityUiTests
         Assert.False(locked.Enabled); Assert.True(locked.Children[0].Checked);
         Assert.All(locked.Children, item => Assert.False(item.Enabled));
     }
+    [Fact] public void RasterResolutionUsesInputAndViewObjectOverridesForRunIdentity()
+    {
+        var input = new SettingsPresentation(ComponentUiState.Default, PresentationTests.Context(["visibility=raster"]));
+        Assert.Contains(input.Resolution!.Views, v => v.Visibility == VisibilityMode.Raster);
+        var context = PresentationTests.Context();
+        context = context with { ViewRows = context.Views.ToDictionary(v => v.Identity,
+            _ => new SettingsRow([KeyValuePair.Create("visibility", "raster")])) };
+        Assert.Contains(new SettingsPresentation(ComponentUiState.Default, context).Resolution!.Views, v => v.Visibility == VisibilityMode.Raster);
+        Assert.DoesNotContain(new SettingsPresentation(ComponentUiState.Default.With("visibility", "raster"),
+            PresentationTests.Context(["visibility=hld"])).Resolution!.Views, v => v.Visibility == VisibilityMode.Raster);
+    }
+
 }
