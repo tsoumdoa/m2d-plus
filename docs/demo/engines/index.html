@@ -1,0 +1,900 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>M2D+ engines</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #0c100d; overflow: hidden; font-family: "Segoe UI", "Yu Gothic UI", sans-serif; }
+  #wrap { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; }
+  canvas { display: block; width: min(100vw, calc(100vh - 62px)); height: min(100vw, calc(100vh - 62px)); background: #141A16; }
+  #ui { display: flex; align-items: center; gap: 12px; color: #aab5ae; font-size: 13px; width: min(96vw, calc(100vh - 62px)); }
+  #ui button, #ui a { background: #1f2823; color: #e8eee9; border: 1px solid #36423b; border-radius: 6px; padding: 5px 12px; font: inherit; cursor: pointer; text-decoration: none; }
+  #ui a.on { border-color: #e8eee9; }
+  #ui input { flex: 1; accent-color: #e8eee9; }
+  body.capture #ui { display: none; }
+  body.capture canvas { width: 1080px; height: 1080px; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="c"></canvas>
+  <div id="ui">
+    <button id="play">Pause</button>
+    <input id="scrub" type="range" min="0" max="1" step="0.0005" value="0">
+    <span id="time">0.0</span>
+    <a id="len" href="?lang=en">EN</a>
+    <a id="lja" href="?lang=ja">日本語</a>
+  </div>
+</div>
+<script>
+'use strict';
+/*
+  M2D+ "three engines" explainer. One square canvas, drawn as a pure function of time.
+  The pipe truss is synthetic and generated below; it is not derived from any real project model.
+  ?lang=ja  Japanese copy      ?capture  hide controls (render.mjs drives __frame)      ?scale=2  backing scale
+  ?cut=short  the short cut    ?only=hld|pipes|raster  one engine scene as a standalone clip
+*/
+const Q = new URLSearchParams(location.search);
+const LANG = Q.get('lang') === 'ja' ? 'ja' : 'en';
+const CAPTURE = Q.has('capture');
+const S = Math.max(1, +Q.get('scale') || 1);
+const JA = LANG === 'ja';
+const SHORT = Q.get('cut') === 'short', ONLY = Q.get('only');
+const pick = (full, short) => SHORT ? short : full;   // every scene keeps two timing tables
+document.documentElement.lang = LANG;
+if (CAPTURE) document.body.classList.add('capture');
+
+// ------------------------------------------------------------------ copy
+const COPY = {
+  en: {
+    title1: 'Three engines for hidden lines',
+    title2: 'Make2D-style drawings for Rhino 8 + Grasshopper',
+    p1: 'A 3D model goes in.',
+    p2: 'A line drawing comes out.',
+    p3: 'For every edge, something has to decide:\nvisible, or hidden?',
+    p4: 'M2D+ lets you choose how that is decided.',
+    visible: 'visible', hidden: 'hidden',
+    tagDefault: 'default', tagExp: 'experimental · opt-in',
+    hA: "Rhino's own hidden-line kernel,\nrunning multithreaded.",
+    hB: 'It works on the exact NURBS surfaces:\nedges, silhouettes, intersections.',
+    hMag: 'exact at any zoom',
+    hSupT: 'Handles everything',
+    hSup: ['Breps', 'Meshes', 'SubD', 'Blocks', 'Sections'],
+    hC: 'The catch: it slows down where many curved\nsurfaces overlap, like dense pipe junctions.',
+    ppA: 'From points along every edge,\nshoot a ray toward the viewer.',
+    ppB: 'Each ray is tested against the real surface\nequations: planes and cylinders. No mesh.',
+    ppPlane: 'view plane',
+    ppLegV: 'reaches the view plane: visible',
+    ppLegH: 'blocked by a pipe: hidden',
+    ppFast: 'About 2–3× faster than HLD on a pipe node',
+    ppLim: 'Needs closed solids modelled in mm.\nWith blocks, meshes or SubD the view falls back to HLD.',
+    ppErr: 'Small extra lines can remain at junctions.',
+    r1: 'Mesh every surface',
+    r2: 'Render a depth image',
+    r3: 'Test each exact edge, point by point,\nagainst the triangles nearby',
+    rMag: 'limited by pixel size',
+    rOut: 'The output is still exact vector curves.\nHLD is never called.',
+    rFast: '6–8× faster than HLD on large models',
+    rLim: 'Approximate. Short stubs or gaps can differ at junctions.\nSlower than HLD on tiny models.',
+    rDiff: 'differs from HLD (illustration)',
+    perfT: 'How they compare',
+    perfS: 'Time for the visibility step. Shorter is better.',
+    row1: 'Large pipe structure · top view · about 3,300 objects',
+    row2: 'Building plan · 5,000 objects',
+    row3: 'One pipe node · 5 pipes',
+    row4: 'The same pipe node',
+    faster: 'faster', hldFaster: 'HLD is faster', times: '×',
+    perfF: 'Measured on one 32-thread desktop with Rhino 8.36. Your models will differ.',
+    chT: 'Which one?',
+    ch: [
+      ['Any geometry', 'The safe choice\nfor final drawings.'],
+      ['Pipe nodes', 'Closed solids\nmodelled in mm.'],
+      ['Big models', 'Fast iterations. Check\nfinals with HLD.'],
+    ],
+    chMenu: 'Right-click  ▸  Visibility engine',
+    chFb: 'The experimental engines fall back to HLD\nfor any view they cannot handle.',
+    end1: 'MIT open source · Rhino 8',
+  },
+  ja: {
+    title1: '隠線を決める、3つのエンジン',
+    title2: 'Rhino 8 + Grasshopper 用の Make2D 作図プラグイン',
+    p1: '3Dモデルを入力すると、',
+    p2: '線画が出力されます。',
+    p3: 'すべてのエッジについて、判定が必要です。\n見える線か、隠れ線か。',
+    p4: 'M2D+ では、その判定方法を選べます。',
+    visible: '可視線', hidden: '隠れ線',
+    tagDefault: '既定', tagExp: '実験的 · オプトイン',
+    hA: 'Rhino 標準の隠線処理カーネルを、\nマルチスレッドで実行します。',
+    hB: 'NURBS サーフェスを厳密に計算します。\nエッジ、シルエット、交線。',
+    hMag: '拡大しても正確',
+    hSupT: 'あらゆる形状に対応',
+    hSup: ['Brep', 'メッシュ', 'SubD', 'ブロック', '断面'],
+    hC: '弱点：曲面が密に重なる箇所、たとえば\nパイプの接合部では遅くなります。',
+    ppA: 'エッジ上の各点から、\n視点に向けてレイを飛ばします。',
+    ppB: 'レイは平面や円筒の方程式そのものと\n交差判定します。メッシュ化はしません。',
+    ppPlane: '投影面',
+    ppLegV: '投影面に届く：可視線',
+    ppLegH: 'パイプに遮られる：隠れ線',
+    ppFast: 'パイプ接合部で HLD の約2〜3倍の速さ',
+    ppLim: '条件は mm 単位の閉じたソリッドです。\nブロック、メッシュ、SubD を含むビューは HLD で作図します。',
+    ppErr: '接合部に余分な短い線が残ることがあります。',
+    r1: 'すべての面をメッシュ化',
+    r2: '深度画像をレンダリング',
+    r3: '正確なエッジを点ごとに、\n近くの三角形と照合',
+    rMag: '精度はピクセルサイズ次第',
+    rOut: '出力は正確なベクター曲線のままです。\nHLD は一切呼び出しません。',
+    rFast: '大規模モデルで HLD の6〜8倍の速さ',
+    rLim: '近似計算です。接合部で短い線の過不足が出ることがあります。\nごく小さなモデルでは HLD より遅くなります。',
+    rDiff: 'HLD と異なる箇所（イメージ）',
+    perfT: '速度の比較',
+    perfS: '可視判定ステップの所要時間です。短いほど高速です。',
+    row1: '大規模なパイプ構造 · 上面図 · 約3,300オブジェクト',
+    row2: '建物の平面図 · 5,000オブジェクト',
+    row3: 'パイプ接合部 1か所 · パイプ5本',
+    row4: '同じパイプ接合部',
+    faster: '高速', hldFaster: 'HLD のほうが高速', times: '倍',
+    perfF: '32スレッドのデスクトップ1台、Rhino 8.36 での計測値です。結果はモデルによって変わります。',
+    chT: 'どれを使う？',
+    ch: [
+      ['あらゆる形状に', '最終図面には\nこれが安全です。'],
+      ['パイプ接合部に', 'mm 単位の\n閉じたソリッド向け。'],
+      ['大規模モデルに', 'すばやい検討向け。\n最終図面は HLD で確認。'],
+    ],
+    chMenu: '右クリック  ▸  Visibility engine',
+    chFb: '実験的エンジンで処理できないビューは、\n自動的に HLD で作図します。',
+    end1: 'MIT オープンソース · Rhino 8',
+  },
+};
+const T = COPY[LANG];
+
+// ------------------------------------------------------------------ palette (validated on the dark surface)
+const BG = '#141A16', BG2 = '#1B231E', LINE = '#2C3830', INK = '#EEF3EF', DIM = '#9AA8A0', FAINT = '#5F6D65';
+const ENG = [
+  { key: 'hld', name: 'Rhino HLD', color: '#C5902C' },
+  { key: 'pipes', name: 'Pipes', color: '#4B9CDD' },
+  { key: 'raster', name: 'Raster', color: '#E96F8E' },
+];
+const FONT = '"Bahnschrift","DIN Alternate","Yu Gothic UI","Hiragino Sans","Meiryo",sans-serif';
+const MONO = '"Cascadia Mono","Consolas","Menlo",monospace';
+const LH = JA ? 1.5 : 1.32;
+
+// ------------------------------------------------------------------ math
+const add = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
+const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+const mul = (a, s) => [a[0] * s, a[1] * s, a[2] * s];
+const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+const len = a => Math.hypot(a[0], a[1], a[2]);
+const norm = a => mul(a, 1 / len(a));
+const mix3 = (a, b, k) => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k];
+const lerp = (a, b, k) => a + (b - a) * k;
+const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
+const seg = (t, a, b) => clamp((t - a) / (b - a));
+const eio = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+const eo = x => 1 - Math.pow(1 - x, 3);
+const span = (t, a, b, fi = .45, fo = .35) => seg(t, a, a + fi) * (1 - seg(t, b - fo, b));
+const rotZ = (v, a) => [v[0] * Math.cos(a) - v[1] * Math.sin(a), v[0] * Math.sin(a) + v[1] * Math.cos(a), v[2]];
+
+// ------------------------------------------------------------------ synthetic pipe truss
+const PIPES = [];
+function pipe(a, b, r, kind) {
+  const d = sub(b, a), L = len(d), ax = mul(d, 1 / L);
+  const u = norm(cross(ax, Math.abs(ax[2]) < .9 ? [0, 0, 1] : [1, 0, 0])), v = cross(ax, u);
+  PIPES.push({ a, b, r, L, ax, u, v, kind, i: PIPES.length });
+}
+const PL = 1.2, HT = 1.0, WD = 1.6, NP = 4;
+pipe([-.3, 0, HT], [NP * PL + .3, 0, HT], .1, 'chord');
+for (const s of [-1, 1]) pipe([PL / 2 - .35, s * WD / 2, 0], [(NP - .5) * PL + .35, s * WD / 2, 0], .09, 'chord');
+for (let j = 0; j < NP; j++) {
+  const xb = (j + .5) * PL;
+  for (const s of [-1, 1]) for (const i of [j, j + 1]) pipe([xb, s * WD / 2, 0], [i * PL, 0, HT], .04, 'brace');
+  pipe([xb, -WD / 2, 0], [xb, WD / 2, 0], .036, 'strut');
+}
+const NODE = [2 * PL, 0, HT];
+
+// ------------------------------------------------------------------ cameras
+function makeCam(id, fwd, center, scale, cx, cy) {
+  fwd = norm(fwd);
+  const right = norm(cross(fwd, [0, 0, 1])), up = cross(right, fwd);
+  return { id, fwd, right, up, center, scale, cx, cy };
+}
+const proj = (c, p) => {
+  const dx = p[0] - c.center[0], dy = p[1] - c.center[1], dz = p[2] - c.center[2];
+  return [c.cx + (dx * c.right[0] + dy * c.right[1] + dz * c.right[2]) * c.scale,
+          c.cy - (dx * c.up[0] + dy * c.up[1] + dz * c.up[2]) * c.scale,
+          dx * c.fwd[0] + dy * c.fwd[1] + dz * c.fwd[2]];
+};
+const FWD0 = norm([.36, .8, -.48]);
+const VP = { x: 40, y: 150, w: 1000, h: 590, r: 18 };
+function fitCam(id, width, cx, cy) {      // frame the whole truss
+  const c = makeCam(id, FWD0, [0, 0, 0], 1, 0, 0);
+  let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+  for (const p of PIPES) for (const e of [p.a, p.b]) { const q = proj(c, e); x0 = Math.min(x0, q[0] - p.r); x1 = Math.max(x1, q[0] + p.r); y0 = Math.min(y0, q[1] - p.r); y1 = Math.max(y1, q[1] + p.r); }
+  c.scale = width / (x1 - x0); c.cx = cx - (x0 + x1) / 2 * c.scale; c.cy = cy - (y0 + y1) / 2 * c.scale;
+  return c;
+}
+const camFull = fitCam('full', 950, 540, 440);
+const camTitle = fitCam('title', 950, 540, 800);
+const camNode = makeCam('node', FWD0, [NODE[0], 0, HT * .78], 400, 540, VP.y + VP.h / 2 + 8);
+const ROT_A = -.92, PLANE_D = 2.5, PLANE_C = add(camNode.center, mul(FWD0, -PLANE_D));
+function camRot(k) {                      // swings round to look across the view direction
+  const f = rotZ(FWD0, ROT_A * k); f[2] = lerp(FWD0[2], -.4, k);
+  return makeCam('rot', f, mix3(camNode.center, mix3(camNode.center, PLANE_C, .47), k), lerp(400, 222, k), 540, camNode.cy - 6 * k);
+}
+
+// ------------------------------------------------------------------ exact hidden-line classification (for view FWD0)
+const WRAY = mul(FWD0, -1);
+function rayInterval(p, w, c) {          // parameter range of p + s*w inside the solid cylinder c
+  const d = sub(p, c.a), dp = dot(d, c.ax), wp = dot(w, c.ax);
+  const ex = sub(d, mul(c.ax, dp)), ew = sub(w, mul(c.ax, wp));
+  const A = dot(ew, ew), B = 2 * dot(ex, ew), C = dot(ex, ex) - c.r * c.r;
+  let lo = -1e9, hi = 1e9;
+  if (A < 1e-12) { if (C > 0) return null; }
+  else { const D = B * B - 4 * A * C; if (D <= 0) return null; const q = Math.sqrt(D); lo = (-B - q) / (2 * A); hi = (-B + q) / (2 * A); }
+  if (Math.abs(wp) < 1e-12) { if (dp < 0 || dp > c.L) return null; }
+  else { let t0 = -dp / wp, t1 = (c.L - dp) / wp; if (t0 > t1) [t0, t1] = [t1, t0]; lo = Math.max(lo, t0); hi = Math.min(hi, t1); }
+  return hi > lo ? [lo, hi] : null;
+}
+function firstHit(p) {                    // distance to the first blocker toward the viewer, or -1
+  let best = -1;
+  for (const c of PIPES) {
+    const iv = rayInterval(p, WRAY, c); if (!iv) continue;
+    const lo = Math.max(iv[0], 1e-4);
+    if (iv[1] - lo > 2e-3 && (best < 0 || lo < best)) best = lo;
+  }
+  return best;
+}
+function insideAny(p) {
+  for (const c of PIPES) {
+    const d = sub(p, c.a), dp = dot(d, c.ax);
+    if (dp < 1e-3 || dp > c.L - 1e-3) continue;
+    const ex = sub(d, mul(c.ax, dp)), rr = c.r - 1e-3;
+    if (dot(ex, ex) < rr * rr) return true;
+  }
+  return false;
+}
+const RUNS = [];                          // {cls 1 visible | 2 hidden, pts, fine, pipe, kind, trans}
+function addCurve(pts, pipeIdx, kind) {
+  let cur = null, prev = 0;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const m = mix3(pts[i], pts[i + 1], .5);
+    const c = insideAny(m) ? 0 : (firstHit(m) >= 0 ? 2 : 1);
+    if (c === 0) { cur = null; prev = 0; continue; }
+    if (!cur || cur.cls !== c) { cur = { cls: c, fine: [pts[i]], pipe: pipeIdx, kind, trans: prev !== 0 && prev !== c }; RUNS.push(cur); }
+    cur.fine.push(pts[i + 1]); prev = c;
+  }
+}
+function buildEdges() {
+  const STEP = .003;
+  for (const c of PIPES) {
+    const n = norm(cross(c.ax, FWD0));
+    for (const s of [-1, 1]) {            // the two silhouette generators
+      const o = add(c.a, mul(n, s * c.r)), k = Math.ceil(c.L / STEP), pts = [];
+      for (let i = 0; i <= k; i++) pts.push(add(o, mul(c.ax, c.L * i / k)));
+      addCurve(pts, c.i, 'sil');
+    }
+    for (const e of [c.a, c.b]) {         // end circles
+      const pts = [];
+      for (let i = 0; i <= 240; i++) { const th = i / 240 * 2 * Math.PI; pts.push(add(e, add(mul(c.u, c.r * Math.cos(th)), mul(c.v, c.r * Math.sin(th))))); }
+      addCurve(pts, c.i, 'cap');
+    }
+  }
+  for (let i = 0; i < PIPES.length; i++) for (let j = i + 1; j < PIPES.length; j++) {
+    let A = PIPES[i], B = PIPES[j]; if (B.r > A.r) [A, B] = [B, A];
+    const NT = 360, chains = [[], []];   // generators of the thinner pipe against the thicker surface
+    for (let k = 0; k <= NT; k++) {
+      const th = k / NT * 2 * Math.PI, o = add(B.a, add(mul(B.u, B.r * Math.cos(th)), mul(B.v, B.r * Math.sin(th))));
+      const d = sub(o, A.a), dp = dot(d, A.ax), wp = dot(B.ax, A.ax);
+      const ex = sub(d, mul(A.ax, dp)), ew = sub(B.ax, mul(A.ax, wp));
+      const qa = dot(ew, ew), qb = 2 * dot(ex, ew), qc = dot(ex, ex) - A.r * A.r, D = qb * qb - 4 * qa * qc;
+      let r0 = null, r1 = null;
+      if (qa > 1e-9 && D > 0) {
+        const q = Math.sqrt(D);
+        [(-qb - q) / (2 * qa), (-qb + q) / (2 * qa)].forEach((t, idx) => {
+          if (t < 0 || t > B.L) return;
+          const ap = dp + t * wp; if (ap < 0 || ap > A.L) return;
+          const p = add(o, mul(B.ax, t)); if (idx === 0) r0 = p; else r1 = p;
+        });
+      }
+      chains[0].push(r0); chains[1].push(r1);
+    }
+    for (const ch of chains) {
+      let pts = [];
+      const flush = () => { if (pts.length > 2) addCurve(pts, B.i, 'int'); pts = []; };
+      for (const p of ch) { if (!p || (pts.length && len(sub(p, pts[pts.length - 1])) > .03)) flush(); if (p) pts.push(p); }
+      flush();
+    }
+  }
+  for (const r of RUNS) {
+    r.pts = r.kind === 'sil' ? [r.fine[0], r.fine[r.fine.length - 1]] : r.fine;
+  }
+}
+
+// ------------------------------------------------------------------ tessellation + software depth raster
+let TRI = null, TRIW = null;
+function tessellate(nsChord, nsBrace, segLen) {
+  const P = [], N = [], ID = [];
+  const tri = (a, b, c, na, nb, nc, id) => { P.push(...a, ...b, ...c); N.push(...na, ...nb, ...nc); ID.push(id); };
+  for (const c of PIPES) {
+    const ns = c.kind === 'chord' ? nsChord : nsBrace, nl = Math.max(1, Math.ceil(c.L / segLen(c)));
+    const ring = (t, i) => { const th = i / ns * 2 * Math.PI, n = add(mul(c.u, Math.cos(th)), mul(c.v, Math.sin(th))); return [add(add(c.a, mul(c.ax, t)), mul(n, c.r)), n]; };
+    for (let l = 0; l < nl; l++) for (let i = 0; i < ns; i++) {
+      const t0 = c.L * l / nl, t1 = c.L * (l + 1) / nl;
+      const [p00, n0] = ring(t0, i), [p01, n1] = ring(t0, i + 1), [p10] = ring(t1, i), [p11] = ring(t1, i + 1);
+      tri(p00, p01, p11, n0, n1, n1, c.i); tri(p00, p11, p10, n0, n1, n0, c.i);
+    }
+    for (const [e, t, sgn] of [[c.a, 0, -1], [c.b, c.L, 1]]) {
+      const nn = mul(c.ax, sgn);
+      for (let i = 0; i < ns; i++) tri(e, ring(t, i)[0], ring(t, i + 1)[0], nn, nn, nn, c.i);
+    }
+  }
+  return { p: new Float32Array(P), n: new Float32Array(N), id: new Int16Array(ID), count: ID.length };
+}
+const KR = CAPTURE ? 2 : 1;               // raster supersampling
+const rbPool = {};
+function rasterize(cam, k, poolKey) {
+  const w = Math.round(1080 * k), h = w;
+  let rb = poolKey && rbPool[poolKey];
+  if (!rb || rb.w !== w) { rb = { w, h, k, depth: new Float32Array(w * h), sh: new Float32Array(w * h), id: new Int16Array(w * h) }; if (poolKey) rbPool[poolKey] = rb; }
+  rb.depth.fill(1e9); rb.id.fill(-1); rb.canvas = null;
+  const { right: R, up: U, fwd: F, center: C, scale: s, cx, cy } = cam;
+  const ox = cx - dot(C, R) * s, oy = cy + dot(C, U) * s, oz = -dot(C, F);
+  const Lt = norm(add(add(mul(F, -.6), mul(U, .68)), mul(R, -.42)));
+  const P = TRI.p, N = TRI.n, depth = rb.depth, sh = rb.sh, idb = rb.id;
+  for (let t = 0; t < TRI.count; t++) {
+    const o = t * 9;
+    const x0 = (ox + (P[o] * R[0] + P[o + 1] * R[1] + P[o + 2] * R[2]) * s) * k, y0 = (oy - (P[o] * U[0] + P[o + 1] * U[1] + P[o + 2] * U[2]) * s) * k, z0 = P[o] * F[0] + P[o + 1] * F[1] + P[o + 2] * F[2] + oz;
+    const x1 = (ox + (P[o + 3] * R[0] + P[o + 4] * R[1] + P[o + 5] * R[2]) * s) * k, y1 = (oy - (P[o + 3] * U[0] + P[o + 4] * U[1] + P[o + 5] * U[2]) * s) * k, z1 = P[o + 3] * F[0] + P[o + 4] * F[1] + P[o + 5] * F[2] + oz;
+    const x2 = (ox + (P[o + 6] * R[0] + P[o + 7] * R[1] + P[o + 8] * R[2]) * s) * k, y2 = (oy - (P[o + 6] * U[0] + P[o + 7] * U[1] + P[o + 8] * U[2]) * s) * k, z2 = P[o + 6] * F[0] + P[o + 7] * F[1] + P[o + 8] * F[2] + oz;
+    const area = (x1 - x0) * (y2 - y0) - (x2 - x0) * (y1 - y0);
+    if (Math.abs(area) < 1e-9) continue;
+    const mnx = Math.max(0, Math.floor(Math.min(x0, x1, x2))), mxx = Math.min(w - 1, Math.ceil(Math.max(x0, x1, x2)));
+    const mny = Math.max(0, Math.floor(Math.min(y0, y1, y2))), mxy = Math.min(h - 1, Math.ceil(Math.max(y0, y1, y2)));
+    if (mnx > mxx || mny > mxy) continue;
+    const i0 = .2 + .8 * Math.max(0, N[o] * Lt[0] + N[o + 1] * Lt[1] + N[o + 2] * Lt[2]);
+    const i1 = .2 + .8 * Math.max(0, N[o + 3] * Lt[0] + N[o + 4] * Lt[1] + N[o + 5] * Lt[2]);
+    const i2 = .2 + .8 * Math.max(0, N[o + 6] * Lt[0] + N[o + 7] * Lt[1] + N[o + 8] * Lt[2]);
+    const inv = 1 / area, pid = TRI.id[t];
+    for (let y = mny; y <= mxy; y++) {
+      const py = y + .5;
+      for (let x = mnx; x <= mxx; x++) {
+        const px = x + .5;
+        const w0 = ((x1 - px) * (y2 - py) - (x2 - px) * (y1 - py)) * inv; if (w0 < 0) continue;
+        const w1 = ((x2 - px) * (y0 - py) - (x0 - px) * (y2 - py)) * inv; if (w1 < 0) continue;
+        const w2 = 1 - w0 - w1; if (w2 < 0) continue;
+        const z = w0 * z0 + w1 * z1 + w2 * z2, idx = y * w + x;
+        if (z < depth[idx]) { depth[idx] = z; sh[idx] = w0 * i0 + w1 * i1 + w2 * i2; idb[idx] = pid; }
+      }
+    }
+  }
+  return rb;
+}
+function rbCanvas(rb) {
+  if (rb.canvas) return rb.canvas;
+  const c = rb.cv || (rb.cv = document.createElement('canvas')); c.width = rb.w; c.height = rb.h;
+  const g = c.getContext('2d'), im = g.createImageData(rb.w, rb.h), d = im.data;
+  for (let i = 0, n = rb.w * rb.h; i < n; i++) {
+    if (rb.id[i] < 0) continue;
+    const v = rb.sh[i], o = i * 4;
+    d[o] = 34 + 150 * v; d[o + 1] = 44 + 160 * v; d[o + 2] = 38 + 152 * v; d[o + 3] = 255;
+  }
+  g.putImageData(im, 0, 0);
+  return rb.canvas = c;
+}
+const rbAt = (rb, x, y) => { const xi = Math.floor(x * rb.k), yi = Math.floor(y * rb.k); return xi < 0 || yi < 0 || xi >= rb.w || yi >= rb.h ? -1 : yi * rb.w + xi; };
+const staticRB = {};
+const RB = cam => staticRB[cam.id] || (staticRB[cam.id] = rasterize(cam, KR));
+
+// ------------------------------------------------------------------ derived data
+const p2cache = {};
+function projRuns(cam) {
+  return RUNS.map(r => { const a = new Float32Array(r.pts.length * 2); for (let i = 0; i < r.pts.length; i++) { const q = proj(cam, r.pts[i]); a[2 * i] = q[0]; a[2 * i + 1] = q[1]; } return a; });
+}
+const P2 = cam => p2cache[cam.id] || (p2cache[cam.id] = projRuns(cam));
+const inVP = (x, y, m = 0) => x > VP.x - m && x < VP.x + VP.w + m && y > VP.y - m && y < VP.y + VP.h + m;
+
+let HLD_SLOT = null, HLD_NS = 0, HLD_ORDER = [], MAG_SRC = [500, 430];
+let MESH = null, CELLS = [], CELL = 12, ZR = [0, 1], DOTS = [], DIFFS = [];
+let RAYS = [], PLANE = null, PLANE_RUNS = [];
+function derive() {
+  const P = P2(camNode);
+  // HLD: pipes revealed one by one, nearest to the node first
+  const seen = new Set();
+  RUNS.forEach((r, i) => { const a = P[i]; for (let k = 0; k < a.length; k += 2) if (inVP(a[k], a[k + 1])) { seen.add(r.pipe); break; } });
+  const dist = c => { const t = clamp(dot(sub(NODE, c.a), c.ax), 0, c.L); return len(sub(add(c.a, mul(c.ax, t)), NODE)) + (c.kind === 'chord' ? -1 : 0); };
+  HLD_ORDER = [...seen].sort((a, b) => dist(PIPES[a]) - dist(PIPES[b]));
+  HLD_SLOT = new Map(HLD_ORDER.map((p, i) => [p, i])); HLD_NS = HLD_ORDER.length;
+  let best = 1e9;
+  RUNS.forEach((r, i) => { if (!r.trans) return; const a = P[i], d = Math.hypot(a[0] - 470, a[1] - 470); if (d < best) { best = d; MAG_SRC = [a[0], a[1]]; } });
+
+  // Raster: visible mesh wires, depth cells, sample dots, illustrative differences
+  const rb = RB(camNode), wires = [];
+  for (let t = 0; t < TRIW.count; t++) {
+    const o = t * 9, q = [0, 1, 2].map(v => proj(camNode, [TRIW.p[o + v * 3], TRIW.p[o + v * 3 + 1], TRIW.p[o + v * 3 + 2]]));
+    const mx = (q[0][0] + q[1][0] + q[2][0]) / 3, my = (q[0][1] + q[1][1] + q[2][1]) / 3, mz = (q[0][2] + q[1][2] + q[2][2]) / 3;
+    if (!inVP(mx, my, 30)) continue;
+    if ((TRIW.n[o] + TRIW.n[o + 3] + TRIW.n[o + 6]) * FWD0[0] + (TRIW.n[o + 1] + TRIW.n[o + 4] + TRIW.n[o + 7]) * FWD0[1] + (TRIW.n[o + 2] + TRIW.n[o + 5] + TRIW.n[o + 8]) * FWD0[2] > -.15) continue;   // back faces
+    const idx = rbAt(rb, mx, my); if (idx < 0 || rb.depth[idx] < mz - .02) continue;
+    wires.push(q[0][0], q[0][1], q[1][0], q[1][1], q[2][0], q[2][1]);
+  }
+  MESH = new Float32Array(wires);
+  let zmin = 1e9, zmax = -1e9;
+  for (let y = VP.y; y < VP.y + VP.h; y += CELL) for (let x = VP.x; x < VP.x + VP.w; x += CELL) {
+    const idx = rbAt(rb, x + CELL / 2, y + CELL / 2); if (idx < 0 || rb.id[idx] < 0) continue;
+    const z = rb.depth[idx]; CELLS.push([x, y, z]); zmin = Math.min(zmin, z); zmax = Math.max(zmax, z);
+  }
+  ZR = [zmin, zmax];
+  const G = 3;
+  RUNS.forEach(r => {
+    let acc = 0, cur = null, last = null;
+    for (let i = 0; i < r.fine.length; i++) {
+      const q = proj(camNode, r.fine[i]);
+      if (last) acc += Math.hypot(q[0] - last[0], q[1] - last[1]); last = q;
+      if (!inVP(q[0], q[1])) { cur = null; continue; }
+      if (acc >= 11) { acc = 0; DOTS.push([q[0], q[1], r.cls]); }
+      const gx = Math.floor(q[0] / G) * G + G / 2, gy = Math.floor(q[1] / G) * G + G / 2, idx = rbAt(rb, gx, gy);
+      const approxHidden = idx >= 0 && rb.id[idx] >= 0 && rb.id[idx] !== r.pipe && rb.depth[idx] < q[2] - .03;
+      if (approxHidden !== (r.cls === 2)) { if (!cur) { cur = []; DIFFS.push(cur); } cur.push(q[0], q[1]); } else cur = null;
+    }
+  });
+  DIFFS = DIFFS.filter(d => { const n = d.length; return n >= 6 && Math.hypot(d[n - 2] - d[0], d[n - 1] - d[1]) > 5; });
+
+  // Pipes: view plane, the drawing on it, and sample rays
+  const hu = .62, hv = .5, vc = PLANE_C;
+  const corner = (a, b) => add(add(vc, mul(camNode.right, a * hu)), mul(camNode.up, b * hv));
+  PLANE = { c: vc, quad: [corner(-1, -1), corner(1, -1), corner(1, 1), corner(-1, 1)] };
+  const onPlane = p => sub(p, mul(FWD0, dot(sub(p, vc), FWD0)));
+  const uv = p => [dot(sub(p, vc), camNode.right), dot(sub(p, vc), camNode.up)];
+  RUNS.forEach(r => {
+    let cur = null, lastRay = -1;
+    for (let i = 0; i < r.fine.length; i += 4) {
+      const p = r.fine[i], [a, b] = uv(p);
+      if (Math.abs(a) > hu || Math.abs(b) > hv) { cur = null; continue; }
+      if (!cur) { cur = { cls: r.cls, pts: [] }; PLANE_RUNS.push(cur); }
+      cur.pts.push(onPlane(p));
+      if (i - lastRay >= 40 && Math.abs(a) < hu * .84 && Math.abs(b) < hv * .84) {
+        lastRay = i;
+        const h = r.cls === 2 ? firstHit(p) : -1;
+        if (r.cls === 2 && h < .07) continue;
+        RAYS.push({ p, cls: r.cls, end: r.cls === 2 ? add(p, mul(WRAY, h)) : onPlane(p) });
+      }
+    }
+  });
+  const thin = (list, n) => { const st = Math.max(1, list.length / n); return Array.from({ length: Math.min(n, list.length) }, (_, i) => list[Math.floor(i * st)]); };
+  RAYS = [...thin(RAYS.filter(r => r.cls === 1), 13), ...thin(RAYS.filter(r => r.cls === 2), 7)];   // a readable handful of each kind
+  RAYS.forEach((r, i) => { r.d = (i * 7919 % RAYS.length) / RAYS.length; });
+}
+
+// ------------------------------------------------------------------ canvas helpers
+const cv = document.getElementById('c');
+cv.width = cv.height = 1080 * S;
+const ctx = cv.getContext('2d');
+function A(a, fn) { if (a <= .003) return; ctx.save(); ctx.globalAlpha *= a; fn(); ctx.restore(); }
+function txt(s, x, y, o = {}) {
+  const { size = 28, weight = 400, color = INK, align = 'left', lh = LH, font = FONT, ls = 0 } = o;
+  ctx.save(); ctx.font = `${weight} ${size}px ${font}`; ctx.fillStyle = color; ctx.textAlign = align; ctx.textBaseline = 'alphabetic';
+  if (ls) ctx.letterSpacing = ls + 'px';
+  String(s).split('\n').forEach((l, i) => ctx.fillText(l, x, y + i * size * lh));
+  ctx.restore();
+}
+function tw(s, size, weight = 400, font = FONT) { ctx.save(); ctx.font = `${weight} ${size}px ${font}`; const w = Math.max(...String(s).split('\n').map(l => ctx.measureText(l).width)); ctx.restore(); return w; }
+function rr(x, y, w, h, r) { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); }
+function vp(fn) {
+  rr(VP.x, VP.y, VP.w, VP.h, VP.r); ctx.fillStyle = '#10150F'; ctx.fill();
+  ctx.save(); rr(VP.x, VP.y, VP.w, VP.h, VP.r); ctx.clip(); fn(); ctx.restore();
+  rr(VP.x, VP.y, VP.w, VP.h, VP.r); ctx.strokeStyle = LINE; ctx.lineWidth = 1.5; ctx.stroke();
+}
+function pathRun(a, f) {
+  const n = a.length / 2; if (n < 2) return;
+  if (f >= 1) { ctx.moveTo(a[0], a[1]); for (let i = 1; i < n; i++) ctx.lineTo(a[2 * i], a[2 * i + 1]); }
+  else if (n === 2) { ctx.moveTo(a[0], a[1]); ctx.lineTo(a[0] + (a[2] - a[0]) * f, a[1] + (a[3] - a[1]) * f); }
+  else { const m = Math.max(2, Math.ceil(n * f)); ctx.moveTo(a[0], a[1]); for (let i = 1; i < m; i++) ctx.lineTo(a[2 * i], a[2 * i + 1]); }
+}
+// the finished drawing: visible solid, hidden dashed
+function drawRuns(P, o = {}) {
+  const { lw = 1, frac = null, hidden = true, visColor = INK, alpha = 1 } = o;
+  ctx.save(); ctx.globalAlpha *= alpha; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  for (const pass of hidden ? [2, 1] : [1]) {
+    ctx.beginPath();
+    for (let i = 0; i < RUNS.length; i++) { if (RUNS[i].cls !== pass) continue; const f = frac ? frac(i) : 1; if (f > 0) pathRun(P[i], f); }
+    if (pass === 2) { ctx.setLineDash([7 * lw, 6 * lw]); ctx.strokeStyle = '#8D9B93'; ctx.lineWidth = 1.25 * lw; ctx.globalAlpha *= .8; ctx.lineCap = 'butt'; }
+    else { ctx.setLineDash([]); ctx.strokeStyle = visColor; ctx.lineWidth = 2.3 * lw; ctx.lineCap = 'round'; }
+    ctx.stroke();
+    if (pass === 2) ctx.globalAlpha /= .8;
+  }
+  ctx.restore();
+}
+function drawShade(cam, a) { A(a, () => ctx.drawImage(rbCanvas(RB(cam)), 0, 0, 1080, 1080)); }
+const LOGO_M = new Path2D('M12 45V20L24 35L36 20V45'), LOGO_P = new Path2D('M46 24H52V30H58V36H52V42H46V36H40V30H46Z');
+function logo(x, y, size) {
+  ctx.save(); ctx.translate(x, y); ctx.scale(size / 64, size / 64);
+  rr(0, 0, 64, 64, 14); ctx.fillStyle = '#0C100D'; ctx.fill(); ctx.strokeStyle = '#3A473F'; ctx.lineWidth = 1.2; ctx.stroke();
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = 6; ctx.lineJoin = 'round'; ctx.stroke(LOGO_M); ctx.fillStyle = '#fff'; ctx.fill(LOGO_P);
+  ctx.restore();
+}
+function pill(s, x, y, color, size = 21) {                 // returns width
+  const w = tw(s, size, 500) + 28, h = size + 18;
+  rr(x, y - h / 2, w, h, h / 2); ctx.strokeStyle = color; ctx.lineWidth = 1.6; ctx.stroke();
+  txt(s, x + 14, y + size * .36, { size, weight: 500, color: INK });
+  return w;
+}
+function header(idx, lt) {
+  const e = ENG[idx], a = seg(lt, 0, .5);
+  A(a, () => {
+    const slide = (1 - eo(a)) * -24;
+    ctx.beginPath(); ctx.arc(74 + slide, 88, 30, 0, 7); ctx.fillStyle = e.color; ctx.fill();
+    txt(idx + 1, 74 + slide, 101, { size: 36, weight: 700, color: '#10150F', align: 'center' });
+    txt(e.name, 122 + slide, 106, { size: 52, weight: 600 });
+    pill(idx === 0 ? T.tagDefault : T.tagExp, 122 + slide + tw(e.name, 52, 600) + 22, 90, e.color);
+    for (let i = 0; i < 3; i++) { rr(946 + i * 32, 80, 22, 16, 5); ctx.fillStyle = i === idx ? ENG[i].color : '#2A342E'; ctx.fill(); }
+  });
+}
+function caption(s, a, y = 812, o = {}) { A(a, () => txt(s, 64, y + (1 - eo(a)) * 10, { size: JA ? 34 : 37, weight: 500, ...o })); }
+function note(s, a, y, o = {}) { A(a, () => txt(s, 64, y, { size: JA ? 23 : 25, color: DIM, ...o })); }
+function magnifier(cx, cy, R, sx, sy, zoom, a, label, color, draw) {
+  A(a, () => {
+    const r0 = R / zoom, dx = cx - sx, dy = cy - sy, d = Math.hypot(dx, dy);
+    ctx.strokeStyle = color; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(sx, sy, r0, 0, 7); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(sx + dx / d * r0, sy + dy / d * r0); ctx.lineTo(cx - dx / d * R, cy - dy / d * R); ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx, cy, R, 0, 7); ctx.fillStyle = '#0D120E'; ctx.fill();
+    ctx.save(); ctx.clip(); ctx.translate(cx, cy); ctx.scale(zoom, zoom); ctx.translate(-sx, -sy); draw(zoom); ctx.restore();
+    ctx.beginPath(); ctx.arc(cx, cy, R, 0, 7); ctx.lineWidth = 2.5; ctx.stroke();
+    const w = tw(label, 21, 500) + 26;
+    rr(cx - w / 2, cy + R - 20, w, 38, 19); ctx.fillStyle = '#0D120E'; ctx.fill(); ctx.lineWidth = 1.5; ctx.stroke();
+    txt(label, cx, cy + R + 6, { size: 21, weight: 500, align: 'center' });
+  });
+}
+
+// ------------------------------------------------------------------ scenes
+function sTitle(lt) {
+  lt *= pick(1, 5 / 3);
+  const P = P2(camTitle);
+  ctx.save(); ctx.beginPath(); ctx.rect(0, 0, 1080 * eio(seg(lt, .3, 3.4)), 1080); ctx.clip(); drawRuns(P, { alpha: .62 }); ctx.restore();
+  A(seg(lt, .1, .7), () => logo(480, 96, 120));
+  A(seg(lt, .4, 1.0), () => txt('M2D+', 540, 344, { size: 104, weight: 700, align: 'center', ls: 2 }));
+  A(seg(lt, .9, 1.6), () => txt(T.title1, 540, 420, { size: JA ? 46 : 50, weight: 500, align: 'center' }));
+  A(seg(lt, 1.3, 2.0), () => txt(T.title2, 540, 468, { size: 25, color: DIM, align: 'center' }));
+  const ws = ENG.map(e => tw(e.name, 24, 500) + 28), total = ws.reduce((a, b) => a + b, 0) + 2 * 18;
+  let x = 540 - total / 2;
+  ENG.forEach((e, i) => { A(seg(lt, 1.8 + i * .3, 2.3 + i * .3), () => pill(e.name, x, 540, e.color, 24)); x += ws[i] + 18; });
+}
+function legend(a, x, y) {
+  A(a, () => {
+    ctx.lineCap = 'round'; ctx.strokeStyle = INK; ctx.lineWidth = 2.6; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 64, y); ctx.stroke();
+    txt(T.visible, x + 78, y + 8, { size: 24 });
+    const x2 = x + 78 + tw(T.visible, 24) + 44;
+    ctx.lineCap = 'butt'; ctx.strokeStyle = '#8D9B93'; ctx.lineWidth = 1.6; ctx.setLineDash([8, 7]); ctx.beginPath(); ctx.moveTo(x2, y); ctx.lineTo(x2 + 64, y); ctx.stroke(); ctx.setLineDash([]);
+    txt(T.hidden, x2 + 78, y + 8, { size: 24, color: DIM });
+  });
+}
+function sProblem(lt) {
+  const M = pick({ shade: [.2, 1.2], wipe: [3.0, 5.4], p1: .3, p2: 3.1, leg: 5.0, p3: 5.6, p4: 7.2 },
+                 { shade: [.1, .6], wipe: [.8, 2.4], p1: .1, p2: .9, leg: 2.2, p3: 1e9, p4: 1e9 });
+  const k = eio(seg(lt, ...M.wipe)), wx = 30 + 1020 * k, a = seg(lt, ...M.shade);
+  ctx.save(); ctx.beginPath(); ctx.rect(wx, 0, 1080, 1080); ctx.clip(); drawShade(camFull, a); ctx.restore();
+  if (k > 0) {
+    ctx.save(); ctx.beginPath(); ctx.rect(0, 0, wx, 1080); ctx.clip(); drawRuns(P2(camFull)); ctx.restore();
+    A(Math.min(1, k * 8) * (1 - seg(k, .95, 1)), () => { ctx.fillStyle = INK; ctx.fillRect(wx - 1, 210, 2, 460); });
+  }
+  A(seg(lt, M.p1, M.p1 + .5), () => txt(T.p1, 64, 110, { size: 46, weight: 600 }));
+  A(seg(lt, M.p2, M.p2 + .5), () => txt(T.p2, 64, 110 + 46 * 1.4, { size: 46, weight: 600 }));
+  legend(seg(lt, M.leg, M.leg + .5), 64, 706);
+  caption(T.p3, seg(lt, M.p3, M.p3 + .7), 800);
+  A(seg(lt, M.p4, M.p4 + .7), () => {
+    ENG.forEach((e, i) => { ctx.beginPath(); ctx.arc(76 + i * 30, 968, 10, 0, 7); ctx.fillStyle = e.color; ctx.fill(); });
+    txt(T.p4, 170, 978, { size: JA ? 28 : 30, color: INK });
+  });
+}
+function sHLD(lt) {
+  header(0, lt);
+  const M = pick({ trace: [1.0, 6.4], capA: [1.0, 6.5], mag: [6.6, 7.3], capB: [6.6, 10.3], sup: 10.4, supStep: .12, capC: 11.4, dim: [8, 9.5] },
+                 { trace: [.4, 3.0], capA: [.4, 3.2], mag: [2.9, 3.4], capB: null, sup: 3.3, supStep: .06, capC: 3.6, dim: [4, 5] });
+  const P = P2(camNode), prog = seg(lt, ...M.trace), cur = Math.min(HLD_NS - 1, Math.floor(prog * HLD_NS));
+  const frac = i => { const s = HLD_SLOT.get(RUNS[i].pipe); return s === undefined ? (prog > 0 ? 1 : 0) : clamp(prog * HLD_NS - s); };
+  vp(() => {
+    drawShade(camNode, .2 * seg(lt, 0, .8));
+    if (prog > 0 && prog < 1) {
+      const c = PIPES[HLD_ORDER[cur]], n = mul(norm(cross(c.ax, FWD0)), c.r);
+      const q = [add(c.a, n), add(c.b, n), sub(c.b, n), sub(c.a, n)].map(p => proj(camNode, p));
+      ctx.beginPath(); q.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.closePath();
+      ctx.fillStyle = ENG[0].color; ctx.globalAlpha = .3; ctx.fill(); ctx.globalAlpha = 1;
+    }
+    drawRuns(P, { lw: 1.25, frac });
+    A(lerp(1, .55, seg(lt, ...M.dim)), () => {
+      ctx.fillStyle = ENG[0].color;
+      for (let i = 0; i < RUNS.length; i++) if (RUNS[i].trans && frac(i) > 0 && inVP(P[i][0], P[i][1])) { ctx.beginPath(); ctx.arc(P[i][0], P[i][1], 4.2, 0, 7); ctx.fill(); }
+    });
+    magnifier(838, 316, 138, MAG_SRC[0], MAG_SRC[1], 5, seg(lt, ...M.mag), T.hMag, ENG[0].color, z => {
+      drawRuns(P, { lw: 2.6 / z });
+      ctx.fillStyle = ENG[0].color;
+      for (let i = 0; i < RUNS.length; i++) if (RUNS[i].trans) { ctx.beginPath(); ctx.arc(P[i][0], P[i][1], 6 / z, 0, 7); ctx.fill(); }
+    });
+  });
+  caption(T.hA, span(lt, ...M.capA));
+  if (M.capB) caption(T.hB, span(lt, ...M.capB));
+  A(seg(lt, M.sup, M.sup + .6), () => {
+    txt(T.hSupT, 64, 800, { size: JA ? 26 : 28, weight: 500, color: DIM });
+    let x = 64 + tw(T.hSupT, JA ? 26 : 28, 500) + 22;
+    T.hSup.forEach((s, i) => A(seg(lt, M.sup + .2 + i * M.supStep, M.sup + .6 + i * M.supStep), () => { x += pill(s, x, 791, ENG[0].color, 22) + 10; }));
+  });
+  caption(T.hC, seg(lt, M.capC, M.capC + .6), 884, { size: JA ? 31 : 34 });
+}
+function runs3D(cam, rb, color, lw, a) {             // model curves in a rotated view, dimmed where occluded
+  const front = new Path2D(), back = new Path2D();
+  for (const r of RUNS) {
+    let prev = null, prevOcc = false;
+    const pts = r.kind === 'sil' ? r.fine.filter((_, i) => i % 6 === 0 || i === r.fine.length - 1) : r.pts;
+    for (const p of pts) {
+      const q = proj(cam, p), idx = rbAt(rb, q[0], q[1]), occ = idx >= 0 && rb.depth[idx] < q[2] - .014;
+      if (prev) { const path = occ || prevOcc ? back : front; path.moveTo(prev[0], prev[1]); path.lineTo(q[0], q[1]); }
+      prev = q; prevOcc = occ;
+    }
+  }
+  ctx.save(); ctx.lineCap = 'round'; ctx.strokeStyle = color; ctx.lineWidth = lw;
+  ctx.globalAlpha *= a; ctx.stroke(front); ctx.globalAlpha *= .13; ctx.stroke(back); ctx.restore();
+}
+function sPipes(lt) {
+  header(1, lt);
+  const M = pick({ rotIn: [1.9, 4.3], rotOut: [9.6, 11.6], fin: [11.3, 12.4], cand: [.3, 1.1], draw: [4.4, 6.4], ray0: 3.3, raySpread: 2.0, rayDur: 1.0, dots: [.9, 1.7], dotsOut: [13.2, 14], leg: [4.6, 5.4], chip: [6.6, 10.2], capA: [1.0, 6.3], capB: [6.4, 11.0], fast: 11.4, lim: 12.0, err: 12.5 },
+                 { rotIn: [.7, 2.1], rotOut: [4.6, 5.7], fin: [5.5, 6.2], cand: [.1, .5], draw: [2.3, 3.5], ray0: 1.8, raySpread: 1.0, rayDur: .7, dots: [.3, .7], dotsOut: [7.2, 7.7], leg: [2.4, 2.9], chip: [2.9, 4.6], capA: [.5, 5.3], capB: null, fast: 5.6, lim: 5.9, err: 6.2 });
+  const col = ENG[1].color;
+  const k = eio(seg(lt, ...M.rotIn)) * (1 - eio(seg(lt, ...M.rotOut))), rot = k > .002;
+  const fin = seg(lt, ...M.fin), cam = rot ? camRot(k) : camNode;
+  vp(() => {
+    let rb = null;
+    if (rot) { rb = rasterize(cam, KR, 'rot'); A(.2 + .75 * k, () => ctx.drawImage(rbCanvas(rb), 0, 0, 1080, 1080)); }
+    else drawShade(camNode, .2 * seg(lt, 0, .8));
+    const cand = (1 - fin) * seg(lt, ...M.cand);
+    if (rot) runs3D(cam, rb, '#C9D4CE', 1.5, cand * .9 * (1 - seg(k, 0, .6)));
+    else {
+      A(cand, () => { ctx.beginPath(); const P = P2(camNode); for (let i = 0; i < RUNS.length; i++) pathRun(P[i], 1); ctx.strokeStyle = '#A9B6AF'; ctx.lineWidth = 1.7; ctx.stroke(); });
+      if (fin > 0) drawRuns(P2(camNode), { lw: 1.25, alpha: fin });
+    }
+    if (rot) {
+      const q = PLANE.quad.map(p => proj(cam, p));
+      A(k, () => {
+        ctx.beginPath(); q.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.closePath();
+        ctx.fillStyle = 'rgba(75,156,221,.10)'; ctx.fill(); ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.stroke();
+        txt(T.ppPlane, (q[2][0] + q[3][0]) / 2, Math.max(VP.y + 34, Math.min(q[2][1], q[3][1]) - 14), { size: 22, weight: 500, align: 'center', color: INK });
+      });
+      A(k * seg(lt, ...M.draw), () => {            // the drawing forming on the plane
+        ctx.lineCap = 'round';
+        for (const pass of [2, 1]) {
+          ctx.beginPath();
+          for (const r of PLANE_RUNS) { if (r.cls !== pass) continue; r.pts.forEach((p, i) => { const s = proj(cam, p); i ? ctx.lineTo(s[0], s[1]) : ctx.moveTo(s[0], s[1]); }); }
+          if (pass === 2) { ctx.setLineDash([4, 4]); ctx.strokeStyle = '#8D9B93'; ctx.lineWidth = .9; } else { ctx.setLineDash([]); ctx.strokeStyle = INK; ctx.lineWidth = 1.5; }
+          ctx.stroke();
+        }
+        ctx.setLineDash([]);
+      });
+    }
+    // sample points and their rays
+    const dotsA = seg(lt, ...M.dots);
+    for (const r of RAYS) {
+      const t0 = M.ray0 + r.d * M.raySpread, e = eo(seg(lt, t0, t0 + M.rayDur)), s = proj(cam, r.p), vis = r.cls === 1;
+      if (rot && e > 0) {
+        const t = proj(cam, mix3(r.p, r.end, e));
+        A(k * .9, () => {
+          ctx.strokeStyle = vis ? col : '#C9D4CE'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(s[0], s[1]); ctx.lineTo(t[0], t[1]); ctx.stroke();
+          if (e >= 1) {
+            if (vis) { ctx.fillStyle = col; ctx.beginPath(); ctx.arc(t[0], t[1], 4, 0, 7); ctx.fill(); }
+            else { ctx.strokeStyle = INK; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.moveTo(t[0] - 6, t[1] - 6); ctx.lineTo(t[0] + 6, t[1] + 6); ctx.moveTo(t[0] - 6, t[1] + 6); ctx.lineTo(t[0] + 6, t[1] - 6); ctx.stroke(); }
+          }
+        });
+      }
+      const decided = seg(lt, t0 + M.rayDur, t0 + M.rayDur + .3);
+      A(dotsA * (1 - seg(lt, ...M.dotsOut)), () => {
+        ctx.beginPath(); ctx.arc(s[0], s[1], lerp(5, 4, k), 0, 7);
+        ctx.fillStyle = decided > 0 && !vis ? '#6F7C74' : col; ctx.fill();
+        ctx.lineWidth = 1.4; ctx.strokeStyle = '#10150F'; ctx.stroke();
+      });
+    }
+    A(k * seg(lt, ...M.leg), () => {                 // in-view legend
+      const x = VP.x + 34, y = VP.y + VP.h - 68, bw = Math.max(tw(T.ppLegV, 21), tw(T.ppLegH, 21)) + 92;
+      rr(x - 16, y - 22, bw, 76, 10); ctx.fillStyle = 'rgba(13,18,14,.88)'; ctx.fill();
+      ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 44, y); ctx.stroke(); ctx.fillStyle = col; ctx.beginPath(); ctx.arc(x + 44, y, 4, 0, 7); ctx.fill();
+      txt(T.ppLegV, x + 60, y + 7, { size: 21 });
+      ctx.strokeStyle = '#C9D4CE'; ctx.beginPath(); ctx.moveTo(x, y + 32); ctx.lineTo(x + 44, y + 32); ctx.stroke();
+      ctx.strokeStyle = INK; ctx.beginPath(); ctx.moveTo(x + 39, y + 27); ctx.lineTo(x + 49, y + 37); ctx.moveTo(x + 39, y + 37); ctx.lineTo(x + 49, y + 27); ctx.stroke();
+      txt(T.ppLegH, x + 60, y + 39, { size: 21 });
+    });
+    A(span(lt, ...M.chip), () => {                   // surface equation chip
+      const s = '| p + t·d − c |² = r²', w = tw(s, 24, 400, MONO) + 36, x = VP.x + 22, y = VP.y + 22;
+      rr(x, y, w, 50, 10); ctx.fillStyle = '#0D120E'; ctx.fill(); ctx.strokeStyle = col; ctx.lineWidth = 1.5; ctx.stroke();
+      txt(s, x + 18, y + 33, { size: 24, font: MONO });
+    });
+  });
+  caption(T.ppA, span(lt, ...M.capA));
+  if (M.capB) caption(T.ppB, span(lt, ...M.capB));
+  A(seg(lt, M.fast, M.fast + .6), () => { ctx.fillStyle = col; ctx.fillRect(64, 782, 6, 40); txt(T.ppFast, 86, 815, { size: JA ? 34 : 37, weight: 600 }); });
+  note(T.ppLim, seg(lt, M.lim, M.lim + .6), 874);
+  note(T.ppErr, seg(lt, M.err, M.err + .6), 874 + (JA ? 23 : 25) * LH * 2 + 14);
+}
+function depthColor(z) { const t = clamp((z - ZR[0]) / (ZR[1] - ZR[0])), v = 1 - t; return `rgb(${Math.round(58 + 190 * v)},${Math.round(34 + 150 * v * v)},${Math.round(48 + 150 * v * v)})`; }
+function drawCells(gap) { for (const c of CELLS) { ctx.fillStyle = depthColor(c[2]); ctx.fillRect(c[0] + gap / 2, c[1] + gap / 2, CELL - gap, CELL - gap); } }
+function sRaster(lt) {
+  header(2, lt);
+  const M = pick({ shade: [0, .8], mesh: [1.0, 2.0], sweep: [4.3, 7.2], wipe: [7.9, 11.3], cellsOut: [11.7, 12.9], diff: [13.3, 13.9], diffLeg: [13.5, 14.1], mag: [8.4, 13.0], steps: [1.0, 4.2, 7.8], stepsOut: [11.5, 11.9], out: [11.9, 13.4], fast: 13.5, lim: 14.1 },
+                 { shade: [0, .4], mesh: [.4, 1.0], sweep: [1.6, 3.0], wipe: [3.2, 4.9], cellsOut: [5.0, 5.6], diff: [5.6, 6.0], diffLeg: [5.7, 6.1], mag: [3.5, 5.3], steps: [.4, 1.6, 3.2], stepsOut: [4.9, 5.2], out: null, fast: 5.4, lim: 5.7 });
+  const col = ENG[2].color, P = P2(camNode);
+  const meshA = seg(lt, ...M.mesh), sweep = eio(seg(lt, ...M.sweep)), sy = VP.y + VP.h * sweep;
+  const wipe = eio(seg(lt, ...M.wipe)), wx = VP.x + VP.w * wipe, cellsA = 1 - seg(lt, ...M.cellsOut);
+  vp(() => {
+    ctx.save(); ctx.beginPath(); ctx.rect(0, sy, 1080, 1080); ctx.clip();
+    drawShade(camNode, seg(lt, ...M.shade));
+    A(meshA * .75, () => { ctx.beginPath(); for (let i = 0; i < MESH.length; i += 6) { ctx.moveTo(MESH[i], MESH[i + 1]); ctx.lineTo(MESH[i + 2], MESH[i + 3]); ctx.lineTo(MESH[i + 4], MESH[i + 5]); ctx.closePath(); } ctx.strokeStyle = col; ctx.lineWidth = .8; ctx.stroke(); });
+    ctx.restore();
+    if (sweep > 0) {
+      ctx.save(); ctx.beginPath(); ctx.rect(0, 0, 1080, sy); ctx.clip(); A(cellsA * lerp(1, .5, wipe), () => drawCells(1.5)); ctx.restore();
+      if (sweep < 1) { ctx.fillStyle = INK; ctx.fillRect(VP.x, sy - 1, VP.w, 2); }
+    }
+    if (wipe > 0) {
+      ctx.save(); ctx.beginPath(); ctx.rect(0, 0, wx, 1080); ctx.clip(); drawRuns(P, { lw: 1.25 }); ctx.restore();
+      if (wipe < 1) for (const d of DOTS) { const dx = wx - d[0]; if (dx < -4 || dx > 60) continue; A(1 - Math.max(0, dx) / 60, () => { ctx.beginPath(); ctx.arc(d[0], d[1], 4, 0, 7); ctx.fillStyle = dx < 14 ? col : (d[2] === 1 ? INK : '#7A8880'); ctx.fill(); }); }
+    }
+    A(seg(lt, ...M.diff) * (.72 + .28 * Math.sin(lt * 5)), () => {
+      ctx.strokeStyle = col; ctx.lineWidth = 6; ctx.lineCap = 'round'; ctx.beginPath();
+      for (const d of DIFFS) { ctx.moveTo(d[0], d[1]); for (let i = 2; i < d.length; i += 2) ctx.lineTo(d[i], d[i + 1]); }
+      ctx.stroke();
+    });
+    A(seg(lt, ...M.diffLeg), () => {
+      const x = VP.x + 34, y = VP.y + VP.h - 40;
+      rr(x - 16, y - 22, tw(T.rDiff, 21) + 84, 44, 10); ctx.fillStyle = 'rgba(13,18,14,.9)'; ctx.fill();
+      ctx.strokeStyle = col; ctx.lineWidth = 6; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 34, y); ctx.stroke();
+      txt(T.rDiff, x + 50, y + 7, { size: 21 });
+    });
+    magnifier(838, 316, 138, MAG_SRC[0], MAG_SRC[1], 5, span(lt, ...M.mag, pick(.6, .4), pick(.5, .4)), T.rMag, col, z => {
+      A(cellsA, () => drawCells(.4)); drawRuns(P, { lw: 2.6 / z });
+    });
+  });
+  const steps = [T.r1, T.r2, T.r3], sz = JA ? 30 : 32, out = seg(lt, ...M.stepsOut);
+  A(1 - out, () => {
+    let y = 800;
+    steps.forEach((s, i) => {
+      const t0 = M.steps[i], a = seg(lt, t0, t0 + pick(.5, .35)), active = lt < (i < 2 ? M.steps[i + 1] : 1e9);
+      A(a * (active ? 1 : .42), () => {
+        ctx.beginPath(); ctx.arc(82, y - 11, 18, 0, 7); ctx.fillStyle = col; ctx.fill();
+        txt(i + 1, 82, y - 2, { size: 23, weight: 700, color: '#10150F', align: 'center' });
+        txt(s, 116, y, { size: sz, weight: 500 });
+      });
+      y += sz * LH * (s.split('\n').length) + 16;
+    });
+  });
+  if (M.out) caption(T.rOut, span(lt, ...M.out));
+  A(seg(lt, M.fast, M.fast + .6), () => { ctx.fillStyle = col; ctx.fillRect(64, 782, 6, 40); txt(T.rFast, 86, 815, { size: JA ? 34 : 37, weight: 600 }); });
+  note(T.rLim, seg(lt, M.lim, M.lim + .6), 874);
+}
+const ROWS = [
+  { k: 'row1', a: [0, 98.6, 1], b: [2, 14.0, 1], f: '7.1', win: 'b' },
+  { k: 'row2', a: [0, 23.7, 1], b: [2, 3.9, 1], f: '6.1', win: 'b' },
+  { k: 'row3', a: [0, .43, 2], b: [1, .20, 2], f: '2.1', win: 'b' },
+  { k: 'row4', a: [0, .47, 2], b: [2, 1.23, 2], f: '2.6', win: 'a' },
+];
+function sPerf(lt) {
+  const M = pick({ rows: .5, rowStep: .15, race: [1.3, 5.2], fac: 5.4, facStep: .25, foot: 6.6 },
+                 { rows: .2, rowStep: .08, race: [.6, 2.2], fac: 2.3, facStep: .12, foot: 2.7 });
+  A(seg(lt, 0, .5), () => { txt(T.perfT, 64, 110, { size: 54, weight: 600 }); txt(T.perfS, 64, 156, { size: JA ? 24 : 26, color: DIM }); });
+  const race = seg(lt, ...M.race), X0 = 190, BW = 560;
+  ROWS.forEach((r, i) => {
+    const y = 248 + i * 172, t0 = M.rows + i * M.rowStep, a = seg(lt, t0, t0 + .5), mx = Math.max(r.a[1], r.b[1]);
+    A(a, () => {
+      txt(T[r.k], 64, y, { size: JA ? 23 : 25, weight: 500 });
+      [r.a, r.b].forEach(([ei, val, dec], j) => {
+        const by = y + 22 + j * 40, v = Math.min(val, race * mx * 1.02), done = v >= val, w = Math.max(3, v / mx * BW);
+        txt(ENG[ei].name, 64, by + 20, { size: 21, color: DIM });
+        rr(X0, by, BW, 28, 4); ctx.fillStyle = '#1A221D'; ctx.fill();
+        ctx.beginPath(); ctx.roundRect(X0, by, w, 28, [0, 4, 4, 0]); ctx.fillStyle = ENG[ei].color; ctx.fill();
+        if (race > 0) txt(v.toFixed(dec) + ' s', X0 + w + 12, by + 22, { size: 23, weight: done ? 600 : 400, color: done ? INK : DIM, font: FONT });
+      });
+      ctx.fillStyle = LINE; ctx.fillRect(X0 - 1, y + 16, 1.5, 80);
+      const f0 = M.fac + i * M.facStep;
+      A(eo(seg(lt, f0, f0 + .5)), () => {
+        if (r.win === 'b') {
+          txt(r.f + T.times, 1016, y + 62, { size: 58, weight: 700, align: 'right' });
+          txt(T.faster, 1016, y + 92, { size: 22, color: DIM, align: 'right' });
+        } else {
+          txt(r.f + T.times, 1016, y + 62, { size: 58, weight: 700, align: 'right', color: DIM });
+          txt(T.hldFaster, 1016, y + 92, { size: 22, color: DIM, align: 'right' });
+        }
+      });
+    });
+  });
+  A(seg(lt, M.foot, M.foot + .6), () => txt(T.perfF, 64, 1000, { size: JA ? 20 : 22, color: FAINT }));
+}
+function sChoose(lt) {
+  const M = pick({ card: .5, step: .35, menu: 2.4, fb: 3.6 }, { card: .15, step: .15, menu: .8, fb: 1.2 });
+  A(seg(lt, 0, .5), () => txt(T.chT, 64, 110, { size: 54, weight: 600 }));
+  ENG.forEach((e, i) => {
+    const x = 64 + i * 326, y = 180, w = 300, h = 380, t0 = M.card + i * M.step, a = seg(lt, t0, t0 + .6);
+    A(a, () => {
+      const dy = (1 - eo(a)) * 18;
+      rr(x, y + dy, w, h, 16); ctx.fillStyle = BG2; ctx.fill(); ctx.strokeStyle = LINE; ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.beginPath(); ctx.roundRect(x, y + dy, w, 10, [16, 16, 0, 0]); ctx.fillStyle = e.color; ctx.fill();
+      ctx.beginPath(); ctx.arc(x + 46, y + dy + 68, 22, 0, 7); ctx.fill();
+      txt(i + 1, x + 46, y + dy + 78, { size: 27, weight: 700, color: '#10150F', align: 'center' });
+      txt(e.name, x + 82, y + dy + 80, { size: 34, weight: 600 });
+      txt(i === 0 ? T.tagDefault : T.tagExp, x + 26, y + dy + 128, { size: 20, color: DIM });
+      ctx.fillStyle = LINE; ctx.fillRect(x + 26, y + dy + 152, w - 52, 1.5);
+      txt(T.ch[i][0], x + 26, y + dy + 212, { size: JA ? 30 : 33, weight: 600 });
+      txt(T.ch[i][1], x + 26, y + dy + 264, { size: JA ? 21 : 23, color: DIM, lh: JA ? 1.6 : 1.42 });
+    });
+  });
+  A(seg(lt, M.menu, M.menu + .6), () => {
+    rr(64, 610, 952, 150, 16); ctx.fillStyle = '#10150F'; ctx.fill(); ctx.strokeStyle = LINE; ctx.lineWidth = 1.5; ctx.stroke();
+    txt(T.chMenu, 96, 672, { size: JA ? 30 : 32, weight: 500 });
+    let x = 96; const y = 722;
+    const parts = [['visibility = ', DIM], ['hld', ENG[0].color], [' | ', DIM], ['pipes', ENG[1].color], [' | ', DIM], ['raster', ENG[2].color]];
+    parts.forEach(([s, c]) => { txt(s, x, y, { size: 25, font: MONO, color: c !== DIM ? INK : DIM }); if (c !== DIM) { ctx.fillStyle = c; ctx.fillRect(x, y + 8, tw(s, 25, 400, MONO), 3); } x += tw(s, 25, 400, MONO); });
+  });
+  caption(T.chFb, seg(lt, M.fb, M.fb + .7), 850, { size: JA ? 30 : 33, weight: 500 });
+}
+function sEnd(lt) {
+  A(seg(lt, 0, pick(.6, .4)), () => {
+    logo(470, 330, 140);
+    txt('M2D+', 540, 590, { size: 96, weight: 700, align: 'center', ls: 2 });
+    txt(T.end1, 540, 650, { size: 28, color: DIM, align: 'center' });
+    txt('github.com/tsoumdoa/m2d-plus', 540, 704, { size: 26, align: 'center', font: MONO, color: INK });
+  });
+}
+function brand() {                        // corner mark for standalone engine clips
+  logo(872, 990, 46); txt('M2D+', 1016, 1026, { size: 34, weight: 700, align: 'right' });
+}
+//           scene      full   short (seconds)
+const ALL = {
+  title:   [sTitle,    5,    3],
+  problem: [sProblem,  9.5,  3.6],
+  hld:     [sHLD,      14.5, 6.5],
+  pipes:   [sPipes,    15.5, 8],
+  raster:  [sRaster,   17,   8.5],
+  perf:    [sPerf,     11,   5],
+  choose:  [sChoose,   9.5,  4.5],
+  end:     [sEnd,      4,    2.2],
+};
+const SCENES = (ALL[ONLY] ? [ONLY] : Object.keys(ALL)).map(k => [ALL[k][0], ALL[k][SHORT ? 2 : 1]]);
+const DUR = SCENES.reduce((a, s) => a + s[1], 0);
+function render(t) {
+  t = clamp(t, 0, DUR - 1e-4);
+  ctx.setTransform(S, 0, 0, S, 0, 0); ctx.globalAlpha = 1; ctx.setLineDash([]);
+  ctx.fillStyle = BG; ctx.fillRect(0, 0, 1080, 1080);
+  const fd = pick(.35, .25);
+  let t0 = 0;
+  for (let i = 0; i < SCENES.length; i++) {
+    const [fn, d] = SCENES[i];
+    if (t < t0 + d) {
+      const lt = t - t0;
+      ctx.save(); fn(lt, d); ctx.restore();
+      if (ALL[ONLY]) { ctx.save(); A(seg(lt, .2, .8), brand); ctx.restore(); }
+      const env = Math.min(i === 0 ? 1 : seg(lt, 0, fd), i === SCENES.length - 1 ? 1 - seg(lt, d - .6, d - .1) : 1 - seg(lt, d - fd, d));
+      if (env < 1) { ctx.globalAlpha = 1 - env; ctx.fillStyle = BG; ctx.fillRect(0, 0, 1080, 1080); ctx.globalAlpha = 1; }
+      break;
+    }
+    t0 += d;
+  }
+}
+
+// ------------------------------------------------------------------ boot
+buildEdges(); TRI = tessellate(28, 18, () => .14); TRIW = tessellate(10, 8, c => c.r * .95); derive();
+window.__duration = DUR;
+window.__frame = (t, type = 'image/png', q) => { render(t); return cv.toDataURL(type, q); };
+window.__ready = true;
+(function ui() {
+  document.getElementById(JA ? 'lja' : 'len').classList.add('on');
+  for (const [id, l] of [['len', 'en'], ['lja', 'ja']]) { const q = new URLSearchParams(Q); q.set('lang', l); q.delete('t'); document.getElementById(id).href = '?' + q; }
+  const play = document.getElementById('play'), scrub = document.getElementById('scrub'), time = document.getElementById('time');
+  let t = +Q.get('t') || 0, playing = !CAPTURE && !Q.has('t'), last = performance.now();
+  play.textContent = playing ? 'Pause' : 'Play';
+  play.onclick = () => { playing = !playing; play.textContent = playing ? 'Pause' : 'Play'; last = performance.now(); };
+  scrub.oninput = () => { t = scrub.value * DUR; render(t); time.textContent = t.toFixed(1); };
+  addEventListener('keydown', e => { if (e.code === 'Space') { e.preventDefault(); play.click(); } });
+  render(t);
+  if (CAPTURE) return;
+  (function loop(now) {
+    if (playing) { t += (now - last) / 1000; if (t >= DUR) t = 0; render(t); scrub.value = t / DUR; time.textContent = t.toFixed(1) + ' / ' + DUR.toFixed(0) + ' s'; }
+    last = now; requestAnimationFrame(loop);
+  })(performance.now());
+})();
+</script>
+</body>
+</html>
