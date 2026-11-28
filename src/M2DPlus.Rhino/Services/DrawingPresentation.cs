@@ -40,6 +40,8 @@ public sealed class DrawingCache : IDisposable
                 // Kind participates in trial admission: identical cut frames can
                 // route differently when authored as Box versus Rectangle/Plane.
                 var key = WorkerCodec.Fingerprint() + "/" + HldProjection.Policy + "/" + scene.Value.VisibilityRevision + "/cull=" + settings.CullSources + "/" + string.Join("|", views.Select(v => (v with { Cut = v.Cut is { } cut ? cut with { SectionerStyle = null } : null }).Revision + "/" + v.Kind + "/" + v.Settings?.VisibilityKey()));
+                if (views.Any(v => v.Settings?.Visibility == VisibilityMode.Raster))
+                    key += "/raster-units=" + scene.Value.MillimetresPerUnit.ToString("R", System.Globalization.CultureInfo.InvariantCulture);
                 if (views.Any(v => v.Cut is not null)) key += "/" + SectionValidation.Policy;
                 LeaseEntry<DrawingBatch>.Lease? lease;
                 long generation;
@@ -104,6 +106,8 @@ public static class DrawingPresentation
                 var original = raw.Views[i]; var settings = views[i].Settings;
                 var target = plan.Views[i]; var transform = Transform.PlaneToPlane(RhinoPlane(target.Transform.Source), RhinoPlane(target.Transform.Target));
                 var result = new ViewDrawing { Name = original.Name, Error = original.Error, Frame = original.Frame,
+                    RasterRan = original.RasterRan, RasterPixel = original.RasterPixel, RasterTriangles = original.RasterTriangles,
+                    RasterCandidates = original.RasterCandidates, RasterEstimatedBytes = original.RasterEstimatedBytes,
                     Report = original.Report, Settings = settings, Seconds = original.Seconds, Tolerance = original.Tolerance,
                     NativeEdges = original.NativeEdges, NativeCalls = original.NativeCalls,
                     FastNativeSources = original.FastNativeSources,

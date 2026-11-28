@@ -25,7 +25,7 @@ public sealed class WorkerCodecStateTests(RhinoHost host)
         var viewWire=typeof(WorkerCodec.Values).GetProperties().Select(p=>p.Name).Concat(new[]{"Pieces","Regions","Phases","_diagnostics"}).Order(StringComparer.Ordinal).ToArray();
         Assert.Equal(State(typeof(ViewDrawing)),viewWire);
 
-        var settings=Settings.Resolve([new("wire","wire",ViewSourceKind.Plane,true,200,.001)],[["hidden=off","min visible=5 mm"]],DocumentUnits.Millimetres).Views[0];
+        var settings=Settings.Resolve([new("wire","wire",ViewSourceKind.Plane,true,200,.001)],[["hidden=off","min visible=5 mm","visibility=raster"]],DocumentUnits.Millimetres).Views[0];
         using var source=new ViewDrawing{Settings=settings};
         using var geometry=new LineCurve(new Point3d(1,2,3),new Point3d(9,11,13));
         var piece=new DrawingPiece(geometry.Duplicate(),new("source/id",[7,9],geometry){SourceItem=13},LineClass.Hidden,geometry.Duplicate());
@@ -35,7 +35,7 @@ public sealed class WorkerCodecStateTests(RhinoHost host)
             foreach(var property in typeAndValue.Item1.GetProperties(BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic).Where(p=>p.SetMethod is not null))
             {
                 object value=property.PropertyType==typeof(int)?++seed:property.PropertyType==typeof(double)?++seed+.125:
-                    property.PropertyType==typeof(bool)?true:property.PropertyType==typeof(string)?"wire/"+property.Name:
+                    property.PropertyType==typeof(long)?(long)++seed * 1234567:property.PropertyType==typeof(bool)?true:property.PropertyType==typeof(string)?"wire/"+property.Name:
                     property.PropertyType==typeof(LineClass)?LineClass.Ignored:property.PropertyType==typeof(Rectangle3d)?new Rectangle3d(new Plane(new Point3d(2,3,4),Vector3d.XAxis,Vector3d.YAxis),new Interval(-4,8),new Interval(1,13)):
                     property.PropertyType==typeof(DepthInterval)?new DepthInterval(2,9):property.PropertyType==typeof(EffectiveSettings)?settings:
                     property.PropertyType==typeof(QualityReport)?new QualityReport("wire",3,4,new Dictionary<string,int>{{"type",5}},["normalised"],true,"wire domain"):

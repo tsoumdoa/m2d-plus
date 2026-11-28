@@ -12,7 +12,7 @@ public enum DiagnosticSeverity { Remark, Warning, Error }
 public enum FarClipMode { None, Line, NoLine }
 public enum CropMode { Auto, Off }
 public enum GlassMode { Opaque, Clear }
-public enum VisibilityMode { Hld, Pipes }
+public enum VisibilityMode { Hld, Pipes, Raster }
 public enum EngineMode { Exact, Native }
 public enum WeightMode { Auto, Layers }
 /// <summary>How outputs are split into branches (UX §1.3). Auto is by layer for document mode or an all-referenced
@@ -115,7 +115,7 @@ public sealed class EffectiveSettings
     public double Tolerance => Get<double>("tolerance");
     /// <summary>The <c>min visible</c> threshold in document units; 0 = off (REQUIREMENTS, "small gaps").</summary>
     public double MinVisible => Get<double>("min_visible");
-    public string VisibilityKey() => "hld-threaded-v4;" + string.Join(";", Settings.VisibilityKeys
+    public string VisibilityKey() => (Visibility == VisibilityMode.Raster ? "hld-threaded-v4;" + Experimental.RasterVisibility.RasterPolicy.Identity + ";" : "hld-threaded-v4;") + string.Join(";", Settings.VisibilityKeys
         .Where(k => (k != "visibility" || Visibility != VisibilityMode.Hld) && (!CutOnly || k is not ("hidden" or "tangents" or "seams")))
         .Select(k => k + "=" + Settings.FormatEffective(k, Values[k].Value)));
     public string Describe() => string.Join(Environment.NewLine, Settings.ActiveKeys.Select(k =>

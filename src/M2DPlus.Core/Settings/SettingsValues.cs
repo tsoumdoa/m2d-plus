@@ -28,11 +28,30 @@ public static partial class Settings
 
     /// <summary>Settings text with bake-time and ignored legacy lines left out: what a drawing run depends on. Two runs whose run text,
     /// views, inputs and scene are equal draw the same thing, whatever their <c>bake</c> values.</summary>
-    public static string RunText(IEnumerable<string> lines) => string.Join("\n", lines.SelectMany(l => l.Replace("\r\n", "\n").Split('\n')).Where(l => !IsBakeTimeLine(l)));
+    public static string RunText(IEnumerable<string> lines)
+    {
+        var text = string.Join("\n", lines.SelectMany(l => l.Replace("\r\n", "\n").Split('\n')).Where(l => !IsBakeTimeLine(l)));
+        return RasterRunPolicy(text);
+    }
+    private static string RasterRunPolicy(string text)
+    {
+        // Each header starts a per-view row; only its last valid assignment applies.
+        var raster = false; var effective = "hld";
+        foreach (var line in text.Split('\n'))
+        {
+            var clean = line.Split('#')[0].Trim();
+            if (clean.StartsWith('[')) { raster |= effective == "raster"; effective = "hld"; }
+            var equals = clean.IndexOf('=');
+            if (equals <= 0 || NormalizeKey(clean[..equals]) != "visibility") continue;
+            var value = clean[(equals + 1)..].Trim().ToLowerInvariant();
+            if (value is "hld" or "pipes" or "raster") effective = value;
+        }
+        return raster || effective == "raster" ? text + "\n# " + Experimental.RasterVisibility.RasterPolicy.Identity : text;
+    }
 
     /// <summary>A stored row (menu or view object) without bake-time and ignored legacy keys, as canonical text for run keys.</summary>
-    public static string RunText(SettingsRow row) => string.Join("\n", row.Values
-        .Where(p => !BakeTimeKeys.Contains(NormalizeKey(p.Key)) && !IsLegacyKey(NormalizeKey(p.Key))).OrderBy(p => p.Key, StringComparer.Ordinal).Select(p => p.Key + "=" + p.Value));
+    public static string RunText(SettingsRow row) => RasterRunPolicy(string.Join("\n", row.Values
+        .Where(p => !BakeTimeKeys.Contains(NormalizeKey(p.Key)) && !IsLegacyKey(NormalizeKey(p.Key))).OrderBy(p => p.Key, StringComparer.Ordinal).Select(p => p.Key + "=" + p.Value)));
 
     /// <summary>The keys that change what the visibility solve computes, and so key the drawing cache (UX §12.14).
     /// Hidden is keyed by <see cref="EffectiveSettings.VisibilityKey"/>.
@@ -106,7 +125,7 @@ public static partial class Settings
             case "farclip": return Choice(value, ("none", FarClipMode.None), ("line", FarClipMode.Line), ("noline", FarClipMode.NoLine));
             case "crop": return Choice(value, ("auto", CropMode.Auto), ("off", CropMode.Off));
             case "glass": return Choice(value, ("opaque", GlassMode.Opaque), ("clear", GlassMode.Clear));
-            case "visibility": return Choice(value, ("hld", VisibilityMode.Hld), ("pipes", VisibilityMode.Pipes));
+            case "visibility": return Choice(value, ("hld", VisibilityMode.Hld), ("pipes", VisibilityMode.Pipes), ("raster", VisibilityMode.Raster));
             case "engine": return value == "fast" ? EngineMode.Native : Choice(value, ("exact", EngineMode.Exact), ("native", EngineMode.Native));
             case "bake": return Choice(value, Bake.BakeNames.Layouts.Select(l => (Bake.BakeNames.LayoutText(l), l)).ToArray());
             case "weights": return Choice(value, ("auto", WeightMode.Auto), ("layers", WeightMode.Layers));

@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using M2DPlus.Rhino.Experimental.RasterVisibility;
 using M2DPlus.Core;
 using M2DPlus.Core.Sections;
 using M2DPlus.Rhino.Sections;
@@ -163,9 +164,13 @@ internal static class SectionDrawing
             {
                 phase.Pause();
                 using var routed = new ViewDrawing { Frame = result.Frame, Tolerance = tol, Settings = view.Settings };
-                HldProjection.Solve(registered.Select(r => new VisibilityInput(r.Geometry, r.Tag.Source, r.Tag.Far)).ToArray(), routed, view, settings, scene.Bounds, token);
+                RasterProjectionRoute.Solve(registered.Select(r => new VisibilityInput(r.Geometry, r.Tag.Source, r.Tag.Far)).ToArray(), routed, view, settings, scene, token);
                 phase.Next("section output construction");
                 result.Phases.Include(routed.Phases);
+                result.RasterRan = routed.RasterRan; result.RasterPixel = routed.RasterPixel;
+                result.RasterTriangles = routed.RasterTriangles; result.RasterCandidates = routed.RasterCandidates;
+                result.RasterEstimatedBytes = routed.RasterEstimatedBytes;
+                if (routed.RasterRan) route = "raster (experimental)";
                 result.NativeEdges = routed.NativeEdges; result.NativeCalls = routed.NativeCalls;
                 result.MultipleThreads = routed.MultipleThreads;
                 result.CurvedCandidateEdges = routed.CurvedCandidateEdges; result.NativeFragments = routed.NativeFragments;
@@ -214,7 +219,9 @@ internal static class SectionDrawing
 
         }
         catch (OperationCanceledException) { result.Dispose(); throw; }
-        catch (Exception ex) { result.Dispose(); result.Error = ex.Message; }
+        catch (Exception ex) when (view.Settings?.Visibility != VisibilityMode.Raster || RasterProjectionRoute.CanFallback(ex))
+        { result.Dispose(); result.Error = ex.Message; }
+        catch { result.Dispose(); throw; }
         finally
         {
             result._diagnostics.Add(work.Diagnostic);
@@ -237,7 +244,7 @@ internal static class SectionDrawing
             result._diagnostics.Add($"Compute: {HldProjection.Policy}; fingerprint={WorkerCodec.Fingerprint()}; processors={System.Environment.ProcessorCount}.");
             result.Pieces.Sort(NativeDrawing.ComparePieces);
             result.Report = new("Route C physical section + " + route, result.Items.Count(p => p.Class == LineClass.Unresolved),
-                invalid, scene.Unsupported, scene.Conversions, quarantine) { ValidationDomain = "certified material sections; Rhino HLD visibility not certified" };
+                invalid, scene.Unsupported, scene.Conversions, quarantine) { ValidationDomain = result.RasterRan ? "certified material sections; Raster approximate visibility not certified" : "certified material sections; Rhino HLD visibility not certified" };
             result.Seconds = timer.Elapsed.TotalSeconds;
             }
             catch { result.Dispose(); throw; }

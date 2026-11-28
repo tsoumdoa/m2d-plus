@@ -1,4 +1,5 @@
 using M2DPlus.Core;
+using M2DPlus.Core.Experimental.RasterVisibility;
 
 namespace M2DPlus.Rhino.Services;
 
@@ -35,14 +36,15 @@ public sealed class DrawingWorkerPool : IDisposable
     internal Action<int,byte[]>? EncodedDrawing { get; set; }
     public Task<DrawingBatch> SolveAsync(PreparedScene scene,RequestIdentity identity,IReadOnlyList<ViewRequest> views,
         NativeSettings settings,CancellationToken token,IProgress<JobProgress>? progress=null) =>
-        SolveCoreAsync(scene.Cost,identity,views,settings,WorkerCodec.Fingerprint(),new(()=>WorkerCodec.Capture(scene,token),LazyThreadSafetyMode.ExecutionAndPublication),token,progress);
+        SolveCoreAsync(scene.Cost,identity,views,settings,WorkerCodec.Fingerprint(),new(()=>WorkerCodec.Capture(scene,token),LazyThreadSafetyMode.ExecutionAndPublication),token,progress,
+            scene.MillimetresPerUnit.ToString("R",System.Globalization.CultureInfo.InvariantCulture));
     // Exercises the exact production reservation/transport/retry path without a RhinoCore in the coordinator.
     // Used by the benchmark so four children never imply a fifth licensed Rhino process in their parent.
     internal Task<DrawingBatch> SolveEncodedAsync(SceneCost cost,RequestIdentity identity,IReadOnlyList<ViewRequest> views,
         WorkerFingerprint fingerprint,byte[] scene,CancellationToken token) =>
-        SolveCoreAsync(cost,identity,views,new(),fingerprint,new(()=>scene),token,null);
+        SolveCoreAsync(cost,identity,views,new(),fingerprint,new(()=>scene),token,null,WorkerCodec.Hash(scene));
     private async Task<DrawingBatch> SolveCoreAsync(SceneCost cost,RequestIdentity identity,IReadOnlyList<ViewRequest> views,
-        NativeSettings settings,WorkerFingerprint fingerprint,Lazy<byte[]> payload,CancellationToken token,IProgress<JobProgress>? progress)
+        NativeSettings settings,WorkerFingerprint fingerprint,Lazy<byte[]> payload,CancellationToken token,IProgress<JobProgress>? progress,string? sceneMetadataKey=null)
     {
         ObjectDisposedException.ThrowIf(_disposed,this);views=views.ToArray();
         using var linked=CancellationTokenSource.CreateLinkedTokenSource(token,_shutdown.Token);token=linked.Token;
@@ -60,7 +62,7 @@ public sealed class DrawingWorkerPool : IDisposable
                 try{resident+=slot.Client?.ResidentBytes??0;retained|=slot.Client is not null;}finally{slot.Gate.Release();}
             }
             memory=memory with{AvailableBytes=Math.Min(memory.PhysicalBytes,checked(memory.AvailableBytes+resident))};
-            long extra=0;
+            long extra=views.Any(v=>v.Settings?.Visibility==VisibilityMode.Raster && v.Settings.CutOnly==false) ? RasterPolicy.WorkerExtra(cost) : 0;
             var admittedWorkers=Math.Min(_options.Count,_options.CurrentHldWorkerLimit);
             var plan=WorkerMemoryPolicy.Size(cost,views.Count,admittedWorkers,memory,_options.MemoryBytes,extra);
             if(plan.Count==0 && retained)
@@ -71,6 +73,19 @@ public sealed class DrawingWorkerPool : IDisposable
                 token.ThrowIfCancellationRequested();
                 memory=_options.ReadMemory();
                 plan=WorkerMemoryPolicy.Size(cost,views.Count,admittedWorkers,memory,_options.MemoryBytes,extra);
+            }
+            // A Raster solve may genuinely need a larger cap. Keep that owned cap
+            // for a following HLD batch when the same worker count still fits;
+            // otherwise toggling engines pointlessly shrinks/restarts the pool twice.
+            // Re-size the aggregate reservation at the retained cap before reusing it.
+            if(plan.Count>0)
+            {
+                var caps=_slots.Take(plan.Count).Select(s=>s.Client?.MemoryCapBytes).Distinct().ToArray();
+                if(caps is [long retainedCap] && retainedCap>plan.CapBytes)
+                {
+                    var reuse=WorkerMemoryPolicy.Size(cost,views.Count,admittedWorkers,memory,retainedCap,extra);
+                    if(reuse.Count==plan.Count)plan=reuse;
+                }
             }
             LastSizing=plan;
             if(plan.Count==0)throw new WorkerUnavailableException(plan.Refusal!);
@@ -199,11 +214,11 @@ public sealed class DrawingWorkerPool : IDisposable
             async Task<ViewDrawing> SolveView(Slot slot,int index,long cap,bool isolatedRetry,long replyLimit)
             {
                 slot.Client??=await WorkerClient.StartAsync(_options with{MemoryBytes=cap,ProcessorLimit=isolatedRetry?WorkerMemoryPolicy.CpuLimit(Environment.ProcessorCount):processors},fingerprint,token).ConfigureAwait(false);
-                if(slot.Client.SceneRevision!=identity.SceneRevision)
+                if(slot.Client.SceneRevision!=identity.SceneRevision || views[index].Settings?.Visibility==VisibilityMode.Raster && sceneMetadataKey is not null && slot.Client.SceneMetadataKey!=sceneMetadataKey)
                 {
                     progress?.Report(new(JobPhase.Drawing,Volatile.Read(ref done),views.Count){Workers=plan.Count,Step="sending scene"});
                     await slot.Client.CallAsync("scene",payload.Value,_options.SolveTimeout,token,bytes=>bytes,_replies,replyLimit).ConfigureAwait(false);
-                    slot.Client.SceneRevision=identity.SceneRevision;
+                    slot.Client.SceneRevision=identity.SceneRevision; slot.Client.SceneMetadataKey=sceneMetadataKey;
                 }
                 AttemptingView?.Invoke(index,cap,isolatedRetry);
                 progress?.Report(new(JobPhase.Drawing,Volatile.Read(ref done),views.Count){Workers=plan.Count});
@@ -283,16 +298,21 @@ public static class DrawingExecution
     {
         if(!HostPlatform.IsolatedWorkers)return await SolveInProcessOnlyAsync(scene,identity,views,settings,token,progress).ConfigureAwait(false);
         var pool=workers??DrawingWorkerPool.Shared;
-        if((views.Count>1 || !scene.Cost.Admitted(views.Count,settings.Scheduler.BudgetBytes)) && pool.Installed)
+        var rasterExtra=views.Any(v=>v.Settings?.Visibility==VisibilityMode.Raster && v.Settings.CutOnly==false) ? RasterPolicy.MinimumReservation(scene.Cost) : 0;
+        var hldAdmitted=scene.Cost.Admitted(views.Count,settings.Scheduler.BudgetBytes);
+        var admitted=hldAdmitted && scene.Cost.Estimate(views.Count)+rasterExtra<=settings.Scheduler.BudgetBytes;
+        if((views.Count>1 || !admitted) && pool.Installed)
         {
             try{return await pool.SolveAsync(scene,identity,views,settings,token,progress).ConfigureAwait(false);}
             catch(WorkerUnavailableException ex)
             {
-                if(!scene.Cost.Admitted(views.Count,settings.Scheduler.BudgetBytes))throw new InvalidOperationException(SceneCost.Refusal+"; "+ex.Message,ex);
+                if(!hldAdmitted)throw new InvalidOperationException(SceneCost.Refusal+"; "+ex.Message,ex);
                 var fallback=await NativeDrawing.SolveBorrowedAsync(scene,identity,views,settings,token,progress).ConfigureAwait(false);
                 foreach(var view in fallback.Views)view._diagnostics.Add(ex.Message);return fallback;
             }
         }
+        // A light scene may safely fall back as a whole to HLD: Raster's runtime admission
+        // rejects its extra memory before allocation. Heavy scenes retain the ordinary refusal.
         return await NativeDrawing.SolveBorrowedAsync(scene,identity,views,settings,token,progress).ConfigureAwait(false);
     }
     /// <summary>macOS (no worker route): every view draws in Rhino's process, one after another, when the scene fits

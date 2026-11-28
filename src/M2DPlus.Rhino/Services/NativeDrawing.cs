@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using M2DPlus.Rhino.Experimental.PipeVisibility;
+using M2DPlus.Rhino.Experimental.RasterVisibility;
 using M2DPlus.Core;
 using M2DPlus.Rhino.Sections;
 using Rhino.DocObjects;
@@ -12,6 +13,9 @@ public sealed record NativeSettings
     // NativeScheduler.Global on Windows; sized from RAM on hosts without workers (HostPlatform).
     internal NativeScheduler Scheduler { get; init; } = HostPlatform.Scheduler;
     internal bool IsWorker { get; init; }
+    // Set only while holding the scheduler reservation for this batch. Zero refuses Raster before allocation.
+    internal long RasterBudgetBytes { get; init; }
+    internal Action? RasterStarting { get; init; }
     /// <summary>In-process-only hosts (macOS): re-admits with live memory once the native slot is held, before any
     /// preparation, because a queued job may start long after its first check. Null on Windows.</summary>
     internal Func<string?>? AdmitInSlot { get; init; }
@@ -94,7 +98,13 @@ public sealed class ViewDrawing : IDisposable
     public PhaseTimings Phases { get; } = new();
     // Number of distinct sources registered with HLD.
     public int FastNativeSources { get; internal set; }
-    public string EngineSummary => Report.Route == "pipes (experimental)" ? "Engine: pipes (experimental); surface visibility; known junction errors" : NativeCalls == 0 ? Settings?.CutOnly == true
+    public bool RasterRan { get; internal set; }
+    /// <summary>Actual raster pixel size in millimetres (captured host units).</summary>
+    public double RasterPixel { get; internal set; }
+    public int RasterTriangles { get; internal set; }
+    public int RasterCandidates { get; internal set; }
+    public long RasterEstimatedBytes { get; internal set; }
+    public string EngineSummary => RasterRan ? $"Engine: Raster (experimental); approximate, pixel {RasterPixel:G6} mm; visibility not certified" : Report.Route == "pipes (experimental)" ? "Engine: pipes (experimental); surface visibility; known junction errors" : NativeCalls == 0 ? Settings?.CutOnly == true
         ? "Engine: sections only; HLD not run" : "Engine: HLD not run"
         : $"Engine: Rhino HLD; {(MultipleThreads ? "multithreaded" : "single-threaded")}; visibility not certified";
     private string JointsDisclosure => Settings is { } settings && settings["joints"].AssignedBy != SettingSource.Default
@@ -199,7 +209,10 @@ public static class NativeDrawing
             views = views.ToArray();
             if (settings.IsWorker ? scene.Cost.Estimate(views.Count) > settings.Scheduler.BudgetBytes : !HostPlatform.Admitted(scene.Cost, views.Count, settings.Scheduler.BudgetBytes))
                 throw new InvalidOperationException($"{SceneCost.Refusal} (estimate {scene.Cost.Estimate(views.Count):N0} bytes; {scene.Cost.BrepFaces} Brep faces; {scene.Cost.MeshTriangles} triangles; {views.Count} views).");
-            return await settings.Scheduler.RunAsync(scene.Cost.Estimate(views.Count), ct =>
+            var rasterBytes = views.Any(v => v.Settings is { Visibility: VisibilityMode.Raster, CutOnly: false })
+                ? M2DPlus.Core.Experimental.RasterVisibility.RasterPolicy.ProjectionReservation(scene.Cost, views.Count, settings.Scheduler.BudgetBytes) : 0;
+            settings = settings with { RasterBudgetBytes = rasterBytes };
+            return await settings.Scheduler.RunAsync(checked(scene.Cost.Estimate(views.Count) + M2DPlus.Core.Experimental.RasterVisibility.RasterPolicy.AdditionalReservation(scene.Cost, rasterBytes)), ct =>
             {
                 var results = new List<ViewDrawing>();
                 try
@@ -299,7 +312,7 @@ public static class NativeDrawing
             if (view.Settings?.CutOnly == true)
             { ReportPhase("sections"); result._diagnostics.Add(ViewNotices.CutOnlyEmpty); return result; }
             result._diagnostics.Add($"Admission: {scene.Cost.GeometryBytes} geometry bytes; {scene.Cost.BrepFaces} faces; {scene.Cost.MeshTriangles} triangles; {scene.SourceCount} sources.");
-            HldProjection.Solve(glass.Sources.Select(s => new VisibilityInput(s.Geometry, s)).ToArray(), result, view, settings, scene.Bounds, token);
+            RasterProjectionRoute.Solve(glass.Sources.Select(s => new VisibilityInput(s.Geometry, s)).ToArray(), result, view, settings, scene, token);
             quarantine |= result.RoutingQuarantine;
             if (view.Named is { Crop: true })
                 foreach (var piece in result.Pieces.ToArray())
@@ -320,13 +333,15 @@ public static class NativeDrawing
             HldProjection.ApplyFailure(result, quarantine, [], tolerance, token);
         }
         catch (OperationCanceledException) { result.Dispose(); throw; }
-        catch (Exception ex) { result.Dispose(); result.Error = ex.Message; }
+        catch (Exception ex) when (view.Settings?.Visibility != VisibilityMode.Raster || RasterProjectionRoute.CanFallback(ex))
+        { result.Dispose(); result.Error = ex.Message; }
+        catch { result.Dispose(); throw; }
         finally
         {
             result._diagnostics.Add($"Compute: {HldProjection.Policy}; fingerprint={WorkerCodec.Fingerprint()}; processors={System.Environment.ProcessorCount}.");
             result.Pieces.Sort(ComparePieces);
-            result.Report = new("Rhino HLD", result.Items.Count(p => p.Class == LineClass.Unresolved), result.RoutingInvalid,
-                scene.Unsupported, scene.Conversions, quarantine) { ValidationDomain = "Rhino HLD; visibility not certified" };
+            result.Report = new(result.RasterRan ? "raster (experimental)" : "Rhino HLD", result.Items.Count(p => p.Class == LineClass.Unresolved), result.RoutingInvalid,
+                scene.Unsupported, scene.Conversions, quarantine) { ValidationDomain = result.RasterRan ? "Raster approximate visibility; not certified" : "Rhino HLD; visibility not certified" };
             result.Seconds = timer.Elapsed.TotalSeconds;
         }
         return result;

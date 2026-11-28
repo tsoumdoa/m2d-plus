@@ -54,6 +54,7 @@ public sealed class SceneCapture : IDisposable
     private readonly Dictionary<Guid, (RhinoObject Leaf, bool Drawable)[]> _definitions = new();
     private readonly double _tolerance;
     private readonly bool _millimetres;
+    private readonly double _millimetresPerUnit;
     private readonly double _angleTolerance;
     private bool _accepted;
     private readonly CaptureVolumes? _volumes;
@@ -103,6 +104,7 @@ public sealed class SceneCapture : IDisposable
         _viewObjects = excluded;
         _tolerance = document.ModelAbsoluteTolerance;
         _millimetres = document.ModelUnitSystem == UnitSystem.Millimeters;
+        _millimetresPerUnit = RhinoMath.UnitScale(document.ModelUnitSystem, UnitSystem.Millimeters);
         _angleTolerance = document.ModelAngleToleranceRadians;
         if (items is null)
         {
@@ -610,7 +612,7 @@ public sealed class SceneCapture : IDisposable
         }
         Add(CapturePhase.Signature, signatureSince);
         var sceneSince = Mark();
-        var lease = cache.Scene(hash, leaves, unsupported, tolerance, _millimetres, _angleTolerance);
+        var lease = cache.Scene(hash, leaves, unsupported, tolerance, _millimetres, _angleTolerance, _millimetresPerUnit);
         Add(CapturePhase.Scene, sceneSince);
         return lease;
     }
