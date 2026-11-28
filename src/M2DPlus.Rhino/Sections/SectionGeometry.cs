@@ -59,13 +59,14 @@ internal static class SectionGeometry
     /// canonical shape takes the scene's verdict for that shape; any other source is checked on its own geometry.
     /// Call from one thread at a time: Rhino's curve overlap search is not repeatable under concurrent calls.
     /// </summary>
-    internal static string Verdict(SectionSource source, double tolerance, SectionVerdictCache verdicts, SectionValidation? validation = null)
+    internal static string Verdict(SectionSource source, double tolerance, SectionVerdictCache verdicts, SectionValidation? validation = null,
+        SectionIntersectionCache? intersections = null)
     {
-        if (source.Canonical is { } canonical) return verdicts.Verdict(canonical, tolerance, validation);
+        if (source.Canonical is { } canonical) return verdicts.Verdict(canonical, tolerance, validation, intersections);
         try
         {
             using var copy = Convert(source.Geometry, tolerance, validate: false);
-            ValidateFaceIntersections(copy, tolerance, verdicts, validation);
+            ValidateFaceIntersections(copy, tolerance, verdicts, validation, intersections);
             return "";
         }
         catch (SectionFailure ex) { return ex.Message; }
@@ -73,7 +74,7 @@ internal static class SectionGeometry
 
     /// <summary>The verdict of a definition-local shape, at instance scale; validation planes use that scaled local frame.</summary>
     internal static string CanonicalVerdict(SectionCanonical canonical, double tolerance, SectionVerdictCache? verdicts = null,
-        SectionValidation? validation = null)
+        SectionValidation? validation = null, SectionIntersectionCache? intersections = null)
     {
         try
         {
@@ -81,14 +82,14 @@ internal static class SectionGeometry
             if (canonical.Scale != 1 && !local.Transform(Transform.Scale(Point3d.Origin, canonical.Scale)))
                 throw new SectionFailure("Definition geometry could not be scaled for validation.");
             using var brep = Convert(local, tolerance, validate: false);
-            ValidateFaceIntersections(brep, tolerance, verdicts, validation);
+            ValidateFaceIntersections(brep, tolerance, verdicts, validation, intersections);
             return "";
         }
         catch (SectionFailure ex) { return ex.Message; }
     }
 
     internal static void ValidateFaceIntersections(Brep brep, double tolerance, SectionVerdictCache? verdicts = null,
-        SectionValidation? validation = null)
+        SectionValidation? validation = null, SectionIntersectionCache? intersections = null)
     {
         // Native face/edge intersections lose shared-edge overlaps at survey coordinates.
         // Their continuous topology fallback then subdivides a long edge down to tolerance.
@@ -96,19 +97,20 @@ internal static class SectionGeometry
         using var local = SectionCoordinates.ValidationCopy(brep, tolerance);
         var centre = brep.GetBoundingBox(true).Center;
         validation = validation?.Transform(Transform.Translation(-centre.X, -centre.Y, -centre.Z));
-        if (verdicts is null) ValidateLocalFaceIntersections(local, tolerance, validation);
+        if (verdicts is null) ValidateLocalFaceIntersections(local, tolerance, validation, intersections);
         else
         {
             var verdict = verdicts.LocalVerdict(local, tolerance, () =>
             {
-                try { ValidateLocalFaceIntersections(local, tolerance, validation); return ""; }
+                try { ValidateLocalFaceIntersections(local, tolerance, validation, intersections); return ""; }
                 catch (SectionFailure ex) { return ex.Message; }
             }, validation);
             if (verdict.Length != 0) throw new SectionFailure(verdict);
         }
     }
 
-    private static void ValidateLocalFaceIntersections(Brep brep, double tolerance, SectionValidation? validation)
+    private static void ValidateLocalFaceIntersections(Brep brep, double tolerance, SectionValidation? validation,
+        SectionIntersectionCache? intersections = null)
     {
         validation = validation?.WithBounds(brep.GetBoundingBox(true));
         using var sections = new SlabOverlapGuard(validation, brep.GetBoundingBox(true), tolerance);
@@ -120,21 +122,27 @@ internal static class SectionGeometry
             if ((touches[i] & touches[j]) == 0) continue;
             var box = boxes[i]; box.Inflate(tolerance);
             if (!BoundingBox.Intersection(box, boxes[j]).IsValid) continue;
-            ValidateFacePair(brep.Faces[i], brep.Faces[j], tolerance, validation, sections);
+            ValidateFacePair(brep.Faces[i], brep.Faces[j], tolerance, validation, sections, intersections);
         }
     }
 
     // Pair-level seam permits synthetic open patches and failure injection without
     // a runtime setting, cache-key variation or mutable process-wide test hook.
     internal static void ValidateFacePair(BrepFace a, BrepFace b, double tolerance, SectionValidation? validation,
-        SlabOverlapGuard sections)
+        SlabOverlapGuard sections, SectionIntersectionCache? intersections = null)
     {
         var shared = a.Brep == b.Brep ? a.AdjacentEdges().Intersect(b.AdjacentEdges()).Select(k => (Curve)a.Brep.Edges[k]).ToArray() : [];
         var aVertices = a.Loops.SelectMany(l => l.Trims).SelectMany(t => new[] { t.StartVertex.Location, t.EndVertex.Location }).ToArray();
         var bVertices = b.Loops.SelectMany(l => l.Trims).SelectMany(t => new[] { t.StartVertex.Location, t.EndVertex.Location }).ToArray();
         var sharedPoints = aVertices.Where(p => bVertices.Any(q => q.DistanceTo(p) <= tolerance)).ToArray();
         using var first = a.DuplicateFace(false); using var second = b.DuplicateFace(false);
-        var success = Intersection.BrepBrep(first, second, tolerance, out var curves, out var points);
+        FacePairIntersections Compute()
+        {
+            var succeeded = Intersection.BrepBrep(first, second, tolerance, out var curves, out var points);
+            return new(succeeded, curves, points);
+        }
+        var intersection = intersections?.Get(first, second, tolerance, Compute) ?? Compute();
+        var success = intersection.Success; var curves = intersection.Curves; var points = intersection.Points;
         try
         {
             if (!success) throw new SectionFailure("Cannot validate face self-intersection relationships.");
@@ -182,7 +190,7 @@ internal static class SectionGeometry
                 }
             }
         }
-        finally { foreach (var curve in curves) curve.Dispose(); }
+        finally { intersection.Dispose(); }
     }
 
     private static bool OnTrimmedFace(BrepFace face, Point3d point, double tolerance) =>
