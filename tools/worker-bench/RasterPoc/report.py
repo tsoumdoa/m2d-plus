@@ -1,10 +1,10 @@
-"""Summarize preserved stage 0 receipts without loading private geometry or Rhino."""
+"""Summarize preserved raster receipts without loading private geometry or Rhino."""
 import argparse
 import json
 from pathlib import Path
 
 
-def summarize(root, matrix):
+def summarize(root, matrix, expected_resolutions=3):
     rows = []
     incomplete = []
     failures = []
@@ -20,9 +20,9 @@ def summarize(root, matrix):
                 incomplete.append(folder.name)
             continue
         case = json.loads(case_path.read_text(encoding='utf-8-sig'))
-        threaded_path = root / 'threaded' / (case['Label'] + '-' + case['View'].replace(' ', '-')) / 'case.json'
+        threaded_path = folder / 'threaded-timing.json'
         if not threaded_path.exists():
-            threaded_path = folder / 'threaded-timing.json'
+            threaded_path = root / 'threaded' / (case['Label'] + '-' + case['View'].replace(' ', '-')) / 'case.json'
         threaded = json.loads(threaded_path.read_text(encoding='utf-8-sig')) if threaded_path.exists() else None
         completed = 0
         for result_path in sorted(folder.glob('*/result.json'), key=lambda p: int(p.parent.name)):
@@ -52,11 +52,12 @@ def summarize(root, matrix):
                 scene_sources=case['SceneSources'], registered_sources=case['RegisteredSources'],
                 registrations=case['Registrations'], authored_depth=case['AuthoredSourceDepth'], resolved_depth=case['ResolvedDepth'],
                 preparation_s=case['PreparationSeconds'], features=features, receipt=str(result_path),
-                benchmark_hash=case['BenchHash'], fingerprint=case['Fingerprint']))
+                benchmark_hash=case['BenchHash'], fingerprint=case['Fingerprint'],
+                invalid_inputs=timing.get('InvalidInputs', 0), without_excluded_layer=result.get('WithoutExcludedLayer')))
             if features is not None:
                 completed += 1
-        if completed != 3:
-            incomplete.append(f'{folder.name}: {completed}/3 complete resolutions')
+        if completed != expected_resolutions:
+            incomplete.append(f'{folder.name}: {completed}/{expected_resolutions} complete resolutions')
         else:
             completed_cases.add((case['Label'], case['View']))
     incomplete.extend(f['folder'] for f in failures if (f['label'], f['view']) not in completed_cases)
@@ -65,9 +66,9 @@ def summarize(root, matrix):
     return dict(matrix=matrix, rows=rows, incomplete=incomplete, failed_trials=failures)
 
 
-def ray_summary(root):
+def ray_summary(root, ray_directory=None):
     result = []
-    for path in sorted((root / 'rays').glob('*/ray-controls.json')):
+    for path in sorted((ray_directory or root / 'rays').glob('*/ray-controls.json')):
         receipt = json.loads(path.read_text(encoding='utf-8-sig'))
         for kind in ('WrongVisible', 'WrongHidden'):
             rows = [r for r in receipt['Records'] if r['Kind'] == kind]
@@ -143,13 +144,18 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('evidence_root', type=Path)
     parser.add_argument('--matrix', default='matrix-4')
+    parser.add_argument('--expected-resolutions', type=int, default=3)
+    parser.add_argument('--rays-directory', type=Path)
+    parser.add_argument('--output-root', type=Path, help='Keep stage 1 summaries separate from preserved stage 0 evidence')
     parser.add_argument('--doc', type=Path, help='Replace the explicitly marked numerical results block in the research report')
     args = parser.parse_args()
-    receipt = summarize(args.evidence_root, args.matrix)
-    rays = ray_summary(args.evidence_root)
-    (args.evidence_root / 'summary.json').write_text(json.dumps(receipt, indent=2), encoding='utf-8')
-    (args.evidence_root / 'summary.md').write_text(markdown(receipt), encoding='utf-8')
-    (args.evidence_root / 'rays-summary.json').write_text(json.dumps(rays, indent=2), encoding='utf-8')
+    receipt = summarize(args.evidence_root, args.matrix, args.expected_resolutions)
+    output = args.output_root or args.evidence_root
+    output.mkdir(parents=True, exist_ok=True)
+    rays = ray_summary(args.evidence_root, args.rays_directory)
+    (output / 'summary.json').write_text(json.dumps(receipt, indent=2), encoding='utf-8')
+    (output / 'summary.md').write_text(markdown(receipt), encoding='utf-8')
+    (output / 'rays-summary.json').write_text(json.dumps(rays, indent=2), encoding='utf-8')
     if args.doc:
         if receipt['incomplete'] or len(receipt['rows']) != 24:
             raise ValueError('Refuse to write a complete report from an incomplete matrix')

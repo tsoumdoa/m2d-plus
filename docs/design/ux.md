@@ -1160,7 +1160,7 @@ Run automatically            ✓
 Run now
 Cancel                            (only while running)
 ────────────────
-Visibility engine ▸ Rhino HLD ✓ · Pipes (experimental)   visibility = hld | pipes
+Visibility engine ▸ Rhino HLD ✓ · Pipes (experimental) · Raster (experimental)   visibility = hld | pipes | raster
 Hidden lines                 ✓        hidden   = on | off
 Tangent edges                         tangents = off | on
 Seams                                 seams    = off | on
@@ -1541,7 +1541,18 @@ new in revision 3** and follow from the two decisions.
 14. **Settings-independent caching:** depth cueing, line weights (`scale`, `weights`), fill colours and the `hatch` override are
     styling only and must not invalidate the drawing cache. Neither does `min visible` (§3.9).
     Visibility keys: `depth`, `farclip`, `crop`, `hidden`, `tangents`, `seams`, `glass`, `tolerance`,
-    `cutonly`, `visibility` (only when `pipes`, so HLD keys are unchanged), scene/view/scope and policy/fingerprints. Cut-only omits hidden, tangents and seams; glass remains keyed for excluded foreground region admission.
+    `cutonly`, `visibility` (only when `pipes` or `raster`, so HLD keys are unchanged), scene/view/scope and policy/fingerprints. Cut-only omits hidden, tangents and seams; glass remains keyed for excluded foreground region admission.
     Tolerance keys the effective distance in document units: `document` / `auto` and unset share a visibility key;
     choosing a different physical preset (from any source, including the menu) re-solves visibility.
     Legacy engine/joints never key compute/run/timing; beyond/cuts/Target remain presentation.
+
+
+### Raster experimental visibility (owner, 2026-11-28)
+
+The Visibility engine menu adds **Raster (experimental)** after Pipes. Settings and
+view-object user text accept `visibility = hld | pipes | raster`; HLD remains the
+default. Raster is approximate, pixel-limited and never certified. Info and a grey
+remark show the actual physical pixel size and any whole-view HLD fallback reason.
+It uses the ordinary sections, crop, presentation, Source/Target, tree/Key, preview
+and Bake paths. No component input/output or GUID changes. Precision is an internal
+versioned adaptive policy with a memory cap; there is no new precision control.

@@ -52,6 +52,7 @@ internal sealed class WorkerClient : IDisposable
     private bool _disposed;
     internal Action? NativeStarted { get; set; }
     internal string? SceneRevision { get; set; }
+    internal string? SceneMetadataKey { get; set; }
     internal int ProcessId { get; }
     internal long PeakBytes => _job.PeakBytes;
     internal long MemoryCapBytes { get; private init; }

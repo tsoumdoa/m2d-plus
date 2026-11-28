@@ -6,12 +6,21 @@ namespace M2DPlus.Grasshopper.Tests;
 
 public sealed class PipeVisibilityUiTests
 {
+    [Fact] public void RasterChoicePersistsAndDisclosesApproximation()
+    {
+        var state = ComponentUiState.Default.With("visibility", "raster");
+        var restored = UiStateSerializer.Read(UiStateSerializer.Write(state), out var error); Assert.Null(error);
+        var presentation = new SettingsPresentation(restored, PresentationTests.Context());
+        Assert.Equal(VisibilityMode.Raster, presentation.Resolution!.Views[0].Visibility);
+        Assert.True(ComponentMenu.Choice(presentation, "Visibility engine", "visibility").Children[2].Checked);
+        Assert.Contains("pixel-limited", SettingsCatalog.Fields.Single(f => f.Key == "visibility").Tooltip);
+    }
     [Fact] public void ChoiceDefaultsToHldPersistsPipesAndHonoursInputLocks()
     {
         var context = PresentationTests.Context();
         var defaults = ComponentMenu.Choice(new(ComponentUiState.Default, context), "Visibility engine", "visibility");
-        Assert.Equal(["Rhino HLD", "Pipes (experimental)"], defaults.Children.Select(n => n.Label));
-        Assert.Equal([true, false], defaults.Children.Select(n => n.Checked));
+        Assert.Equal(["Rhino HLD", "Pipes (experimental)", "Raster (experimental)"], defaults.Children.Select(n => n.Label));
+        Assert.Equal([true, false, false], defaults.Children.Select(n => n.Checked));
         var state = ComponentUiState.Default.With("visibility", "pipes");
         var restored = UiStateSerializer.Read(UiStateSerializer.Write(state), out var error); Assert.Null(error);
         var presentation = new SettingsPresentation(restored, context);

@@ -5,8 +5,10 @@ Design note · owner option B, 2026-11-17. Approved implementation specification
 ## Default and opt-in exception
 
 Rhino HLD remains the default visibility engine. Since beta.12 (PR #69),
-**Pipes (experimental)** (`visibility = pipes`) is the only opt-in exception.
-It has known wrong-visible junction errors and falls back to HLD for views it
+**Pipes (experimental)** (`visibility = pipes`) is an opt-in exception. The owner added
+**Raster (experimental)** (`visibility = raster`) on 2026-11-28: an approximate,
+pixel-limited whole-view engine, never an HLD hybrid. See its [README](../../src/M2DPlus.Rhino/Experimental/RasterVisibility/README.md).
+Pipes has known wrong-visible junction errors and falls back to HLD for views it
 cannot admit. See the [Pipes engine README](../../src/M2DPlus.Rhino/Experimental/PipeVisibility/README.md)
 for its supported domain and regression gate. The routing below describes HLD.
 

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using M2DPlus.Core;
+using M2DPlus.Core.Experimental.RasterVisibility;
 using M2DPlus.Measurements;
 using M2DPlus.Rhino.Services;
 using Rhino;
@@ -10,7 +11,7 @@ using Rhino.Geometry.Intersect;
 internal static class RasterRays
 {
     private static readonly JsonSerializerOptions Json = new() { WriteIndented = true, IncludeFields = true };
-    internal static void Run(string caseFolder, string resolution, string output)
+    internal static void Run(string caseFolder, string resolution, string output, string? excludeLayerFile = null)
     {
         if (System.Environment.GetEnvironmentVariable("M2D_RHINO_TESTS") != "1") throw new InvalidOperationException("Set M2D_RHINO_TESTS=1");
         if (File.Exists(output) || Directory.Exists(output)) throw new IOException("Preserve existing ray evidence");
@@ -18,6 +19,7 @@ internal static class RasterRays
         using var metrics = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(caseFolder, resolution, "result.json")));
         var root = System.Environment.GetEnvironmentVariable("M2D_MODELS") ?? Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.UserProfile), ".t3", "m2d-plus-models");
         var model = RasterBench.Model(root, header.GetProperty("Label").GetString()!);
+        var excludedLayer = excludeLayerFile is null ? null : File.ReadAllText(excludeLayerFile).Trim();
         if (WorkerCodec.Hash(File.ReadAllBytes(model)) != header.GetProperty("ModelHash").GetString())
             throw new InvalidDataException("Diagnostic model fingerprint mismatch");
         using var mutex = new Mutex(false, @"Local\M2DPlusLocalModelSuiteRhino");
@@ -95,7 +97,7 @@ internal static class RasterRays
                     return details;
                 }
                 foreach (var (kind, drawing) in new[] { ("WrongVisible", raster), ("WrongHidden", hld) })
-                foreach (var span in spans.RootElement.GetProperty(kind).Deserialize<DrawingComparison.Span[]>(Json)!.OrderByDescending(s => s.Mm).Take(12))
+                foreach (var span in spans.RootElement.GetProperty(kind).Deserialize<DrawingComparison.Span[]>(Json)!.Where(s => excludedLayer is null || drawing.Items[s.Piece].SourceLayer != excludedLayer).OrderByDescending(s => s.Mm).Take(12))
                 {
                     var piece = drawing.Items[span.Piece]; using var flat = (Curve)piece.CopyGeometry();
                     using var part = flat.Trim(span.Start, span.End)!;
@@ -105,14 +107,15 @@ internal static class RasterRays
                     var y = box.Min.Y + (Math.Floor((local.Y - box.Min.Y) / pixel) + .5) * pixel;
                     var centre = p + frame.XAxis * (x - local.X) + frame.YAxis * (y - local.Y);
                     records.Add(new { Kind = kind, span.Piece, span.Mm, span.Start, span.End, piece.SourceIdentity, piece.Profile,
-                        Point = p, PixelMm = pixel * factor, MaximumDepthBiasMm = (2 * tolerance + 2 * meshTolerance + 2 * pixel) * factor,
+                        Point = p, PixelMm = pixel * factor, MaximumDepthBiasMm = RasterPolicy.DepthAllowance(tolerance, meshTolerance) * factor,
                         InsideRequestedFrame = NativeDrawing.Inside(p, drawing.Frame, tolerance),
                         CandidateRay = Ray(p), PixelCentreRay = Ray(centre) });
                 }
                 Directory.CreateDirectory(output);
                 File.WriteAllText(Path.Combine(output, "ray-controls.json"), JsonSerializer.Serialize(new
                 {
-                    SourceCase = Path.GetFullPath(caseFolder), Resolution = resolution, Fingerprint = WorkerCodec.Fingerprint(), InputDigest = digest,
+                    SourceCase = Path.GetFullPath(caseFolder), Resolution = resolution,
+                    ExcludedLayerHash = excludedLayer is null ? null : WorkerCodec.Hash(System.Text.Encoding.UTF8.GetBytes(excludedLayer)), Fingerprint = WorkerCodec.Fingerprint(), InputDigest = digest,
                     Method = "Twelve longest spans per error direction; native trimmed-Brep forward intersections and strict solid interior at interval midpoints, at candidate ray and its raster pixel centre. Representative controls, not a length-integrated oracle; no HLD solve.",
                     Records = records
                 }, Json));

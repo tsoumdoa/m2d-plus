@@ -3,8 +3,10 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.Text.Json;
 using M2DPlus.Core;
+using M2DPlus.Core.Experimental.RasterVisibility;
 using M2DPlus.Measurements;
 using M2DPlus.Rhino.Services;
+using M2DPlus.Rhino.Experimental.RasterVisibility;
 using Rhino;
 using Rhino.DocObjects;
 using Rhino.Geometry;
@@ -19,7 +21,9 @@ internal static class RasterBench
     internal static void Run(string[] args)
     {
         if (Environment.GetEnvironmentVariable("M2D_RHINO_TESTS") != "1") throw new InvalidOperationException("Set M2D_RHINO_TESTS=1");
-        RasterBuffer.Controls();
+        RasterControls.Run();
+        if (args[2] == "score-archives")
+        { ScoreArchives(args[3], int.Parse(args[4]), args[5], args[6]); return; }
         var label = args[2]; var viewName = args[3]; var folder = Path.GetFullPath(args[4]);
         if (Directory.Exists(folder) || File.Exists(folder)) throw new IOException("Preserve existing evidence; choose a new output folder");
         var root = Environment.GetEnvironmentVariable("M2D_MODELS") ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".t3", "m2d-plus-models");
@@ -34,8 +38,9 @@ internal static class RasterBench
         var admissionSeconds = wait.Elapsed.TotalSeconds;
         var timingReference = args.FirstOrDefault(a => a.StartsWith("--timing-only=", StringComparison.Ordinal))?[14..];
         var reuseReference = args.FirstOrDefault(a => a.StartsWith("--reference=", StringComparison.Ordinal))?[12..];
+        var excludeLayerFile = args.FirstOrDefault(a => a.StartsWith("--exclude-layer-file=", StringComparison.Ordinal))?[21..];
         var viewRequest = args.FirstOrDefault(a => a.StartsWith("--view-request=", StringComparison.Ordinal))?[15..];
-        try { Measure(model, label, viewName, folder, resolutions, args.Contains("mesh"), admissionSeconds, timingReference, reuseReference, viewRequest, args.Contains("--also-threaded")); }
+        try { Measure(model, label, viewName, folder, resolutions, args.Contains("mesh"), admissionSeconds, timingReference, reuseReference, viewRequest, args.Contains("--also-threaded"), excludeLayerFile, args.Contains("--product-only")); }
         catch (Exception ex) { Write(Path.Combine(folder, "failure.json"), new { Label = label, View = viewName, Error = ex.ToString() }); throw; }
         finally { mutex.ReleaseMutex(); }
     }
@@ -69,7 +74,7 @@ internal static class RasterBench
         var objects = doc.Objects.GetObjectList(ObjectType.AnyObject).Where(o => string.Equals(o.Attributes.Name, name, StringComparison.OrdinalIgnoreCase)).ToArray();
         return objects.Length == 1 ? ViewRequest.Parse(objects[0], doc) with { Name = name } : view;
     }
-    private static void Measure(string model, string label, string viewName, string folder, int[] resolutions, bool mesh, double admissionSeconds, string? timingReference, string? reuseReference, string? viewDescriptor, bool alsoThreaded)
+    private static void Measure(string model, string label, string viewName, string folder, int[] resolutions, bool mesh, double admissionSeconds, string? timingReference, string? reuseReference, string? viewDescriptor, bool alsoThreaded, string? excludeLayerFile, bool productOnly)
     {
         using var core = new Rhino.Runtime.InProcess.RhinoCore(["/nosplash", "/notemplate"], Rhino.Runtime.InProcess.WindowStyle.NoWindow);
         using var doc = RhinoDoc.OpenHeadless(model) ?? throw new IOException("Cannot open model label " + label);
@@ -145,6 +150,29 @@ internal static class RasterBench
                     !WorkerCodec.Fingerprint().Accepts(expected.GetProperty("Fingerprint").Deserialize<WorkerFingerprint>(Json)!))
                     throw new InvalidDataException("Inputs differ from the single-threaded reference");
             }
+            if (productOnly)
+            {
+                var rasterSettings = Settings.Resolve([new(viewName, viewName, view.Kind, view.Cut is not null, cheap.Diagonal.Length,
+                    doc.ModelAbsoluteTolerance, authoredDepth)], [[settingsText + "\nvisibility=raster"]], units).Views[0];
+                var productView = view with { Settings = rasterSettings };
+                var plan = WorkerMemoryPolicy.Size(scene.Cost, 1, 1, WorkerMachineMemory.Read(), extra: RasterPolicy.Reservation(scene.Cost));
+                if (plan.Refusal is not null) throw new InvalidOperationException(plan.Refusal);
+                var calls = NativeDrawing.HldCalls;
+                using var product = NativeDrawing.SolveBorrowedAsync(scene, new(scene.Revision, "raster-product-smoke", viewName, 1), [productView],
+                    new() { IsWorker = true, Scheduler = new(plan.CapBytes), ObserveHldOptions = _ => throw new InvalidOperationException("HLD forbidden in Raster product smoke") },
+                    default, null).GetAwaiter().GetResult();
+                var drawing = product.Views.Single();
+                Write(Path.Combine(folder, "product-smoke.json"), new { Label = label, View = viewName, Fingerprint = WorkerCodec.Fingerprint(),
+                    InputDigest = inputDigest, scene.Cost, plan.CapBytes, ExtraReservation = RasterPolicy.Reservation(scene.Cost),
+                    drawing.RasterRan, drawing.RasterPixel, drawing.RasterTriangles, drawing.RasterCandidates, drawing.RasterEstimatedBytes,
+                    drawing.NativeCalls, HldCallDelta = NativeDrawing.HldCalls - calls, drawing.Error, drawing.Info, drawing.Seconds,
+                    Pieces = drawing.Items.Count, Regions = drawing.Regions.Count });
+                if (drawing.Error is not null || !drawing.RasterRan || drawing.NativeCalls != 0 || NativeDrawing.HldCalls != calls)
+                    throw new InvalidDataException("Product Raster smoke failed: " + drawing.Info);
+                Console.WriteLine($"Product Raster smoke passed: {drawing.Seconds:F3}s; {drawing.Items.Count} pieces; {drawing.Regions.Count} regions; cap={plan.CapBytes}; pixel={drawing.RasterPixel:F4}mm");
+                return;
+            }
+            var invalidBeforeReference = registered.Count(i => !i.Geometry.IsValid);
             if (alsoThreaded)
             {
                 using var production = new ViewDrawing { Name = viewName, Frame = frame, Settings = view.Settings, Tolerance = tolerance };
@@ -189,6 +217,7 @@ internal static class RasterBench
                     SceneSources = scene.SourceCount, ScopedOut = capture.ScopedOutCount, Registrations = registered.Count,
                     RegisteredSources = registered.Select(i => i.Source.Identity).Distinct().Count(), InputDigest = inputDigest,
                     GeometryTypes = registered.GroupBy(i => i.Geometry.GetType().Name).ToDictionary(g => g.Key, g => g.Count()),
+                    InvalidBeforeReference = invalidBeforeReference, InvalidAfterReference = registered.Count(i => !i.Geometry.IsValid),
                     PreparationSeconds = preparationSeconds, PreparationDiagnostics = captureResult.Diagnostics,
                     HldPhases = hld.Phases.Seconds, HldPieces = hld.Items.Count, HldDiagnostics = hld.Diagnostics,
                     HldPeakPrivateBytes = reuseReference is null ? memory.PeakPrivate : reference!.RootElement.GetProperty("HldPeakPrivateBytes").GetInt64(),
@@ -202,6 +231,7 @@ internal static class RasterBench
             Console.WriteLine($"  HLD Compute: {hld.Phases.Seconds["native solve"]:F3}s; pieces={hld.Items.Count}");
             if (timingReference is not null) return; // Production-threaded timing only; accuracy always uses false.
             using var hldMm = Millimetres(hld, scale);
+            var excludedLayer = excludeLayerFile is null ? null : File.ReadAllText(excludeLayerFile).Trim();
             foreach (var resolution in resolutions)
             {
                 Console.WriteLine($"START raster {resolution}");
@@ -217,12 +247,17 @@ internal static class RasterBench
                 Console.WriteLine($"  raster={result.Timings.Total:F3}s; grid={result.Timings.Width}x{result.Timings.Height}; triangles={result.Timings.Triangles}; comparing");
                 using var rasterMm = Millimetres(result.Drawing, scale);
                 var compare = DrawingComparison.Compare(rasterMm, hldMm);
+                using var rasterFiltered = WithoutLayer(rasterMm, excludedLayer);
+                using var hldFiltered = WithoutLayer(hldMm, excludedLayer);
+                var withoutExcludedLayer = excludedLayer is null ? null : DrawingComparison.Compare(rasterFiltered, hldFiltered);
                 Write(Path.Combine(sub, "result.json"), new
                 {
                     Label = label, View = viewName, Mode = mesh ? "mesh silhouettes" : "native silhouettes", result.Timings,
                     Speedup = hld.Phases.Seconds["native solve"] / result.Timings.Total,
                     PeakPrivateBytes = memory.PeakPrivate, PeakWorkingSetBytes = memory.PeakWorking,
                     compare.WrongVisibleMm, compare.WrongVisiblePercent, compare.WrongHiddenMm, compare.WrongHiddenPercent,
+                    ExcludedLayerHash = excludedLayer is null ? null : WorkerCodec.Hash(System.Text.Encoding.UTF8.GetBytes(excludedLayer)),
+                    WithoutExcludedLayer = withoutExcludedLayer,
                     RasterMissingMm = compare.PipesToHld.MissingMm, HldMissingMm = compare.HldToPipes.MissingMm, Compare = compare
                 });
                 Console.WriteLine($"  WV={compare.WrongVisibleMm:F2}mm/{compare.WrongVisiblePercent:F4}%; WH={compare.WrongHiddenMm:F2}mm/{compare.WrongHiddenPercent:F4}%");
@@ -239,9 +274,71 @@ internal static class RasterBench
         {
             var geometry = piece.CopyGeometry(); geometry.Transform(transform);
             var depth = piece.DepthGeometry?.Duplicate(); depth?.Transform(transform);
-            drawing.Pieces.Add(new(geometry, new PreparedLeaf(piece.SourceIdentity, piece.SourcePath, geometry), piece.Class, depth));
+            drawing.Pieces.Add(new(geometry, new PreparedLeaf(piece.SourceIdentity, piece.SourcePath, geometry) { Section = piece.Source }, piece.Class, depth));
         }
         return drawing;
+    }
+    private static ViewDrawing WithoutLayer(ViewDrawing source, string? excluded)
+    {
+        var drawing = new ViewDrawing { Name = source.Name, Frame = source.Frame, Tolerance = source.Tolerance };
+        foreach (var piece in source.Items)
+        {
+            if (excluded is not null && piece.SourceLayer == excluded) continue;
+            var geometry = piece.CopyGeometry();
+            drawing.Pieces.Add(new(geometry, new PreparedLeaf(piece.SourceIdentity, piece.SourcePath, geometry) { Section = piece.Source }, piece.Class, piece.DepthGeometry?.Duplicate()));
+        }
+        return drawing;
+    }
+    // Measurement-only historical archive import. This does not relax product cache/worker restoration.
+    private static void ScoreArchives(string folder, int resolution, string layerFile, string output)
+    {
+        if (Directory.Exists(output) || File.Exists(output)) throw new IOException("Preserve existing scoring evidence");
+        using var mutex = new Mutex(false, @"Local\M2DPlusLocalModelSuiteRhino");
+        try { mutex.WaitOne(); } catch (AbandonedMutexException) { }
+        try
+        {
+            using var core = new Rhino.Runtime.InProcess.RhinoCore(["/nosplash", "/notemplate"], Rhino.Runtime.InProcess.WindowStyle.NoWindow);
+            using var header = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(folder, "case.json")));
+            var factor = header.RootElement.GetProperty("MillimetresPerUnit").GetDouble();
+            var layer = File.ReadAllText(layerFile).Trim();
+            var rasterPath = Path.Combine(folder, resolution.ToString(), "raster.json"); var hldPath = Path.Combine(folder, "hld.json");
+            var current = WorkerCodec.Fingerprint();
+            ViewDrawing Read(string path)
+            {
+                using var json = JsonDocument.Parse(File.ReadAllBytes(path)); var root = json.RootElement;
+                var original = root.GetProperty("Fingerprint").Deserialize<WorkerFingerprint>(WorkerCodec.Json)!;
+                if (root.GetProperty("Schema").GetInt32() != WorkerCodec.Schema || original.RhinoBuild != current.RhinoBuild ||
+                    original.RhinoRevision != current.RhinoRevision || original.RhinoCommonSha256 != current.RhinoCommonSha256)
+                    throw new InvalidDataException("Historical scoring requires the same archive schema and exact native Rhino build");
+                var drawing = new ViewDrawing { Frame = root.GetProperty("Values").GetProperty("Frame").Deserialize<Rectangle3d>(WorkerCodec.Json) };
+                try
+                {
+                    foreach (var p in root.GetProperty("Pieces").EnumerateArray())
+                    {
+                        var geometry = WorkerCodec.Restore(p.GetProperty("Geometry").GetString()!);
+                        var source = new PreparedLeaf(p.GetProperty("SourceIdentity").GetString()!, p.GetProperty("SourcePath").Deserialize<int[]>()!, geometry)
+                            { Section = p.GetProperty("Source").Deserialize<SourceSection>(WorkerCodec.Json)! };
+                        drawing.Pieces.Add(new(geometry, source, (LineClass)p.GetProperty("Class").GetInt32()));
+                    }
+                    return drawing;
+                }
+                catch { drawing.Dispose(); throw; }
+            }
+            var calls = NativeDrawing.HldCalls;
+            using var rawRaster = Read(rasterPath); using var rawHld = Read(hldPath);
+            using var raster = Millimetres(rawRaster, factor); using var hld = Millimetres(rawHld, factor);
+            using var rasterFiltered = WithoutLayer(raster, layer); using var hldFiltered = WithoutLayer(hld, layer);
+            var compare = DrawingComparison.Compare(rasterFiltered, hldFiltered);
+            if (calls != NativeDrawing.HldCalls) throw new InvalidDataException("Archive scoring called HLD");
+            Directory.CreateDirectory(output);
+            Write(Path.Combine(output, "result.json"), new { Label = header.RootElement.GetProperty("Label").GetString(),
+                View = header.RootElement.GetProperty("View").GetString(), HistoricalCase = Path.GetFullPath(folder),
+                RasterHash = WorkerCodec.Hash(File.ReadAllBytes(rasterPath)), HldHash = WorkerCodec.Hash(File.ReadAllBytes(hldPath)),
+                ExcludedLayerHash = WorkerCodec.Hash(System.Text.Encoding.UTF8.GetBytes(layer)), ScoringFingerprint = current,
+                Method = "Historical geometry-only re-score with unchanged comparator; exact native Rhino/schema required; no engine run or worker/cache import", Compare = compare });
+            Console.WriteLine($"Historical layer-excluded score: WV={compare.WrongVisibleMm:F2} mm; WH={compare.WrongHiddenMm:F2} mm");
+        }
+        finally { mutex.ReleaseMutex(); }
     }
     private static void Errors(string folder, ViewDrawing raster, ViewDrawing hld, List<RasterProjection.Candidate> candidates, double scale)
     {

@@ -95,7 +95,7 @@ See [UX revision 4](design/ux.md) §2.2 and §6.
 
 Rhino HLD is the only visibility engine, including points, contacts and duplicate ownership.
 The earlier exact/composed roadmap is superseded; its archive is `archive/exact-engine`
-at `0cfc171` (beta.8). No custom visibility classifier, ray verifier or dense audit remains in the default engine; the opt-in Pipes (experimental) engine is the only exception.
+at `0cfc171` (beta.8). No custom visibility classifier, ray verifier or dense audit remains in the default engine; the opt-in Pipes (experimental) and Raster (experimental, owner 2026-11-28) engines are the exceptions. Raster is approximate, pixel-limited and never certified; it never calls HLD for part of a view and falls back for the whole view with a remark.
 Route C physically trims/caps participating geometry before HLD, preserves holes and
 scope, substitutes clear glass feature curves, and builds regions/crop/merge/hatches
 independently. Excluded geometry stays whole and occludes. Cut-only and zero-depth

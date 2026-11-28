@@ -51,7 +51,7 @@ internal static class WorkerCodec
     internal static string Hash(byte[] bytes) => Convert.ToHexString(SHA256.HashData(bytes));
     internal sealed record Definition(string Archive, string? Conversion);
     internal sealed record Leaf(string Identity, string Key, int[] Path, Transform[] Chain, SourceSection Section, int SourceItem);
-    internal sealed record Scene(string Revision, double Tolerance, Dictionary<string,Definition> Definitions, Leaf[] Leaves, Dictionary<string,int> Unsupported, bool Millimetres, double AngleTolerance);
+    internal sealed record Scene(string Revision, double Tolerance, Dictionary<string,Definition> Definitions, Leaf[] Leaves, Dictionary<string,int> Unsupported, bool Millimetres, double AngleTolerance, double MillimetresPerUnit);
     internal static byte[] Capture(PreparedScene scene, CancellationToken token)
     {
         var definitions = new Dictionary<string,Definition>();
@@ -62,7 +62,7 @@ internal static class WorkerCodec
             using var copy = leaf.Geometry.Value.Copy();
             definitions.Add(leaf.Key,new(Archive(copy),leaf.Geometry.Value.Conversion));
         }
-        return Encode(new Scene(scene.Revision,scene.Tolerance,definitions,scene.TransportLeaves.Select(l=>new Leaf(l.Identity,l.Key,l.Path,l.Chain,l.Section,l.SourceItem)).ToArray(),new(scene.Unsupported),scene.Millimetres,scene.AngleTolerance));
+        return Encode(new Scene(scene.Revision,scene.Tolerance,definitions,scene.TransportLeaves.Select(l=>new Leaf(l.Identity,l.Key,l.Path,l.Chain,l.Section,l.SourceItem)).ToArray(),new(scene.Unsupported),scene.Millimetres,scene.AngleTolerance,scene.MillimetresPerUnit));
     }
     internal static PreparedScene RestoreScene(byte[] bytes)
     {
@@ -71,7 +71,7 @@ internal static class WorkerCodec
         {
             foreach(var d in dto.Definitions) owners.Add(d.Key,new(new OwnedGeometry(Restore(d.Value.Archive),d.Value.Conversion)));
             foreach(var l in dto.Leaves) leaves.Add(new(l.Identity,l.Key,l.Path,l.Chain,owners[l.Key].Acquire(),l.Section){SourceItem=l.SourceItem});
-            return new(dto.Revision,leaves,dto.Unsupported,dto.Tolerance,dto.Millimetres,dto.AngleTolerance);
+            return new(dto.Revision,leaves,dto.Unsupported,dto.Tolerance,dto.Millimetres,dto.AngleTolerance,dto.MillimetresPerUnit);
         }
         catch { foreach(var l in leaves)l.Geometry.Dispose(); throw; }
         finally { foreach(var owner in owners.Values)owner.Dispose(); }
@@ -94,11 +94,11 @@ internal static class WorkerCodec
     internal sealed record Region(string Id, Loop[] Loops, string? Hatch, string[] Sources, M2DPlus.Core.Sections.SectionStyleSnapshot Style,
         M2DPlus.Core.Sections.SectionStatus Status, double Area, string? Uncertainty, int[] Path, int SourceItem, SourceSection Source);
     
-    internal sealed record Values(string Name, EffectiveSettings? Settings, string? Error, Rectangle3d Frame, QualityReport Report, int HiddenPoints, int DuplicateSegments, int ProjectingSegments, int EmptyNativeSlots, int ZeroLengthNativeSegments, int ToleranceDroppedPieces, int SubToleranceSourceEdges, int SubToleranceBoundsGaps, int UncertainSectionComponents, double Seconds, double MinVisible, int IgnoredObjects, int IgnoredPieces, int RoutingInvalid, bool RoutingQuarantine, int NativeEdges, int NativeCalls, int FastNativeSources, int CurvedCandidateEdges, int NativeFragments, bool MultipleThreads, double Tolerance);
+    internal sealed record Values(string Name, EffectiveSettings? Settings, string? Error, Rectangle3d Frame, QualityReport Report, int HiddenPoints, int DuplicateSegments, int ProjectingSegments, int EmptyNativeSlots, int ZeroLengthNativeSegments, int ToleranceDroppedPieces, int SubToleranceSourceEdges, int SubToleranceBoundsGaps, int UncertainSectionComponents, double Seconds, double MinVisible, int IgnoredObjects, int IgnoredPieces, int RoutingInvalid, bool RoutingQuarantine, int NativeEdges, int NativeCalls, int FastNativeSources, int CurvedCandidateEdges, int NativeFragments, bool MultipleThreads, double Tolerance, bool RasterRan, double RasterPixel, int RasterTriangles, int RasterCandidates, long RasterEstimatedBytes);
     internal sealed record Drawing(Values Values, string[] Diagnostics, Dictionary<string,double> Phases, Piece[] Pieces, Region[] Regions, int Schema, WorkerFingerprint Fingerprint);
     internal static byte[] CaptureDrawing(ViewDrawing drawing, bool stable = false)
     {
-        var values = new Values(drawing.Name, drawing.Settings, drawing.Error, drawing.Frame, drawing.Report, drawing.HiddenPoints, drawing.DuplicateSegments, drawing.ProjectingSegments, drawing.EmptyNativeSlots, drawing.ZeroLengthNativeSegments, drawing.ToleranceDroppedPieces, drawing.SubToleranceSourceEdges, drawing.SubToleranceBoundsGaps, drawing.UncertainSectionComponents, stable ? 0 : drawing.Seconds, drawing.MinVisible, drawing.IgnoredObjects, drawing.IgnoredPieces, drawing.RoutingInvalid, drawing.RoutingQuarantine, drawing.NativeEdges, drawing.NativeCalls, drawing.FastNativeSources, drawing.CurvedCandidateEdges, drawing.NativeFragments, drawing.MultipleThreads, drawing.Tolerance);
+        var values = new Values(drawing.Name, drawing.Settings, drawing.Error, drawing.Frame, drawing.Report, drawing.HiddenPoints, drawing.DuplicateSegments, drawing.ProjectingSegments, drawing.EmptyNativeSlots, drawing.ZeroLengthNativeSegments, drawing.ToleranceDroppedPieces, drawing.SubToleranceSourceEdges, drawing.SubToleranceBoundsGaps, drawing.UncertainSectionComponents, stable ? 0 : drawing.Seconds, drawing.MinVisible, drawing.IgnoredObjects, drawing.IgnoredPieces, drawing.RoutingInvalid, drawing.RoutingQuarantine, drawing.NativeEdges, drawing.NativeCalls, drawing.FastNativeSources, drawing.CurvedCandidateEdges, drawing.NativeFragments, drawing.MultipleThreads, drawing.Tolerance, drawing.RasterRan, drawing.RasterPixel, drawing.RasterTriangles, drawing.RasterCandidates, drawing.RasterEstimatedBytes);
         return Encode(new Drawing(values, stable ? [] : drawing.Diagnostics.ToArray(), stable ? new() : new(drawing.Phases.Seconds),
             drawing.Items.Select(p => { using var g=p.CopyGeometry(); return new Piece(Archive(g),p.DepthGeometry is {} d?Archive(d):null,
                 p.SourceIdentity,p.SourcePath,p.SourceItem,p.Source,p.Class,p.SolvedClass,p.Profile,p.FarCandidate,p.Depths,p.Intensity); }).ToArray(),
@@ -112,7 +112,7 @@ internal static class WorkerCodec
         if(dto.Schema!=Schema || dto.Fingerprint is null || !Fingerprint().Accepts(dto.Fingerprint))
             throw new InvalidDataException("Drawing cache/transport schema or compute fingerprint mismatch.");
         var v=dto.Values;
-        var drawing=new ViewDrawing { Name=v.Name, Settings=v.Settings, Error=v.Error, Frame=v.Frame, Report=v.Report, HiddenPoints=v.HiddenPoints, DuplicateSegments=v.DuplicateSegments, ProjectingSegments=v.ProjectingSegments, EmptyNativeSlots=v.EmptyNativeSlots, ZeroLengthNativeSegments=v.ZeroLengthNativeSegments, ToleranceDroppedPieces=v.ToleranceDroppedPieces, SubToleranceSourceEdges=v.SubToleranceSourceEdges, SubToleranceBoundsGaps=v.SubToleranceBoundsGaps, UncertainSectionComponents=v.UncertainSectionComponents, Seconds=v.Seconds, MinVisible=v.MinVisible, IgnoredObjects=v.IgnoredObjects, IgnoredPieces=v.IgnoredPieces, RoutingInvalid=v.RoutingInvalid, RoutingQuarantine=v.RoutingQuarantine, NativeEdges=v.NativeEdges, NativeCalls=v.NativeCalls, FastNativeSources=v.FastNativeSources, CurvedCandidateEdges=v.CurvedCandidateEdges, NativeFragments=v.NativeFragments, MultipleThreads=v.MultipleThreads, Tolerance=v.Tolerance };
+        var drawing=new ViewDrawing { Name=v.Name, Settings=v.Settings, Error=v.Error, Frame=v.Frame, Report=v.Report, HiddenPoints=v.HiddenPoints, DuplicateSegments=v.DuplicateSegments, ProjectingSegments=v.ProjectingSegments, EmptyNativeSlots=v.EmptyNativeSlots, ZeroLengthNativeSegments=v.ZeroLengthNativeSegments, ToleranceDroppedPieces=v.ToleranceDroppedPieces, SubToleranceSourceEdges=v.SubToleranceSourceEdges, SubToleranceBoundsGaps=v.SubToleranceBoundsGaps, UncertainSectionComponents=v.UncertainSectionComponents, Seconds=v.Seconds, MinVisible=v.MinVisible, IgnoredObjects=v.IgnoredObjects, IgnoredPieces=v.IgnoredPieces, RoutingInvalid=v.RoutingInvalid, RoutingQuarantine=v.RoutingQuarantine, NativeEdges=v.NativeEdges, NativeCalls=v.NativeCalls, FastNativeSources=v.FastNativeSources, CurvedCandidateEdges=v.CurvedCandidateEdges, NativeFragments=v.NativeFragments, MultipleThreads=v.MultipleThreads, Tolerance=v.Tolerance, RasterRan=v.RasterRan, RasterPixel=v.RasterPixel, RasterTriangles=v.RasterTriangles, RasterCandidates=v.RasterCandidates, RasterEstimatedBytes=v.RasterEstimatedBytes };
         try
         {
             drawing._diagnostics.AddRange(dto.Diagnostics);foreach(var phase in dto.Phases)drawing.Phases.Add(phase.Key,phase.Value);

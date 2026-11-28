@@ -100,6 +100,7 @@ public sealed class PreparedScene : IDisposable
     public BoundingBox Bounds { get; }
     public double Tolerance { get; }
     internal bool Millimetres { get; }
+    internal double MillimetresPerUnit { get; }
     internal double AngleTolerance { get; }
     public long EstimatedBytes { get; }
     public SceneCost Cost { get; }
@@ -107,9 +108,9 @@ public sealed class PreparedScene : IDisposable
     public int PreparationCount { get; private set; }
     public string VisibilityRevision { get; }
     internal IReadOnlyDictionary<string, SourceSection> SourceMetadata { get; }
-    internal PreparedScene(string revision, List<SceneLeaf> leaves, Dictionary<string, int> unsupported, double tolerance, bool millimetres = true, double angleTolerance = Math.PI / 180)
+    internal PreparedScene(string revision, List<SceneLeaf> leaves, Dictionary<string, int> unsupported, double tolerance, bool millimetres = true, double angleTolerance = Math.PI / 180, double millimetresPerUnit = 1)
     {
-        Millimetres = millimetres; AngleTolerance = angleTolerance;
+        Millimetres = millimetres; AngleTolerance = angleTolerance; MillimetresPerUnit = millimetresPerUnit;
         SourceMetadata = new ReadOnlyDictionary<string, SourceSection>(leaves.ToDictionary(l => l.Identity, l => l.Section, StringComparer.Ordinal));
         // Streamed, not one giant JSON string: the same fields, hashed in order.
         using (var hash = new SceneHash())
@@ -270,18 +271,19 @@ public sealed class SceneCache : IDisposable
             return lease;
         }
     }
-    internal LeaseEntry<PreparedScene>.Lease Scene(string key, List<SceneLeaf> leaves, Dictionary<string, int> unsupported, double tolerance, bool millimetres = true, double angleTolerance = Math.PI / 180)
+    internal LeaseEntry<PreparedScene>.Lease Scene(string key, List<SceneLeaf> leaves, Dictionary<string, int> unsupported, double tolerance, bool millimetres = true, double angleTolerance = Math.PI / 180, double millimetresPerUnit = 1)
     {
         lock (_sync)
         {
-            if (_scenes.TryGetValue(key, out var found))
+            var cacheKey = millimetresPerUnit == 1 ? key : key + "/units=" + millimetresPerUnit.ToString("R", System.Globalization.CultureInfo.InvariantCulture);
+            if (_scenes.TryGetValue(cacheKey, out var found))
             {
-                SceneHits++; _retention.Touch("s/" + key); foreach (var leaf in leaves) leaf.Geometry.Dispose(); return found.Acquire();
+                SceneHits++; _retention.Touch("s/" + cacheKey); foreach (var leaf in leaves) leaf.Geometry.Dispose(); return found.Acquire();
             }
-            var scene = new PreparedScene(key, leaves, unsupported, tolerance, millimetres, angleTolerance);
+            var scene = new PreparedScene(key, leaves, unsupported, tolerance, millimetres, angleTolerance, millimetresPerUnit);
             var added = new LeaseEntry<PreparedScene>(scene); var lease = added.Acquire();
-            _scenes.Add(key, added);
-            _retention.Add("s/" + key, scene.EstimatedBytes, () => { _scenes.Remove(key); added.Dispose(); });
+            _scenes.Add(cacheKey, added);
+            _retention.Add("s/" + cacheKey, scene.EstimatedBytes, () => { _scenes.Remove(cacheKey); added.Dispose(); });
             return lease;
         }
     }

@@ -1,4 +1,9 @@
-# Raster visibility — stage 0
+# Raster visibility — stages 0 and 1
+
+The stage 0 record below is preserved as historical evidence. The owner approved
+a second opt-in experimental engine on 2026-11-28; see [stage 1](#stage-1--owner-approved-opt-in).
+
+## Stage 0 record
 
 2026-11-28. Standalone prototype and measurement only. No product engine, setting,
 cache identity, worker protocol or HLD behavior changes. No commit, installation
@@ -402,3 +407,250 @@ A subsequent stage would need:
    HLD-fallback and zero-HLD-call assertions. Test the full shared suppression,
    crop, Cut precedence, Source/Target, min-visible, tree/Key, Bake and worker
    paths; stage 0 measures raw projection and does not certify those integrations.
+
+
+# Stage 1 — owner-approved opt-in
+
+2026-11-28. The owner accepted the overall shape of the stage 0 renders and asked
+for the extra linework to be reduced, then for **Raster (experimental)** and a
+trial Yak. This supersedes stage 0's integration no-go. HLD remains the default;
+this is approximate, pixel-limited visibility, never an accuracy certificate.
+
+## Correction and integration
+
+The image now supplies a broad phase, not the visibility answer. A sample checks
+its own parallel view ray against actual triangles in the containing 32x32 tile,
+including triangles too small to cover a pixel centre. Barycentric coverage is
+required. The pixel-centre plane extrapolation, slope allowance and all face-ID
+visibility shortcuts are removed. A wrapping/folded face may occlude its own rear
+edge or tangency. The classifier considers the entire batch and never calls HLD.
+
+Brep meshing uses `max(document tolerance, nominal pixel / 32)`, four times finer
+than stage 0's nominal pixel / 8. Depth allowance is `2 * document tolerance +
+mesh tolerance`, with no pixel/slope term. This is a tessellation allowance, not a
+proved error bound. Exact curve candidates and transition bisection are retained.
+Brep tessellation also explicitly requests `DoublePrecision = true`. The first
+strict ray/triangle run exposed a serious grazing-silhouette regression on owner-1:
+9,936.67 mm / 35.6875% wrong-hidden, mostly tangent contours. Eleven of its twelve
+longest wrong-hidden native controls had no forward material obstruction. Keeping
+float mesh coordinates at survey locations was consistent with this self-occlusion
+mechanism. Enabling double vertices reduced the probe to 426.89 mm / 1.5332%
+wrong-hidden, while wrong-visible stayed about 1.96 mm. The full final matrix below
+uses this corrected precision policy. The independent translated analytic-cylinder
+continuity check is a positive control; it also passed on the old policy and does
+not independently reproduce this model-specific NURBS regression.
+
+No definition-mesh reuse is added; global tighter, double-precision meshing is the
+measured trade-off.
+
+The product consumes the same prepared ordered registration batch as HLD in both
+uncut and Route C views. Normalization, block transforms, culling, physical cuts,
+clear glass, regions/hatches, crop, Cut precedence and presentation remain shared.
+The experimental projection transfers only on complete success. Any unsupported
+batch, missing finite bounds, failed tessellation or projection failure discards
+it and falls back to HLD for the **whole view**, with a grey remark. Cancellation
+propagates without fallback. Unknown geometry cannot silently disappear.
+
+A blanket Rhino-validity refusal initially blocked owner-2 Top before projection.
+The captured batch has two invalid sources before **and** after HLD. As in the
+prototype, sources that can tessellate remain in the full approximate batch;
+invalid-source counts are disclosed in Info. Finite bounds and complete face
+meshing are still required. This does not certify the source geometry or sections.
+
+Resolution uses scene diagonal / (64 * document tolerance), clamped to 64..8192,
+then clamps the actual grid by aspect ratio, the 512 MiB image ceiling and remaining
+projection memory. Memory admission estimates meshes, triangles, bins, candidates,
+output and image together; runtime count/allocation checks can refuse the batch.
+Windows worker routing reserves additional raster memory, with no heavy in-process
+fallback if workers are unavailable. A scene that fits the ordinary HLD in-process budget
+may fall back to HLD with a remark after Raster refuses its extra memory. macOS uses the existing in-process-only live
+budget. Native meshing/silhouette calls remain cooperatively cancellable between
+calls; only workers have hard cancel and memory caps.
+
+`visibility = hld | pipes | raster` and the menu add Raster after Pipes. HLD's
+adapter/policy and default settings/run/visibility-key text are unchanged. Raster
+keys its engine, precision policy and exact assembly/process fingerprint. Schema 4
+is retained: mandatory exact Core/Rhino fingerprints reject older peers before
+scene data; the existing enum converter carries Raster. Result pixel size (mm),
+triangle/candidate counts, memory estimate, phases and diagnostics round-trip.
+Host-captured unit scale also travels with the scene. Raster cache and retained
+worker scene keys include it, even if a units edit preserves geometry/tolerance;
+a regression test changes metres to centimetres without scaling and reuses the
+same worker process. HLD scene and default visibility identities remain unchanged. The full stored-field census
+in `WorkerCodecStateTests` covers the new result state.
+
+## Measurement boundary and evidence
+
+The final matrix calls the shipped projection and Core buffer directly from
+`raster-poc`, at 8192 requested pixels, once per case. Every case freshly measures
+threaded HLD, then the serial HLD accuracy reference, then Raster. The shared
+`Local\M2DPlusLocalModelSuiteRhino` mutex serializes these owned headless hosts.
+No interactive Rhino was inspected or changed, and no curved-M/campus run occurred.
+Raw projection timing excludes capture, Route C preparation, comparison, renders
+and cleanup, as in stage 0. A separate product smoke uses the calculated worker cap,
+the ordinary full pipeline and an HLD-call guard. Raw speed is not end-to-end speed.
+
+All evidence is outside git under:
+
+`~/.t3/m2d-plus-models/evidence/raster-2026-11-28/stage1/`
+
+`matrix-final-double` is scored. `runtime-final-double` preserves its binaries;
+the Core/Rhino DLLs match the trial Yak. Earlier stage 1 probe/matrix folders are
+preserved integration and float-mesh diagnostics, not mixed into the final table.
+The float matrix in `matrix-reviewed` and the double-vertex probe make the
+silhouette regression/correction auditable. Historical reference reuse refused a
+changed exact assembly fingerprint; no reference identity checks were weakened.
+
+The setting-out layer is identified only in an external UTF-8 descriptor. A second
+comparison removes it from **both archived drawings**, without changing either
+solve's inputs. Stage 0 archives are re-scored with the unchanged comparator,
+requiring the same exact native Rhino build and schema; the measurement-only
+geometry importer does not relax product cache/worker restoration. Receipts record
+archive hashes and the scoring fingerprint. No private filenames, layer names,
+object IDs or coordinates are committed.
+
+<!-- stage1-results:start -->
+
+All lengths below count duplicate strokes and use the unchanged 0.25 mm / 0.05 mm comparator. Percent denominators are each result’s Raster Visible length (wrong-visible) and HLD Visible length (wrong-hidden). Native HLD is a reference, not an independent certificate. Times are single observations; machine-wide CPU quiescence was not established.
+
+| Model / view | Raster s before -> after | Final threaded HLD s | Final speedup | Wrong-visible mm / % before -> after | Wrong-hidden mm / % before -> after |
+|---|---:|---:|---:|---:|---:|
+| owner-2 / Top | 19.448 -> 13.964 | 98.584 | 7.06x | 417,081.22 / 11.2790 -> 40,652.89 / 1.2639 | 76,329.60 / 2.7303 -> 106,458.95 / 3.8080 |
+| owner-2 / Plan A | 4.454 -> 5.688 | 44.538 | 7.83x | 187,571.08 / 9.5781 -> 8,901.10 / 0.5088 | 27,840.28 / 1.8839 -> 46,774.16 / 3.1652 |
+| owner-1 / Top | 0.394 -> 1.228 | 0.468 | 0.38x | 355.52 / 1.1161 -> 1.96 / 0.0062 | 370.17 / 1.3294 -> 426.89 / 1.5332 |
+| curved-S / Top | 2.452 -> 4.242 | 11.380 | 2.68x | 19,413.84 / 1.0215 -> 9,300.32 / 0.5719 | 12,813.85 / 1.0040 -> 11,750.83 / 0.9207 |
+| perf-M / Plan level 1 | 3.660 -> 3.917 | 23.715 | 6.05x | 1,388.17 / 0.0238 -> 0.00 / 0.0000 | 595.84 / 0.0535 -> 2.25 / 0.0002 |
+| brep_box / SW | 0.324 -> 0.399 | 0.351 | 0.88x | 0.69 / 0.0028 -> 0.26 / 0.0011 | 0.00 / 0.0000 -> 0.00 / 0.0000 |
+| brep_curved_sphere / SW | 0.455 -> 0.555 | 0.768 | 1.38x | 0.00 / 0.0000 -> 0.00 / 0.0000 | 0.00 / 0.0000 -> 0.00 / 0.0000 |
+| chs_hollow / SW | 0.353 -> 0.511 | 0.501 | 0.98x | 7.50 / 0.0354 -> 0.00 / 0.0000 | 10.50 / 0.0731 -> 0.00 / 0.0000 |
+
+### Comparison with the setting-out layer removed
+
+This removes the selected layer from both drawings for scoring, not from the prepared scene before solving. This exclusion applies to the identified owner-2 setting-out layer; no layer is excluded on the other controls.
+
+| View | Wrong-visible mm / % before -> after | Wrong-hidden mm / % before -> after |
+|---|---:|---:|
+| owner-2 / Top | 132,615.70 / 4.1452 -> 3,496.52 / 0.1165 | 73,214.52 / 2.8386 -> 68,168.18 / 2.6429 |
+| owner-2 / Plan A | 58,513.03 / 3.4244 -> 1,605.83 / 0.0975 | 25,852.35 / 1.9071 -> 20,435.73 / 1.5075 |
+
+Owner-2 wrong-visible length falls 90.3% (Top) and 95.3% (Plan A) overall,
+and 97.4% / 97.3% outside the setting-out layer. Outside that layer, wrong-hidden
+length also falls 6.9% / 21.0%; the overall increase is concentrated in that
+layer. Both owner-2 views exceed the required 3x projection speed, but small
+models can be slower than HLD. These are single-run observations.
+
+### Final phases and memory
+
+| View | Actual grid / pixel mm | Mesh tolerance mm | Triangles | Tessellate / classify s | Sampled peak private GiB |
+|---|---:|---:|---:|---:|---:|
+| owner-2 / Top | 8192x4201 / 8.6932 | 0.2716 | 11,857,661 | 4.721 / 7.629 | 5.16 |
+| owner-2 / Plan A | 8111x5515 / 6.1035 | 0.1888 | 5,655,880 | 2.136 / 2.659 | 3.00 |
+| owner-1 / Top | 7671x5832 / 0.6451 | 0.0189 | 805,859 | 0.344 / 0.552 | 0.97 |
+| curved-S / Top | 8192x3396 / 6.1749 | 0.1930 | 7,750,330 | 1.680 / 1.808 | 2.49 |
+| perf-M / Plan level 1 | 6216x7196 / 4.0220 | 0.1104 | 4,305,065 | 0.997 / 1.377 | 2.45 |
+| brep_box / SW | 6240x7169 / 0.4710 | 0.1000 | 16 | 0.006 / 0.020 | 0.77 |
+| brep_curved_sphere / SW | 6688x6688 / 0.3094 | 0.1000 | 65,024 | 0.049 / 0.160 | 0.79 |
+| chs_hollow / SW | 5699x7849 / 0.3665 | 0.1000 | 23,228 | 0.029 / 0.108 | 0.79 |
+
+Peak private memory includes the headless host, retained reference and experimental allocations, not just incremental Raster memory. Comparison/render allocations and cleanup are outside the projection timer, matching stage 0. Inputs match stage 0 by model hash and prepared-input digest: owner-2-Top=True, owner-2-Plan-A=True, owner-1-Top=True, curved-S-Top=True, perf-M-Plan-level-1=True, brep_box-SW=True, brep_curved_sphere-SW=True, chs_hollow-SW=True.
+
+### Full product smoke
+
+These per-view times use an already prepared scene after the input-capture witness; they are not cold end-to-end timings. HLD setup/solve is forbidden by the smoke guard.
+
+| View | Pipeline s | Pixel mm | Pieces / regions | Worker cap / projection estimate GiB | HLD calls |
+|---|---:|---:|---:|---:|---:|
+| owner-2 / Top | 13.020 | 8.6932 | 73,870 / 0 | 10.00 / 4.24 | 0 |
+| owner-2 / Plan A | 28.425 | 6.1035 | 31,792 / 130 | 6.00 / 2.37 | 0 |
+
+### Representative native controls
+
+Twelve longest spans per direction per control set; layer-excluded sets target residual junction linework. Queries use the original trimmed Breps at the candidate ray and pixel-centre ray, with a 4-tolerance start offset. Hits/material are midpoint controls, not length-integrated truth; open sheets and near-contact policy need separate interpretation.
+
+| Case | Direction | Candidate hits / material | Centre hits / material | Own-body material | Failed native queries |
+|---|---|---:|---:|---:|---:|
+| curved-S-Top | WrongVisible | 0 / 0 | 6 / 1 | 0 | 0 |
+| curved-S-Top | WrongHidden | 12 / 12 | 12 / 12 | 0 | 0 |
+| owner-1-Top | WrongVisible | 0 / 0 | 0 / 0 | 0 | 0 |
+| owner-1-Top | WrongHidden | 12 / 12 | 12 / 12 | 7 | 0 |
+| owner-2-Plan-A | WrongVisible | 12 / 12 | 5 / 5 | 0 | 0 |
+| owner-2-Plan-A | WrongHidden | 12 / 12 | 6 / 6 | 2 | 0 |
+| owner-2-Plan-A-without-layer | WrongVisible | 1 / 0 | 6 / 6 | 0 | 0 |
+| owner-2-Plan-A-without-layer | WrongHidden | 12 / 12 | 9 / 9 | 5 | 0 |
+| owner-2-Top | WrongVisible | 12 / 12 | 8 / 8 | 0 | 0 |
+| owner-2-Top | WrongHidden | 12 / 12 | 9 / 9 | 0 | 0 |
+| owner-2-Top-without-layer | WrongVisible | 2 / 0 | 8 / 8 | 0 | 0 |
+| owner-2-Top-without-layer | WrongHidden | 12 / 12 | 12 / 12 | 0 | 0 |
+
+The remaining longest all-layer owner-2 wrong-visible controls still meet native
+solid material at their candidate ray (12/12 each). The layer-excluded controls
+meet no forward solid material (0/12 each), while several pixel-centre rays do.
+This supports removing centre-ray extrapolation at junctions, but does not prove
+every remaining HLD disagreement is a Raster error. Conversely every sampled
+final wrong-hidden control meets native material; some are its own body. These
+midpoint controls do not certify whole intervals or settle near-contact policy.
+
+### Renders
+
+The original external `visual/render.py` creates new PNGs under `stage1/visual/`. The driver and common-window selection are preserved in `stage1/render_stage1.py` and `stage1/visual/render-manifest.json`. Each owner view has a full rendering, a rendering without the setting-out layer, and three common before/after dense-error windows selected outside that layer. The combined dense-window PNG shows before Raster, after Raster, HLD and after-error overlay (red extra / blue missing).
+
+* `stage1/visual/owner-2-Top-before-after-dense-1.png` (also dense-2, dense-3).
+* `stage1/visual/owner-2-Plan-A-before-after-dense-1.png` (also dense-2, dense-3).
+* Full PNGs: `stage1/visual/<case>-8192-stage1-full.png` for every matrix case.
+
+Per-feature attribution and complete curve/point/missing-locus receipts remain in each case folder. These include wrong-hidden increases, not just improvements.
+
+<!-- stage1-results:end -->
+
+## Implementation files
+
+| Area | Files |
+|---|---|
+| Plain raster and precision/memory policy | `src/M2DPlus.Core/Experimental/RasterVisibility/RasterBuffer.cs`, `RasterPolicy.cs` |
+| Native adapter, atomic fallback and run identity | `src/M2DPlus.Rhino/Experimental/RasterVisibility/RasterProjection.cs`, `RasterProjectionRoute.cs`, `RasterEngineIdentity.cs`, `README.md` |
+| Settings and menu | `src/M2DPlus.Core/Settings/SettingsModels.cs`, `SettingsValues.cs`; `src/M2DPlus.Grasshopper/UI/Model/SettingsCatalog.cs` |
+| Component run/progress identity | `src/M2DPlus.Grasshopper/DrawingComponent.Async.cs` |
+| Shared prepared-batch dispatch and result state | `src/M2DPlus.Rhino/Services/NativeDrawing.cs`, `SectionDrawing.cs`, `DrawingPresentation.cs`, `ViewNotices.cs` |
+| Routing, memory reservation, captured units, transport | `src/M2DPlus.Rhino/Services/DrawingWorkerPool.cs`, `HostCapture.cs`, `Scene.cs`, `WorkerClient.cs`, `WorkerCodec.cs` |
+| Tests | `tests/M2DPlus.Core.Tests/RasterVisibilityTests.cs`; `tests/M2DPlus.Grasshopper.Tests/PipeVisibilityUiTests.cs`; `tests/M2DPlus.Rhino.Tests/RasterVisibilityTests.cs`, `WorkerCodecStateTests.cs` |
+| Harness | `tools/worker-bench/RasterPoc/RasterBench.cs`, `RasterControls.cs`, `RasterRays.cs`, `report.py`, `README.md`; `tools/worker-bench/Program.cs`; prototype buffer/projection moved into product libraries |
+| Contracts and evidence | `AGENTS.md`, `docs/PLAN.md`, `docs/REQUIREMENTS.md`, `docs/design/native-engine.md`, `docs/design/ux.md`, this report |
+
+## Validation and trial
+
+<!-- stage1-validation:start -->
+
+* Debug and Release solution builds: zero warnings/errors; worker-bench Release
+  also builds with warnings as errors.
+* Focused licensed fixture/routing/geometry/codec checks: **17 passed on .NET 8**
+  and **17 passed on .NET 10**, none skipped. This includes uncut/Route C,
+  primitive/mesh/SubD/mirrored block fixtures, independent shallow-wire/point
+  visibility, crop/Cut/Hatch/Bake, whole-view fallback, default HLD adapter parity,
+  borrowed-mesh immutability, cancellation without fallback, unit changes through
+  the same retained worker and drawing cache, and the forced Mac route.
+* Forced local hook: **592 Core** and **141 GH UI-model** tests passed. Full
+  default Debug suite: 592 Core, 141 GH UI-model and 9 managed Rhino checks passed;
+  352 licensed cases skipped as designed. Logs are under `stage1/validation`.
+* Trial Yak: `artifacts/yak/trials/m2d-plus-0.1.0-beta.17-rh8_20-win.yak`.
+  SHA-256: `22275c6cd7b4d7139dae118c1d64d6fd14fe1328f6349743a07cf24c75602585`.
+  The archive inventory/versions/payload checks pass (19 files, matching .NET 8/10
+  workers, no host DLLs). Its Core/Rhino DLLs match `runtime-final-double` exactly.
+* No version bump, commit, push, installation or publication. The intentional
+  package-name/assembly-name Yak warning remains. Installed-Yak interactive and
+  native macOS validation remain manual.
+
+<!-- stage1-validation:end -->
+
+## Limits to disclose
+
+This is an owner-approved trial, not a new default or a certificate. Tightening the
+classifier reduces extra linework but can increase wrong-hidden disagreement.
+HLD agreement is a reference comparison; duplicate ownership, shallow contacts,
+near coincidence, grazing faces, native tessellation and sampled transitions remain
+limits. Very short visibility events can be missed between samples, and duplicate
+strokes remain. Profile means a tangent candidate, not HLD's scene silhouette.
+Unsupported/failed views can take HLD time. Physical section refusals and failed
+clip-footprint demotion remain independent and unchanged. Memory estimates are not
+hard native allocation bounds. macOS is compiled and exercised through the forced
+route on Windows, with no native Mac or installed-Yak interactive validation.
+No version bump, commit, push, installation or publication is part of this work.

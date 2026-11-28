@@ -1,9 +1,8 @@
-# Raster stage 0 measurement
+# Raster measurement harness
 
-Standalone research command; no production routing, `visibility=raster` setting,
-worker protocol or shipped assembly changes. See
-[the research report](../../../docs/research/raster-engine.md) for scope, measurement
-limits, results and the stage 1 recommendation.
+The stage 1 harness calls the opt-in product Raster engine directly. Stage 0 was
+a standalone prototype; its historic measurements and limitations remain in
+[the research report](../../../docs/research/raster-engine.md).
 
 ```powershell
 dotnet build tools/worker-bench -c Release
@@ -58,3 +57,32 @@ diagnosis; they are not a length-integrated oracle.
 `python report.py <evidence-root> --doc <research-report.md>` produces the local
 summary and updates only the explicitly marked numerical block of the requested
 research report. It refuses to declare an incomplete matrix complete.
+
+
+## Stage 1
+
+The harness now calls the shipped `Experimental/RasterVisibility/RasterProjection`
+and Core raster buffer directly. There is no separate classifier prototype. The
+`mesh` silhouette alternative is retired. Use the same commands and a fresh evidence
+folder; `--also-threaded` records the production HLD step for each case. Optional
+`--exclude-layer-file=<external UTF-8 text file>` records a second comparison after
+removing that layer from **both drawings**, without changing the solved inputs.
+The receipt stores the layer hash; private names remain outside git.
+
+`--product-only` skips references/comparison and runs the ordinary full product
+pipeline at its calculated worker memory cap, with an HLD-call guard; its receipt
+proves admission/crop/section integration rather than raw projection accuracy.
+`raster-poc <resolver> score-archives <historic-case> 8192 <external-layer-file> <fresh-output>`
+re-scores preserved stage 0 geometry without that layer. It requires the same exact
+Rhino build and schema, never imports a historical result into product cache/worker
+state, and records archive hashes and the scoring fingerprint.
+
+Summarize a single-resolution stage 1 matrix without overwriting stage 0 summaries:
+
+```text
+python tools/worker-bench/RasterPoc/report.py <evidence-root> --matrix stage1/matrix-reviewed --expected-resolutions 1 --output-root <evidence-root>/stage1
+```
+
+The optional final `raster-rays` argument is an external layer descriptor; it filters
+control selection only, so non-setting-out junction errors can be inspected while
+all prepared occluders remain in the native ray query.

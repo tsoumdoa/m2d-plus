@@ -213,6 +213,11 @@ public sealed partial class DrawingComponent
             string.Join(Unit, rows.OrderBy(r => r.Key, StringComparer.Ordinal).Select(r => r.Key + "=" + Settings.RunText(r.Value))),
             string.Join(Unit, _targets.Select(PlaneRevision)), string.Join(Unit, _sources.Select(PlaneRevision)),
             _settings.ToString(), _context.Units.ToString(), _tolerance.ToString("R", System.Globalization.CultureInfo.InvariantCulture)]);
+        if (new SettingsPresentation(Ui.State, _context).Resolution?.Views.Any(v => v.Visibility == VisibilityMode.Raster) == true)
+        {
+            var rasterIdentity = M2DPlus.Rhino.Experimental.RasterVisibility.RasterEngineIdentity.Value;
+            _runKey += Unit + rasterIdentity; _historyKey += "|" + rasterIdentity;
+        }
         _started = true; _uiSeconds = 0; _jobClock.Restart(); Array.Clear(_stageSeen); _reused = false; _loadingEnd = 0;
         _model = null; _state = default; _status = new("Starting…"); Message = _status.Full;
         _timer ??= CreateTimer(); _timer.Interval = _parked is null ? 250 : 1; _timer.Start();
